@@ -1,151 +1,171 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sha. - P2P File Transfer</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1 class="logo" data-text="Share. Host. Access.">Sha.</h1>
-            <p class="tagline">P2P file transfer. No servers. No bullshit.</p>
-        </header>
-
-        <div class="mode-selector">
-            <button id="send-mode-btn" class="mode-btn active">Send</button>
-            <button id="receive-mode-btn" class="mode-btn">Receive</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="cd is a direct browser-to-browser file transfer app with share codes, links, and QR handoff."
+    />
+    <title>cd - P2P File Transfer</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="brand-rail" aria-label="cd status board">
+        <div class="brand-lockup">
+          <h1>cd</h1>
+          <p class="tagline">Direct file handoff.</p>
         </div>
 
-        <!-- Sender View -->
-        <div id="sender-view" class="view active">
-            <div id="drop-zone" class="drop-zone">
-                <input type="file" id="file-input" multiple hidden>
-                <div class="drop-zone-content">
-                    <span class="drop-icon">+</span>
-                    <p>Drop files here or <button id="select-file-btn" class="link-btn">browse</button></p>
-                    <span class="drop-zone-hint">Send one file or a full batch in a single transfer.</span>
-                </div>
-            </div>
+        <div class="state-board" aria-live="polite">
+          <span class="state-label">state</span>
+          <strong id="app-state">idle</strong>
+        </div>
+      </section>
 
-            <div id="sender-file-info" class="file-info hidden">
-                <div class="file-details">
-                    <div class="file-header">
-                        <span class="file-name"></span>
-                        <span class="file-size"></span>
-                    </div>
-                    <span class="file-subtext"></span>
-                </div>
-            </div>
-
-            <div id="sender-code-section" class="code-section hidden">
-                <p>Share this code</p>
-                <div class="code-display">
-                    <span id="share-code"></span>
-                    <button id="copy-code-btn" class="copy-btn" title="Copy code">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                    </button>
-                </div>
-                <p class="status" id="sender-status">Waiting for receiver...</p>
-            </div>
-
-            <div id="sender-progress" class="progress-section hidden">
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <div class="progress-stats">
-                    <span class="progress-percent">0%</span>
-                    <span class="progress-speed">0 MB/s</span>
-                    <span class="progress-transferred">0 / 0 MB</span>
-                </div>
-            </div>
-
-            <div id="sender-complete" class="complete-section hidden">
-                <span class="complete-icon">&#10003;</span>
-                <p id="sender-complete-message">Transfer complete</p>
-                <button id="send-another-btn" class="primary-btn">Send another</button>
-            </div>
-
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-text">End-to-end</div>
-                </div>
-                <div class="feature-divider">/</div>
-                <div class="feature">
-                    <div class="feature-text">Fast P2P</div>
-                </div>
-                <div class="feature-divider">/</div>
-                <div class="feature">
-                    <div class="feature-text">No storage</div>
-                </div>
-            </div>
+      <section class="workbench" aria-label="file transfer app">
+        <div class="mode-selector" role="tablist" aria-label="Choose transfer mode">
+          <button id="send-mode-btn" class="mode-btn active" type="button" role="tab" aria-selected="true">
+            Send
+          </button>
+          <button id="receive-mode-btn" class="mode-btn" type="button" role="tab" aria-selected="false">
+            Receive
+          </button>
         </div>
 
-        <!-- Receiver View -->
-        <div id="receiver-view" class="view hidden">
-            <div id="receiver-input-section" class="input-section">
-                <label for="code-input">Enter code</label>
-                <div class="code-input-wrapper">
-                    <input type="text" id="code-input" maxlength="6" placeholder="X7K9M2" autocomplete="off" spellcheck="false">
-                    <button id="connect-btn" class="primary-btn">Connect</button>
-                </div>
+        <section id="sender-view" class="view active" aria-label="Send files">
+          <div id="drop-zone" class="drop-zone">
+            <input id="file-input" type="file" multiple hidden />
+            <span class="drop-mark" aria-hidden="true">+</span>
+            <div>
+              <h2>Drop</h2>
+              <p>Choose files or drag them in.</p>
+            </div>
+            <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
+          </div>
+
+          <div id="sender-file-info" class="file-info hidden">
+            <span class="panel-kicker">payload</span>
+            <div class="file-header">
+              <span class="file-name"></span>
+              <span class="file-size"></span>
+            </div>
+            <span class="file-subtext"></span>
+          </div>
+
+          <div id="sender-code-section" class="share-panel hidden">
+            <div class="share-grid">
+              <div class="code-block">
+                <span class="panel-kicker">share code</span>
+                <strong id="share-code"></strong>
+              </div>
+              <div class="qr-block">
+                <span class="panel-kicker">join qr</span>
+                <canvas id="share-qr" width="180" height="180" aria-label="QR code for receive link"></canvas>
+              </div>
             </div>
 
-            <div id="receiver-connecting" class="connecting-section hidden">
-                <div class="spinner"></div>
-                <p>Connecting...</p>
+            <div class="share-actions">
+              <button id="copy-code-btn" class="secondary-btn" type="button">Copy code</button>
+              <button id="copy-link-btn" class="secondary-btn" type="button">Copy link</button>
             </div>
 
-            <div id="receiver-file-info" class="file-info hidden">
-                <div class="file-details">
-                    <div class="file-header">
-                        <span class="file-name"></span>
-                        <span class="file-size"></span>
-                    </div>
-                    <span class="file-subtext"></span>
-                </div>
+            <p class="status" id="sender-status">Waiting for receiver...</p>
+          </div>
+
+          <div id="sender-progress" class="progress-section hidden">
+            <div class="progress-topline">
+              <span class="progress-mode">uploading</span>
+              <strong class="progress-percent">0%</strong>
+            </div>
+            <div class="progress-bar" aria-label="Upload progress">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+              <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
+              <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+            </div>
+          </div>
+
+          <div id="sender-complete" class="result-section hidden">
+            <span class="result-mark">OK</span>
+            <p id="sender-complete-message">Transfer complete</p>
+            <button id="send-another-btn" class="primary-btn" type="button">Send another</button>
+          </div>
+        </section>
+
+        <section id="receiver-view" class="view hidden" aria-label="Receive files">
+          <div id="receiver-input-section" class="input-section">
+            <label for="code-input">Receive code</label>
+            <div class="code-input-wrapper">
+              <input
+                id="code-input"
+                type="text"
+                maxlength="10"
+                placeholder="spark9x2k"
+                autocomplete="off"
+                spellcheck="false"
+                inputmode="text"
+              />
+              <button id="connect-btn" class="primary-btn" type="button">Connect</button>
             </div>
 
-            <div id="receiver-progress" class="progress-section hidden">
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <div class="progress-stats">
-                    <span class="progress-percent">0%</span>
-                    <span class="progress-speed">0 MB/s</span>
-                    <span class="progress-transferred">0 / 0 MB</span>
-                </div>
+            <div class="scanner-panel">
+              <button id="scan-qr-btn" class="secondary-btn" type="button">Scan QR</button>
+              <button id="stop-scan-btn" class="secondary-btn hidden" type="button">Stop scan</button>
+              <p id="scanner-status" class="scanner-status">Camera scan is optional. Codes still work.</p>
+              <div id="qr-reader" class="qr-reader hidden"></div>
             </div>
+          </div>
 
-            <div id="receiver-complete" class="complete-section hidden">
-                <span class="complete-icon">&#10003;</span>
-                <p id="receiver-complete-message">Download complete</p>
-                <button id="receive-another-btn" class="primary-btn">Receive another</button>
-            </div>
+          <div id="receiver-connecting" class="connecting-section hidden">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Connecting...</p>
+          </div>
 
-            <div id="receiver-error" class="error-section hidden">
-                <span class="error-icon">&#10005;</span>
-                <p class="error-message"></p>
-                <button id="retry-btn" class="primary-btn">Try again</button>
+          <div id="receiver-file-info" class="file-info hidden">
+            <span class="panel-kicker">incoming</span>
+            <div class="file-header">
+              <span class="file-name"></span>
+              <span class="file-size"></span>
             </div>
-        </div>
-    </div>
+            <span class="file-subtext"></span>
+          </div>
+
+          <div id="receiver-progress" class="progress-section hidden">
+            <div class="progress-topline">
+              <span class="progress-mode">downloading</span>
+              <strong class="progress-percent">0%</strong>
+            </div>
+            <div class="progress-bar" aria-label="Download progress">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+              <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
+              <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+            </div>
+          </div>
+
+          <div id="receiver-complete" class="result-section hidden">
+            <span class="result-mark">OK</span>
+            <p id="receiver-complete-message">Download complete</p>
+            <button id="receive-another-btn" class="primary-btn" type="button">Receive another</button>
+          </div>
+
+          <div id="receiver-error" class="result-section error hidden">
+            <span class="result-mark">ERR</span>
+            <p class="error-message"></p>
+            <button id="retry-btn" class="primary-btn" type="button">Try again</button>
+          </div>
+        </section>
+      </section>
+    </main>
 
     <footer class="watermark">
-        Made by <a href="https://github.com/YashasVM" target="_blank">@Yashas.VM</a>
+      Made by <a href="https://github.com/YashasVM" target="_blank" rel="noreferrer">@Yashas.VM</a>
     </footer>
 
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <script src="js/sender.js"></script>
-    <script src="js/receiver.js"></script>
-    <script src="js/app.js"></script>
-</body>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
