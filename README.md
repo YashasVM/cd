@@ -35,6 +35,21 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
 
 ---
 
+## Links
+
+| Link | Purpose |
+|---|---|
+| [cd Repository](https://github.com/YashasVM/cd) | Modernized fork and active codebase |
+| [Original Sha Repository](https://github.com/YashasVM/Sha) | Source project this fork split from |
+| [Issues](https://github.com/YashasVM/cd/issues) | Bug reports, feature requests, and regressions |
+| [Vite](https://vite.dev) | Local dev server and production build tool |
+| [PeerJS](https://peerjs.com/) | WebRTC signaling library |
+| [QRCode](https://github.com/soldair/node-qrcode) | Sender QR generation |
+| [html5-qrcode](https://github.com/mebjas/html5-qrcode) | Receiver camera QR scanning |
+| [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) | Deployment target configured by `wrangler.jsonc` |
+
+---
+
 ## Features
 
 ### Transfer Flow
@@ -87,6 +102,72 @@ Open the local Vite URL in two browser windows or on two devices.
 1. Switch to **Receive**, open a receive link, or scan the QR code.
 2. Connect with the code.
 3. Save streamed files when prompted, or let the browser download Blob fallbacks.
+
+---
+
+## Developer Setup
+
+### Prerequisites
+
+- Node.js 18 or newer
+- npm 9 or newer
+- Git
+- A modern Chromium, Firefox, or Safari browser for WebRTC testing
+
+### Clone
+
+```bash
+git clone https://github.com/YashasVM/cd.git
+cd cd
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Start Dev Server
+
+```bash
+npm run dev
+```
+
+Vite prints a local URL, usually `http://127.0.0.1:5173/`. Open it in two browser windows to test send and receive on one machine.
+
+### Build Production Assets
+
+```bash
+npm run build
+```
+
+The production build is written to `dist/`.
+
+### Run Dependency Audit
+
+```bash
+npm run audit
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+### Deploy Notes
+
+`wrangler.jsonc` points Cloudflare at `./dist`, so deploy after running `npm run build`. The repo is structured for static asset hosting; no server-side file storage process is required.
+
+### Manual QA Checklist
+
+- Send one small file.
+- Send multiple files in one batch.
+- Receive with manual code entry.
+- Receive with a copied receive link.
+- Receive by scanning the generated QR code.
+- Try an invalid code and an unavailable sender.
+- Test at least one large file to watch speed and backpressure behavior.
 
 ---
 
