@@ -237,11 +237,6 @@ Cloudflare serves the production build from `dist/`, as configured in `wrangler.
 
 ---
 
-## License
-
-MIT
-
----
 
 <div align="center">
 
