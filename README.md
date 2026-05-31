@@ -11,10 +11,8 @@
 [![Origin](https://img.shields.io/badge/fork%20of-Sha-f04435?style=flat-square&labelColor=111111)](https://github.com/YashasVM/Sha)
 [![Stack](https://img.shields.io/badge/stack-Vite%20%2B%20WebRTC-f4ed28?style=flat-square&labelColor=111111)](https://vite.dev)
 
-**No login** . **No server-side file storage** . **Multi-file transfer** . **QR ready**
 
-[Source Code](https://github.com/YashasVM/cd) . [Original Sha Project](https://github.com/YashasVM/Sha) . [Report an Issue](https://github.com/YashasVM/cd/issues)
-
+[cd - Website](https://cd.yashasvm.workers.dev/) . [Original Sha Project](https://github.com/YashasVM/Sha) . [Source Code](https://github.com/YashasVM/cd)
 ---
 
 </div>
@@ -41,7 +39,7 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
 |---|---|
 | [cd Repository](https://github.com/YashasVM/cd) | Modernized fork and active codebase |
 | [Original Sha Repository](https://github.com/YashasVM/Sha) | Source project this fork split from |
-| [Issues](https://github.com/YashasVM/cd/issues) | Bug reports, feature requests, and regressions |
+| [New main website](https://cd.yashasvm.workers.dev/) | Main Cd website, New UI, and Upgraded memes |
 | [Vite](https://vite.dev) | Local dev server and production build tool |
 | [PeerJS](https://peerjs.com/) | WebRTC signaling library |
 | [QRCode](https://github.com/soldair/node-qrcode) | Sender QR generation |
