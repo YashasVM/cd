@@ -4,23 +4,24 @@ import { Html5Qrcode } from 'html5-qrcode';
 import './style.css';
 
 const FUN_CODES = [
-  'cutiee',
-  'naughty',
-  'hotboy',
-  'coolass',
-  'fuckker',
-  'fuckyou',
-  'asshole',
-  'dickhead',
-  'lowde',
-  'shaaa',
-  'fahh',
-  'jnv',
-  'slop',
-  'cs6969',
-  '69420'
+  'spark',
+  'orbit',
+  'pixel',
+  'vault',
+  'sonic',
+  'mango',
+  'laser',
+  'comet',
+  'glint',
+  'turbo',
+  'relay',
+  'frost',
+  'nova',
+  'bloom',
+  'cargo'
 ];
-const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length));
+const CODE_SUFFIX_LENGTH = 5;
+const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length)) + CODE_SUFFIX_LENGTH;
 const PEER_PREFIX = 'cd-';
 const MAX_BUFFERED_AMOUNT = 16 * 1024 * 1024;
 const BUFFER_LOW_AMOUNT = 8 * 1024 * 1024;
@@ -69,8 +70,10 @@ function setState(state) {
 }
 
 function generateCode() {
-  const [value] = crypto.getRandomValues(new Uint32Array(1));
-  return FUN_CODES[value % FUN_CODES.length];
+  const values = crypto.getRandomValues(new Uint32Array(2));
+  const word = FUN_CODES[values[0] % FUN_CODES.length];
+  const suffix = values[1].toString(36).padStart(CODE_SUFFIX_LENGTH, '0').slice(-CODE_SUFFIX_LENGTH);
+  return word + suffix;
 }
 
 function cleanCode(value) {
@@ -78,7 +81,9 @@ function cleanCode(value) {
 }
 
 function isValidCode(value) {
-  return FUN_CODES.includes(cleanCode(value));
+  const code = cleanCode(value);
+  const word = FUN_CODES.find((item) => code.startsWith(item));
+  return Boolean(word && code.length === word.length + CODE_SUFFIX_LENGTH && /^[a-z0-9]+$/.test(code.slice(word.length)));
 }
 
 function codeFromUrl(value) {
