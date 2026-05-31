@@ -23,9 +23,9 @@ const FUN_CODES = [
 const CODE_SUFFIX_LENGTH = 5;
 const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length)) + CODE_SUFFIX_LENGTH;
 const PEER_PREFIX = 'cd-';
-const MAX_BUFFERED_AMOUNT = 16 * 1024 * 1024;
-const BUFFER_LOW_AMOUNT = 8 * 1024 * 1024;
-const PROGRESS_UPDATE_INTERVAL = 160;
+const MAX_BUFFERED_AMOUNT = 8 * 1024 * 1024;
+const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
+const PROGRESS_UPDATE_INTERVAL = 80;
 const CONNECTION_TIMEOUT_MS = 15000;
 
 const els = {
