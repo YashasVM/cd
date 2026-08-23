@@ -37,9 +37,10 @@ public sealed class ClerkAuthService
         {
             refreshToken = await ReadRefreshTokenAsync(cancellationToken);
         }
-        catch (CryptographicException)
+        catch (Exception exception) when (exception is CryptographicException or IOException or UnauthorizedAccessException)
         {
             ClearRefreshToken();
+            CurrentUser = null;
             return null;
         }
 
