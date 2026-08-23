@@ -7,9 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -77,23 +74,9 @@ private fun CdApp() {
     bottomBar = { ModeBar(mode, onModeChange = { mode = it }) },
   ) { padding ->
     Box(Modifier.fillMaxSize().padding(padding)) {
+      CloudTransferScreen(visible = mode == TransferMode.CLOUD, modifier = Modifier.fillMaxSize())
       if (mode == TransferMode.LOCAL) LocalTransferRoute()
-      else Placeholder("Cloud transfer", "Clerk sign-in and internet sharing are being connected.")
     }
-  }
-}
-
-@Composable
-private fun Placeholder(title: String, message: String) {
-  Column(
-    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 28.dp),
-    verticalArrangement = Arrangement.Center,
-  ) {
-    Text("CD", fontSize = 28.sp, fontWeight = FontWeight.Normal, letterSpacing = (-1).sp)
-    Spacer(Modifier.height(48.dp))
-    Text(title, fontSize = 30.sp, fontWeight = FontWeight.Normal, letterSpacing = (-0.5).sp)
-    Spacer(Modifier.height(12.dp))
-    Text(message, color = CdMuted, fontSize = 15.sp, lineHeight = 23.sp)
   }
 }
 
