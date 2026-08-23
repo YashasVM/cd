@@ -251,7 +251,7 @@
                                 </DockPanel>
                                 <ProgressBar x:Name="TransferProgressBar" Height="5" Margin="0,12,0,0" Minimum="0" Maximum="100" Value="0" ToolTip="Transfer progress" AutomationProperties.Name="Transfer progress" />
                             </StackPanel>
-                            <Button x:Name="CancelTransferButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Click="CancelTransfer_Click" MinWidth="82" VerticalAlignment="Center" ToolTip="Cancel the current transfer" AutomationProperties.Name="Cancel transfer">Cancel</Button>
+                            <Button x:Name="CancelTransferButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Click="CancelTransfer_Click" MinWidth="82" VerticalAlignment="Center" IsEnabled="False" ToolTip="Cancel the current transfer" AutomationProperties.Name="Cancel transfer">Cancel</Button>
                         </Grid>
                     </Border>
                 </StackPanel>

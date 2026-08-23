@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -124,12 +125,11 @@ public sealed partial class CdxRunner : IAsyncDisposable
         }
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-        _process = process;
         if (!process.Start())
         {
-            _process = null;
             throw new InvalidOperationException("Could not start the cdx transfer engine.");
         }
+        _process = process;
 
         var output = new StringBuilder();
         var recent = new Queue<string>();
@@ -237,7 +237,7 @@ public sealed partial class CdxRunner : IAsyncDisposable
         {
             configured,
             Path.Combine(AppContext.BaseDirectory, "cdx.exe"),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "cdx", "cdx.exe")),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "cdx", "cdx.exe")),
         };
         var engine = candidates.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path));
         return engine ?? throw new FileNotFoundException(
