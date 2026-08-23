@@ -11,7 +11,9 @@ public sealed record CloudSendResult(string ShareLink, string CliToken);
 
 public sealed partial class CdxRunner : IAsyncDisposable
 {
+    private const int MaxCapturedOutput = 64 * 1024;
     private Process? _process;
+    private long _lastProgressTimestamp;
 
     public bool IsRunning => _process is { HasExited: false };
 
@@ -132,22 +134,19 @@ public sealed partial class CdxRunner : IAsyncDisposable
         _process = process;
 
         var output = new StringBuilder();
-        var recent = new Queue<string>();
+        Interlocked.Exchange(ref _lastProgressTimestamp, 0);
         using var registration = cancellationToken.Register(Cancel);
         try
         {
-            var stdout = ReadOutputAsync(process.StandardOutput, output, recent, progress);
-            var stderr = ReadOutputAsync(process.StandardError, output, recent, progress);
+            var stdout = ReadOutputAsync(process.StandardOutput, output, progress);
+            var stderr = ReadOutputAsync(process.StandardError, output, progress);
             await process.WaitForExitAsync(CancellationToken.None);
             await Task.WhenAll(stdout, stderr);
 
             cancellationToken.ThrowIfCancellationRequested();
             if (process.ExitCode != 0)
             {
-                var detail = string.Join(Environment.NewLine, recent.TakeLast(4));
-                throw new InvalidOperationException(detail.Length == 0
-                    ? $"The transfer engine stopped with code {process.ExitCode}."
-                    : detail);
+                throw new InvalidOperationException($"The transfer engine stopped with code {process.ExitCode}.");
             }
 
             return output.ToString();
@@ -158,10 +157,9 @@ public sealed partial class CdxRunner : IAsyncDisposable
         }
     }
 
-    private static async Task ReadOutputAsync(
+    private async Task ReadOutputAsync(
         StreamReader reader,
         StringBuilder output,
-        Queue<string> recent,
         IProgress<TransferUpdate> progress)
     {
         var buffer = new char[512];
@@ -171,7 +169,7 @@ public sealed partial class CdxRunner : IAsyncDisposable
             var count = await reader.ReadAsync(buffer);
             if (count == 0)
             {
-                EmitLine(line.ToString(), output, recent, progress);
+                EmitLine(line.ToString(), output, progress);
                 return;
             }
 
@@ -180,7 +178,7 @@ public sealed partial class CdxRunner : IAsyncDisposable
                 var character = buffer[index];
                 if (character is '\r' or '\n')
                 {
-                    EmitLine(line.ToString(), output, recent, progress);
+                    EmitLine(line.ToString(), output, progress);
                     line.Clear();
                 }
                 else
@@ -191,10 +189,9 @@ public sealed partial class CdxRunner : IAsyncDisposable
         }
     }
 
-    private static void EmitLine(
+    private void EmitLine(
         string raw,
         StringBuilder output,
-        Queue<string> recent,
         IProgress<TransferUpdate> progress)
     {
         var line = AnsiRegex().Replace(raw, string.Empty).Trim();
@@ -206,13 +203,9 @@ public sealed partial class CdxRunner : IAsyncDisposable
         lock (output)
         {
             output.AppendLine(line);
-        }
-        lock (recent)
-        {
-            recent.Enqueue(line);
-            while (recent.Count > 8)
+            if (output.Length > MaxCapturedOutput * 2)
             {
-                recent.Dequeue();
+                output.Remove(0, output.Length - MaxCapturedOutput);
             }
         }
 
@@ -223,11 +216,18 @@ public sealed partial class CdxRunner : IAsyncDisposable
         }
 
         var percentage = PercentageRegex().Match(line);
-        progress.Report(new TransferUpdate(
-            line,
-            percentage.Success && double.TryParse(percentage.Groups[1].Value, CultureInfo.InvariantCulture, out var value)
-                ? Math.Clamp(value, 0, 100)
-                : null));
+        var percent = percentage.Success && double.TryParse(percentage.Groups[1].Value, CultureInfo.InvariantCulture, out var value)
+            ? Math.Clamp(value, 0, 100)
+            : (double?)null;
+        var now = Stopwatch.GetTimestamp();
+        var previous = Interlocked.Read(ref _lastProgressTimestamp);
+        if (percent == 100 || previous == 0 ||
+            (Stopwatch.GetElapsedTime(previous, now) >= TimeSpan.FromMilliseconds(100) &&
+             Interlocked.CompareExchange(ref _lastProgressTimestamp, now, previous) == previous))
+        {
+            Interlocked.Exchange(ref _lastProgressTimestamp, now);
+            progress.Report(new TransferUpdate(line, percent));
+        }
     }
 
     private static string FindEngine()
