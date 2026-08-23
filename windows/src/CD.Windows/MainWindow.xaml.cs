@@ -120,7 +120,7 @@ public partial class MainWindow : Window
 
     private void ChooseFiles()
     {
-        var dialog = new OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Multiselect = true,
             Title = "Choose files to send",
@@ -163,20 +163,22 @@ public partial class MainWindow : Window
         RefreshFiles();
     }
 
-    private void FileDrop_DragEnter(object sender, DragEventArgs e)
+    private void FileDrop_DragEnter(object sender, System.Windows.DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
+            ? System.Windows.DragDropEffects.Copy
+            : System.Windows.DragDropEffects.None;
         FileDropBorder.BorderBrush = Brush("AccentBrush");
         e.Handled = true;
     }
 
-    private void FileDrop_DragLeave(object sender, DragEventArgs e) =>
+    private void FileDrop_DragLeave(object sender, System.Windows.DragEventArgs e) =>
         FileDropBorder.BorderBrush = Brush("BorderBrush");
 
-    private void FileDrop_Drop(object sender, DragEventArgs e)
+    private void FileDrop_Drop(object sender, System.Windows.DragEventArgs e)
     {
         FileDropBorder.BorderBrush = Brush("BorderBrush");
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] paths)
         {
             AddFiles(paths);
         }
@@ -325,7 +327,7 @@ public partial class MainWindow : Window
         }
         try
         {
-            Clipboard.SetText(ResultValueTextBox.Text);
+            System.Windows.Clipboard.SetText(ResultValueTextBox.Text);
             TransferStatusText.Text = "Copied to clipboard.";
         }
         catch (ExternalException)
@@ -391,7 +393,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var answer = MessageBox.Show(this, "Sign out of Clerk on this device?", "CD", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var answer = System.Windows.MessageBox.Show(this, "Sign out of Clerk on this device?", "CD", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer != MessageBoxResult.Yes)
         {
             return;
@@ -484,7 +486,9 @@ public partial class MainWindow : Window
     {
         ProgressPanel.Visibility = Visibility.Visible;
         TransferStatusText.Text = text;
-        TransferStatusText.Foreground = error ? new SolidColorBrush(Color.FromRgb(255, 138, 138)) : Brush("TextBrush");
+        TransferStatusText.Foreground = error
+            ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 138, 138))
+            : Brush("TextBrush");
         if (error)
         {
             TransferProgressBar.IsIndeterminate = false;
@@ -514,14 +518,14 @@ public partial class MainWindow : Window
         TransferProgressBar.IsIndeterminate = false;
     }
 
-    private void SelectButton(Button button, bool selected)
+    private void SelectButton(System.Windows.Controls.Button button, bool selected)
     {
-        button.Background = selected ? Brush("SurfaceRaisedBrush") : Brushes.Transparent;
+        button.Background = selected ? Brush("SurfaceRaisedBrush") : System.Windows.Media.Brushes.Transparent;
         button.Foreground = selected ? Brush("TextBrush") : Brush("MutedTextBrush");
-        button.BorderBrush = selected ? Brush("BorderBrush") : Brushes.Transparent;
+        button.BorderBrush = selected ? Brush("BorderBrush") : System.Windows.Media.Brushes.Transparent;
     }
 
-    private Brush Brush(string key) => (Brush)FindResource(key);
+    private System.Windows.Media.Brush Brush(string key) => (System.Windows.Media.Brush)FindResource(key);
 
     private void Window_StateChanged(object? sender, EventArgs e)
     {
@@ -574,7 +578,7 @@ public partial class MainWindow : Window
 
     private void ExitApplication()
     {
-        if (_transfer is not null && MessageBox.Show(
+        if (_transfer is not null && System.Windows.MessageBox.Show(
             this,
             "A transfer is active. Exit and stop it?",
             "CD",

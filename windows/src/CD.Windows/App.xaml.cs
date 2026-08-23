@@ -1,3 +1,5 @@
+using System.Windows;
+
 namespace CD.Windows;
 
 public partial class App : System.Windows.Application
