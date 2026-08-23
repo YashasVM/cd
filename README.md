@@ -14,3 +14,19 @@ Production check:
 ```powershell
 npm run check
 ```
+
+## CD Android
+
+The Android app combines two transfer modes in one dark UI:
+
+- **Local** — nearby Android-to-Android file transfer without the internet.
+- **Cloud** — the production CD web flow with existing Clerk login, guest mode, username/email recipients, and share links.
+
+Build the debug APK:
+
+```powershell
+cd android
+.\gradlew.bat :app:assembleDebug
+```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Install CD on both devices for local transfers; received files are saved in `Downloads/CD`.
