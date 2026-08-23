@@ -3,6 +3,7 @@ androidGradlePlugin = "9.0.1"
 androidxCore = "1.18.0"
 androidxActivity = "1.13.0"
 androidxComposeBom = "2026.03.01"
+androidxLifecycle = "2.10.0"
 kotlin = "2.3.20"
 playServicesNearby = "19.4.0"
 
@@ -12,6 +13,8 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3"}
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui"}
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 play-services-nearby = { module = "com.google.android.gms:play-services-nearby", version.ref = "playServicesNearby" }
 
 [plugins]
