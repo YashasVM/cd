@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -78,7 +77,7 @@ private fun CdApp() {
     bottomBar = { ModeBar(mode, onModeChange = { mode = it }) },
   ) { padding ->
     Box(Modifier.fillMaxSize().padding(padding)) {
-      if (mode == TransferMode.LOCAL) Placeholder("Local transfer", "Nearby device discovery is being connected.")
+      if (mode == TransferMode.LOCAL) LocalTransferRoute()
       else Placeholder("Cloud transfer", "Clerk sign-in and internet sharing are being connected.")
     }
   }
@@ -115,7 +114,7 @@ private fun ModeBar(mode: TransferMode, onModeChange: (TransferMode) -> Unit) {
         modifier = Modifier.widthIn(min = 112.dp).height(48.dp),
         shape = RoundedCornerShape(999.dp),
         colors =
-          TextButtonDefaults.textButtonColors(
+          androidx.compose.material3.ButtonDefaults.textButtonColors(
             containerColor = if (selected) CdText else Color.Transparent,
             contentColor = if (selected) CdBackground else CdMuted,
           ),

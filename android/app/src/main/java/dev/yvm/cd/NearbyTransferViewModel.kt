@@ -213,6 +213,10 @@ class NearbyTransferViewModel(application: Application) : AndroidViewModel(appli
     restartSearch()
   }
 
+  fun refresh() {
+    if (active) restartSearch()
+  }
+
   fun stop() {
     active = false
     client.stopAdvertising()
