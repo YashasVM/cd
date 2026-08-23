@@ -2,12 +2,16 @@ package dev.yvm.cd
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.View
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -51,16 +55,25 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import java.io.OutputStream
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import org.json.JSONObject
 
 internal const val CD_WEB_URL = "https://cd.yvm.workers.dev/"
 internal const val CD_WEB_ORIGIN = "https://cd.yvm.workers.dev"
 private const val CD_WEB_HOST = "cd.yvm.workers.dev"
+private const val DOWNLOAD_BRIDGE = "CDNative"
 
 @Composable
 internal fun CloudTransferScreen(visible: Boolean, modifier: Modifier = Modifier) {
   val context = androidx.compose.ui.platform.LocalContext.current
   val activity = context as Activity
   val lifecycleOwner = LocalLifecycleOwner.current
+  val downloadSink = remember(activity) { CloudDownloadSink(activity) }
   var webView by remember { mutableStateOf<WebView?>(null) }
   var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
   var progress by remember { mutableIntStateOf(0) }
@@ -98,6 +111,7 @@ internal fun CloudTransferScreen(visible: Boolean, modifier: Modifier = Modifier
             loadError = false
             canGoBack = it.canGoBack()
           },
+          downloadSink = downloadSink,
         ).also { webView = it }
       },
       update = { it.visibility = if (visible) View.VISIBLE else View.INVISIBLE },
@@ -135,9 +149,15 @@ internal fun CloudTransferScreen(visible: Boolean, modifier: Modifier = Modifier
       lifecycleOwner.lifecycle.removeObserver(observer)
       fileCallback?.onReceiveValue(null)
       fileCallback = null
+      webView?.let {
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+          WebViewCompat.removeWebMessageListener(it, DOWNLOAD_BRIDGE)
+        }
+      }
       webView?.stopLoading()
       webView?.destroy()
       webView = null
+      downloadSink.close()
     }
   }
 }
@@ -149,6 +169,7 @@ private fun createCdWebView(
   onProgress: (Int) -> Unit,
   onError: () -> Unit,
   onLoaded: (WebView) -> Unit,
+  downloadSink: CloudDownloadSink,
 ) =
   WebView(activity).apply {
     if ((activity.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
@@ -171,6 +192,7 @@ private fun createCdWebView(
     val cookies = CookieManager.getInstance()
     cookies.setAcceptCookie(true)
     cookies.setAcceptThirdPartyCookies(this, true)
+    installDownloadBridge(this, downloadSink)
     webChromeClient =
       object : WebChromeClient() {
         override fun onProgressChanged(view: WebView?, newProgress: Int) = onProgress(newProgress)
@@ -189,6 +211,12 @@ private fun createCdWebView(
 
         override fun onPageFinished(view: WebView?, url: String?) {
           onProgress(100)
+          if (
+            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+              !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+          ) {
+            view?.evaluateJavascript(DOWNLOAD_HOOK, null)
+          }
           view?.let(onLoaded)
         }
 
@@ -217,6 +245,160 @@ private fun fileIntent(parameters: WebChromeClient.FileChooserParams): Intent {
     .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, parameters.mode == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE)
     .apply { if (types.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, types) }
 }
+
+private fun installDownloadBridge(webView: WebView, sink: CloudDownloadSink) {
+  if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+  WebViewCompat.addWebMessageListener(
+    webView,
+    DOWNLOAD_BRIDGE,
+    setOf(CD_WEB_ORIGIN),
+  ) { _, message, sourceOrigin, isMainFrame, _ ->
+    if (isMainFrame && sourceOrigin.toString() == CD_WEB_ORIGIN) {
+      message.data?.let(sink::post)
+    }
+  }
+  if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+    WebViewCompat.addDocumentStartJavaScript(webView, DOWNLOAD_HOOK, setOf(CD_WEB_ORIGIN))
+  }
+}
+
+private data class CloudDownload(val uri: Uri, val name: String, val stream: OutputStream)
+
+private class CloudDownloadSink(private val activity: Activity) {
+  private val downloads = ConcurrentHashMap<String, CloudDownload>()
+  private val worker = Executors.newSingleThreadExecutor()
+  @Volatile private var closed = false
+
+  fun post(message: String) {
+    if (closed) return
+    try {
+      worker.execute { handle(message) }
+    } catch (_: RejectedExecutionException) {
+      // Activity is already closing.
+    }
+  }
+
+  fun close() {
+    if (closed) return
+    closed = true
+    worker.execute { downloads.keys.toList().forEach(::abort) }
+    worker.shutdown()
+  }
+
+  private fun handle(message: String) {
+    runCatching {
+      val json = JSONObject(message)
+      val id = json.optString("id")
+      if (!id.matches(Regex("[A-Za-z0-9._-]{1,80}"))) return
+      when (json.optString("type")) {
+        "begin" -> begin(id, json.optString("name"), json.optString("mime"))
+        "chunk" -> append(id, json.getString("data"))
+        "finish" -> finish(id)
+        "abort" -> abort(id)
+        "error" -> notify("The received file couldn't be saved.")
+      }
+    }.onFailure {
+      notify("The received file couldn't be saved.")
+    }
+  }
+
+  private fun begin(id: String, rawName: String, rawMime: String) {
+    abort(id)
+    val name = safeDownloadName(rawName)
+    val values =
+      ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+        put(MediaStore.MediaColumns.MIME_TYPE, rawMime.ifBlank { "application/octet-stream" })
+        put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/CD")
+        put(MediaStore.MediaColumns.IS_PENDING, 1)
+      }
+    var uri: Uri? = null
+    try {
+      uri = activity.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        ?: error("Could not create download")
+      val stream = activity.contentResolver.openOutputStream(uri) ?: error("Could not open download")
+      downloads[id] = CloudDownload(uri, name, stream)
+    } catch (_: Exception) {
+      uri?.let { activity.contentResolver.delete(it, null, null) }
+      notify("Couldn't save the received file.")
+    }
+  }
+
+  private fun append(id: String, encoded: String) {
+    val download = downloads[id] ?: return
+    try {
+      download.stream.write(Base64.decode(encoded, Base64.DEFAULT))
+    } catch (_: Exception) {
+      abort(id)
+      notify("The received file couldn't be saved.")
+    }
+  }
+
+  private fun finish(id: String) {
+    val download = downloads.remove(id) ?: return
+    try {
+      download.stream.close()
+      activity.contentResolver.update(
+        download.uri,
+        ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+        null,
+        null,
+      )
+      notify("${download.name} saved to Downloads/CD")
+    } catch (_: Exception) {
+      activity.contentResolver.delete(download.uri, null, null)
+      notify("The received file couldn't be saved.")
+    }
+  }
+
+  private fun abort(id: String) {
+    val download = downloads.remove(id) ?: return
+    runCatching { download.stream.close() }
+    runCatching { activity.contentResolver.delete(download.uri, null, null) }
+  }
+
+  private fun notify(message: String) = activity.runOnUiThread {
+    if (!activity.isDestroyed) Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+  }
+}
+
+private fun safeDownloadName(name: String) =
+  name.substringAfterLast('/').substringAfterLast('\\').filterNot(Char::isISOControl).take(180).ifBlank { "download" }
+
+private const val DOWNLOAD_HOOK =
+  """
+  (() => {
+    if (window.__cdAndroidDownloadHook || !window.CDNative) return;
+    window.__cdAndroidDownloadHook = true;
+    const originalClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      const anchor = this;
+      if (!anchor.href.startsWith('blob:') || !anchor.download) return originalClick.call(anchor);
+      (async () => {
+        const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random();
+        try {
+          const blob = await fetch(anchor.href).then(response => response.blob());
+          CDNative.postMessage(JSON.stringify({ type: 'begin', id, name: anchor.download, mime: blob.type }));
+          const reader = blob.stream().getReader();
+          while (true) {
+            const result = await reader.read();
+            if (result.done) break;
+            for (let offset = 0; offset < result.value.length; offset += 48 * 1024) {
+              const chunk = result.value.subarray(offset, Math.min(offset + 48 * 1024, result.value.length));
+              let binary = '';
+              for (let index = 0; index < chunk.length; index += 1) binary += String.fromCharCode(chunk[index]);
+              CDNative.postMessage(JSON.stringify({ type: 'chunk', id, data: btoa(binary) }));
+            }
+          }
+          CDNative.postMessage(JSON.stringify({ type: 'finish', id }));
+        } catch (_) {
+          CDNative.postMessage(JSON.stringify({ type: 'abort', id }));
+          CDNative.postMessage(JSON.stringify({ type: 'error', id }));
+        }
+      })();
+    };
+  })();
+  """
 
 private fun openExternal(activity: Activity, uri: Uri): Boolean {
   if (uri.scheme !in setOf("https", "http", "mailto", "tel")) return true
