@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "check": "vite build",
-    "test": "node --test test/transfer-utils.test.mjs",
+    "test": "node --test test/transfer-utils.test.mjs test/peer-transfer.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

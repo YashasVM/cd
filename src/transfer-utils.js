@@ -1,9 +1,11 @@
 const TRANSFER_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{4,126}[A-Za-z0-9]$/;
 
+export const isTransferId = value => TRANSFER_ID.test(value);
+
 export const appendFiles = (current, incoming) => [...current, ...Array.from(incoming || [])];
 
 export function makeGuestLink(origin, peerId) {
-  if (!TRANSFER_ID.test(peerId)) throw new Error('Invalid transfer code.');
+  if (!isTransferId(peerId)) throw new Error('Invalid transfer code.');
   const url = new URL('/', origin);
   url.searchParams.set('guest', peerId);
   return url.href;
@@ -15,7 +17,7 @@ export function parseReceiveTarget(input, origin) {
 
   const base = new URL(origin);
   let url;
-  if (TRANSFER_ID.test(value)) {
+  if (isTransferId(value)) {
     url = new URL(makeGuestLink(base.origin, value));
   } else {
     try {
@@ -37,7 +39,7 @@ export function parseReceiveTarget(input, origin) {
   }
 
   const transferId = guest || emailTransfer;
-  if (!TRANSFER_ID.test(transferId) || (guest && url.hash)) {
+  if (!isTransferId(transferId) || (guest && url.hash)) {
     return { error: 'This CD link is missing a valid transfer code.' };
   }
 

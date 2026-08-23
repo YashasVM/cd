@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ClerkProvider, SignIn, UserButton, useAuth } from '@clerk/react';
-import { Peer } from 'peerjs';
 import { appendFiles, parseReceiveTarget } from './transfer-utils.js';
+import { errorText, fileSummary, openPeer, receiveFiles, sendFiles, validateFiles } from './peer-transfer.js';
 import './styles.css';
 
 const api = (import.meta.env.VITE_CONTROL_PLANE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8788' : '')).replace(/\/$/, '');
@@ -78,9 +78,7 @@ const clerkAppearance = {
   },
 };
 
-const fileSummary = files => files.map(({ name, size, type }) => ({ name, size, ...(type ? { mime: type } : {}) }));
 const size = bytes => bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
-const errorText = error => error?.type || error?.message || 'unknown error';
 function createIntentId() {
   const cryptoApi = globalThis.crypto;
   if (typeof cryptoApi?.randomUUID === 'function') return cryptoApi.randomUUID();
@@ -105,71 +103,6 @@ async function authenticatedFetch(path, getToken, options = {}) {
     throw new Error(body.message || `${response.status} ${response.statusText}`);
   }
   return response;
-}
-
-function openPeer() {
-  return new Promise((resolve, reject) => {
-    const peer = new Peer({ debug: 1 });
-    const timer = setTimeout(() => { peer.destroy(); reject(new Error('signaling timed out')); }, 15000);
-    peer.once('open', () => { clearTimeout(timer); resolve(peer); });
-    peer.once('error', error => { clearTimeout(timer); reject(error); });
-  });
-}
-
-async function sendFiles(connection, files, update) {
-  connection.send({ type: 'manifest', files: fileSummary(files) });
-  const total = files.reduce((sum, file) => sum + file.size, 0);
-  let sent = 0;
-  for (const [index, file] of files.entries()) {
-    connection.send({ type: 'file-start', index });
-    for (let offset = 0; offset < file.size; offset += 64 * 1024) {
-      // ponytail: fixed backpressure is enough until measured networks need adaptive chunking.
-      while (connection.dataChannel?.bufferedAmount > 8 * 1024 * 1024) await new Promise(resolve => setTimeout(resolve, 40));
-      const chunk = await file.slice(offset, offset + 64 * 1024).arrayBuffer();
-      connection.send(chunk);
-      sent += chunk.byteLength;
-      update(`Sending ${Math.round(sent / total * 100)}%`);
-    }
-    connection.send({ type: 'file-complete' });
-  }
-  connection.send({ type: 'transfer-complete' });
-  update('Sent successfully.');
-}
-
-function receiveFiles(peerId, handlers = {}) {
-  const emitStatus = text => handlers.status?.(text);
-  const peer = new Peer({ debug: 1 });
-  let manifest = [];
-  let current;
-  let received = 0;
-  const timeout = setTimeout(() => { peer.destroy(); emitStatus('Sender unavailable. Ask them to keep CD open.'); }, 20000);
-  peer.on('open', () => {
-    const connection = peer.connect(peerId, { reliable: true });
-    connection.on('open', () => { clearTimeout(timeout); emitStatus('Receiving files…'); });
-    connection.on('data', async data => {
-      const message = data && typeof data === 'object' && !(data instanceof ArrayBuffer) && !(data instanceof Blob) && 'type' in data;
-      if (message) {
-        if (data.type === 'manifest') { manifest = data.files; handlers.manifest?.(manifest); }
-        if (data.type === 'file-start') current = { file: manifest[data.index], chunks: [] };
-        if (data.type === 'file-complete' && current) {
-          // ponytail: Blob download is universal; stream to disk when browser support is broad enough.
-          const url = URL.createObjectURL(new Blob(current.chunks, { type: current.file.mime }));
-          Object.assign(document.createElement('a'), { href: url, download: current.file.name }).click();
-          setTimeout(() => URL.revokeObjectURL(url), 60000);
-          current = undefined;
-        }
-        if (data.type === 'transfer-complete') { emitStatus('Received successfully.'); peer.destroy(); }
-      } else if (current) {
-        const chunk = data instanceof Blob ? await data.arrayBuffer() : data;
-        received += chunk.byteLength;
-        current.chunks.push(chunk);
-        handlers.progress?.(received);
-      }
-    });
-    connection.on('error', error => emitStatus(`Transfer failed: ${errorText(error)}`));
-  });
-  peer.on('error', error => { clearTimeout(timeout); emitStatus(`Connection failed: ${errorText(error)}`); });
-  return peer;
 }
 
 function Header({ account, onSignIn, onGuest }) {
@@ -201,24 +134,44 @@ function FileList({ files, setFiles }) {
 }
 
 function TransferReceiver({ title = 'Incoming transfer', join }) {
+  const controllerRef = useRef(null);
+  const urlsRef = useRef([]);
   const [otp, setOtp] = useState('');
-  const [status, setStatus] = useState('');
+  const [transfer, setTransfer] = useState({ phase: 'idle', progress: 0, message: '' });
   const [manifest, setManifest] = useState([]);
   const [received, setReceived] = useState(0);
-  const [active, setActive] = useState(false);
-  const done = /successfully/i.test(status);
-  const failed = /failed|unavailable|invalid|expired/i.test(status);
+  const [downloads, setDownloads] = useState([]);
+  const done = transfer.phase === 'completed';
+  const failed = transfer.phase === 'failed' || transfer.phase === 'cancelled';
+  const active = ['connecting', 'waiting', 'transferring'].includes(transfer.phase);
   const total = manifest.reduce((sum, file) => sum + file.size, 0);
-  const percent = total ? Math.min(100, Math.round(received / total * 100)) : 0;
+  const percent = transfer.progress || (total ? Math.min(100, Math.round(received / total * 100)) : 0);
+
+  useEffect(() => () => {
+    controllerRef.current?.destroy();
+    urlsRef.current.forEach(URL.revokeObjectURL);
+  }, []);
 
   const accept = async () => {
-    setActive(true);
-    setStatus('Connecting…');
+    controllerRef.current?.destroy();
+    urlsRef.current.forEach(URL.revokeObjectURL);
+    urlsRef.current = [];
+    setDownloads([]);
+    setManifest([]);
+    setReceived(0);
+    setTransfer({ phase: 'connecting', progress: 0, message: 'Connecting to sender…' });
     try {
-      receiveFiles(await join(otp), { status: setStatus, manifest: setManifest, progress: setReceived });
+      controllerRef.current = receiveFiles(await join(otp), {
+        state: setTransfer,
+        manifest: setManifest,
+        progress: setReceived,
+        file: download => {
+          urlsRef.current.push(download.url);
+          setDownloads(current => [...current.filter(item => item.index !== download.index), download]);
+        },
+      });
     } catch (error) {
-      setActive(false);
-      setStatus(errorText(error));
+      setTransfer({ phase: 'failed', progress: 0, message: errorText(error) });
     }
   };
   return (
@@ -229,7 +182,7 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
           <span className="card-tag">{done ? 'Transfer complete' : 'Incoming'}</span>
           <h1>{title}</h1>
           <p>{done
-            ? 'Everything landed safely in your downloads.'
+            ? 'All file data arrived. Save each file below before closing this page.'
             : 'Files will come straight from the sender over an encrypted, point-to-point line.'}</p>
           {manifest.length ? (
             <>
@@ -239,7 +192,9 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
                     <span className="file-index">{String(index + 1).padStart(3, '0')}</span>
                     <span className="file-icon"><Icon name={done ? 'check' : 'file'} size={17}/></span>
                     <span className="file-name">{file.name}</span>
-                    <span className="file-size">{size(file.size)}</span>
+                    {downloads.find(item => item.index === index)
+                      ? <a className="download-link" href={downloads.find(item => item.index === index).url} download={file.name}>Save</a>
+                      : <span className="file-size">{size(file.size)}</span>}
                   </div>
                 ))}
               </div>
@@ -248,11 +203,12 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
           ) : emailTransferId ? (
             <input className="text-input otp-input" inputMode="numeric" maxLength="6" value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, ''))} placeholder="Code (if asked)" aria-label="One-time code"/>
           ) : null}
-          {!done ? (
-            <button className="primary-button" disabled={active && !failed} onClick={accept}>Accept files<Icon name="arrow" size={16}/></button>
-          ) : null}
-          <p className="status" role="status" data-error={failed}>
-            {active && !done && manifest.length ? `RECEIVING · ${percent}%` : status}
+          {!done ? active
+            ? <button className="secondary-button receiver-cancel" onClick={() => controllerRef.current?.cancel()}>Cancel transfer</button>
+            : <button className="primary-button" onClick={accept}>{failed ? 'Try again' : 'Accept files'}<Icon name="arrow" size={16}/></button>
+          : null}
+          <p className="status" role="status" data-error={failed} data-phase={transfer.phase}>
+            {active && manifest.length ? `RECEIVING · ${percent}%` : transfer.message}
           </p>
           <div className="auth-facts receiver-facts" aria-label="How CD handles your files">
             <span>Peer to peer</span>
@@ -316,6 +272,7 @@ function GuestApp({ onBack }) {
 
   const start = async () => {
     if (!files.length) return;
+    try { validateFiles(files); } catch (error) { setStatus(errorText(error)); return; }
     setStatus('Creating private link…');
     try {
       peerRef.current?.destroy();
@@ -485,6 +442,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
 
   const send = async () => {
     if (!recipient || !files.length) return;
+    try { validateFiles(files); } catch (error) { setStatus(errorText(error)); return; }
     const selected = [...files];
     setShareUrl('');
     setStatus('Connecting to transfer service…');
