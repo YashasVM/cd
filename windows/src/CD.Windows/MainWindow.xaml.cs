@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly CdxRunner _runner = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly ClerkAuthService _auth;
+    private CancellationTokenSource? _signIn;
     private CancellationTokenSource? _transfer;
     private Forms.NotifyIcon? _tray;
     private bool _sendPage = true;
@@ -338,12 +339,20 @@ public partial class MainWindow : Window
 
     private async void ClerkSignIn_Click(object sender, RoutedEventArgs e)
     {
+        if (_signIn is not null)
+        {
+            return;
+        }
+
+        using var signIn = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _signIn = signIn;
         ClerkSignInButton.IsEnabled = false;
-        GuestButton.IsEnabled = false;
         LoginStatusText.Text = "Finish signing in with Clerk in your browser…";
         try
         {
-            ShowUser(await _auth.SignInAsync(_lifetime.Token));
+            var user = await _auth.SignInAsync(signIn.Token);
+            signIn.Token.ThrowIfCancellationRequested();
+            ShowUser(user);
         }
         catch (OperationCanceledException)
         {
@@ -355,13 +364,14 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _signIn = null;
             ClerkSignInButton.IsEnabled = _auth.IsConfigured;
-            GuestButton.IsEnabled = true;
         }
     }
 
     private void Guest_Click(object sender, RoutedEventArgs e)
     {
+        _signIn?.Cancel();
         _guest = true;
         AccountNameText.Text = "Guest";
         AccountMetaText.Text = "Local session";
