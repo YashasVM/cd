@@ -56,6 +56,10 @@ The default encrypted storage origin is `https://getcroc.com`. Override it
 with `StoreUrl` in `appsettings.json` or `CD_STORE_URL` when using a private
 `cdx` storage service.
 
+For packaged deployments, environment variables are preferred so the same
+binary can move between tenants or storage origins without editing files:
+`CD_CLERK_ISSUER`, `CD_CLERK_CLIENT_ID`, `CD_STORE_URL`, and `CD_CDX_PATH`.
+
 ## Background behavior
 
 Closing or minimizing the window hides it to the notification area. Right-click
