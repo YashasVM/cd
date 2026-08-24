@@ -43,6 +43,9 @@ The self-contained app is written to `windows\artifacts\win-x64\CD.exe` with
 its `cdx.exe` transfer engine beside it. Use `-SelfContained $false` for a
 smaller framework-dependent build.
 
+Launch `CD.exe` from that folder. A normal window appears on first launch;
+closing or minimizing it keeps CD available from the notification area.
+
 The default encrypted storage origin is `https://getcroc.com`. Override it
 with `StoreUrl` in `appsettings.json` or `CD_STORE_URL` when using a private
 `cdx` storage service.
