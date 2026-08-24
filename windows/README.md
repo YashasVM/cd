@@ -66,3 +66,9 @@ Closing or minimizing the window hides it to the notification area. Right-click
 the tray icon and choose **Exit CD** to stop it. Idle CD has no network loop,
 polling timer, animation loop, or transfer subprocess; network and disk work
 begin only after the user starts a transfer.
+
+## Verification
+
+The native shell is checked with `dotnet build`. The transfer engine’s
+cryptography, encrypted storage, store client, and transport packages are
+checked with `CGO_ENABLED=0 go test` before packaging.
