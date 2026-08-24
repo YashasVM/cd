@@ -386,9 +386,10 @@ private fun MonoLabel(text: String) {
 }
 
 private fun nearbyPermissions(): Array<String> =
-  buildList {
-    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) add(Manifest.permission.ACCESS_FINE_LOCATION)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    buildList {
+      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) add(Manifest.permission.ACCESS_FINE_LOCATION)
+      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) add(Manifest.permission.READ_EXTERNAL_STORAGE)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       add(Manifest.permission.BLUETOOTH_SCAN)
       add(Manifest.permission.BLUETOOTH_ADVERTISE)
       add(Manifest.permission.BLUETOOTH_CONNECT)
