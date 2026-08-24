@@ -31,6 +31,12 @@ Then set `ClerkIssuer` and `ClerkClientId` in
 
 Guest mode remains available for transfers when Clerk is not configured.
 
+## Transfer modes
+
+Nearby mode is code-based: the sender shows a short code and the receiver
+enters it on the same network. Cloud mode returns one encrypted capability
+link; the receiver can paste that link or its token and choose a local folder.
+
 ## Build
 
 Requirements: Windows 10/11, .NET 8 SDK, and Go 1.27 or newer.
