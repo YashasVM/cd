@@ -1,0 +1,35 @@
+name: cdx CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: cdx
+
+jobs:
+  security-and-unit-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '^1.27.0'
+      - run: go test ./...
+      - run: go test -race ./src/receivefs ./src/redact ./src/storecrypto ./src/storeclient
+      - run: go test ./src/utils -run 'Test(UnzipDirectory|RemoveMarkedFiles|ValidFileName)'
+      - run: go test ./src/tcp -run 'Test(AdmissionLimiter|RoomDenials|RelayAdmissionLimits|CanonicalSource|WithAdmissionLimits)'
+      - run: go test ./src/croc -run 'Test(HostilePortable|MarkedArchive|UnmarkedArchive|LocalIPExchange|FailedPakeConfirmation|ClientErrorsRedact)'
+
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '^1.27.0'
+      - run: go test ./src/receivefs -run '^$' -fuzz '^FuzzNormalize$' -fuzztime 10s
+      - run: go test ./src/receivefs -run '^$' -fuzz '^FuzzValidateEntries$' -fuzztime 10s
+      - run: go test ./src/utils -run '^$' -fuzz '^FuzzZipPreflight$' -fuzztime 10s
