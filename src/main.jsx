@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ClerkProvider, SignIn, UserButton, useAuth } from '@clerk/react';
-import { Peer } from 'peerjs';
+import { appendFiles, parseReceiveTarget } from './transfer-utils.js';
+import { errorText, fileSummary, openPeer, receiveFiles, sendFiles, validateFiles } from './peer-transfer.js';
 import './styles.css';
 
 const api = (import.meta.env.VITE_CONTROL_PLANE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8788' : '')).replace(/\/$/, '');
-const params = new URLSearchParams(location.search);
-const emailTransferId = params.get('emailTransfer');
-const guestPeerId = params.get('guest');
+const initialTarget = parseReceiveTarget(location.href, location.origin).target;
+const emailTransferId = initialTarget?.kind === 'email' ? initialTarget.transferId : '';
+const guestPeerId = initialTarget?.kind === 'guest' ? initialTarget.peerId : '';
 
 const paths = {
   search: <><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></>,
@@ -77,9 +78,7 @@ const clerkAppearance = {
   },
 };
 
-const fileSummary = files => files.map(({ name, size, type }) => ({ name, size, ...(type ? { mime: type } : {}) }));
 const size = bytes => bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
-const errorText = error => error?.type || error?.message || 'unknown error';
 function createIntentId() {
   const cryptoApi = globalThis.crypto;
   if (typeof cryptoApi?.randomUUID === 'function') return cryptoApi.randomUUID();
@@ -106,71 +105,6 @@ async function authenticatedFetch(path, getToken, options = {}) {
   return response;
 }
 
-function openPeer() {
-  return new Promise((resolve, reject) => {
-    const peer = new Peer({ debug: 1 });
-    const timer = setTimeout(() => { peer.destroy(); reject(new Error('signaling timed out')); }, 15000);
-    peer.once('open', () => { clearTimeout(timer); resolve(peer); });
-    peer.once('error', error => { clearTimeout(timer); reject(error); });
-  });
-}
-
-async function sendFiles(connection, files, update) {
-  connection.send({ type: 'manifest', files: fileSummary(files) });
-  const total = files.reduce((sum, file) => sum + file.size, 0);
-  let sent = 0;
-  for (const [index, file] of files.entries()) {
-    connection.send({ type: 'file-start', index });
-    for (let offset = 0; offset < file.size; offset += 64 * 1024) {
-      // ponytail: fixed backpressure is enough until measured networks need adaptive chunking.
-      while (connection.dataChannel?.bufferedAmount > 8 * 1024 * 1024) await new Promise(resolve => setTimeout(resolve, 40));
-      const chunk = await file.slice(offset, offset + 64 * 1024).arrayBuffer();
-      connection.send(chunk);
-      sent += chunk.byteLength;
-      update(`Sending ${Math.round(sent / total * 100)}%`);
-    }
-    connection.send({ type: 'file-complete' });
-  }
-  connection.send({ type: 'transfer-complete' });
-  update('Sent successfully.');
-}
-
-function receiveFiles(peerId, handlers = {}) {
-  const emitStatus = text => handlers.status?.(text);
-  const peer = new Peer({ debug: 1 });
-  let manifest = [];
-  let current;
-  let received = 0;
-  const timeout = setTimeout(() => { peer.destroy(); emitStatus('Sender unavailable. Ask them to keep CD open.'); }, 20000);
-  peer.on('open', () => {
-    const connection = peer.connect(peerId, { reliable: true });
-    connection.on('open', () => { clearTimeout(timeout); emitStatus('Receiving files…'); });
-    connection.on('data', async data => {
-      const message = data && typeof data === 'object' && !(data instanceof ArrayBuffer) && !(data instanceof Blob) && 'type' in data;
-      if (message) {
-        if (data.type === 'manifest') { manifest = data.files; handlers.manifest?.(manifest); }
-        if (data.type === 'file-start') current = { file: manifest[data.index], chunks: [] };
-        if (data.type === 'file-complete' && current) {
-          // ponytail: Blob download is universal; stream to disk when browser support is broad enough.
-          const url = URL.createObjectURL(new Blob(current.chunks, { type: current.file.mime }));
-          Object.assign(document.createElement('a'), { href: url, download: current.file.name }).click();
-          setTimeout(() => URL.revokeObjectURL(url), 60000);
-          current = undefined;
-        }
-        if (data.type === 'transfer-complete') { emitStatus('Received successfully.'); peer.destroy(); }
-      } else if (current) {
-        const chunk = data instanceof Blob ? await data.arrayBuffer() : data;
-        received += chunk.byteLength;
-        current.chunks.push(chunk);
-        handlers.progress?.(received);
-      }
-    });
-    connection.on('error', error => emitStatus(`Transfer failed: ${errorText(error)}`));
-  });
-  peer.on('error', error => { clearTimeout(timeout); emitStatus(`Connection failed: ${errorText(error)}`); });
-  return peer;
-}
-
 function Header({ account, onSignIn, onGuest }) {
   return (
     <header className="header">
@@ -187,7 +121,7 @@ function FileList({ files, setFiles }) {
   return (
     <div className="file-list">
       {files.map((file, index) => (
-        <div className="file-row" key={`${file.name}-${file.size}-${file.lastModified}`}>
+        <div className="file-row" key={`${file.name}-${file.size}-${file.lastModified}-${index}`}>
           <span className="file-index">{String(index + 1).padStart(3, '0')}</span>
           <span className="file-icon"><Icon name="file" size={17}/></span>
           <span className="file-name">{file.name}</span>
@@ -200,24 +134,44 @@ function FileList({ files, setFiles }) {
 }
 
 function TransferReceiver({ title = 'Incoming transfer', join }) {
+  const controllerRef = useRef(null);
+  const urlsRef = useRef([]);
   const [otp, setOtp] = useState('');
-  const [status, setStatus] = useState('');
+  const [transfer, setTransfer] = useState({ phase: 'idle', progress: 0, message: '' });
   const [manifest, setManifest] = useState([]);
   const [received, setReceived] = useState(0);
-  const [active, setActive] = useState(false);
-  const done = /successfully/i.test(status);
-  const failed = /failed|unavailable|invalid|expired/i.test(status);
+  const [downloads, setDownloads] = useState([]);
+  const done = transfer.phase === 'completed';
+  const failed = transfer.phase === 'failed' || transfer.phase === 'cancelled';
+  const active = ['connecting', 'waiting', 'transferring'].includes(transfer.phase);
   const total = manifest.reduce((sum, file) => sum + file.size, 0);
-  const percent = total ? Math.min(100, Math.round(received / total * 100)) : 0;
+  const percent = transfer.progress || (total ? Math.min(100, Math.round(received / total * 100)) : 0);
+
+  useEffect(() => () => {
+    controllerRef.current?.destroy();
+    urlsRef.current.forEach(URL.revokeObjectURL);
+  }, []);
 
   const accept = async () => {
-    setActive(true);
-    setStatus('Connecting…');
+    controllerRef.current?.destroy();
+    urlsRef.current.forEach(URL.revokeObjectURL);
+    urlsRef.current = [];
+    setDownloads([]);
+    setManifest([]);
+    setReceived(0);
+    setTransfer({ phase: 'connecting', progress: 0, message: 'Connecting to sender…' });
     try {
-      receiveFiles(await join(otp), { status: setStatus, manifest: setManifest, progress: setReceived });
+      controllerRef.current = receiveFiles(await join(otp), {
+        state: setTransfer,
+        manifest: setManifest,
+        progress: setReceived,
+        file: download => {
+          urlsRef.current.push(download.url);
+          setDownloads(current => [...current.filter(item => item.index !== download.index), download]);
+        },
+      });
     } catch (error) {
-      setActive(false);
-      setStatus(errorText(error));
+      setTransfer({ phase: 'failed', progress: 0, message: errorText(error) });
     }
   };
   return (
@@ -228,7 +182,7 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
           <span className="card-tag">{done ? 'Transfer complete' : 'Incoming'}</span>
           <h1>{title}</h1>
           <p>{done
-            ? 'Everything landed safely in your downloads.'
+            ? 'All file data arrived. Save each file below before closing this page.'
             : 'Files will come straight from the sender over an encrypted, point-to-point line.'}</p>
           {manifest.length ? (
             <>
@@ -238,7 +192,9 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
                     <span className="file-index">{String(index + 1).padStart(3, '0')}</span>
                     <span className="file-icon"><Icon name={done ? 'check' : 'file'} size={17}/></span>
                     <span className="file-name">{file.name}</span>
-                    <span className="file-size">{size(file.size)}</span>
+                    {downloads.find(item => item.index === index)
+                      ? <a className="download-link" href={downloads.find(item => item.index === index).url} download={file.name}>Save</a>
+                      : <span className="file-size">{size(file.size)}</span>}
                   </div>
                 ))}
               </div>
@@ -247,11 +203,12 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
           ) : emailTransferId ? (
             <input className="text-input otp-input" inputMode="numeric" maxLength="6" value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, ''))} placeholder="Code (if asked)" aria-label="One-time code"/>
           ) : null}
-          {!done ? (
-            <button className="primary-button" disabled={active && !failed} onClick={accept}>Accept files<Icon name="arrow" size={16}/></button>
-          ) : null}
-          <p className="status" role="status" data-error={failed}>
-            {active && !done && manifest.length ? `RECEIVING · ${percent}%` : status}
+          {!done ? active
+            ? <button className="secondary-button receiver-cancel" onClick={() => controllerRef.current?.cancel()}>Cancel transfer</button>
+            : <button className="primary-button" onClick={accept}>{failed ? 'Try again' : 'Accept files'}<Icon name="arrow" size={16}/></button>
+          : null}
+          <p className="status" role="status" data-error={failed} data-phase={transfer.phase}>
+            {active && manifest.length ? `RECEIVING · ${percent}%` : transfer.message}
           </p>
           <div className="auth-facts receiver-facts" aria-label="How CD handles your files">
             <span>Peer to peer</span>
@@ -284,6 +241,7 @@ function GuestApp({ onBack }) {
   const [files, setFiles] = useState([]);
   const [link, setLink] = useState('');
   const [invite, setInvite] = useState('');
+  const [inviteError, setInviteError] = useState('');
   const [status, setStatus] = useState('');
   const [dragging, setDragging] = useState(false);
   const [guestToken, setGuestToken] = useState(() => {
@@ -314,6 +272,7 @@ function GuestApp({ onBack }) {
 
   const start = async () => {
     if (!files.length) return;
+    try { validateFiles(files); } catch (error) { setStatus(errorText(error)); return; }
     setStatus('Creating private link…');
     try {
       peerRef.current?.destroy();
@@ -329,15 +288,17 @@ function GuestApp({ onBack }) {
 
   const receive = event => {
     event.preventDefault();
-    const value = invite.trim();
-    try { location.assign(new URL(value).href); } catch { location.assign(`/?guest=${encodeURIComponent(value)}`); }
+    const result = parseReceiveTarget(invite, location.origin);
+    if (result.error) return setInviteError(result.error);
+    setInviteError('');
+    location.assign(result.target.href);
   };
 
   const pickFiles = () => picker.current?.click();
   const takeDropped = event => {
     event.preventDefault();
     setDragging(false);
-    if (event.dataTransfer.files.length) setFiles([...event.dataTransfer.files]);
+    if (event.dataTransfer.files.length) setFiles(current => appendFiles(current, event.dataTransfer.files));
   };
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -347,7 +308,7 @@ function GuestApp({ onBack }) {
       <main className="page">
         <div className="page-head">
           <h1>Guest transfer</h1>
-          <p>The full CD send surface, no account attached. Sessions expire after 24 hours.</p>
+          <p>No account needed. Private links stay available only while this browser tab remains open.</p>
         </div>
         <div className="mode-switch" role="tablist">
           <button role="tab" aria-selected={mode === 'direct'} className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')}>Direct</button>
@@ -366,7 +327,7 @@ function GuestApp({ onBack }) {
               onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }}
               onDrop={takeDropped}
             >
-              <input ref={picker} hidden type="file" multiple onChange={event => setFiles([...event.target.files])}/>
+              <input ref={picker} hidden type="file" multiple onChange={event => { setFiles(current => appendFiles(current, event.target.files)); event.target.value = ''; }}/>
               <div className="composer-files">
                 <div className="section-line">
                   <span className="step-tag">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'} · ${size(totalSize)}` : 'Files'}</span>
@@ -387,6 +348,7 @@ function GuestApp({ onBack }) {
             <label className="step-tag" htmlFor="invite">Invitation link or transfer code</label>
             <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste invitation"/>
             <button className="primary-button" type="submit">Receive files<Icon name="arrow" size={16}/></button>
+            {inviteError ? <p className="status" role="alert" data-error="true">{inviteError}</p> : null}
           </form>
         )}
         <p className="guest-backline"><button className="guest-link" onClick={onBack}>Back to sign in</button></p>
@@ -480,6 +442,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
 
   const send = async () => {
     if (!recipient || !files.length) return;
+    try { validateFiles(files); } catch (error) { setStatus(errorText(error)); return; }
     const selected = [...files];
     setShareUrl('');
     setStatus('Connecting to transfer service…');
@@ -514,7 +477,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
   const takeDropped = event => {
     event.preventDefault();
     setDragging(false);
-    if (recipient && event.dataTransfer.files.length) setFiles([...event.dataTransfer.files]);
+    if (recipient && event.dataTransfer.files.length) setFiles(current => appendFiles(current, event.dataTransfer.files));
   };
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
 
@@ -526,7 +489,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
           onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false); }}
           onDrop={takeDropped}
         >
-          <input ref={picker} hidden type="file" multiple onChange={event => setFiles([...event.target.files])}/>
+          <input ref={picker} hidden type="file" multiple onChange={event => { setFiles(current => appendFiles(current, event.target.files)); event.target.value = ''; }}/>
           <div className="composer-to">
             <span className="composer-label">To</span>
             {recipient ? (
@@ -534,7 +497,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
                 <span className="avatar">{recipient.label[recipient.label.startsWith('@') ? 1 : 0].toUpperCase()}</span>
                 <strong>{recipient.label}</strong>
                 <small>{recipient.type === 'email' ? 'EMAIL' : 'CD USER'}</small>
-                <button className="icon-button" aria-label="Change recipient" onClick={() => { setRecipient(null); setFiles([]); }}><Icon name="close" size={16}/></button>
+                <button className="icon-button" aria-label="Change recipient" onClick={() => setRecipient(null)}><Icon name="close" size={16}/></button>
               </span>
             ) : (
               <form className="composer-find" onSubmit={find}>
@@ -610,10 +573,13 @@ function ReceiveOfferRow({ offer, onAnswer }) {
 
 function ReceivePage({ offers, onAnswer }) {
   const [invite, setInvite] = useState('');
+  const [inviteError, setInviteError] = useState('');
   const open = event => {
     event.preventDefault();
-    const value = invite.trim();
-    try { location.assign(new URL(value).href); } catch { location.assign(`/?guest=${encodeURIComponent(value)}`); }
+    const result = parseReceiveTarget(invite, location.origin);
+    if (result.error) return setInviteError(result.error);
+    setInviteError('');
+    location.assign(result.target.href);
   };
   return (
     <>
@@ -635,6 +601,7 @@ function ReceivePage({ offers, onAnswer }) {
         <label className="step-tag" htmlFor="invite">Invitation link or transfer code</label>
         <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste invitation"/>
         <button className="primary-button" type="submit">Receive files<Icon name="arrow" size={16}/></button>
+        {inviteError ? <p className="status" role="alert" data-error="true">{inviteError}</p> : null}
       </form>
     </>
   );
@@ -681,8 +648,8 @@ function AuthScreen({ clerk, onGuest, loading = false }) {
               <p className="auth-loading">{loading ? 'SIGN-IN OPTIONS LOADING' : 'SIGN-IN IS UNAVAILABLE RIGHT NOW'}</p>
             )}
             <div className="guest-cta">
-              <button className="secondary-button" onClick={onGuest}><Icon name="arrow" size={16}/>Use guest mode</button>
-              <p className="guest-note">NO ACCOUNT · FULL SEND FEATURES · EXPIRES IN 24H</p>
+              <button className="secondary-button" onClick={onGuest}><Icon name="arrow" size={16}/>Continue as guest</button>
+              <p className="guest-note">NO ACCOUNT · LIVE LINKS NEED THIS TAB OPEN</p>
             </div>
           </section>
         </div>
@@ -700,8 +667,13 @@ function ClerkGate() {
 }
 
 const key = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+function GuestFallbackGate() {
+  const [guest, setGuest] = useState(false);
+  return guest ? <GuestApp onBack={() => setGuest(false)}/> : <AuthScreen onGuest={() => setGuest(true)}/>;
+}
+
 const app = emailTransferId ? <EmailReceive/> : guestPeerId ? <DirectReceive/>
   : key ? <ClerkProvider publishableKey={key} afterSignOutUrl="/" appearance={clerkAppearance}><ClerkGate/></ClerkProvider>
-  : <><Header/><AuthHero><p className="auth-unavailable">SIGN-IN IS UNAVAILABLE RIGHT NOW<br/>CHECK BACK SOON, OR USE A RECEIVE LINK YOU ALREADY HAVE</p></AuthHero></>;
+  : <GuestFallbackGate/>;
 
 createRoot(document.getElementById('root')).render(app);

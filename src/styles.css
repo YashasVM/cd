@@ -350,6 +350,8 @@ input { transition: border-color .15s ease, box-shadow .15s ease; }
 
 .file-name { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .file-size { color: var(--muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.download-link { padding: 6px 11px; border: 1px solid var(--line-active); border-radius: 9999px; color: var(--text); font-size: 12px; text-decoration: none; }
+.download-link:hover { border-color: var(--line-active-hover); background: var(--surface); }
 
 .otp-check { display: flex; align-items: flex-start; gap: 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
 .otp-check input { width: 15px; height: 15px; margin-top: 1px; accent-color: #fff; }
@@ -559,6 +561,7 @@ input { transition: border-color .15s ease, box-shadow .15s ease; }
 }
 .receiver-card > p:not(.status) { margin: -6px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
 .receiver-card .primary-button { width: 100%; margin-top: 6px; }
+.receiver-card .receiver-cancel { width: 100%; margin-top: 6px; }
 .receiver-card .primary-button svg { transition: transform .15s ease; }
 .receiver-card .primary-button:hover:not(:disabled) svg { transform: translateX(2px); }
 .receiver-card .otp-input { width: 100%; margin-top: 4px; }
