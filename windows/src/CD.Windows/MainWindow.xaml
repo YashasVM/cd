@@ -1,0 +1,292 @@
+<Window x:Class="CD.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CD — secure file transfer"
+        Width="1220"
+        Height="780"
+        MinWidth="960"
+        MinHeight="640"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing"
+        StateChanged="Window_StateChanged">
+    <Grid Background="{StaticResource CanvasBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="216" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Grid Margin="18,22">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" Background="{StaticResource AccentBrush}" CornerRadius="6">
+                        <TextBlock Text="CD" Foreground="#061018" FontFamily="Cascadia Mono, Consolas" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="CD" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="file transfer" Foreground="{StaticResource MutedTextBrush}" FontSize="11" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Text="TRANSFER" Foreground="{StaticResource MutedTextBrush}" FontSize="10" FontWeight="SemiBold" Margin="4,0,0,8" />
+                <StackPanel Grid.Row="2" Margin="0,22,0,0">
+                    <Button x:Name="DevicesNavButton" Style="{StaticResource SidebarNavButton}" Click="DevicesNav_Click" ToolTip="Manage paired devices" AutomationProperties.Name="Devices">
+                        <TextBlock Text="_Devices" />
+                    </Button>
+                    <Button x:Name="BrowseNavButton" Style="{StaticResource SidebarNavButton}" Click="BrowseNav_Click" ToolTip="Browse phone files" AutomationProperties.Name="Browse phone">
+                        <TextBlock Text="_Browse Phone" />
+                    </Button>
+                    <Button x:Name="SendNavButton" Style="{StaticResource SidebarNavButton}" Click="SendNav_Click" ToolTip="Send files (Alt+S)" AutomationProperties.Name="Send files">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="↑" FontFamily="Cascadia Mono, Consolas" FontSize="17" Width="28" VerticalAlignment="Center" />
+                            <TextBlock Text="_Send" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ClipboardNavButton" Style="{StaticResource SidebarNavButton}" Click="ClipboardNav_Click" ToolTip="Clipboard sync" AutomationProperties.Name="Clipboard">
+                        <TextBlock Text="_Clipboard" />
+                    </Button>
+                    <Button x:Name="TransfersNavButton" Style="{StaticResource SidebarNavButton}" Click="TransfersNav_Click" ToolTip="Transfer history" AutomationProperties.Name="Transfers">
+                        <TextBlock Text="_Transfers" />
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Row="4">
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,14">
+                        <StackPanel>
+                            <DockPanel LastChildFill="False">
+                                <TextBlock Text="EFFICIENT MODE" Foreground="{StaticResource MutedTextBrush}" FontSize="10" FontWeight="SemiBold" DockPanel.Dock="Left" />
+                                <TextBlock Text="ON" Foreground="{StaticResource AccentBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="10" DockPanel.Dock="Right" />
+                            </DockPanel>
+                            <TextBlock x:Name="EfficiencyStatusText" Text="No background polling" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,5,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="AccountButton" Style="{StaticResource SidebarNavButton}" Click="Account_Click" ToolTip="Open account options" AutomationProperties.Name="Open account options" Margin="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="30" Height="30" Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="15">
+                                <TextBlock x:Name="AvatarText" Text="G" Foreground="{StaticResource AccentBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="AccountNameText" Text="Guest" FontSize="12" />
+                                <TextBlock x:Name="AccountMetaText" Text="Local session" Foreground="{StaticResource MutedTextBrush}" FontSize="10" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="42,30,42,32">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="22" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock x:Name="MainTitleText" Text="Send files" FontSize="27" FontWeight="SemiBold" />
+                    <TextBlock x:Name="MainSubtitleText" Text="Private transfers, direct when nearby." Foreground="{StaticResource MutedTextBrush}" FontSize="13" Margin="0,5,0,0" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="3">
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="NearbyModeButton" Style="{StaticResource ModeButton}" Click="NearbyMode_Click" Background="{StaticResource SurfaceRaisedBrush}" Foreground="{StaticResource TextBrush}" ToolTip="Send directly to a nearby device" AutomationProperties.Name="Nearby transfer mode">Nearby</Button>
+                        <Button x:Name="CloudModeButton" Style="{StaticResource ModeButton}" Click="CloudMode_Click" ToolTip="Create a cloud transfer link" AutomationProperties.Name="Cloud transfer mode">Cloud</Button>
+                        <Button x:Name="ReceiveSubmodeButton" Style="{StaticResource ModeButton}" Click="ReceiveNav_Click" ToolTip="Receive files using a code or link" AutomationProperties.Name="Receive files">Receive</Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <StackPanel>
+                    <Grid x:Name="SendPanel">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="14" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="16" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="16" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0">
+                            <DockPanel LastChildFill="False" Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Text="Files" FontSize="15" FontWeight="SemiBold" />
+                                    <TextBlock Text="Add one or more files to encrypt and send." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,3,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Bottom">
+                                    <Button x:Name="AddFilesButton" Style="{StaticResource SecondaryButton}" Click="AddFiles_Click" ToolTip="Choose files to add" AutomationProperties.Name="Add files">Add files</Button>
+                                    <Button x:Name="ClearFilesButton" Style="{StaticResource SecondaryButton}" Click="ClearFiles_Click" Margin="8,0,0,0" ToolTip="Remove all selected files" AutomationProperties.Name="Clear selected files">Clear</Button>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <Border x:Name="FileDropBorder" Height="194" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" AllowDrop="True" DragEnter="FileDrop_DragEnter" DragLeave="FileDrop_DragLeave" Drop="FileDrop_Drop" MouseLeftButtonUp="FileDrop_Click" ToolTip="Drop files here or click to choose files" AutomationProperties.Name="File drop area">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.TextAlignment="Center">
+                                    <Border Width="42" Height="42" BorderBrush="#3B3D42" BorderThickness="1" CornerRadius="21" HorizontalAlignment="Center">
+                                        <TextBlock Text="+" Foreground="{StaticResource AccentBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock x:Name="FileDropTitle" Text="Drop files here" FontSize="15" FontWeight="SemiBold" Margin="0,12,0,0" />
+                                    <TextBlock Text="or click to browse" Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="102" />
+                            </Grid.RowDefinitions>
+                            <DockPanel LastChildFill="False">
+                                <TextBlock x:Name="FileCountText" Text="0 files" Foreground="{StaticResource MutedTextBrush}" FontSize="12" DockPanel.Dock="Left" />
+                                <TextBlock x:Name="FileTotalText" Text="0 B" Foreground="{StaticResource MutedTextBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="12" DockPanel.Dock="Right" />
+                            </DockPanel>
+                            <Grid Grid.Row="2">
+                                <ListBox x:Name="FileList" ToolTip="Files queued to send" AutomationProperties.Name="Files queued to send" />
+                                <TextBlock x:Name="EmptyFilesText" Text="No files selected" Foreground="{StaticResource MutedTextBrush}" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+                            </Grid>
+                        </Grid>
+
+                        <Border x:Name="NearbyHintPanel" Grid.Row="4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="16,13">
+                            <StackPanel>
+                                <TextBlock Text="Nearby transfer" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock Text="Keep both devices online. CD uses an encrypted, direct connection when available." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="CloudOptionsPanel" Grid.Row="4" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="16,13" Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Link expires" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,0,0,6" />
+                                    <ComboBox x:Name="ExpirationCombo" SelectedIndex="1" ToolTip="Select how long the cloud transfer remains available" AutomationProperties.Name="Cloud link expiration">
+                                        <ComboBoxItem Tag="1h">1 hour</ComboBoxItem>
+                                        <ComboBoxItem Tag="1d">1 day</ComboBoxItem>
+                                        <ComboBoxItem Tag="3d">3 days</ComboBoxItem>
+                                        <ComboBoxItem Tag="7d">7 days</ComboBoxItem>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Downloads allowed" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,0,0,6" />
+                                    <ComboBox x:Name="DownloadsCombo" SelectedIndex="0" ToolTip="Limit the number of allowed downloads" AutomationProperties.Name="Allowed cloud downloads">
+                                        <ComboBoxItem>1</ComboBoxItem>
+                                        <ComboBoxItem>3</ComboBoxItem>
+                                        <ComboBoxItem>5</ComboBoxItem>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Button x:Name="StartSendButton" Grid.Row="6" Style="{StaticResource PrimaryButton}" Click="StartSend_Click" HorizontalAlignment="Left" MinWidth="152" ToolTip="Start the encrypted transfer" AutomationProperties.Name="Start send transfer">Send files</Button>
+                    </Grid>
+
+                    <Grid x:Name="ReceivePanel" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="16" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="18" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="Receive a transfer" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Text="Enter the code shared by the sender." Foreground="{StaticResource MutedTextBrush}" FontSize="12" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="2">
+                            <TextBlock x:Name="ReceiveCodeLabel" Text="Transfer code" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,0,0,6" />
+                            <TextBox x:Name="ReceiveCodeTextBox" FontSize="16" ToolTip="Paste the transfer code" AutomationProperties.Name="Transfer code" />
+                        </StackPanel>
+                        <StackPanel Grid.Row="4">
+                            <TextBlock Text="Save to" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,0,0,6" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="DestinationTextBox" Text="Downloads" ToolTip="Destination folder for received files" AutomationProperties.Name="Destination folder" />
+                                <Button x:Name="BrowseDestinationButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Click="BrowseDestination_Click" MinWidth="96" ToolTip="Choose a destination folder" AutomationProperties.Name="Browse destination folder">Browse</Button>
+                            </Grid>
+                        </StackPanel>
+                        <Button x:Name="StartReceiveButton" Grid.Row="6" Style="{StaticResource PrimaryButton}" Click="StartReceive_Click" HorizontalAlignment="Left" MinWidth="164" ToolTip="Receive the encrypted transfer" AutomationProperties.Name="Start receive transfer">Receive files</Button>
+                    </Grid>
+
+                    <Border x:Name="EmptySectionPanel" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="22" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock x:Name="EmptySectionTitle" Text="Devices" FontSize="17" FontWeight="SemiBold" />
+                            <TextBlock x:Name="EmptySectionText" Foreground="{StaticResource MutedTextBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            <Button x:Name="EmptySectionAction" Style="{StaticResource PrimaryButton}" Click="EmptySectionAction_Click" HorizontalAlignment="Left" Margin="0,18,0,0" MinWidth="140">Send files</Button>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="ResultPanel" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="16" Margin="0,22,0,0" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock x:Name="ResultEyebrowText" Text="TRANSFER CODE" Foreground="{StaticResource MutedTextBrush}" FontSize="10" FontWeight="SemiBold" />
+                                <TextBox x:Name="ResultValueTextBox" IsReadOnly="True" BorderThickness="0" Background="Transparent" Padding="0,6,0,0" ToolTip="Transfer code or link" AutomationProperties.Name="Transfer result" />
+                            </StackPanel>
+                            <Button x:Name="CopyResultButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Click="CopyResult_Click" MinWidth="84" VerticalAlignment="Bottom" ToolTip="Copy the transfer code or link" AutomationProperties.Name="Copy transfer result">Copy</Button>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="ProgressPanel" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="16" Margin="0,12,0,0" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <DockPanel LastChildFill="False">
+                                    <TextBlock x:Name="TransferStatusText" Text="Preparing secure transfer…" FontSize="13" FontWeight="SemiBold" DockPanel.Dock="Left" />
+                                    <TextBlock Text="Encryption enabled" Foreground="{StaticResource AccentBrush}" FontSize="11" DockPanel.Dock="Right" />
+                                </DockPanel>
+                                <ProgressBar x:Name="TransferProgressBar" Height="5" Margin="0,12,0,0" Minimum="0" Maximum="100" Value="0" ToolTip="Transfer progress" AutomationProperties.Name="Transfer progress" />
+                            </StackPanel>
+                            <Button x:Name="CancelTransferButton" Grid.Column="2" Style="{StaticResource SecondaryButton}" Click="CancelTransfer_Click" MinWidth="82" VerticalAlignment="Center" IsEnabled="False" ToolTip="Cancel the current transfer" AutomationProperties.Name="Cancel transfer">Cancel</Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid x:Name="LoginOverlay" Grid.ColumnSpan="2" Background="#F50A0A0A" Panel.ZIndex="10">
+            <Border Width="420" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="34" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <Border Width="40" Height="40" Background="{StaticResource AccentBrush}" CornerRadius="7" HorizontalAlignment="Left">
+                        <TextBlock Text="CD" Foreground="#061018" FontFamily="Cascadia Mono, Consolas" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="Continue to CD" FontSize="23" FontWeight="SemiBold" Margin="0,22,0,0" />
+                    <TextBlock x:Name="LoginStatusText" Text="Sign in to manage cloud transfers, or continue locally as a guest." Foreground="{StaticResource MutedTextBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,7,0,0" />
+                    <Button x:Name="ClerkSignInButton" Style="{StaticResource PrimaryButton}" Click="ClerkSignIn_Click" Margin="0,24,0,0" ToolTip="Sign in with your Clerk account" AutomationProperties.Name="Sign in">Sign in</Button>
+                    <Button x:Name="GuestButton" Style="{StaticResource SecondaryButton}" Click="Guest_Click" Margin="0,10,0,0" ToolTip="Continue without an account" AutomationProperties.Name="Continue as guest">Continue as guest</Button>
+                    <TextBlock Text="Guest transfers stay on this device unless you choose Cloud mode." Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,16,0,0" />
+                    <Button x:Name="ExitGuestButton" Click="Account_Click" Background="Transparent" BorderThickness="0" Foreground="{StaticResource MutedTextBrush}" Padding="0" HorizontalAlignment="Left" Margin="0,16,0,0" ToolTip="Open account options" AutomationProperties.Name="Account options">Account options</Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
