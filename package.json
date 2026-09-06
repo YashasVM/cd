@@ -1,0 +1,21 @@
+{
+  "name": "@cd-oss/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CD browser send workbench",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "vite build",
+    "test": "node --test test/transfer-utils.test.mjs test/peer-transfer.test.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@clerk/react": "^6.14.5",
+    "peerjs": "^1.5.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "vite": "^6.3.5"
+  }
+}
