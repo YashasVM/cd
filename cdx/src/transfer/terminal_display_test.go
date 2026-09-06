@@ -1,0 +1,174 @@
+package transfer
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/schollz/progressbar/v3"
+)
+
+func TestProgressBarTheme(t *testing.T) {
+	plain := progressBarTheme(false)
+	if plain != progressbar.ThemeDefault {
+		t.Fatalf("plain progress theme = %#v; want default theme", plain)
+	}
+
+	colored := progressBarTheme(true)
+	if colored.BarStartFilled != "|[cyan]" {
+		t.Fatalf("colored bar start = %q; want cyan", colored.BarStartFilled)
+	}
+	if colored.SaucerHead != "█[reset]" || colored.BarEndFilled != "[reset]|" {
+		t.Fatalf("colored progress theme does not reset after its filled section: %#v", colored)
+	}
+}
+
+func TestStyleProgressFilename(t *testing.T) {
+	const description = "  cdx.txt  "
+	if got := styleProgressFilename(description, false); got != description {
+		t.Fatalf("plain description = %q; want %q", got, description)
+	}
+	want := "  \x1b[1mcdx.txt\x1b[0m  "
+	if got := styleProgressFilename(description, true); got != want {
+		t.Fatalf("styled description = %q; want %q", got, want)
+	}
+	if got := styleProgressFilename("   ", true); got != "   " {
+		t.Fatalf("blank description = %q; want spaces unchanged", got)
+	}
+}
+
+func TestQuotedFilename(t *testing.T) {
+	if got := quotedFilename("cdx.txt", false); got != "'cdx.txt'" {
+		t.Fatalf("plain filename = %q", got)
+	}
+	if got := quotedFilename("cdx.txt", true); got != "'\x1b[1mcdx.txt\x1b[0m'" {
+		t.Fatalf("styled filename = %q", got)
+	}
+}
+
+func TestPeerIP(t *testing.T) {
+	tests := map[string]string{
+		"71.212.143.50:43760":    "71.212.143.50",
+		"127.0.0.1:51324":        "127.0.0.1",
+		"[2001:db8::1]:43760":    "2001:db8::1",
+		"2001:db8::1":            "2001:db8::1",
+		"relay.example.com:9009": "relay.example.com",
+		" 71.212.143.50:43760 ":  "71.212.143.50",
+	}
+	for input, want := range tests {
+		if got := peerIP(input); got != want {
+			t.Errorf("peerIP(%q) = %q; want %q", input, got, want)
+		}
+	}
+}
+
+func TestPreferredPeerIP(t *testing.T) {
+	if got := preferredPeerIP("10.0.0.2:9009", "5.78.128.79:43760"); got != "5.78.128.79" {
+		t.Fatalf("public peer IP = %q; want 5.78.128.79", got)
+	}
+	if got := preferredPeerIP("5.78.128.79:9009", "10.0.0.2:43760"); got != "5.78.128.79" {
+		t.Fatalf("public route IP = %q; want 5.78.128.79", got)
+	}
+	if got := preferredPeerIP("10.0.0.2:9009", ""); got != "10.0.0.2" {
+		t.Fatalf("fallback peer IP = %q; want 10.0.0.2", got)
+	}
+}
+
+func TestPreferredPublicIP(t *testing.T) {
+	if got := preferredPublicIP("10.0.0.2:43760", []string{"172.17.0.1", "5.78.128.79"}); got != "5.78.128.79" {
+		t.Fatalf("public interface IP = %q; want 5.78.128.79", got)
+	}
+	if got := preferredPublicIP("71.212.143.50:43760", []string{"192.168.1.2"}); got != "71.212.143.50" {
+		t.Fatalf("public relay IP = %q; want 71.212.143.50", got)
+	}
+	if got := preferredPublicIP("10.0.0.2:43760", []string{"172.17.0.1"}); got != "10.0.0.2" {
+		t.Fatalf("private fallback IP = %q; want 10.0.0.2", got)
+	}
+}
+
+func TestFormatNoTransferSummary(t *testing.T) {
+	files := []FileInfo{{FolderRemote: ".", Name: "test"}}
+	if got := formatNoTransferSummary(files, 1, false); got != "\rAlready up to date: 'test'\n" {
+		t.Fatalf("unchanged summary = %q", got)
+	}
+	if got := formatNoTransferSummary(files, 0, false); got != "\rNo files transferred.\n" {
+		t.Fatalf("generic summary = %q", got)
+	}
+
+	colored := formatNoTransferSummary(files, 1, true)
+	if strings.Contains(colored, "\x1b[32m") {
+		t.Fatalf("summary status should be plain: %q", colored)
+	}
+	if !strings.Contains(colored, "'\x1b[1mtest\x1b[0m'") {
+		t.Fatalf("filename is not emphasized: %q", colored)
+	}
+}
+
+func TestReceiveStatusReplacesAndClearsTerminalLine(t *testing.T) {
+	var output strings.Builder
+	width := writeReceiveStatus(&output, 0, receiveStatusOpeningTransferChannels)
+	width = writeReceiveStatus(&output, width, receiveStatusWaitingForFileList)
+	clearReceiveStatus(&output, width)
+
+	padding := strings.Repeat(
+		" ",
+		len(receiveStatusOpeningTransferChannels)-len(receiveStatusWaitingForFileList),
+	)
+	want := receiveStatusOpeningTransferChannels +
+		"\r" + receiveStatusWaitingForFileList + padding +
+		"\r" + strings.Repeat(" ", len(receiveStatusWaitingForFileList)) + "\r"
+	if got := output.String(); got != want {
+		t.Fatalf("receive status output = %q; want %q", got, want)
+	}
+}
+
+func TestColoredProgressBarThemeRendersANSIWithoutMarkup(t *testing.T) {
+	var output strings.Builder
+	bar := progressbar.NewOptions64(2,
+		progressbar.OptionSetWriter(&output),
+		progressbar.OptionSetWidth(2),
+		progressbar.OptionSetTheme(progressBarTheme(true)),
+		progressbar.OptionEnableColorCodes(true),
+	)
+	if err := bar.Add(1); err != nil {
+		t.Fatalf("render progress bar: %v", err)
+	}
+
+	got := output.String()
+	if !strings.Contains(got, "\x1b[") {
+		t.Fatalf("colored progress bar has no ANSI styling: %q", got)
+	}
+	if strings.Contains(got, "[green]") || strings.Contains(got, "[reset]") {
+		t.Fatalf("progress bar leaked color markup: %q", got)
+	}
+	if !strings.Contains(got, "\x1b[36m") {
+		t.Fatalf("active progress bar is not cyan: %q", got)
+	}
+}
+
+func TestProgressBarWriterUsesGreenOnlyAtCompletion(t *testing.T) {
+	var output strings.Builder
+	writer := progressBarWriter(&output, true)
+
+	active := "100% legit  50% |\x1b[36m█\x1b[0m |"
+	if _, err := writer.Write([]byte(active)); err != nil {
+		t.Fatalf("write active progress: %v", err)
+	}
+	if got := output.String(); got != active {
+		t.Fatalf("active progress = %q; want %q", got, active)
+	}
+
+	output.Reset()
+	complete := "100% |\x1b[36m██\x1b[0m|"
+	if _, err := writer.Write([]byte(complete)); err != nil {
+		t.Fatalf("write completed progress: %v", err)
+	}
+	want := "100% |\x1b[32m██\x1b[0m|"
+	if got := output.String(); got != want {
+		t.Fatalf("completed progress = %q; want %q", got, want)
+	}
+
+	plain := progressBarWriter(&output, false)
+	if plain != &output {
+		t.Fatalf("plain progress writer = %T; want original writer", plain)
+	}
+}
