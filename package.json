@@ -1,21 +1,20 @@
 {
-  "name": "@cd-oss/web",
-  "version": "0.1.0",
+  "name": "cd",
+  "version": "1.0.0",
   "private": true,
-  "description": "CD browser send workbench",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "check": "vite build",
-    "test": "node --test test/transfer-utils.test.mjs test/peer-transfer.test.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview --host 127.0.0.1",
+    "audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
-    "@clerk/react": "^6.14.5",
-    "peerjs": "^1.5.5",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "vite": "^6.3.5"
+    "html5-qrcode": "2.3.8",
+    "peerjs": "1.5.5",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "vite": "8.0.14"
   }
 }

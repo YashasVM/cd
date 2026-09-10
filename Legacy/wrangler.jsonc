@@ -1,7 +1,0 @@
-{
-  "name": "cd",
-  "compatibility_date": "2026-02-06",
-  "assets": {
-    "directory": "./dist"
-  }
-}
