@@ -701,18 +701,32 @@ input { transition: border-color .15s ease, box-shadow .15s ease; }
 /* ---- responsive ---- */
 
 @media (max-width: 600px) {
-  .header { height: 56px; padding: 0 18px; }
-  .page { margin-top: 44px; }
-  .page-head { margin-bottom: 32px; }
+  .header { height: 56px; padding: 0 14px; }
+  .page { width: min(100% - 28px, 760px); margin-top: 32px; margin-bottom: 72px; }
+  .page-head { margin-bottom: 24px; }
+  .page-head h1 { font-size: clamp(30px, 9vw, 38px); line-height: 1.08; }
+  .page-head p { margin-top: 10px; font-size: 14px; line-height: 1.45; }
   .mode-switch { width: 100%; }
   .mode-switch button { flex: 1; }
-  .composer-foot { flex-wrap: wrap; }
+  .composer-files { padding: 12px 14px 14px; }
+  .composer-foot { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
   .composer-foot .primary-button { flex: 1; }
+  .file-row { gap: 8px; padding: 8px 10px; }
+  .file-index { display: none; }
+  .file-name { font-size: 13px; }
+  .file-size { font-size: 10px; }
   .receive-row { flex-wrap: wrap; }
   .row-actions { width: 100%; }
   .row-actions button { flex: 1; }
   .receive-row > .status { max-width: 100%; }
-  .receiver-card { padding: 26px 22px; }
+  .receiver-page { padding: 24px 14px; }
+  .receiver-card { padding: 24px 16px; }
+  .receiver-card h1 { font-size: clamp(28px, 8vw, 36px); }
+  .receiver-card > p:not(.status) { font-size: 14px; line-height: 1.5; }
+  .auth-page { padding: 28px 16px; }
+  .auth-split { gap: 32px; }
+  .auth-brand h1 { font-size: clamp(38px, 12vw, 52px); }
+  .auth-brand .auth-sub { margin-top: 18px; font-size: 14px; line-height: 1.55; }
   .auth-facts { flex-direction: column; gap: 8px; margin-top: 56px; }
   .auth-facts span + span::before { content: none; }
   .dialog-actions { flex-direction: column-reverse; }

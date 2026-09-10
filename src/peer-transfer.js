@@ -9,6 +9,10 @@ export const transferLimits = {
   maxTransferBytes: 2 * 1024 * 1024 * 1024,
 };
 
+const CHUNK_BYTES = 64 * 1024;
+const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
+const PROGRESS_INTERVAL_MS = 100;
+
 export const fileSummary = files => files.map(({ name, size, type }) => ({ name, size, ...(type ? { mime: type } : {}) }));
 export const errorText = error => typeof error === 'string' ? error : error?.type || error?.message || 'unknown error';
 
@@ -48,6 +52,38 @@ export function validateManifest(files) {
 
 export const validateFiles = files => validateManifest(fileSummary(files));
 
+const wait = delay => new Promise(resolve => setTimeout(resolve, delay));
+
+async function waitForBufferCapacity(connection, hasFailed) {
+  const channel = connection.dataChannel;
+  if (!channel) return;
+
+  while (!hasFailed() && channel.bufferedAmount > MAX_BUFFERED_BYTES) {
+    await wait(40);
+  }
+}
+
+function createProgressEmitter(emit) {
+  let lastEmit = 0;
+  let pending;
+
+  return {
+    update(state) {
+      const now = performance.now();
+      if (now - lastEmit >= PROGRESS_INTERVAL_MS) {
+        lastEmit = now;
+        emit(state);
+      } else {
+        pending = state;
+      }
+    },
+    flush() {
+      if (pending) emit(pending);
+      pending = undefined;
+    },
+  };
+}
+
 export async function sendFiles(connection, files, handlers = {}) {
   const emit = state => {
     if (typeof handlers === 'function') handlers(state.message);
@@ -60,6 +96,7 @@ export async function sendFiles(connection, files, handlers = {}) {
   let failure;
   let resolveOutcome;
   const outcome = new Promise(resolve => { resolveOutcome = resolve; });
+  const progress = createProgressEmitter(emit);
   const fail = error => {
     if (finished || failure) return;
     failure = error instanceof Error ? error : new Error(errorText(error));
@@ -72,7 +109,7 @@ export async function sendFiles(connection, files, handlers = {}) {
     } else if (isControl(data) && data.type === 'cancel') fail(new Error('The recipient cancelled the transfer.'));
   };
   const onError = error => fail(new Error(`Connection failed: ${errorText(error)}`));
-  const onClose = () => fail(new Error('The connection closed before the recipient confirmed the files.'));
+  const onClose = () => fail(new Error('The connection closed before the recipient gave the thumbs-up.'));
   connection.on('data', onData);
   connection.on('error', onError);
   connection.on('close', onClose);
@@ -82,26 +119,27 @@ export async function sendFiles(connection, files, handlers = {}) {
     for (const [index, file] of files.entries()) {
       if (failure) throw failure;
       connection.send({ type: 'file-start', index });
-      for (let offset = 0; offset < file.size; offset += 64 * 1024) {
+      for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
         if (failure) throw failure;
-        // ponytail: fixed backpressure is enough until measured networks need adaptive chunking.
-        while (!failure && connection.dataChannel?.bufferedAmount > 8 * 1024 * 1024) await new Promise(resolve => setTimeout(resolve, 40));
+        await waitForBufferCapacity(connection, () => Boolean(failure));
         if (failure) throw failure;
-        const chunk = await file.slice(offset, offset + 64 * 1024).arrayBuffer();
+        const chunk = await file.slice(offset, offset + CHUNK_BYTES).arrayBuffer();
         connection.send(chunk);
         sent += chunk.byteLength;
-        emit({ phase: 'transferring', progress: total ? Math.round(sent / total * 100) : 100, message: `Sending ${total ? Math.round(sent / total * 100) : 100}%` });
+        const percent = total ? Math.round(sent / total * 100) : 100;
+        progress.update({ phase: 'transferring', progress: percent, message: `Sending ${percent}%` });
       }
       connection.send({ type: 'file-complete' });
     }
     awaitingReceipt = true;
+    progress.flush();
     connection.send({ type: 'transfer-complete' });
-    emit({ phase: 'waiting', progress: 100, message: 'Files sent. Waiting for receiver confirmation…' });
-    const timeout = setTimeout(() => fail(new Error('The receiver did not confirm the transfer. Try again.')), 30000);
+    emit({ phase: 'waiting', progress: 100, message: 'Sent. Waiting for receiver thumbs-up…' });
+    const timeout = setTimeout(() => fail(new Error('No thumbs-up yet. Try the transfer again.')), 30000);
     const result = await outcome;
     clearTimeout(timeout);
     if (result.error) throw result.error;
-    emit({ phase: 'completed', progress: 100, message: 'Receiver confirmed the transfer.' });
+    emit({ phase: 'completed', progress: 100, message: 'Delivered. Thumbs-up received.' });
     connection.close();
     return { ok: true };
   } catch (error) {
@@ -118,7 +156,7 @@ export async function sendFiles(connection, files, handlers = {}) {
 export function receiveFiles(peerId, handlers = {}, PeerClass = Peer) {
   const emit = state => { handlers.state?.(state); handlers.status?.(state.message); };
   if (!isTransferId(peerId)) {
-    const state = { phase: 'failed', progress: 0, message: 'The sender provided an invalid transfer code.' };
+    const state = { phase: 'failed', progress: 0, message: 'That transfer code is a dud.' };
     handlers.state?.(state);
     handlers.status?.(state.message);
     return { cancel() {}, destroy() {} };
@@ -210,7 +248,7 @@ export function receiveFiles(peerId, handlers = {}, PeerClass = Peer) {
       connection.send({ type: 'receipt' });
       finished = true;
       clearTimeout(timeout);
-      emit({ phase: 'completed', progress: 100, message: 'All file data arrived.' });
+      emit({ phase: 'completed', progress: 100, message: 'All here. Nice.' });
       handlers.complete?.();
       setTimeout(close, 250);
       return;
@@ -220,13 +258,13 @@ export function receiveFiles(peerId, handlers = {}, PeerClass = Peer) {
   };
 
   resetTimeout(20000);
-  emit({ phase: 'connecting', progress: 0, message: 'Connecting to sender…' });
+  emit({ phase: 'connecting', progress: 0, message: 'Finding the sender…' });
   peer.on('open', () => {
     connection = peer.connect(peerId, { reliable: true });
-    connection.on('open', () => { resetTimeout(); emit({ phase: 'waiting', progress: 0, message: 'Connected. Waiting for files…' }); });
+    connection.on('open', () => { resetTimeout(); emit({ phase: 'waiting', progress: 0, message: 'Connected. Waiting for the stuff…' }); });
     connection.on('data', data => { queue = queue.then(() => consume(data)).catch(fail); });
     connection.on('error', error => fail(`Transfer failed: ${errorText(error)}`));
-    connection.on('close', () => { queue.finally(() => { if (!finished) fail('The sender closed the connection before completion.'); }); });
+    connection.on('close', () => { queue.finally(() => { if (!finished) fail('The sender vanished before delivery.'); }); });
   });
   peer.on('error', error => fail(`Connection failed: ${errorText(error)}`));
   return { cancel, destroy, peer };

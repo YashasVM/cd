@@ -111,7 +111,7 @@ function Header({ account, onSignIn, onGuest }) {
       <a className="logo" href="/">CD<span className="logo-packet"/></a>
       <div className="header-side">
         {account || (onSignIn ? <button className="quiet-button" onClick={onSignIn}>Sign in</button> : null)}
-        {!account && onGuest ? <button className="quiet-button header-guest" onClick={onGuest}>Guest<Icon name="arrow" size={15}/></button> : null}
+        {!account && onGuest ? <button className="quiet-button header-guest" onClick={onGuest}>Skip sign-in<Icon name="arrow" size={15}/></button> : null}
       </div>
     </header>
   );
@@ -133,7 +133,7 @@ function FileList({ files, setFiles }) {
   );
 }
 
-function TransferReceiver({ title = 'Incoming transfer', join }) {
+function TransferReceiver({ title = 'Incoming stuff', join }) {
   const controllerRef = useRef(null);
   const urlsRef = useRef([]);
   const [otp, setOtp] = useState('');
@@ -146,6 +146,7 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
   const active = ['connecting', 'waiting', 'transferring'].includes(transfer.phase);
   const total = manifest.reduce((sum, file) => sum + file.size, 0);
   const percent = transfer.progress || (total ? Math.min(100, Math.round(received / total * 100)) : 0);
+  const downloadsByIndex = new Map(downloads.map(download => [download.index, download]));
 
   useEffect(() => () => {
     controllerRef.current?.destroy();
@@ -179,24 +180,25 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
       <Header onSignIn={() => location.assign('/')}/>
       <main className="receiver-page">
         <section className="receiver-card">
-          <span className="card-tag">{done ? 'Transfer complete' : 'Incoming'}</span>
+          <span className="card-tag">{done ? 'Transfer complete' : 'Incoming stuff'}</span>
           <h1>{title}</h1>
           <p>{done
-            ? 'All file data arrived. Save each file below before closing this page.'
-            : 'Files will come straight from the sender over an encrypted, point-to-point line.'}</p>
+            ? 'Everything arrived. Save it before you bounce.'
+            : 'Straight from the sender. No upload queue, no mystery bucket.'}</p>
           {manifest.length ? (
             <>
               <div className="file-list">
-                {manifest.map((file, index) => (
-                  <div className="file-row" key={`${file.name}-${file.size}`}>
+                {manifest.map((file, index) => {
+                  const download = downloadsByIndex.get(index);
+                  return <div className="file-row" key={`${file.name}-${file.size}`}>
                     <span className="file-index">{String(index + 1).padStart(3, '0')}</span>
                     <span className="file-icon"><Icon name={done ? 'check' : 'file'} size={17}/></span>
                     <span className="file-name">{file.name}</span>
-                    {downloads.find(item => item.index === index)
-                      ? <a className="download-link" href={downloads.find(item => item.index === index).url} download={file.name}>Save</a>
+                    {download
+                      ? <a className="download-link" href={download.url} download={file.name}>Save</a>
                       : <span className="file-size">{size(file.size)}</span>}
-                  </div>
-                ))}
+                  </div>;
+                })}
               </div>
               {!done ? <div className="receiver-progress" aria-hidden="true"><span style={{width: `${percent}%`}}/></div> : null}
             </>
@@ -204,8 +206,8 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
             <input className="text-input otp-input" inputMode="numeric" maxLength="6" value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, ''))} placeholder="Code (if asked)" aria-label="One-time code"/>
           ) : null}
           {!done ? active
-            ? <button className="secondary-button receiver-cancel" onClick={() => controllerRef.current?.cancel()}>Cancel transfer</button>
-            : <button className="primary-button" onClick={accept}>{failed ? 'Try again' : 'Accept files'}<Icon name="arrow" size={16}/></button>
+            ? <button className="secondary-button receiver-cancel" onClick={() => controllerRef.current?.cancel()}>Abort mission</button>
+            : <button className="primary-button" onClick={accept}>{failed ? 'Try again' : 'Grab files'}<Icon name="arrow" size={16}/></button>
           : null}
           <p className="status" role="status" data-error={failed} data-phase={transfer.phase}>
             {active && manifest.length ? `RECEIVING · ${percent}%` : transfer.message}
@@ -213,7 +215,7 @@ function TransferReceiver({ title = 'Incoming transfer', join }) {
           <div className="auth-facts receiver-facts" aria-label="How CD handles your files">
             <span>Peer to peer</span>
             <span>End to end encrypted</span>
-            <span>Nothing stored</span>
+            <span>Nothing parked</span>
           </div>
         </section>
       </main>
@@ -231,7 +233,7 @@ function EmailReceive() {
 }
 
 function DirectReceive() {
-  return <TransferReceiver title="Someone sent you files" join={async () => guestPeerId}/>;
+  return <TransferReceiver title="Someone sent you stuff" join={async () => guestPeerId}/>;
 }
 
 function GuestApp({ onBack }) {
@@ -273,7 +275,7 @@ function GuestApp({ onBack }) {
   const start = async () => {
     if (!files.length) return;
     try { validateFiles(files); } catch (error) { setStatus(errorText(error)); return; }
-    setStatus('Creating private link…');
+    setStatus('Making your link…');
     try {
       peerRef.current?.destroy();
       const peer = await openPeer();
@@ -282,8 +284,8 @@ function GuestApp({ onBack }) {
       const guestLink = `${location.origin}/?guest=${encodeURIComponent(peer.id)}`;
       setLink(guestLink);
       await navigator.clipboard?.writeText(guestLink).catch(() => {});
-      setStatus('Link copied. Keep this page open.');
-    } catch (error) { setStatus(`Could not create transfer: ${errorText(error)}`); }
+      setStatus('Link copied. Keep this tab alive.');
+    } catch (error) { setStatus(`Couldn’t make it: ${errorText(error)}`); }
   };
 
   const receive = event => {
@@ -307,12 +309,12 @@ function GuestApp({ onBack }) {
       <Header onSignIn={onBack}/>
       <main className="page">
         <div className="page-head">
-          <h1>Guest transfer</h1>
-          <p>No account needed. Private links stay available only while this browser tab remains open.</p>
+          <h1>Send without the paperwork.</h1>
+          <p>No account. One tab. Then poof.</p>
         </div>
         <div className="mode-switch" role="tablist">
           <button role="tab" aria-selected={mode === 'direct'} className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')}>Direct</button>
-          <button role="tab" aria-selected={mode === 'link'} className={mode === 'link' ? 'active' : ''} onClick={() => setMode('link')}>Private link</button>
+          <button role="tab" aria-selected={mode === 'link'} className={mode === 'link' ? 'active' : ''} onClick={() => setMode('link')}>Link</button>
           <button role="tab" aria-selected={mode === 'receive'} className={mode === 'receive' ? 'active' : ''} onClick={() => setMode('receive')}>Receive</button>
         </div>
         {mode === 'direct' ? (
@@ -331,23 +333,23 @@ function GuestApp({ onBack }) {
               <div className="composer-files">
                 <div className="section-line">
                   <span className="step-tag">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'} · ${size(totalSize)}` : 'Files'}</span>
-                  <button className="text-button" onClick={pickFiles}><Icon name="plus" size={15}/>Add files</button>
+                  <button className="text-button" onClick={pickFiles}><Icon name="plus" size={15}/>Add stuff</button>
                 </div>
-                {files.length ? <FileList files={files} setFiles={setFiles}/> : <button className="empty-files" onClick={pickFiles}>Drag files here, or click to browse</button>}
+                {files.length ? <FileList files={files} setFiles={setFiles}/> : <button className="empty-files" onClick={pickFiles}>Drop stuff here, or browse</button>}
               </div>
               <div className="composer-foot">
                 <span/>
-                <button className="primary-button" disabled={!files.length} onClick={start}>Create private link<Icon name="arrow" size={16}/></button>
+                <button className="primary-button" disabled={!files.length} onClick={start}>Make link<Icon name="arrow" size={16}/></button>
               </div>
           {link ? <div className="share-link"><input readOnly value={link}/><button aria-label="Copy link" onClick={() => navigator.clipboard.writeText(link)}><Icon name="copy" size={18}/></button></div> : null}
         </section>
-            <p className="status" role="status" data-error={/failed|expired|invalid|unavailable/i.test(status)}>{status}</p>
+          <p className="status" role="status" data-error={/failed|expired|invalid|unavailable/i.test(status)}>{status}</p>
           </>
         ) : (
           <form className="receive-form" onSubmit={receive}>
             <label className="step-tag" htmlFor="invite">Invitation link or transfer code</label>
-            <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste invitation"/>
-            <button className="primary-button" type="submit">Receive files<Icon name="arrow" size={16}/></button>
+            <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste a link or code"/>
+            <button className="primary-button" type="submit">Get files<Icon name="arrow" size={16}/></button>
             {inviteError ? <p className="status" role="alert" data-error="true">{inviteError}</p> : null}
           </form>
         )}
@@ -395,10 +397,10 @@ function SendApp({ getToken }) {
       <Header account={<UserButton appearance={clerkAppearance}/>}/>
       <main className="page">
         <div className="page-head">
-          <h1>{mode === 'send' ? 'Send files' : 'Receive files'}</h1>
+          <h1>{mode === 'send' ? 'Send stuff' : 'Catch stuff'}</h1>
           <p>{mode === 'send'
-            ? 'Straight to your recipient. Encrypted the whole way.'
-            : 'Requests land here the moment someone sends to you.'}</p>
+            ? 'Straight to them. Encrypted end to end.'
+            : 'Incoming requests. No carrier pigeons.'}</p>
         </div>
         <div className="mode-switch" role="tablist">
           <button role="tab" aria-selected={mode === 'send'} className={mode === 'send' ? 'active' : ''} onClick={() => setMode('send')}>Send</button>
@@ -430,7 +432,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
     setShareUrl('');
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return setRecipient({ type: 'email', label: value, id: value });
     const username = value.replace(/^@/, '').toLowerCase();
-    setStatus('Finding recipient…');
+    setStatus('Looking for them…');
     try {
       const response = await fetch(`${api}/v1/recipients/by-username/${encodeURIComponent(username)}`);
       if (!response.ok) throw new Error('No CD user found. Use their email instead.');
@@ -453,7 +455,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
       peerRef.current = peer;
       peer.on('connection', connection => connection.on('open', () => sendFiles(connection, selected, setStatus)));
     } catch (error) {
-      return setStatus(`Transfer service failed: ${errorText(error)}`);
+      return setStatus(`Transfer service sulked: ${errorText(error)}`);
     }
     setStatus('Sending request…');
     try {
@@ -465,11 +467,11 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
       if (result.receiveUrl) {
         setShareUrl(result.receiveUrl);
         await navigator.clipboard?.writeText(result.receiveUrl).catch(() => {});
-        setStatus('Invitation link copied. Share it and keep this page open.');
-      } else setStatus(recipient.type === 'email' ? 'Email sent. Keep this page open.' : 'Request sent. Keep this page open.');
+        setStatus('Invite copied. Send it and keep this tab alive.');
+      } else setStatus(recipient.type === 'email' ? 'Email sent. Keep this tab alive.' : 'Request sent. Keep this tab alive.');
     } catch (error) {
       peer.destroy();
-      setStatus(`Request failed: ${errorText(error)}`);
+      setStatus(`Request flopped: ${errorText(error)}`);
     }
   };
 
@@ -509,13 +511,13 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
           <div className="composer-files">
             <div className="section-line">
               <span className="step-tag">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'} · ${size(totalSize)}` : 'Files'}</span>
-              {recipient ? <button className="text-button" onClick={pickFiles}><Icon name="plus" size={15}/>Add files</button> : null}
+              {recipient ? <button className="text-button" onClick={pickFiles}><Icon name="plus" size={15}/>Add stuff</button> : null}
             </div>
             {files.length ? (
               <FileList files={files} setFiles={setFiles}/>
             ) : (
               <button className="empty-files" disabled={!recipient} onClick={pickFiles}>
-                {recipient ? 'Drag files here, or click to browse' : 'Find a recipient to start'}
+                {recipient ? 'Drop stuff here, or browse' : 'Find someone first'}
               </button>
             )}
           </div>
@@ -523,7 +525,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
                 {recipient?.type === 'email' ? (
                   <label className="otp-check"><input type="checkbox" checked={requireOtp} onChange={event => setRequireOtp(event.target.checked)}/>Require a one-time password</label>
                 ) : <span/>}
-                <button className="primary-button" disabled={!files.length} onClick={send}>Send<Icon name="arrow" size={16}/></button>
+                <button className="primary-button" disabled={!files.length} onClick={send}>Send it<Icon name="arrow" size={16}/></button>
               </div>
           {shareUrl ? <div className="share-link"><input readOnly value={shareUrl}/><button aria-label="Copy invitation" onClick={() => navigator.clipboard.writeText(shareUrl)}><Icon name="copy" size={18}/></button></div> : null}
         </section>
@@ -532,7 +534,7 @@ function SendWorkbench({ getToken, offers, onAnswer }) {
         <div className="dialog-backdrop">
           <section className="incoming-dialog" role="dialog" aria-modal="true">
             <button className="dialog-close" aria-label="Close" onClick={() => onAnswer(offers[0], false, setStatus)}><Icon name="close" size={18}/></button>
-            <h2>Incoming transfer</h2>
+            <h2>Incoming stuff</h2>
             <p>Someone wants to send you {offers[0].manifest.length} file{offers[0].manifest.length === 1 ? '' : 's'}.</p>
             <div className="incoming-files">
               {offers[0].manifest.slice(0, 4).map(file => <div key={file.name}><Icon name="file" size={17}/><span>{file.name}</span><small>{size(file.size)}</small></div>)}
@@ -593,14 +595,14 @@ function ReceivePage({ offers, onAnswer }) {
               {offers.map(offer => <ReceiveOfferRow key={offer.id} offer={offer} onAnswer={onAnswer}/>)}
             </div>
           ) : (
-            <p className="empty-files">Nothing waiting right now. Requests appear here as soon as someone sends to you.</p>
+            <p className="empty-files">No takers yet. Requests will show up here.</p>
           )}
         </div>
       </section>
       <form className="receive-form" onSubmit={open}>
         <label className="step-tag" htmlFor="invite">Invitation link or transfer code</label>
-        <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste invitation"/>
-        <button className="primary-button" type="submit">Receive files<Icon name="arrow" size={16}/></button>
+        <input id="invite" className="text-input" required value={invite} onChange={event => setInvite(event.target.value)} placeholder="Paste a link or code"/>
+        <button className="primary-button" type="submit">Get files<Icon name="arrow" size={16}/></button>
         {inviteError ? <p className="status" role="alert" data-error="true">{inviteError}</p> : null}
       </form>
     </>
@@ -612,13 +614,13 @@ function AuthHero({ children }) {
     <main className="auth-page">
       <section className="auth-hero">
         <p className="auth-kicker">CD · Direct file transfer</p>
-        <h1>Send files directly.</h1>
-        <p>Point-to-point transfers over an encrypted connection. Files move between sender and recipient only — nothing is stored on CD servers.</p>
+        <h1>Send it. Directly.</h1>
+        <p>Files go straight from you to them. No upload queue. No mystery bucket.</p>
         {children}
         <div className="auth-facts" aria-label="How CD handles your files">
           <span>Peer to peer</span>
           <span>End to end encrypted</span>
-          <span>Nothing stored</span>
+          <span>Nothing parked</span>
         </div>
       </section>
     </main>
@@ -633,12 +635,12 @@ function AuthScreen({ clerk, onGuest, loading = false }) {
         <div className="auth-split">
           <section className="auth-brand">
             <p className="auth-kicker">CD · Direct file transfer</p>
-            <h1>Send files<br/>directly.</h1>
-            <p className="auth-sub">Point-to-point transfers over an encrypted connection. Files move between sender and recipient only — nothing is stored on CD servers.</p>
+            <h1>Send it<br/>directly.</h1>
+            <p className="auth-sub">Files go straight from you to them. No upload queue. No mystery bucket.</p>
             <div className="auth-facts" aria-label="How CD handles your files">
               <span>Peer to peer</span>
               <span>End to end encrypted</span>
-              <span>Nothing stored</span>
+              <span>Nothing parked</span>
             </div>
           </section>
           <section className="auth-panel">
