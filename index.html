@@ -5,17 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="cd sends files straight between browsers. No upload queue, no mystery bucket."
+      content="Send files directly between browsers with a short word or QR code. No upload queue, no cloud detour."
     />
-    <title>cd — Send it directly</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#0d0503" />
+    <meta property="og:title" content="cd | direct browser transfer" />
+    <meta
+      property="og:description"
+      content="Send files directly between browsers with a short word or QR code."
+    />
+    <title>cd | direct browser transfer</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
   </head>
   <body>
     <main class="shell">
       <section class="brand-rail" aria-label="cd status board">
         <div class="brand-lockup">
-          <h1>cd</h1>
-          <p class="tagline">No upload queue.</p>
+          <div class="brand-mark"><span></span><span></span><span></span></div>
+          <div>
+            <h1>cd</h1>
+          <p class="tagline">/di·rect/</p>
+          </div>
+          <p class="brand-note">no cloud detour</p>
         </div>
 
         <div class="state-board" aria-live="polite">
@@ -39,10 +49,10 @@
             <input id="file-input" type="file" multiple hidden />
             <span class="drop-mark" aria-hidden="true">+</span>
             <div>
-              <h2>Drop</h2>
-              <p>Drop stuff here.</p>
+            <h2>Send a file</h2>
+            <p>Drop anything here and we’ll make a tiny, memorable hand-off code.</p>
             </div>
-            <button id="select-file-btn" class="primary-btn" type="button">Pick stuff</button>
+            <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
           </div>
 
           <div id="sender-file-info" class="file-info hidden">
@@ -57,11 +67,11 @@
           <div id="sender-code-section" class="share-panel hidden">
             <div class="share-grid">
               <div class="code-block">
-                <span class="panel-kicker">secret-ish code</span>
+                <span class="panel-kicker">share this code</span>
                 <strong id="share-code"></strong>
               </div>
               <div class="qr-block">
-                <span class="panel-kicker">scan this</span>
+                <span class="panel-kicker">or scan it</span>
                 <canvas id="share-qr" width="180" height="180" aria-label="QR code for receive link"></canvas>
               </div>
             </div>
@@ -97,18 +107,18 @@
 
         <section id="receiver-view" class="view hidden" aria-label="Receive files">
           <div id="receiver-input-section" class="input-section">
-              <label for="code-input">Magic-ish code</label>
+              <label for="code-input">Enter the hand-off word</label>
             <div class="code-input-wrapper">
               <input
                 id="code-input"
                 type="text"
-                maxlength="10"
-                placeholder="spark9x2k"
+                maxlength="6"
+                placeholder="waffle"
                 autocomplete="off"
                 spellcheck="false"
                 inputmode="text"
               />
-              <button id="connect-btn" class="primary-btn" type="button">Find it</button>
+              <button id="connect-btn" class="primary-btn" type="button">Connect</button>
             </div>
 
             <div class="scanner-panel">

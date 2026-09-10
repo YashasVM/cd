@@ -12,7 +12,7 @@
 [![Stack](https://img.shields.io/badge/stack-Vite%20%2B%20WebRTC-f4ed28?style=flat-square&labelColor=111111)](https://vite.dev)
 
 
-[cd - Website](https://cd.yashasvm.workers.dev/) . [Original Sha Project](https://github.com/YashasVM/Sha) . [Source Code](https://github.com/YashasVM/cd)
+[cd - Website](https://cd.yash0.in/) . [Original Sha Project](https://github.com/YashasVM/Sha) . [Source Code](https://github.com/YashasVM/cd)
 ---
 
 </div>
@@ -39,7 +39,7 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
 |---|---|
 | [cd Repository](https://github.com/YashasVM/cd) | Modernized fork and active codebase |
 | [Original Sha Repository](https://github.com/YashasVM/Sha) | Source project this fork split from |
-| [New main website](https://cd.yashasvm.workers.dev/) | Main Cd website, New UI, and Upgraded memes |
+| [Main website](https://cd.yash0.in/) | Main cd website and direct transfer UI |
 | [Vite](https://vite.dev) | Local dev server and production build tool |
 | [PeerJS](https://peerjs.com/) | WebRTC signaling library |
 | [QRCode](https://github.com/soldair/node-qrcode) | Sender QR generation |
@@ -65,7 +65,7 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
 
 | Area | What Changed |
 |---|---|
-| **UI** | Rebuilt into a sharper, clearer brutalist workbench |
+| **UI** | Rebuilt into a focused, centered editorial interface |
 | **Codebase** | Moved from loose static scripts into a Vite ES module app |
 | **Speed** | Uses binary chunks, file streams, and data-channel backpressure |
 | **Safety** | Avoids CDN script injection and keeps file handling in browser APIs |
@@ -205,8 +205,8 @@ npm run preview
 |-- index.html              App shell and accessible transfer views
 |-- src/
 |   |-- main.js             Sender, receiver, WebRTC, QR, and transfer logic
-|   `-- style.css           Brutalist responsive interface
-|-- favicon.svg             App icon
+|   `-- style.css           Responsive transfer interface
+|-- public/favicon.png      Generated app icon
 |-- package.json            Scripts and dependencies
 |-- package-lock.json       Locked dependency graph
 |-- wrangler.jsonc          Cloudflare static asset config

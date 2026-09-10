@@ -15,6 +15,7 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "vite": "8.0.14"
+    "vite": "8.0.14",
+    "wrangler": "^4.131.0"
   }
 }

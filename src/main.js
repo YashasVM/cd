@@ -15,28 +15,17 @@ function loadScanner() {
 }
 
 const FUN_CODES = [
-  'spark',
-  'orbit',
-  'pixel',
-  'vault',
-  'sonic',
-  'mango',
-  'laser',
-  'comet',
-  'glint',
-  'turbo',
-  'relay',
-  'frost',
-  'nova',
-  'bloom',
-  'cargo'
+  'beep', 'boop', 'bork', 'bonk', 'blob', 'cake', 'clam', 'clap', 'dino', 'drip',
+  'duck', 'flap', 'goof', 'honk', 'jazz', 'mochi', 'muffin', 'nacho', 'noodle',
+  'otter', 'pickle', 'pizza', 'plop', 'quack', 'salsa', 'snack', 'spork', 'taco',
+  'tofu', 'wacky', 'waffle', 'yeti', 'zippy'
 ];
-const CODE_SUFFIX_LENGTH = 5;
-const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length)) + CODE_SUFFIX_LENGTH;
+const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length));
 const PEER_PREFIX = 'cd-';
-const MAX_BUFFERED_AMOUNT = 8 * 1024 * 1024;
-const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
-const PROGRESS_UPDATE_INTERVAL = 80;
+const MAX_BUFFERED_AMOUNT = 16 * 1024 * 1024;
+const BUFFER_LOW_AMOUNT = 4 * 1024 * 1024;
+const TRANSFER_CHUNK_SIZE = 256 * 1024;
+const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
 
 const els = {
@@ -81,10 +70,8 @@ function setState(state) {
 }
 
 function generateCode() {
-  const values = crypto.getRandomValues(new Uint32Array(2));
-  const word = FUN_CODES[values[0] % FUN_CODES.length];
-  const suffix = values[1].toString(36).padStart(CODE_SUFFIX_LENGTH, '0').slice(-CODE_SUFFIX_LENGTH);
-  return word + suffix;
+  const values = crypto.getRandomValues(new Uint32Array(1));
+  return FUN_CODES[values[0] % FUN_CODES.length];
 }
 
 function cleanCode(value) {
@@ -93,8 +80,7 @@ function cleanCode(value) {
 
 function isValidCode(value) {
   const code = cleanCode(value);
-  const word = FUN_CODES.find((item) => code.startsWith(item));
-  return Boolean(word && code.length === word.length + CODE_SUFFIX_LENGTH && /^[a-z0-9]+$/.test(code.slice(word.length)));
+  return FUN_CODES.includes(code);
 }
 
 function codeFromUrl(value) {
@@ -221,8 +207,8 @@ const Sender = (() => {
       margin: 1,
       width: 180,
       color: {
-        dark: '#101010',
-        light: '#f5f000'
+        dark: '#0d0503',
+        light: '#e4d4b6'
       }
     });
   }
@@ -307,38 +293,29 @@ const Sender = (() => {
   }
 
   async function sendSingleFile(file) {
-    const reader = file.stream().getReader();
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          lastProgressUpdate.value = updateProgress(
-            els.senderProgress,
-            bytesSent,
-            totalSize,
-            transferStartTime,
-            true,
-            lastProgressUpdate
-          );
-          return;
-        }
-
-        await waitForBuffer();
-        connection.send(value);
-        bytesSent += value.byteLength;
-        lastProgressUpdate.value = updateProgress(
-          els.senderProgress,
-          bytesSent,
-          totalSize,
-          transferStartTime,
-          false,
-          lastProgressUpdate
-        );
-      }
-    } finally {
-      reader.releaseLock();
+    for (let offset = 0; offset < file.size; offset += TRANSFER_CHUNK_SIZE) {
+      await waitForBuffer();
+      const value = await file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
+      connection.send(value);
+      bytesSent += value.byteLength;
+      lastProgressUpdate.value = updateProgress(
+        els.senderProgress,
+        bytesSent,
+        totalSize,
+        transferStartTime,
+        false,
+        lastProgressUpdate
+      );
     }
+
+    lastProgressUpdate.value = updateProgress(
+      els.senderProgress,
+      bytesSent,
+      totalSize,
+      transferStartTime,
+      true,
+      lastProgressUpdate
+    );
   }
 
   function waitForBuffer() {
