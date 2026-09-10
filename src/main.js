@@ -144,6 +144,7 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
   const speed = bytes / elapsed;
 
   container.querySelector('.progress-fill').style.width = `${percent}%`;
+  container.querySelector('.progress-bar').style.setProperty('--progress', `${percent}%`);
   container.querySelector('.progress-bar').setAttribute('aria-valuenow', percent.toFixed(1));
   container.querySelector('.progress-percent').textContent = `${percent.toFixed(1)}%`;
   container.querySelector('.progress-speed').textContent = `${formatSize(speed)}/s`;
@@ -158,10 +159,12 @@ const Sender = (() => {
   let files = [];
   let code = null;
   let bytesSent = 0;
+  let bytesConfirmed = 0;
   let totalSize = 0;
   let transferStartTime = null;
   let transferFinished = false;
   let transferCancelled = false;
+  let transferAckResolve = null;
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
@@ -171,6 +174,7 @@ const Sender = (() => {
 
     code = generateCode();
     bytesSent = 0;
+    bytesConfirmed = 0;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
     transferFinished = false;
     transferCancelled = false;
@@ -241,6 +245,32 @@ const Sender = (() => {
       });
 
       conn.on('data', (data) => {
+        if (data?.type === 'progress') {
+          bytesConfirmed = Math.max(bytesConfirmed, Math.min(data.bytes, totalSize));
+          lastProgressUpdate.value = updateProgress(
+            els.senderProgress,
+            bytesConfirmed,
+            totalSize,
+            transferStartTime,
+            false,
+            lastProgressUpdate
+          );
+          return;
+        }
+        if (data?.type === 'transfer-ack') {
+          bytesConfirmed = totalSize;
+          lastProgressUpdate.value = updateProgress(
+            els.senderProgress,
+            bytesConfirmed,
+            totalSize,
+            transferStartTime,
+            true,
+            lastProgressUpdate
+          );
+          transferAckResolve?.();
+          transferAckResolve = null;
+          return;
+        }
         if (data?.type === 'cancel') {
           cancel('Receiver canceled the transfer.');
         }
@@ -248,6 +278,9 @@ const Sender = (() => {
 
       conn.on('close', () => {
         if (!transferFinished && !transferCancelled) {
+          transferCancelled = true;
+          transferAckResolve?.();
+          transferAckResolve = null;
           els.senderStatus.textContent = 'Connection vanished mid-send.';
           setState('failed');
         }
@@ -300,7 +333,10 @@ const Sender = (() => {
       connection.send({ type: 'file-complete', index });
     }
 
+    const transferAck = waitForTransferAck();
     connection.send({ type: 'transfer-complete' });
+    await transferAck;
+    if (transferCancelled) return;
     transferFinished = true;
     showComplete();
   }
@@ -311,24 +347,14 @@ const Sender = (() => {
       const value = await file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
       connection.send(value);
       bytesSent += value.byteLength;
-      lastProgressUpdate.value = updateProgress(
-        els.senderProgress,
-        bytesSent,
-        totalSize,
-        transferStartTime,
-        false,
-        lastProgressUpdate
-      );
     }
+  }
 
-    lastProgressUpdate.value = updateProgress(
-      els.senderProgress,
-      bytesSent,
-      totalSize,
-      transferStartTime,
-      true,
-      lastProgressUpdate
-    );
+  function waitForTransferAck() {
+    if (transferCancelled) return Promise.resolve();
+    return new Promise((resolve) => {
+      transferAckResolve = resolve;
+    });
   }
 
   function waitForBuffer() {
@@ -390,9 +416,12 @@ const Sender = (() => {
     files = [];
     code = null;
     bytesSent = 0;
+    bytesConfirmed = 0;
     totalSize = 0;
     transferStartTime = null;
     transferFinished = false;
+    transferAckResolve?.();
+    transferAckResolve = null;
     lastProgressUpdate.value = 0;
 
     els.dropZone.classList.remove('hidden');
@@ -430,6 +459,7 @@ const Receiver = (() => {
   let transferStartTime = null;
   let transferComplete = false;
   let transferCancelled = false;
+  let lastProgressAckAt = 0;
   let dataQueue = Promise.resolve();
   let timeoutId = null;
   const lastProgressUpdate = { value: 0 };
@@ -531,6 +561,7 @@ const Receiver = (() => {
     totalBytesReceived = 0;
     transferStartTime = Date.now();
     transferCancelled = false;
+    lastProgressAckAt = 0;
     lastProgressUpdate.value = 0;
 
     setManifestSummary();
@@ -611,6 +642,15 @@ const Receiver = (() => {
       false,
       lastProgressUpdate
     );
+    sendProgressAck();
+  }
+
+  function sendProgressAck(force = false) {
+    if (!connection?.open) return;
+    const now = performance.now();
+    if (!force && now - lastProgressAckAt < PROGRESS_UPDATE_INTERVAL) return;
+    connection.send({ type: 'progress', bytes: totalBytesReceived });
+    lastProgressAckAt = now;
   }
 
   async function handleFileComplete() {
@@ -631,6 +671,7 @@ const Receiver = (() => {
       true,
       lastProgressUpdate
     );
+    sendProgressAck(true);
     currentFile = null;
     currentFileChunks = [];
     currentWritable = null;
@@ -645,6 +686,8 @@ const Receiver = (() => {
   function handleTransferComplete() {
     transferComplete = true;
     clearTimeout(timeoutId);
+    sendProgressAck(true);
+    connection?.send({ type: 'transfer-ack' });
     els.receiverFileInfo.classList.add('hidden');
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.remove('hidden');
