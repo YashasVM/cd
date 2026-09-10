@@ -1,6 +1,14 @@
 import { Peer } from 'peerjs';
 import './style.css';
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Offline shell support is optional; transfers still work without it.
+    });
+  });
+}
+
 let qrCodeModulePromise;
 let scannerModulePromise;
 

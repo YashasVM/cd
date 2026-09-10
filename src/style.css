@@ -50,3 +50,42 @@ body::before{content:"";position:fixed;z-index:0;inset:0 0 auto;height:58vh;poin
 @keyframes dino-bob{to{transform:translate(-50%,-3px) rotate(2deg)}}
 @media(prefers-reduced-motion:reduce){.progress-fill::after,.progress-dino{animation:none}}
 @media(max-width:600px){.progress-topline{gap:8px}.cancel-btn{padding-inline:8px}.progress-bar{height:9px;margin:21px 0 14px}.progress-dino{font-size:16px}}
+
+/* Phone-first touch pass: safe areas, full-width actions, and controls sized for thumbs. */
+@media(max-width:600px){
+  html{min-width:0}
+  body{min-height:100svh;padding-bottom:env(safe-area-inset-bottom)}
+  .shell{width:100%;min-height:100svh;padding:calc(20px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));justify-content:flex-start}
+  .brand-lockup h1{font-size:34px}
+  .tagline{font-size:12px}
+  .brand-note{font-size:12px}
+  .brand-lockup::after{margin-top:14px;font-size:16px}
+  .state-board{margin-top:18px}
+  .workbench{margin-top:26px}
+  .mode-selector{margin-bottom:12px;padding-bottom:10px}
+  .mode-btn{min-height:44px;padding:10px 12px 0;font-size:14px}
+  .mode-btn.active::after{right:12px;bottom:-11px;left:12px}
+  .drop-zone{min-height:218px;grid-template-columns:50px minmax(0,1fr);gap:14px;padding:18px 0}
+  .drop-mark{width:50px;height:50px;font-size:28px}
+  .drop-zone h2{font-size:19px}
+  .drop-zone p{font-size:14px;line-height:1.5}
+  .primary-btn,.secondary-btn{min-height:48px;padding:10px 14px;font-size:14px}
+  .drop-zone .primary-btn{grid-column:1 / -1;width:100%;margin-top:8px}
+  .file-info,.share-panel,.progress-section,.result-section,.input-section,.connecting-section{margin-top:18px;padding:16px;border-radius:8px}
+  .share-grid,.code-input-wrapper{grid-template-columns:1fr}
+  .code-block #share-code{font-size:34px}
+  .qr-block{justify-items:center}
+  .qr-block #share-qr{width:180px;height:180px}
+  .share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .share-actions button{width:100%}
+  #code-input{min-height:56px;font-size:25px;padding:12px 14px}
+  .code-input-wrapper .primary-btn{width:100%;min-height:52px}
+  .scanner-panel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .scanner-panel .scanner-status{grid-column:1 / -1;grid-row:1;order:0}
+  .scanner-panel button{width:100%;grid-row:2}
+  .progress-topline{grid-template-columns:minmax(0,1fr) auto auto}
+  .progress-mode{font-size:16px}
+  .progress-stats{gap:8px}
+  .progress-stats span{padding:10px}
+  .progress-stats em{font-size:12px}
+}
