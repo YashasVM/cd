@@ -862,3 +862,89 @@ h2 {
     padding: 12px 10px;
   }
 }
+
+/* Keep the old deployment compact on phones: less scrolling, larger tap targets. */
+@media (max-width: 600px) {
+  .shell {
+    width: calc(100vw - 16px);
+    min-height: calc(100svh - 20px);
+    margin: 8px auto 12px;
+  }
+
+  .brand-lockup {
+    padding: 14px;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 16vw, 4.4rem);
+  }
+
+  .tagline {
+    font-size: 0.78rem;
+  }
+
+  .state-board {
+    padding: 12px 10px;
+  }
+
+  .view {
+    padding: 12px;
+  }
+
+  .mode-btn,
+  .primary-btn,
+  .secondary-btn {
+    min-height: 44px;
+  }
+
+  .mode-btn {
+    padding: 12px 10px;
+  }
+
+  .drop-zone {
+    min-height: min(40svh, 300px);
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .drop-mark {
+    width: 62px;
+    font-size: 3.4rem;
+  }
+
+  h2 {
+    font-size: clamp(2.5rem, 15vw, 4.4rem);
+  }
+
+  .file-info,
+  .share-panel,
+  .progress-section,
+  .result-section,
+  .input-section,
+  .connecting-section {
+    margin-top: 12px;
+  }
+
+  .file-info,
+  .share-panel,
+  .progress-section,
+  .result-section,
+  .input-section,
+  .connecting-section {
+    padding: 14px;
+  }
+
+  #code-input {
+    font-size: clamp(2.6rem, 14vw, 4rem);
+  }
+
+  #share-qr {
+    width: 128px;
+    height: 128px;
+  }
+
+  .progress-bar {
+    height: 32px;
+    margin: 10px 0;
+  }
+}

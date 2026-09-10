@@ -1,7 +1,18 @@
 import { Peer } from 'peerjs';
-import QRCode from 'qrcode';
-import { Html5Qrcode } from 'html5-qrcode';
 import './style.css';
+
+let qrCodeModulePromise;
+let scannerModulePromise;
+
+function loadQrCode() {
+  qrCodeModulePromise ??= import('qrcode').then((module) => module.default || module);
+  return qrCodeModulePromise;
+}
+
+function loadScanner() {
+  scannerModulePromise ??= import('html5-qrcode').then((module) => module.Html5Qrcode || module.default?.Html5Qrcode);
+  return scannerModulePromise;
+}
 
 const FUN_CODES = [
   'spark',
@@ -205,6 +216,7 @@ const Sender = (() => {
   }
 
   async function renderQr() {
+    const QRCode = await loadQrCode();
     await QRCode.toCanvas(els.shareQr, receiveLinkFor(code), {
       margin: 1,
       width: 180,
@@ -225,7 +237,7 @@ const Sender = (() => {
 
     peer.on('connection', (conn) => {
       connection = conn;
-      els.senderStatus.textContent = 'Receiver connected.';
+      els.senderStatus.textContent = 'Receiver found.';
       setState('connecting');
 
       conn.on('open', () => {
@@ -233,13 +245,13 @@ const Sender = (() => {
       });
 
       conn.on('error', () => {
-        els.senderStatus.textContent = 'Connection error. Try again.';
+        els.senderStatus.textContent = 'Connection got grumpy. Try again.';
         setState('failed');
       });
 
       conn.on('close', () => {
         if (!transferFinished) {
-          els.senderStatus.textContent = 'Connection closed before transfer finished.';
+          els.senderStatus.textContent = 'Connection vanished mid-send.';
           setState('failed');
         }
       });
@@ -254,7 +266,7 @@ const Sender = (() => {
         return;
       }
 
-      els.senderStatus.textContent = 'Connection error. Please refresh.';
+      els.senderStatus.textContent = 'Connection failed. Give it a refresh.';
       setState('failed');
     });
   }
@@ -283,7 +295,7 @@ const Sender = (() => {
 
     for (let index = 0; index < files.length; index += 1) {
       showCurrentFile(index);
-      els.senderStatus.textContent = `Sending file ${index + 1} of ${files.length}`;
+      els.senderStatus.textContent = `Sending ${index + 1} of ${files.length}…`;
       connection.send({ type: 'file-start', index });
       await sendSingleFile(files[index]);
       connection.send({ type: 'file-complete', index });
@@ -363,7 +375,7 @@ const Sender = (() => {
   function showComplete() {
     els.senderProgress.classList.add('hidden');
     els.senderComplete.classList.remove('hidden');
-    els.senderCompleteMessage.textContent = files.length === 1 ? 'Transfer complete' : `${files.length} files transferred`;
+    els.senderCompleteMessage.textContent = files.length === 1 ? 'Sent. Nice.' : `${files.length} files escaped.`;
     setState('complete');
   }
 
@@ -385,7 +397,7 @@ const Sender = (() => {
     els.senderProgress.classList.add('hidden');
     els.senderComplete.classList.add('hidden');
     els.senderStatus.textContent = 'Waiting for receiver...';
-    els.senderCompleteMessage.textContent = 'Transfer complete';
+    els.senderCompleteMessage.textContent = 'Sent. Nice.';
     els.senderProgress.querySelector('.progress-fill').style.width = '0%';
     els.senderProgress.querySelector('.progress-percent').textContent = '0%';
     els.senderProgress.querySelector('.progress-speed').textContent = '0 MB/s';
@@ -418,7 +430,7 @@ const Receiver = (() => {
   function connect(rawCode) {
     const code = cleanCode(rawCode);
     if (!isValidCode(code)) {
-      showError('Enter a valid cd code.');
+      showError('That code is a dud.');
       return;
     }
 
@@ -443,32 +455,32 @@ const Receiver = (() => {
 
       connection.on('data', (data) => {
         dataQueue = dataQueue.then(() => handleData(data)).catch(() => {
-          showError('Transfer failed while receiving data.');
+        showError('The transfer tripped. Try again.');
         });
       });
 
       connection.on('error', () => {
-        showError('Connection lost. Please try again.');
+        showError('Connection vanished. Try again.');
       });
 
       connection.on('close', () => {
         if (!transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
-          showError('Connection closed unexpectedly.');
+          showError('Connection vanished unexpectedly.');
         }
       });
     });
 
     peer.on('error', (err) => {
       if (err.type === 'peer-unavailable') {
-        showError('Invalid code or sender not available.');
+        showError('Bad code, or the sender wandered off.');
         return;
       }
-      showError('Connection error. Please try again.');
+      showError('Connection failed. Try again.');
     });
 
     timeoutId = setTimeout(() => {
       if (!connection || !connection.open) {
-        showError('Connection timeout. Check the code and try again.');
+        showError('Connection timed out. Check the code and try again.');
       }
     }, CONNECTION_TIMEOUT_MS);
   }
@@ -525,7 +537,7 @@ const Receiver = (() => {
 
     if (manifest.totalFiles === 1) {
       const onlyFile = manifest.files[0];
-      setFileInfo(els.receiverFileInfo, onlyFile.name, formatSize(onlyFile.size), 'Preparing transfer');
+      setFileInfo(els.receiverFileInfo, onlyFile.name, formatSize(onlyFile.size), 'Getting ready');
       return;
     }
 
@@ -623,7 +635,7 @@ const Receiver = (() => {
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.remove('hidden');
     els.receiverCompleteMessage.textContent =
-      manifest && manifest.totalFiles > 1 ? `${manifest.totalFiles} files downloaded` : 'Download complete';
+      manifest && manifest.totalFiles > 1 ? `${manifest.totalFiles} files landed.` : 'All here. Nice.';
     setState('complete');
   }
 
@@ -674,7 +686,7 @@ const Receiver = (() => {
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.add('hidden');
     els.receiverError.classList.add('hidden');
-    els.receiverCompleteMessage.textContent = 'Download complete';
+    els.receiverCompleteMessage.textContent = 'All here. Nice.';
     els.codeInput.value = '';
     els.receiverProgress.querySelector('.progress-fill').style.width = '0%';
     els.receiverProgress.querySelector('.progress-percent').textContent = '0%';
@@ -692,12 +704,13 @@ const Receiver = (() => {
 let scanner = null;
 
 async function startScanner() {
-  els.scannerStatus.textContent = 'Requesting camera...';
+  els.scannerStatus.textContent = 'Waking the camera...';
   els.qrReader.classList.remove('hidden');
   els.scanQrBtn.classList.add('hidden');
   els.stopScanBtn.classList.remove('hidden');
 
   try {
+    const Html5Qrcode = await loadScanner();
     scanner = new Html5Qrcode('qr-reader');
     await scanner.start(
       { facingMode: 'environment' },
@@ -710,9 +723,9 @@ async function startScanner() {
         }
       }
     );
-    els.scannerStatus.textContent = 'Point the camera at a cd QR code.';
+    els.scannerStatus.textContent = 'Point it at the code.';
   } catch {
-    els.scannerStatus.textContent = 'Camera unavailable. Enter the code manually.';
+    els.scannerStatus.textContent = 'Camera said no. Type the code.';
     await stopScanner();
   }
 }
