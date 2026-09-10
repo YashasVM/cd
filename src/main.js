@@ -45,6 +45,7 @@ const els = {
   copyLinkBtn: document.getElementById('copy-link-btn'),
   senderStatus: document.getElementById('sender-status'),
   senderProgress: document.getElementById('sender-progress'),
+  senderCancelBtn: document.getElementById('sender-cancel-btn'),
   senderComplete: document.getElementById('sender-complete'),
   senderCompleteMessage: document.getElementById('sender-complete-message'),
   sendAnotherBtn: document.getElementById('send-another-btn'),
@@ -58,6 +59,7 @@ const els = {
   receiverConnecting: document.getElementById('receiver-connecting'),
   receiverFileInfo: document.getElementById('receiver-file-info'),
   receiverProgress: document.getElementById('receiver-progress'),
+  receiverCancelBtn: document.getElementById('receiver-cancel-btn'),
   receiverComplete: document.getElementById('receiver-complete'),
   receiverCompleteMessage: document.getElementById('receiver-complete-message'),
   receiverError: document.getElementById('receiver-error'),
@@ -142,6 +144,7 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
   const speed = bytes / elapsed;
 
   container.querySelector('.progress-fill').style.width = `${percent}%`;
+  container.querySelector('.progress-bar').setAttribute('aria-valuenow', percent.toFixed(1));
   container.querySelector('.progress-percent').textContent = `${percent.toFixed(1)}%`;
   container.querySelector('.progress-speed').textContent = `${formatSize(speed)}/s`;
   container.querySelector('.progress-transferred').textContent = `${formatSize(bytes)} / ${formatSize(total)}`;
@@ -158,6 +161,7 @@ const Sender = (() => {
   let totalSize = 0;
   let transferStartTime = null;
   let transferFinished = false;
+  let transferCancelled = false;
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
@@ -169,6 +173,7 @@ const Sender = (() => {
     bytesSent = 0;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
     transferFinished = false;
+    transferCancelled = false;
 
     renderSelectionSummary();
     els.shareCode.textContent = code;
@@ -235,8 +240,14 @@ const Sender = (() => {
         setState('failed');
       });
 
+      conn.on('data', (data) => {
+        if (data?.type === 'cancel') {
+          cancel('Receiver canceled the transfer.');
+        }
+      });
+
       conn.on('close', () => {
-        if (!transferFinished) {
+        if (!transferFinished && !transferCancelled) {
           els.senderStatus.textContent = 'Connection vanished mid-send.';
           setState('failed');
         }
@@ -280,10 +291,12 @@ const Sender = (() => {
     lastProgressUpdate.value = updateProgress(els.senderProgress, bytesSent, totalSize, transferStartTime, true, lastProgressUpdate);
 
     for (let index = 0; index < files.length; index += 1) {
+      if (transferCancelled) return;
       showCurrentFile(index);
       els.senderStatus.textContent = `Sending ${index + 1} of ${files.length}…`;
       connection.send({ type: 'file-start', index });
       await sendSingleFile(files[index]);
+      if (transferCancelled) return;
       connection.send({ type: 'file-complete', index });
     }
 
@@ -293,7 +306,7 @@ const Sender = (() => {
   }
 
   async function sendSingleFile(file) {
-    for (let offset = 0; offset < file.size; offset += TRANSFER_CHUNK_SIZE) {
+    for (let offset = 0; offset < file.size && !transferCancelled; offset += TRANSFER_CHUNK_SIZE) {
       await waitForBuffer();
       const value = await file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
       connection.send(value);
@@ -339,7 +352,7 @@ const Sender = (() => {
       };
 
       const onBufferedLow = () => {
-        if (!connection?.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
+        if (transferCancelled || !connection?.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
           finish();
         }
       };
@@ -356,7 +369,21 @@ const Sender = (() => {
     setState('complete');
   }
 
+  function cancel(message = 'Transfer canceled.') {
+    if (transferCancelled) return;
+    transferCancelled = true;
+    try {
+      connection?.send({ type: 'cancel' });
+    } catch {
+      // The connection may already be closing.
+    }
+    els.senderStatus.textContent = message;
+    reset();
+    setState('idle');
+  }
+
   function reset() {
+    transferCancelled = true;
     peer?.destroy();
     peer = null;
     connection = null;
@@ -379,11 +406,13 @@ const Sender = (() => {
     els.senderProgress.querySelector('.progress-percent').textContent = '0%';
     els.senderProgress.querySelector('.progress-speed').textContent = '0 MB/s';
     els.senderProgress.querySelector('.progress-transferred').textContent = '0 / 0 MB';
+    els.senderProgress.querySelector('.progress-bar').setAttribute('aria-valuenow', '0');
   }
 
   return {
     init,
     reset,
+    cancel,
     copyCode: () => code && copyText(code, els.copyCodeBtn, 'Copied'),
     copyLink: () => code && copyText(receiveLinkFor(code), els.copyLinkBtn, 'Copied')
   };
@@ -400,6 +429,7 @@ const Receiver = (() => {
   let totalBytesReceived = 0;
   let transferStartTime = null;
   let transferComplete = false;
+  let transferCancelled = false;
   let dataQueue = Promise.resolve();
   let timeoutId = null;
   const lastProgressUpdate = { value: 0 };
@@ -441,7 +471,7 @@ const Receiver = (() => {
       });
 
       connection.on('close', () => {
-        if (!transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
+        if (!transferCancelled && !transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
           showError('Connection vanished unexpectedly.');
         }
       });
@@ -463,6 +493,8 @@ const Receiver = (() => {
   }
 
   async function handleData(data) {
+    if (transferCancelled && data?.type !== 'manifest') return;
+
     if (data instanceof ArrayBuffer || ArrayBuffer.isView(data) || data instanceof Blob) {
       await handleChunk(data);
       return;
@@ -481,6 +513,10 @@ const Receiver = (() => {
       case 'transfer-complete':
         handleTransferComplete();
         break;
+      case 'cancel':
+        transferCancelled = true;
+        showError('The sender canceled the transfer.');
+        break;
       default:
         break;
     }
@@ -494,6 +530,7 @@ const Receiver = (() => {
     };
     totalBytesReceived = 0;
     transferStartTime = Date.now();
+    transferCancelled = false;
     lastProgressUpdate.value = 0;
 
     setManifestSummary();
@@ -639,7 +676,19 @@ const Receiver = (() => {
     setState('failed');
   }
 
+  function cancel() {
+    if (transferCancelled) return;
+    transferCancelled = true;
+    try {
+      connection?.send({ type: 'cancel' });
+    } catch {
+      // The connection may already be closing.
+    }
+    reset();
+  }
+
   function resetConnectionOnly() {
+    transferCancelled = true;
     peer?.destroy();
     peer = null;
     connection = null;
@@ -669,12 +718,14 @@ const Receiver = (() => {
     els.receiverProgress.querySelector('.progress-percent').textContent = '0%';
     els.receiverProgress.querySelector('.progress-speed').textContent = '0 MB/s';
     els.receiverProgress.querySelector('.progress-transferred').textContent = '0 / 0 MB';
+    els.receiverProgress.querySelector('.progress-bar').setAttribute('aria-valuenow', '0');
     setState('idle');
   }
 
   return {
     connect,
-    reset
+    reset,
+    cancel
   };
 })();
 
@@ -778,6 +829,7 @@ els.sendAnotherBtn.addEventListener('click', () => {
   els.fileInput.value = '';
   setState('idle');
 });
+els.senderCancelBtn.addEventListener('click', () => Sender.cancel());
 
 els.connectBtn.addEventListener('click', () => Receiver.connect(els.codeInput.value));
 els.codeInput.addEventListener('keydown', (event) => {
@@ -795,6 +847,7 @@ els.scanQrBtn.addEventListener('click', () => void startScanner());
 els.stopScanBtn.addEventListener('click', () => void stopScanner());
 els.receiveAnotherBtn.addEventListener('click', () => Receiver.reset());
 els.retryBtn.addEventListener('click', () => Receiver.reset());
+els.receiverCancelBtn.addEventListener('click', () => Receiver.cancel());
 
 window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => event.preventDefault());

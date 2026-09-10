@@ -88,8 +88,9 @@
             <div class="progress-topline">
               <span class="progress-mode">uploading</span>
               <strong class="progress-percent">0%</strong>
+              <button id="sender-cancel-btn" class="cancel-btn" type="button">Cancel</button>
             </div>
-            <div class="progress-bar" aria-label="Upload progress">
+            <div class="progress-bar" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
             </div>
             <div class="progress-stats">
@@ -147,8 +148,9 @@
             <div class="progress-topline">
               <span class="progress-mode">downloading</span>
               <strong class="progress-percent">0%</strong>
+              <button id="receiver-cancel-btn" class="cancel-btn" type="button">Cancel</button>
             </div>
-            <div class="progress-bar" aria-label="Download progress">
+            <div class="progress-bar" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
             </div>
             <div class="progress-stats">

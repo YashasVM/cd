@@ -36,3 +36,15 @@ body::before{content:"";position:fixed;z-index:0;inset:0 0 auto;height:58vh;poin
 .primary-btn{background:#24110c;box-shadow:none}
 .secondary-btn{background:#160907}
 .primary-btn:hover,.secondary-btn:hover{background:#32170f}
+
+/* Transfer progress is intentionally high-contrast: the fill, stats, and cancel action should read at a glance. */
+.progress-topline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px}
+.progress-bar{height:10px;margin:16px 0;border:1px solid rgba(228,212,182,.16);border-radius:999px;background:#080302;box-shadow:inset 0 1px 2px rgba(0,0,0,.45);overflow:hidden}
+.progress-fill{position:relative;min-width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent-soft),var(--accent));box-shadow:0 0 12px rgba(229,138,87,.28);transition:width 140ms ease-out}
+.progress-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 20%,rgba(255,240,215,.28) 48%,transparent 76%);background-size:220% 100%;animation:progress-sheen 1.8s linear infinite}
+.cancel-btn{min-height:30px;padding:5px 10px;border:1px solid rgba(228,212,182,.22);border-radius:3px;background:transparent;color:var(--muted);font:11px ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer;transition:color .18s ease,border-color .18s ease,background .18s ease}
+.cancel-btn:hover{border-color:var(--accent);background:#24110c;color:var(--accent)}
+.cancel-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@keyframes progress-sheen{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.progress-fill::after{animation:none}}
+@media(max-width:600px){.progress-topline{gap:8px}.cancel-btn{padding-inline:8px}.progress-bar{height:9px;margin:14px 0}}
