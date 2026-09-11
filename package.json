@@ -9,8 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "audit": "npm audit --audit-level=moderate",
     "test:cli": "go test ./cmd/cdx/...",
-    "deploy:dry": "npm run build && wrangler deploy --dry-run",
-    "install:croc": "./scripts/install-croc.sh"
+    "deploy:dry": "npm run build && wrangler deploy --dry-run"
   },
   "dependencies": {
     "html5-qrcode": "2.3.8",

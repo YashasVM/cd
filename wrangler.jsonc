@@ -1,9 +1,16 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cd",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-11",
+  "durable_objects": {
+    "bindings": [{ "name": "TRANSFERS", "class_name": "TransferRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TransferRoom"] }],
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/ws/*", "/api/*"]
   }
 }

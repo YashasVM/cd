@@ -1,13 +1,10 @@
-.PHONY: cdx cdx-release croc test
+.PHONY: cdx cdx-release test
 
 CDX_DIR := cmd/cdx
 CDX_BUILD_FLAGS := -buildvcs=false -trimpath
 
 cdx:
 	cd $(CDX_DIR) && CGO_ENABLED=0 go build $(CDX_BUILD_FLAGS) -o ../../bin/cdx .
-
-croc:
-	./scripts/install-croc.sh
 
 cdx-release:
 	mkdir -p bin

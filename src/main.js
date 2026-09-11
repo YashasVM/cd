@@ -1,8 +1,3 @@
-const cdShareCode = window.location.pathname.match(/^\/([a-z]+(?:-[a-z]+){2,7})\/?$/i)?.[1];
-if (cdShareCode) {
-  window.location.replace(`https://getcroc.com/?code=${encodeURIComponent(cdShareCode)}`);
-}
-
 import { Peer } from 'peerjs';
 import './style.css';
 

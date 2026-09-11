@@ -36,13 +36,12 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
 CD also provides a CLI path for agents that need to hand a file to a user:
 
 ```text
-AI agent -> cdx send file -> https://cd.yash0.in/<code> -> croc encrypted relay
+AI agent -> cdx send file -> encrypted CD relay -> https://cd.yash0.in/<code>#<key>
 ```
 
-Install croc and build the small Go CLI from `cmd/cdx`:
+Build the small Go CLI from `cmd/cdx`:
 
 ```bash
-make croc
 make cdx
 ```
 
@@ -52,15 +51,15 @@ cdx send ./archive.zip --json
 ```
 
 The default command prints a CD URL such as
-`https://cd.yash0.in/baker-fog-lurk`. CD redirects that code to croc's browser
-receiver. Croc uses a short-lived code phrase and end-to-end encryption. Its
-relay forwards the transfer but does not need a storage bucket. The sender
-process must remain alive until the recipient opens the link.
+`https://cd.yash0.in/baker-fog-lurk#<key>`. The browser connects directly to
+CD's relay on that path. The relay sees encrypted frames only, while the key
+stays in the URL fragment and never reaches the server. The sender process
+remains alive until the recipient opens the link.
 
 The project-local provider-agnostic agent instructions live at
 [`skills/cd-file-sharing/SKILL.md`](skills/cd-file-sharing/SKILL.md).
 Repository agents should also follow [`AGENTS.md`](AGENTS.md) for the command
-lookup and croc setup behavior.
+lookup and CD relay behavior.
 
 ---
 

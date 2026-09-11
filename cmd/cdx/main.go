@@ -1,61 +1,152 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"time"
+	"strings"
+
+	"github.com/gorilla/websocket"
 )
 
-var browserURL = regexp.MustCompile(`https://[^[:space:]]+`)
+const chunkSize = 64 * 1024
+const relayURL = "wss://cd.yash0.in/ws/"
 
-func cdShareURL(crocURL string) (string, error) {
-	parsed, err := url.Parse(crocURL)
+var words = []string{
+	"beep", "boop", "bork", "bonk", "blob", "cake", "clam", "clap", "dino", "drip",
+	"duck", "flap", "goof", "honk", "jazz", "mochi", "muffin", "nacho", "noodle",
+	"otter", "pickle", "pizza", "plop", "quack", "salsa", "snack", "spork", "taco",
+	"tofu", "wacky", "waffle", "yeti", "zippy",
+}
+
+type metadata struct {
+	Filename string `json:"filename"`
+	Mime     string `json:"mime"`
+	Size     int64  `json:"size"`
+}
+
+func randomBytes(size int) ([]byte, error) {
+	value := make([]byte, size)
+	_, err := io.ReadFull(rand.Reader, value)
+	return value, err
+}
+
+func shareCode() (string, error) {
+	bytes, err := randomBytes(4)
 	if err != nil {
 		return "", err
 	}
-	code := parsed.Query().Get("code")
-	if code == "" {
-		return "", errors.New("croc did not return a receive code")
+	parts := make([]string, len(bytes))
+	for index, value := range bytes {
+		parts[index] = words[int(value)%len(words)]
 	}
-	return "https://cd.yash0.in/" + url.PathEscape(code), nil
+	return strings.Join(parts, "-"), nil
 }
 
-func crocPath() string {
-	if configured := os.Getenv("CROC_BIN"); configured != "" {
-		return configured
+func encrypt(block cipher.AEAD, key []byte, plaintext []byte) ([]byte, error) {
+	nonce, err := randomBytes(block.NonceSize())
+	if err != nil {
+		return nil, err
 	}
-	if executable, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(executable), "croc")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	return "croc"
+	return append(nonce, block.Seal(nil, nonce, plaintext, nil)...), nil
 }
 
-func send(args []string) error {
-	if len(args) == 0 {
-		return errors.New("usage: cdx send <file> [--json]")
+func sendEncrypted(connection *websocket.Conn, payload []byte) error {
+	return connection.WriteMessage(websocket.TextMessage, []byte("data:"+base64.RawStdEncoding.EncodeToString(payload)))
+}
+
+func contentType(filename string) string {
+	if value := mime.TypeByExtension(strings.ToLower(filepath.Ext(filename))); value != "" {
+		return value
 	}
-	filename := args[0]
-	jsonOutput := false
-	for _, argument := range args[1:] {
-		switch argument {
-		case "--json":
-			jsonOutput = true
-		case "--expire":
-			return errors.New("live croc transfers do not use expiry; the link closes after the receiver accepts it")
-		default:
-			return fmt.Errorf("unknown option %s", argument)
+	return "application/octet-stream"
+}
+
+func relayEndpoint(code string) string {
+	base := os.Getenv("CD_RELAY_URL")
+	if base == "" {
+		base = relayURL
+	}
+	return strings.TrimRight(base, "/") + "/" + url.PathEscape(code)
+}
+
+func runSender(filename, code string) error {
+	key, err := base64.RawURLEncoding.DecodeString(os.Getenv("CD_SHARE_KEY"))
+	if err != nil || len(key) != 32 {
+		return errors.New("invalid CD_SHARE_KEY")
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return err
+	}
+	connection, _, err := websocket.DefaultDialer.Dial(relayEndpoint(code), nil)
+	if err != nil {
+		return fmt.Errorf("connect to CD relay: %w", err)
+	}
+	defer connection.Close()
+	if err := connection.WriteMessage(websocket.TextMessage, []byte("hello:sender")); err != nil {
+		return err
+	}
+	if _, message, err := connection.ReadMessage(); err != nil || string(message) != "ready" {
+		return errors.New("receiver did not connect")
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	meta, err := json.Marshal(metadata{Filename: filepath.Base(filename), Mime: contentType(filename), Size: info.Size()})
+	if err != nil {
+		return err
+	}
+	encrypted, err := encrypt(aead, key, meta)
+	if err != nil {
+		return err
+	}
+	if err := sendEncrypted(connection, encrypted); err != nil {
+		return err
+	}
+	buffer := make([]byte, chunkSize)
+	for {
+		count, readErr := file.Read(buffer)
+		if count > 0 {
+			encrypted, err = encrypt(aead, key, buffer[:count])
+			if err != nil {
+				return err
+			}
+			if err := sendEncrypted(connection, encrypted); err != nil {
+				return err
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return readErr
 		}
 	}
+	return connection.WriteMessage(websocket.TextMessage, []byte("done"))
+}
+
+func send(filename string, jsonOutput bool) error {
 	info, err := os.Stat(filename)
 	if err != nil {
 		return err
@@ -63,61 +154,57 @@ func send(args []string) error {
 	if !info.Mode().IsRegular() {
 		return errors.New("file must be regular")
 	}
-
-	command := exec.Command(crocPath(), "send", "--qr", filename)
-	command.Stdout = io.Discard
-	logFile, err := os.CreateTemp("", "cdx-croc-*.log")
+	code, err := shareCode()
 	if err != nil {
 		return err
 	}
-	command.Stderr = logFile
+	key, err := randomBytes(32)
+	if err != nil {
+		return err
+	}
+	encodedKey := base64.RawURLEncoding.EncodeToString(key)
+	command := exec.Command(os.Args[0], "--serve", filename, code)
+	command.Env = append(os.Environ(), "CD_SHARE_KEY="+encodedKey)
+	command.Stdout = io.Discard
+	command.Stderr = os.Stderr
 	configureDetached(command)
 	if err := command.Start(); err != nil {
-		logFile.Close()
-		os.Remove(logFile.Name())
-		return fmt.Errorf("croc is not installed; run make croc or set CROC_BIN: %w", err)
+		return fmt.Errorf("start CD sender: %w", err)
 	}
-	logFile.Close()
-	done := waitForExit(command)
-	go func() { <-done; os.Remove(logFile.Name()) }()
-
-	for {
-		data, _ := os.ReadFile(logFile.Name())
-		if url := browserURL.FindString(string(data)); url != "" {
-			shareURL, err := cdShareURL(url)
-			if err != nil {
-				return err
-			}
-			if jsonOutput {
-				return json.NewEncoder(os.Stdout).Encode(map[string]any{"url": shareURL, "filename": filepath.Base(filename), "size": info.Size()})
-			}
-			_, err = fmt.Fprintln(os.Stdout, shareURL)
-			return err
-		}
-		select {
-		case <-done:
-			return errors.New("croc stopped before it produced a browser link")
-		case <-time.After(100 * time.Millisecond):
-		}
+	shareURL := "https://cd.yash0.in/" + code + "#" + encodedKey
+	if jsonOutput {
+		return json.NewEncoder(os.Stdout).Encode(map[string]any{"url": shareURL, "filename": filepath.Base(filename), "size": info.Size()})
 	}
-}
-
-func waitForExit(command *exec.Cmd) <-chan error {
-	result := make(chan error, 1)
-	go func() { result <- command.Wait() }()
-	return result
+	_, err = fmt.Fprintln(os.Stdout, shareURL)
+	return err
 }
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) >= 2 && os.Args[1] == "--serve" {
+		if len(os.Args) != 4 {
+			fmt.Fprintln(os.Stderr, "cdx: invalid sender process")
+			os.Exit(2)
+		}
+		if err := runSender(os.Args[2], os.Args[3]); err != nil {
+			fmt.Fprintln(os.Stderr, "cdx sender:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) < 3 || os.Args[1] != "send" {
 		fmt.Fprintln(os.Stderr, "usage: cdx send <file> [--json]")
 		os.Exit(2)
 	}
-	if os.Args[1] != "send" {
-		fmt.Fprintf(os.Stderr, "cdx: unknown command %q\n", os.Args[1])
-		os.Exit(2)
+	jsonOutput := false
+	for _, argument := range os.Args[3:] {
+		if argument == "--json" {
+			jsonOutput = true
+		} else {
+			fmt.Fprintf(os.Stderr, "cdx: unknown option %s\n", argument)
+			os.Exit(2)
+		}
 	}
-	if err := send(os.Args[2:]); err != nil {
+	if err := send(os.Args[2], jsonOutput); err != nil {
 		fmt.Fprintln(os.Stderr, "cdx:", err)
 		os.Exit(1)
 	}

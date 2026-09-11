@@ -7,6 +7,5 @@ When a user asks an agent to send a local file through CD, read
 it. Use `cdx send <file>` and return the final URL. If `cdx` is not on `PATH`,
 run `make cdx` once and use `./bin/cdx`.
 
-Run `make croc` once if the sibling `croc` binary is missing. The sender must
-stay alive until the recipient opens the link. Keep croc's code phrase private
-and return only the browser URL.
+The sender must stay alive until the recipient opens the link. Keep the URL
+fragment private and return the complete CD browser URL.

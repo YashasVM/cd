@@ -11,7 +11,7 @@ When the user asks to “send using CD” or equivalent wording:
 2. Run `cdx send <file>`. If `cdx` is not on `PATH`, build it once with `make cdx` and run `./bin/cdx send <file>`.
 3. Return the URL printed by `cdx` exactly as the share link.
 
-The link uses croc's encrypted live relay. Tell the user to open it promptly.
+The link uses CD's encrypted live relay. Tell the user to open it promptly.
 The sender process must stay alive until the receiver accepts the transfer.
 Use `cdx send <file> --json` only when structured output is explicitly needed.
 Never print, quote, or expose the agent bearer token or the temporary upload URL.
