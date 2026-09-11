@@ -31,6 +31,37 @@ Sender Browser -> WebRTC Data Channel -> Receiver Browser
        +-- PeerJS signaling for connection setup
 ```
 
+## Agent file sharing
+
+CD also provides a CLI path for agents that need to hand a file to a user:
+
+```text
+AI agent -> cdx send file -> https://cd.yash0.in/<code> -> croc encrypted relay
+```
+
+Install croc and build the small Go CLI from `cmd/cdx`:
+
+```bash
+make croc
+make cdx
+```
+
+```bash
+cdx send ./app.apk
+cdx send ./archive.zip --json
+```
+
+The default command prints a CD URL such as
+`https://cd.yash0.in/baker-fog-lurk`. CD redirects that code to croc's browser
+receiver. Croc uses a short-lived code phrase and end-to-end encryption. Its
+relay forwards the transfer but does not need a storage bucket. The sender
+process must remain alive until the recipient opens the link.
+
+The project-local provider-agnostic agent instructions live at
+[`skills/cd-file-sharing/SKILL.md`](skills/cd-file-sharing/SKILL.md).
+Repository agents should also follow [`AGENTS.md`](AGENTS.md) for the command
+lookup and croc setup behavior.
+
 ---
 
 ## Links

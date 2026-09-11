@@ -1,6 +1,16 @@
 node_modules/
 dist/
 .vite/
+.wrangler/
+bin/
 npm-debug.log*
 .agents/
 skills-lock.json
+
+# Android (local SDK path + generated outputs)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.iml
+.idea/

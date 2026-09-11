@@ -18,6 +18,8 @@
       content="Send files directly between browsers with a short word or QR code."
     />
     <title>cd | direct browser transfer</title>
+    <link rel="preconnect" href="https://0.peerjs.com" crossorigin />
+    <link rel="dns-prefetch" href="https://0.peerjs.com" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -103,6 +105,7 @@
             <div class="progress-stats">
               <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
               <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+              <span><b>left</b><em class="progress-eta">–</em></span>
             </div>
           </div>
 
@@ -123,6 +126,9 @@
                 maxlength="6"
                 placeholder="waffle"
                 autocomplete="off"
+                autocapitalize="none"
+                autocorrect="off"
+                enterkeyhint="go"
                 spellcheck="false"
                 inputmode="text"
               />
@@ -140,6 +146,7 @@
           <div id="receiver-connecting" class="connecting-section hidden">
             <div class="spinner" aria-hidden="true"></div>
             <p>Finding the sender...</p>
+            <button id="receiver-connecting-cancel-btn" class="secondary-btn" type="button">Cancel</button>
           </div>
 
           <div id="receiver-file-info" class="file-info hidden">
@@ -164,6 +171,7 @@
             <div class="progress-stats">
               <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
               <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+              <span><b>left</b><em class="progress-eta">–</em></span>
             </div>
           </div>
 

@@ -1,26 +1,64 @@
+const cdShareCode = window.location.pathname.match(/^\/([a-z]+(?:-[a-z]+){2,7})\/?$/i)?.[1];
+if (cdShareCode) {
+  window.location.replace(`https://getcroc.com/?code=${encodeURIComponent(cdShareCode)}`);
+}
+
 import { Peer } from 'peerjs';
 import './style.css';
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  // Register after first paint/idle so the install never contends with app
+  // boot (or an in-progress transfer) for bandwidth and CPU.
+  const registerSw = () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       // Offline shell support is optional; transfers still work without it.
     });
-  });
+  };
+  if ('requestIdleCallback' in window) {
+    window.addEventListener('load', () => requestIdleCallback(registerSw, { timeout: 4000 }));
+  } else {
+    window.addEventListener('load', () => setTimeout(registerSw, 1500));
+  }
 }
 
 let qrCodeModulePromise;
 let scannerModulePromise;
 
 function loadQrCode() {
-  qrCodeModulePromise ??= import('qrcode').then((module) => module.default || module);
+  qrCodeModulePromise ??= import('qrcode')
+    .then((module) => module.default || module)
+    .catch((error) => {
+      qrCodeModulePromise = undefined;
+      throw error;
+    });
   return qrCodeModulePromise;
 }
 
 function loadScanner() {
-  scannerModulePromise ??= import('html5-qrcode').then((module) => module.Html5Qrcode || module.default?.Html5Qrcode);
+  scannerModulePromise ??= import('html5-qrcode')
+    .then((module) => module.Html5Qrcode || module.default?.Html5Qrcode)
+    .catch((error) => {
+      scannerModulePromise = undefined;
+      throw error;
+    });
   return scannerModulePromise;
 }
+
+function warmUpOnIdle(task) {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(task, { timeout: 5000 });
+  } else {
+    setTimeout(task, 1500);
+  }
+}
+
+// Fetch the QR renderer during idle so the share panel paints instantly after
+// file selection instead of stalling on a dynamic import.
+warmUpOnIdle(() => {
+  loadQrCode().catch(() => {
+    // Retried on demand when files are selected.
+  });
+});
 
 const FUN_CODES = [
   'beep', 'boop', 'bork', 'bonk', 'blob', 'cake', 'clam', 'clap', 'dino', 'drip',
@@ -30,9 +68,15 @@ const FUN_CODES = [
 ];
 const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length));
 const PEER_PREFIX = 'cd-';
-const MAX_BUFFERED_AMOUNT = 16 * 1024 * 1024;
-const BUFFER_LOW_AMOUNT = 4 * 1024 * 1024;
-const TRANSFER_CHUNK_SIZE = 256 * 1024;
+// PeerJS's binary serializer fragments payloads above its ~16 KB MTU. Keep
+// application chunks just below that limit to avoid an extra fragment/
+// reassembly cycle for every file chunk.
+const TRANSFER_CHUNK_SIZE = 16 * 1024 - 128;
+// PeerJS starts queueing internally at 8 MB. Stay below that threshold so
+// backpressure remains controlled by this transfer loop instead of creating a
+// second, opaque queue inside the library.
+const MAX_BUFFERED_AMOUNT = 6 * 1024 * 1024;
+const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
 const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
 
@@ -65,6 +109,7 @@ const els = {
   scannerStatus: document.getElementById('scanner-status'),
   qrReader: document.getElementById('qr-reader'),
   receiverConnecting: document.getElementById('receiver-connecting'),
+  receiverConnectingCancelBtn: document.getElementById('receiver-connecting-cancel-btn'),
   receiverFileInfo: document.getElementById('receiver-file-info'),
   receiverProgress: document.getElementById('receiver-progress'),
   receiverCancelBtn: document.getElementById('receiver-cancel-btn'),
@@ -138,6 +183,47 @@ function setFileInfo(container, title, size, subtitle) {
   container.querySelector('.file-subtext').textContent = subtitle || '';
   container.classList.remove('hidden');
 }
+// Progress DOM nodes are cached per container: updateProgress runs on every
+// throttled tick during a transfer, so re-querying the DOM each time is pure
+// overhead on the hot path.
+const progressRefs = new WeakMap();
+
+function refsForProgress(container) {
+  let refs = progressRefs.get(container);
+  if (!refs) {
+    refs = {
+      fill: container.querySelector('.progress-fill'),
+      bar: container.querySelector('.progress-bar'),
+      percent: container.querySelector('.progress-percent'),
+      speed: container.querySelector('.progress-speed'),
+      transferred: container.querySelector('.progress-transferred'),
+      eta: container.querySelector('.progress-eta'),
+      emaSpeed: 0
+    };
+    progressRefs.set(container, refs);
+  }
+  return refs;
+}
+
+function formatEta(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '–';
+  if (seconds < 1) return '<1s';
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+function resetProgress(container) {
+  const refs = refsForProgress(container);
+  refs.emaSpeed = 0;
+  refs.fill.style.transform = 'scaleX(0)';
+  refs.bar.setAttribute('aria-valuenow', '0');
+  refs.percent.textContent = '0%';
+  refs.speed.textContent = '0 MB/s';
+  refs.transferred.textContent = '0 / 0 MB';
+  if (refs.eta) refs.eta.textContent = '–';
+}
 
 function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef) {
   if (!startedAt) return lastUpdateRef.value;
@@ -147,16 +233,24 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
     return lastUpdateRef.value;
   }
 
+  const refs = refsForProgress(container);
   const percent = total === 0 ? 100 : Math.min((bytes / total) * 100, 100);
   const elapsed = Math.max((Date.now() - startedAt) / 1000, 0.001);
-  const speed = bytes / elapsed;
+  const instantSpeed = bytes / elapsed;
+  // Exponential moving average: per-chunk timing is noisy, and a flickering
+  // speed readout makes the transfer feel slower than it is.
+  refs.emaSpeed = refs.emaSpeed === 0 ? instantSpeed : refs.emaSpeed * 0.7 + instantSpeed * 0.3;
 
-  container.querySelector('.progress-fill').style.width = `${percent}%`;
-  container.querySelector('.progress-bar').style.setProperty('--progress', `${percent}%`);
-  container.querySelector('.progress-bar').setAttribute('aria-valuenow', percent.toFixed(1));
-  container.querySelector('.progress-percent').textContent = `${percent.toFixed(1)}%`;
-  container.querySelector('.progress-speed').textContent = `${formatSize(speed)}/s`;
-  container.querySelector('.progress-transferred').textContent = `${formatSize(bytes)} / ${formatSize(total)}`;
+  // transform (not width) keeps the bar animation on the compositor thread.
+  refs.fill.style.transform = `scaleX(${percent / 100})`;
+  refs.bar.style.setProperty('--progress', `${percent}%`);
+  refs.bar.setAttribute('aria-valuenow', percent.toFixed(1));
+  refs.percent.textContent = `${percent.toFixed(1)}%`;
+  refs.speed.textContent = `${formatSize(refs.emaSpeed)}/s`;
+  refs.transferred.textContent = `${formatSize(bytes)} / ${formatSize(total)}`;
+  if (refs.eta) {
+    refs.eta.textContent = bytes >= total || refs.emaSpeed <= 0 ? '–' : formatEta((total - bytes) / refs.emaSpeed);
+  }
 
   return now;
 }
@@ -350,9 +444,20 @@ const Sender = (() => {
   }
 
   async function sendSingleFile(file) {
-    for (let offset = 0; offset < file.size && !transferCancelled; offset += TRANSFER_CHUNK_SIZE) {
+    let offset = 0;
+    let nextChunk = file.slice(0, Math.min(TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
+
+    while (offset < file.size && !transferCancelled) {
+      // Start reading the next chunk before waiting for the data channel. On
+      // slower storage this keeps the channel supplied without growing the
+      // number of outstanding reads beyond one.
+      const value = await nextChunk;
+      offset += value.byteLength;
+      nextChunk = offset < file.size
+        ? file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer()
+        : null;
+
       await waitForBuffer();
-      const value = await file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
       connection.send(value);
       bytesSent += value.byteLength;
     }
@@ -373,26 +478,32 @@ const Sender = (() => {
 
     dataChannel.bufferedAmountLowThreshold = BUFFER_LOW_AMOUNT;
 
+    // Event-driven: waking 60x/sec on a polling interval burns CPU for the
+    // whole transfer. The coarse timeout is only a fallback for browsers
+    // that never fire bufferedamountlow.
     return new Promise((resolve) => {
       let settled = false;
-      let intervalId = null;
+      let fallbackId = 0;
 
       const finish = () => {
         if (settled) return;
         settled = true;
         dataChannel.removeEventListener?.('bufferedamountlow', onBufferedLow);
-        if (intervalId) clearInterval(intervalId);
+        clearTimeout(fallbackId);
         resolve();
       };
 
       const onBufferedLow = () => {
         if (transferCancelled || !connection?.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
           finish();
+        } else {
+          clearTimeout(fallbackId);
+          fallbackId = setTimeout(onBufferedLow, 120);
         }
       };
 
       dataChannel.addEventListener?.('bufferedamountlow', onBufferedLow);
-      intervalId = setInterval(onBufferedLow, 16);
+      fallbackId = setTimeout(onBufferedLow, 120);
     });
   }
 
@@ -439,11 +550,7 @@ const Sender = (() => {
     els.senderComplete.classList.add('hidden');
     els.senderStatus.textContent = 'Waiting for receiver...';
     els.senderCompleteMessage.textContent = 'Sent. Nice.';
-    els.senderProgress.querySelector('.progress-fill').style.width = '0%';
-    els.senderProgress.querySelector('.progress-percent').textContent = '0%';
-    els.senderProgress.querySelector('.progress-speed').textContent = '0 MB/s';
-    els.senderProgress.querySelector('.progress-transferred').textContent = '0 / 0 MB';
-    els.senderProgress.querySelector('.progress-bar').setAttribute('aria-valuenow', '0');
+    resetProgress(els.senderProgress);
   }
 
   return {
@@ -463,6 +570,7 @@ const Receiver = (() => {
   let currentFileChunks = [];
   let currentWritable = null;
   let currentFileHandle = null;
+  let pickerPromise = null;
   let totalBytesReceived = 0;
   let transferStartTime = null;
   let transferComplete = false;
@@ -607,6 +715,7 @@ const Receiver = (() => {
     currentFileChunks = [];
     currentWritable = null;
     currentFileHandle = null;
+    pickerPromise = null;
     setFileInfo(
       els.receiverFileInfo,
       currentFile.name,
@@ -615,17 +724,22 @@ const Receiver = (() => {
     );
 
     if ('showSaveFilePicker' in window) {
-      try {
-        currentFileHandle = await window.showSaveFilePicker({
-          suggestedName: currentFile.name,
-          types: [{ description: currentFile.mimeType, accept: { [currentFile.mimeType]: ['.' + extensionFor(currentFile.name)] } }]
-        });
-        currentWritable = await currentFileHandle.createWritable();
-        setState('saving');
-      } catch {
-        currentWritable = null;
-        currentFileHandle = null;
-      }
+      // Fire the save dialog WITHOUT blocking the transfer queue. Awaiting
+      // it here stalls the sender (backpressure) until the user picks a
+      // location; instead chunks buffer in memory and flush at file-complete.
+      pickerPromise = openWritable(currentFile);
+    }
+  }
+
+  async function openWritable(file) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: file.name,
+        types: [{ description: file.mimeType, accept: { [file.mimeType]: ['.' + extensionFor(file.name)] } }]
+      });
+      return { handle, writable: await handle.createWritable() };
+    } catch {
+      return null;
     }
   }
 
@@ -664,7 +778,20 @@ const Receiver = (() => {
   async function handleFileComplete() {
     if (!currentFile) return;
 
+    // Adopt the save stream if the dialog resolved while chunks streamed in.
+    const picked = await pickerPromise;
+    pickerPromise = null;
+    if (picked && !transferCancelled) {
+      currentWritable = picked.writable;
+      currentFileHandle = picked.handle;
+      setState('saving');
+    }
+
     if (currentWritable) {
+      for (const buffered of currentFileChunks) {
+        await currentWritable.write(buffered);
+      }
+      currentFileChunks = [];
       await currentWritable.close();
     } else {
       const blob = new Blob(currentFileChunks, { type: currentFile.mimeType });
@@ -748,6 +875,7 @@ const Receiver = (() => {
     currentFileChunks = [];
     currentWritable = null;
     currentFileHandle = null;
+    pickerPromise = null;
     totalBytesReceived = 0;
     transferStartTime = null;
     transferComplete = false;
@@ -765,11 +893,7 @@ const Receiver = (() => {
     els.receiverError.classList.add('hidden');
     els.receiverCompleteMessage.textContent = 'All here. Nice.';
     els.codeInput.value = '';
-    els.receiverProgress.querySelector('.progress-fill').style.width = '0%';
-    els.receiverProgress.querySelector('.progress-percent').textContent = '0%';
-    els.receiverProgress.querySelector('.progress-speed').textContent = '0 MB/s';
-    els.receiverProgress.querySelector('.progress-transferred').textContent = '0 / 0 MB';
-    els.receiverProgress.querySelector('.progress-bar').setAttribute('aria-valuenow', '0');
+    resetProgress(els.receiverProgress);
     setState('idle');
   }
 
@@ -850,6 +974,13 @@ function switchToReceiveMode() {
   els.senderView.classList.add('hidden');
   Sender.reset();
   setState('idle');
+  // Warm the 369 KB scanner chunk while idle so tapping "Scan code" later
+  // opens the camera instead of downloading and parsing a library.
+  warmUpOnIdle(() => {
+    loadScanner().catch(() => {
+      // Retried on demand when scanning starts.
+    });
+  });
 }
 
 els.sendModeBtn.addEventListener('click', switchToSendMode);
@@ -899,6 +1030,14 @@ els.stopScanBtn.addEventListener('click', () => void stopScanner());
 els.receiveAnotherBtn.addEventListener('click', () => Receiver.reset());
 els.retryBtn.addEventListener('click', () => Receiver.reset());
 els.receiverCancelBtn.addEventListener('click', () => Receiver.cancel());
+els.receiverConnectingCancelBtn.addEventListener('click', () => Receiver.reset());
+
+// Pasting files anywhere on the Send tab starts a transfer immediately.
+window.addEventListener('paste', (event) => {
+  if (!els.senderView.classList.contains('active')) return;
+  const files = Array.from(event.clipboardData?.files || []).filter(Boolean);
+  if (files.length > 0) Sender.init(files);
+});
 
 window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => event.preventDefault());
