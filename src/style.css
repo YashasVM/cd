@@ -90,3 +90,9 @@ body::before{content:"";position:fixed;z-index:0;inset:0 0 auto;height:58vh;poin
   .progress-stats span{padding:10px}
   .progress-stats em{font-size:12px}
 }
+
+.share-transfer-page .brand-lockup::after{content:none}
+.share-description{margin:18px 0 0;color:var(--text);font-size:17px;line-height:1.45}
+.share-transfer-page .share-panel{max-width:680px}
+.share-transfer-page .status{margin-top:0}
+.share-download{display:inline-flex;align-items:center;margin-top:16px;text-decoration:none}

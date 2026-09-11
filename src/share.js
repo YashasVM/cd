@@ -1,10 +1,23 @@
+import './style.css';
+
 const code = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
 const encodedKey = window.location.hash.slice(1);
 
 document.body.innerHTML = `
-  <main style="max-width:560px;margin:12vh auto;padding:24px;font:16px system-ui;color:#f4eadb;background:#160806">
-    <h1>cd</h1><p id="status">Connecting to the sender...</p>
-    <a id="download" hidden></a>
+  <main class="shell share-transfer-page">
+    <header class="brand-rail">
+      <div class="brand-lockup"><h1>cd</h1><span class="tagline">/di·rect/</span></div>
+      <p class="brand-note">private CD relay</p>
+      <p class="share-description">A file is being handed to you through CD.</p>
+    </header>
+    <section class="workbench">
+      <div class="share-panel">
+        <span class="panel-kicker">incoming transfer</span>
+        <p id="status" class="status">Connecting to the sender...</p>
+        <a id="download" class="primary-btn share-download" hidden></a>
+      </div>
+    </section>
+    <p class="watermark">encrypted in your browser · <a href="/">cd.yash0.in</a></p>
   </main>`;
 const status = document.getElementById('status');
 const download = document.getElementById('download');
@@ -20,7 +33,9 @@ function decodeBase64(value) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-const keyPromise = crypto.subtle.importKey('raw', decodeBase64Url(encodedKey), 'AES-GCM', false, ['decrypt']);
+const keyPromise = encodedKey
+  ? crypto.subtle.importKey('raw', decodeBase64Url(encodedKey), 'AES-GCM', false, ['decrypt'])
+  : Promise.reject(new Error('missing transfer key'));
 const chunks = [];
 let file;
 
@@ -32,6 +47,9 @@ async function decrypt(data) {
 const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/${code}`);
 socket.binaryType = 'arraybuffer';
 socket.addEventListener('open', () => socket.send('hello:receiver'));
+socket.addEventListener('error', () => {
+  status.textContent = 'This CD transfer is unavailable or has expired.';
+});
 socket.addEventListener('message', async (event) => {
   if (typeof event.data === 'string') {
     if (event.data === 'ready') status.textContent = 'Receiving securely...';
