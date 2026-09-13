@@ -13,7 +13,10 @@ import {
   receiverAdmission
 } from '../src/agent-protocol.js';
 
-const port = await availablePort();
+const hosted = process.env.CD_VERIFY_URL;
+const port = hosted ? null : await availablePort();
+const publicBase = hosted ? new URL(hosted).origin : `http://127.0.0.1:${port}`;
+const relayBase = publicBase.replace(/^http/, 'ws') + '/ws/v1';
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-'));
 const executable = join(work, process.platform === 'win32' ? 'cdx.exe' : 'cdx');
 const sourcePath = join(work, 'résumé final.bin');
@@ -25,49 +28,53 @@ let sender;
 let browser;
 try {
   await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cdx']);
-  const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
-  worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  collect(worker.stdout);
-  collect(worker.stderr);
-  await waitForHealth(`http://127.0.0.1:${port}/api/health`, worker);
-  await verifyPeerSignaling(port);
-  const missing = await runCapture(executable, ['send', join(work, 'missing.bin')]);
-  assert.equal(missing.code, 1);
-  assert.equal(missing.stdout, '');
-  await expectClose(
-    `ws://127.0.0.1:${port}/ws/v1/AAAAAAAAAAAAAAAAAAAAAA`,
-    { type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
-    4404
-  );
-  await expectClose(
-    `ws://127.0.0.1:${port}/ws/v1/CCCCCCCCCCCCCCCCCCCCCC`,
-    { type: 'join', protocol: 'cd-transfer-v0', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
-    4406
-  );
-  await expectSilentTimeout(`ws://127.0.0.1:${port}/ws/v1/DDDDDDDDDDDDDDDDDDDDDD`);
-  const abandonedRoom = `ws://127.0.0.1:${port}/ws/v1/BBBBBBBBBBBBBBBBBBBBBB`;
-  await connectAndClose(abandonedRoom, {
-    type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-  });
-  await expectClose(abandonedRoom, {
-    type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-  }, 4409);
+  if (!hosted) {
+    const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
+    worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    collect(worker.stdout);
+    collect(worker.stderr);
+    await waitForHealth(`http://127.0.0.1:${port}/api/health`, worker);
+    await verifyPeerSignaling(port);
+    const missing = await runCapture(executable, ['send', join(work, 'missing.bin')]);
+    assert.equal(missing.code, 1);
+    assert.equal(missing.stdout, '');
+    await expectClose(
+      `ws://127.0.0.1:${port}/ws/v1/AAAAAAAAAAAAAAAAAAAAAA`,
+      { type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      4404
+    );
+    await expectClose(
+      `ws://127.0.0.1:${port}/ws/v1/CCCCCCCCCCCCCCCCCCCCCC`,
+      { type: 'join', protocol: 'cd-transfer-v0', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      4406
+    );
+    await expectSilentTimeout(`ws://127.0.0.1:${port}/ws/v1/DDDDDDDDDDDDDDDDDDDDDD`);
+    const abandonedRoom = `ws://127.0.0.1:${port}/ws/v1/BBBBBBBBBBBBBBBBBBBBBB`;
+    await connectAndClose(abandonedRoom, {
+      type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    });
+    await expectClose(abandonedRoom, {
+      type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    }, 4409);
+  }
   sender = spawn(executable, ['send', sourcePath], {
     env: {
       ...process.env,
-      CD_RELAY_URL: `ws://127.0.0.1:${port}/ws/v1`,
-      CD_PUBLIC_URL: `http://127.0.0.1:${port}`
+      CD_RELAY_URL: relayBase,
+      CD_PUBLIC_URL: publicBase
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const senderExit = new Promise((resolve) => sender.once('exit', resolve));
   const stderr = collect(sender.stderr);
   const link = await firstLine(sender.stdout);
-  assert.match(link, new RegExp(`^http://127\\.0\\.0\\.1:${port}/s/[A-Za-z0-9_-]{22}#v1\\.[A-Za-z0-9_-]{43}$`));
   const linkUrl = new URL(link);
-  const relayUrl = `ws://${linkUrl.host}/ws/v1/${linkUrl.pathname.split('/').at(-1)}`;
+  assert.equal(linkUrl.origin, publicBase);
+  assert.match(linkUrl.pathname, /^\/s\/[A-Za-z0-9_-]{22}$/);
+  assert.match(linkUrl.hash, /^#v1\.[A-Za-z0-9_-]{43}$/);
+  const relayUrl = `${relayBase}/${linkUrl.pathname.split('/').at(-1)}`;
   await expectClose(relayUrl, {
     type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
   }, 4401);
