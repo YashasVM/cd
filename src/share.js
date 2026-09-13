@@ -14,9 +14,9 @@ import {
   parseInvitation,
   receiverAdmission
 } from './agent-protocol.js';
+import { createSink as createDownloadSink } from './sink.js';
 import './style.css';
 
-const BLOB_LIMIT = 256n * 1024n * 1024n;
 const ACK_INTERVAL = 256n * 1024n;
 const MAX_PENDING_BYTES = 2 * 1024 * 1024;
 const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -101,27 +101,7 @@ function decodeCounts(value) {
 }
 
 async function createSink(offer) {
-  if ('showSaveFilePicker' in window) {
-    const handle = await window.showSaveFilePicker({ suggestedName: offer.name });
-    const writable = await handle.createWritable();
-    return {
-      kind: 'saved',
-      async write(bytes) { await writable.write(bytes); },
-      async close() { await writable.close(); return {}; },
-      async abort() { await writable.abort(); }
-    };
-  }
-  if (offer.size > BLOB_LIMIT) throw new Error('This browser can receive files up to 256 MB. Open the link in a desktop browser for this file.');
-  const chunks = [];
-  return {
-    kind: 'download',
-    async write(bytes) { chunks.push(bytes); },
-    async close() {
-      const url = URL.createObjectURL(new Blob(chunks, { type: offer.mediaType }));
-      return { url, revoke: () => URL.revokeObjectURL(url) };
-    },
-    async abort() { chunks.length = 0; }
-  };
+  return createDownloadSink({ name: offer.name, size: offer.size, mediaType: offer.mediaType });
 }
 
 function waitForAcceptance(offer) {

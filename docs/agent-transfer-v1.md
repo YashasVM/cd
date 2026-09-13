@@ -103,7 +103,9 @@ duplicated, missing, or extra content without a second file read.
 - Plaintext chunk: 64 KiB.
 - Unacknowledged sender window: 1 MiB.
 - Pending receiver ciphertext: 2 MiB.
-- Blob fallback: 256 MiB.
+- Large-file receiver sink: File System Access streaming, then Origin
+  Private File System staging, then a Blob download capped at 256 MiB
+  on WebKit receivers (large blob downloads crash real iOS devices).
 
 The browser reports a Blob result as "ready to download", not "saved". A direct
 file-system sink may report "saved" only after its writable closes successfully.

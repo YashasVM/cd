@@ -12,6 +12,7 @@
     "test:cli": "go test ./...",
     "typecheck": "tsc",
     "verify:agent": "npm run build && node scripts/verify-agent.mjs",
+    "verify:p2p": "npm run build && node scripts/verify-p2p.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run"
   },
   "dependencies": {

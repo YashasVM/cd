@@ -2,6 +2,14 @@ import { Peer } from 'peerjs';
 import './style.css';
 import { cleanCode, codeFromUrl, generateCode, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
 import { parseManifest } from './p2p-manifest.js';
+import {
+  DOWNLOAD_TOO_LARGE,
+  createBlobSink,
+  createOPFSSink,
+  createStageSink,
+  detectCapabilities,
+  selectSinkTier
+} from './sink.js';
 
 if ('serviceWorker' in navigator) {
   // Register after first paint/idle so the install never contends with app
@@ -558,9 +566,9 @@ const Receiver = (() => {
   let connection = null;
   let manifest = null;
   let currentFile = null;
-  let currentFileChunks = [];
-  let currentWritable = null;
-  let currentFileHandle = null;
+  let currentSink = null;
+  let stageSink = null;
+  let pendingDownloadUrl = null;
   let currentFileBytes = 0;
   let nextFileIndex = 0;
   let pickerPromise = null;
@@ -718,9 +726,8 @@ const Receiver = (() => {
 
     currentFile = manifest.files[data.index];
     currentFileBytes = 0;
-    currentFileChunks = [];
-    currentWritable = null;
-    currentFileHandle = null;
+    currentSink = null;
+    stageSink = null;
     pickerPromise = null;
     setFileInfo(
       els.receiverFileInfo,
@@ -729,11 +736,22 @@ const Receiver = (() => {
       `File ${data.index + 1} of ${manifest.totalFiles}`
     );
 
-    if ('showSaveFilePicker' in window) {
+    const tier = selectSinkTier(detectCapabilities(), currentFile.size, navigator.userAgent);
+    if (tier === 'too-large') {
+      refuseTransfer(DOWNLOAD_TOO_LARGE);
+      return;
+    }
+    if (tier === 'file-picker') {
       // Fire the save dialog WITHOUT blocking the transfer queue. Awaiting
       // it here stalls the sender (backpressure) until the user picks a
-      // location; instead chunks buffer in memory and flush at file-complete.
+      // location; instead chunks stage (preferably off-heap in OPFS) and
+      // flush at file-complete.
       pickerPromise = openWritable(currentFile);
+      stageSink = await createStageSink({ name: currentFile.name });
+    } else if (tier === 'opfs') {
+      currentSink = await createOPFSSink({ name: currentFile.name });
+    } else {
+      currentSink = createBlobSink({ mediaType: currentFile.mimeType, name: currentFile.name });
     }
   }
 
@@ -758,10 +776,12 @@ const Receiver = (() => {
       throw new Error('file size exceeded');
     }
 
-    if (currentWritable) {
-      await currentWritable.write(chunk);
+    if (currentSink) {
+      await currentSink.write(chunk);
+    } else if (stageSink) {
+      await stageSink.write(chunk);
     } else {
-      currentFileChunks.push(chunk);
+      throw new Error('unexpected file bytes');
     }
 
     totalBytesReceived += chunkSize;
@@ -790,24 +810,30 @@ const Receiver = (() => {
       throw new Error('incomplete file');
     }
 
-    // Adopt the save stream if the dialog resolved while chunks streamed in.
+    // Adopt the save stream if the dialog resolved while chunks staged.
     const picked = await pickerPromise;
     pickerPromise = null;
     if (picked && !transferCancelled) {
-      currentWritable = picked.writable;
-      currentFileHandle = picked.handle;
       setState('saving');
-    }
-
-    if (currentWritable) {
-      for (const buffered of currentFileChunks) {
-        await currentWritable.write(buffered);
+      if (stageSink) {
+        const staged = await stageSink.toFile(currentFile.mimeType);
+        stageSink = null;
+        try {
+          await staged.file.stream().pipeTo(picked.writable);
+        } catch (error) {
+          await staged.cleanup();
+          throw error;
+        }
+        await staged.cleanup();
       }
-      currentFileChunks = [];
-      await currentWritable.close();
-    } else {
-      const blob = new Blob(currentFileChunks, { type: currentFile.mimeType });
-      downloadBlob(blob, currentFile.name);
+    } else if (currentSink) {
+      const result = await currentSink.close();
+      currentSink = null;
+      downloadUrl(result.url, currentFile.name, result.revoke);
+    } else if (stageSink) {
+      const download = await stageSink.toDownload(currentFile.mimeType);
+      stageSink = null;
+      downloadUrl(download.url, currentFile.name, download.revoke);
     }
 
     lastProgressUpdate.value = updateProgress(
@@ -822,9 +848,8 @@ const Receiver = (() => {
     currentFile = null;
     currentFileBytes = 0;
     nextFileIndex += 1;
-    currentFileChunks = [];
-    currentWritable = null;
-    currentFileHandle = null;
+    currentSink = null;
+    stageSink = null;
   }
 
   function extensionFor(fileName) {
@@ -849,14 +874,22 @@ const Receiver = (() => {
   }
 
   function downloadBlob(blob, fileName) {
-    const url = URL.createObjectURL(blob);
+    downloadUrl(URL.createObjectURL(blob), fileName);
+  }
+
+  function downloadUrl(url, fileName, revokeExtra) {
+    pendingDownloadUrl = { url, revokeExtra };
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => {
+      if (pendingDownloadUrl?.url === url) pendingDownloadUrl = null;
+      try { revokeExtra?.(); } catch { /* Best effort. */ }
+      URL.revokeObjectURL(url);
+    }, 60_000);
   }
 
   function showError(message) {
@@ -878,6 +911,13 @@ const Receiver = (() => {
     showError('The sender sent invalid transfer data.');
   }
 
+  function refuseTransfer(message) {
+    transferCancelled = true;
+    try { connection?.close(); } catch { /* Best effort. */ }
+    try { peer?.destroy(); } catch { /* Best effort. */ }
+    showError(message);
+  }
+
   function cancel() {
     if (transferCancelled) return;
     transferCancelled = true;
@@ -897,9 +937,15 @@ const Receiver = (() => {
     connection = null;
     manifest = null;
     currentFile = null;
-    currentFileChunks = [];
-    currentWritable = null;
-    currentFileHandle = null;
+    if (currentSink) void currentSink.abort();
+    if (stageSink) void stageSink.discard();
+    currentSink = null;
+    stageSink = null;
+    if (pendingDownloadUrl) {
+      try { pendingDownloadUrl.revokeExtra?.(); } catch { /* Best effort. */ }
+      URL.revokeObjectURL(pendingDownloadUrl.url);
+    }
+    pendingDownloadUrl = null;
     currentFileBytes = 0;
     nextFileIndex = 0;
     pickerPromise = null;

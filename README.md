@@ -111,8 +111,9 @@ The Cloudflare Worker uses one Durable Object room per random 128-bit transfer
 identifier. Rooms admit one sender and one authorized receiver, bound memory
 and frame sizes, expire automatically, and retain no file contents. The sender
 uses 64 KiB chunks with an acknowledged 1 MiB window. The browser streams to
-the File System Access API where available and otherwise offers a bounded
-256 MiB Blob download.
+the File System Access API where available, stages to the Origin Private
+File System next, and otherwise offers a Blob download (capped at
+256 MiB on WebKit receivers, where large blob downloads crash real devices).
 
 The exact protocol and trust boundaries are documented in
 [Agent transfer protocol v1](docs/agent-transfer-v1.md). Operational recovery
