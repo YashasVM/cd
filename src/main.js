@@ -3,8 +3,7 @@ import { cleanCode, codeFromUrl, generateCode, isValidCode, peerIdFor, receiveLi
 import { parseManifest } from './p2p-manifest.js';
 import {
   DOWNLOAD_TOO_LARGE,
-  createBlobSink,
-  createOPFSSink,
+  createSink,
   createStageSink,
   detectCapabilities,
   selectSinkTier
@@ -621,7 +620,9 @@ const Receiver = (() => {
         dataQueue = dataQueue
           .then(() => connectionGeneration === transferGeneration && handleData(data))
           .catch(() => { if (connectionGeneration === transferGeneration) failProtocol(); })
-          .finally(() => { pendingReceiveBytes = Math.max(0, pendingReceiveBytes - frameBytes); });
+          .finally(() => {
+            if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;
+          });
       });
 
       connection.on('error', () => {
@@ -746,21 +747,25 @@ const Receiver = (() => {
       // location; instead chunks stage (preferably off-heap in OPFS) and
       // flush at file-complete.
       pickerPromise = openWritable(currentFile);
-      stageSink = await createStageSink({ name: currentFile.name });
-    } else if (tier === 'opfs') {
-      currentSink = await createOPFSSink({ name: currentFile.name });
+      stageSink = await createStageSink({ name: currentFile.name, size: currentFile.size });
     } else {
-      currentSink = createBlobSink({ mediaType: currentFile.mimeType, name: currentFile.name });
+      currentSink = await createSink({ mediaType: currentFile.mimeType, name: currentFile.name, size: currentFile.size });
     }
   }
 
   async function openWritable(file) {
+    const generation = transferGeneration;
     try {
       const handle = await window.showSaveFilePicker({
         suggestedName: file.name,
         types: [{ description: file.mimeType, accept: { [file.mimeType]: ['.' + extensionFor(file.name)] } }]
       });
-      return { handle, writable: await handle.createWritable() };
+      const writable = await handle.createWritable();
+      if (generation !== transferGeneration || transferCancelled) {
+        await writable.abort();
+        return null;
+      }
+      return { handle, writable };
     } catch {
       return null;
     }

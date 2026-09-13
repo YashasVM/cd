@@ -32,7 +32,7 @@ export function isWebKitBrowser(userAgent = '') {
 
 export function detectCapabilities(host = globalThis) {
   const filePicker =
-    typeof host.window !== 'undefined' && 'showSaveFilePicker' in host.window;
+    typeof host.window !== 'undefined' && typeof host.window.showSaveFilePicker === 'function';
   const opfs =
     typeof host.navigator !== 'undefined' &&
     typeof host.navigator.storage?.getDirectory === 'function';
@@ -47,21 +47,21 @@ export function selectSinkTier(capabilities, size, userAgent = '') {
   return 'blob';
 }
 
-let stagingCounter = 0;
-
-function stagingName(name) {
-  stagingCounter += 1;
-  return `cd-rx-${Date.now().toString(36)}-${stagingCounter}-${name}`;
+function stagingName() {
+  return `cd-rx-${crypto.randomUUID()}`;
 }
 
 export function downloadUrlFor(file, offerName, onRevoke) {
   const url = URL.createObjectURL(file);
+  let revoked = false;
   return {
     url,
     name: offerName,
     revoke: () => {
+      if (revoked) return;
+      revoked = true;
       URL.revokeObjectURL(url);
-      try { onRevoke?.(); } catch { /* Best effort. */ }
+      try { void Promise.resolve(onRevoke?.()).catch(() => {}); } catch { /* Best effort. */ }
     }
   };
 }
@@ -79,9 +79,15 @@ export async function createPickerSink({ name }) {
 
 export async function createOPFSSink({ name }) {
   const root = await navigator.storage.getDirectory();
-  const internal = stagingName(name);
+  const internal = stagingName();
   const fileHandle = await root.getFileHandle(internal, { create: true });
-  const writable = await fileHandle.createWritable();
+  let writable;
+  try {
+    writable = await fileHandle.createWritable();
+  } catch (error) {
+    try { await root.removeEntry(internal); } catch { /* Best effort. */ }
+    throw error;
+  }
   const discard = async () => {
     try { await writable.abort(); } catch { /* Best effort. */ }
     try { await root.removeEntry(internal); } catch { /* Best effort. */ }
@@ -114,7 +120,7 @@ export async function createOPFSSink({ name }) {
 // falls back to a RAM array. Single-use: call exactly one of toFile()
 // (pipe the staged bytes somewhere else) or toDownload() (offer them
 // as a download); discard() drops them.
-export async function createStageSink({ name }) {
+export async function createStageSink({ name, size = 0 }) {
   try {
     if (detectCapabilities().opfs) {
       const staged = await createOPFSSink({ name });
@@ -131,6 +137,7 @@ export async function createStageSink({ name }) {
   } catch {
     // OPFS can fail after detection (private mode, full disk).
   }
+  assertBlobSize(size);
   const chunks = [];
   return {
     async write(bytes) { chunks.push(bytes); },
@@ -161,6 +168,12 @@ export function createBlobSink({ mediaType, name }) {
   };
 }
 
+function assertBlobSize(size) {
+  if (selectSinkTier({ filePicker: false, opfs: false }, size, navigator.userAgent) === 'too-large') {
+    throw new Error(DOWNLOAD_TOO_LARGE);
+  }
+}
+
 // Single-file receiver entry point (share.js): routes to the best tier
 // and throws a readable error when the browser cannot take the size.
 export async function createSink({ name, size, mediaType }) {
@@ -184,6 +197,7 @@ export async function createSink({ name, size, mediaType }) {
         // Private mode and full disks disable OPFS; Blob is the last resort.
       }
     }
+    assertBlobSize(size);
     return createBlobSink({ mediaType, name });
   }
   throw new Error(DOWNLOAD_TOO_LARGE);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
+import { createSink, createStageSink, createOPFSSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
 
 const SAFARI_MAC =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
@@ -80,5 +80,53 @@ describe('capability detection', () => {
       navigator: { storage: { getDirectory() {} } }
     };
     assert.deepEqual(detectCapabilities(host), { filePicker: true, opfs: true });
+  });
+});
+
+describe('download sink lifecycle', () => {
+  async function withBrowser(t, storage, run) {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { userAgent: SAFARI_IOS, storage } });
+    try { return await run(); } finally {
+      if (original) Object.defineProperty(globalThis, 'navigator', original);
+      else delete globalThis.navigator;
+    }
+  }
+
+  it('refuses oversized Safari blobs when advertised OPFS fails', async (t) => {
+    await withBrowser(t, { async getDirectory() { throw new Error('storage unavailable'); } }, async () => {
+      const offer = { name: 'large.bin', size: WEBKIT_BLOB_LIMIT + 1n, mediaType: 'application/octet-stream' };
+      await assert.rejects(createSink(offer), { message: DOWNLOAD_TOO_LARGE });
+      await assert.rejects(createStageSink(offer), { message: DOWNLOAD_TOO_LARGE });
+    });
+  });
+
+  it('removes the staging entry when opening its writable fails', async (t) => {
+    const removed = [];
+    let created;
+    await withBrowser(t, { async getDirectory() { return {
+      async getFileHandle(name) { created = name; return { async createWritable() { throw new Error('quota'); } }; },
+      async removeEntry(name) { removed.push(name); }
+    }; } }, async () => {
+      await assert.rejects(createOPFSSink({ name: 'a'.repeat(255) }), { message: 'quota' });
+      assert.ok(created.length < 255);
+      assert.deepEqual(removed, [created]);
+    });
+  });
+
+  it('preserves bytes in the fallback and revokes cleanup only once', async (t) => {
+    await withBrowser(t, {}, async () => {
+      const sink = await createSink({ name: 'hello.txt', size: 5, mediaType: 'text/plain' });
+      await sink.write(new TextEncoder().encode('hello'));
+      const result = await sink.close();
+      assert.equal(await (await fetch(result.url)).text(), 'hello');
+      result.revoke();
+      let cleaned = 0;
+      const download = downloadUrlFor(new Blob(['x']), 'x', async () => { cleaned++; throw new Error('already removed'); });
+      download.revoke();
+      download.revoke();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(cleaned, 1);
+    });
   });
 });
