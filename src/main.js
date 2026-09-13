@@ -785,19 +785,21 @@ const Receiver = (() => {
   async function handleChunk(data) {
     if (!currentFile || !manifest) throw new Error('unexpected file bytes');
 
+    const generation = transferGeneration;
+    const file = currentFile;
+    const sink = currentSink || stageSink;
     const chunk = data instanceof Blob ? await data.arrayBuffer() : data;
+    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
     const chunkSize = chunk.byteLength;
-    if (chunkSize === 0 || currentFileBytes + chunkSize > currentFile.size || totalBytesReceived + chunkSize > manifest.totalSize) {
+    if (chunkSize === 0 || currentFileBytes + chunkSize > file.size || totalBytesReceived + chunkSize > manifest.totalSize) {
       throw new Error('file size exceeded');
     }
 
-    if (currentSink) {
-      await currentSink.write(chunk);
-    } else if (stageSink) {
-      await stageSink.write(chunk);
-    } else {
+    if (!sink) {
       throw new Error('unexpected file bytes');
     }
+    await sink.write(chunk);
+    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
 
     totalBytesReceived += chunkSize;
     currentFileBytes += chunkSize;
@@ -829,11 +831,16 @@ const Receiver = (() => {
     const file = currentFile;
     const activeSink = currentSink;
     const activeStageSink = stageSink;
+    const cleanupStale = async () => {
+      try { await activeSink?.abort(); } catch { /* Best effort. */ }
+      try { await activeStageSink?.discard(); } catch { /* Best effort. */ }
+    };
 
     // Adopt the save stream if the dialog resolved while chunks staged.
     const picked = await pickerPromise;
     if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
       try { await picked?.writable?.abort(); } catch { /* Best effort. */ }
+      await cleanupStale();
       return;
     }
     pickerPromise = null;
@@ -844,6 +851,7 @@ const Receiver = (() => {
         if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
           await staged.cleanup();
           try { await picked.writable.abort(); } catch { /* Best effort. */ }
+          await cleanupStale();
           return;
         }
         stageSink = null;
@@ -855,6 +863,7 @@ const Receiver = (() => {
         }
         if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
           await staged.cleanup();
+          await cleanupStale();
           return;
         }
         await staged.cleanup();
@@ -863,6 +872,7 @@ const Receiver = (() => {
       const result = await activeSink.close();
       if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
         try { result?.revoke?.(); } catch { /* Best effort. */ }
+        await cleanupStale();
         return;
       }
       currentSink = null;
@@ -871,6 +881,7 @@ const Receiver = (() => {
       const download = await activeStageSink.toDownload(file.mimeType);
       if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
         try { download?.revoke?.(); } catch { /* Best effort. */ }
+        await cleanupStale();
         return;
       }
       stageSink = null;
