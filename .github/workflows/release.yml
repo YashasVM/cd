@@ -26,6 +26,7 @@ jobs:
       - run: npm run test:cli
       - run: npm run typecheck
       - run: npm run verify:agent
+      - run: npm run verify:p2p
       - run: npm run deploy:dry
 
   build:
