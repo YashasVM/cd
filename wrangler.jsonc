@@ -2,15 +2,37 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cd",
   "main": "worker/index.ts",
-  "compatibility_date": "2026-09-11",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "cd.yash0.in", "custom_domain": true }
+  ],
   "durable_objects": {
-    "bindings": [{ "name": "TRANSFERS", "class_name": "TransferRoom" }]
+    "bindings": [
+      { "name": "TRANSFERS", "class_name": "TransferRoom" },
+      { "name": "PEERS", "class_name": "PeerSignal" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TransferRoom"] }],
+  "ratelimits": [
+    {
+      "name": "CONNECTION_RATE_LIMITER",
+      "namespace_id": "9237401",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["TransferRoom"] },
+    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] }
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/ws/*", "/api/*"]
+    "run_worker_first": ["/ws/*", "/api/*", "/peerjs/*"]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
   }
 }

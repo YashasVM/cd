@@ -1,0 +1,5 @@
+Contact: https://github.com/YashasVM/cd/security/advisories/new
+Expires: 2027-09-12T00:00:00Z
+Canonical: https://cd.yash0.in/.well-known/security.txt
+Policy: https://github.com/YashasVM/cd/security/policy
+Preferred-Languages: en

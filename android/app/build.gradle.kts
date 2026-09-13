@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "in.yash0.cd"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"

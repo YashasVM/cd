@@ -1,5 +1,7 @@
 import { Peer } from 'peerjs';
 import './style.css';
+import { cleanCode, codeFromUrl, generateCode, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
+import { parseManifest } from './p2p-manifest.js';
 
 if ('serviceWorker' in navigator) {
   // Register after first paint/idle so the install never contends with app
@@ -55,14 +57,6 @@ warmUpOnIdle(() => {
   });
 });
 
-const FUN_CODES = [
-  'beep', 'boop', 'bork', 'bonk', 'blob', 'cake', 'clam', 'clap', 'dino', 'drip',
-  'duck', 'flap', 'goof', 'honk', 'jazz', 'mochi', 'muffin', 'nacho', 'noodle',
-  'otter', 'pickle', 'pizza', 'plop', 'quack', 'salsa', 'snack', 'spork', 'taco',
-  'tofu', 'wacky', 'waffle', 'yeti', 'zippy'
-];
-const MAX_CODE_LENGTH = Math.max(...FUN_CODES.map((item) => item.length));
-const PEER_PREFIX = 'cd-';
 // PeerJS's binary serializer fragments payloads above its ~16 KB MTU. Keep
 // application chunks just below that limit to avoid an extra fragment/
 // reassembly cycle for every file chunk.
@@ -74,6 +68,25 @@ const MAX_BUFFERED_AMOUNT = 6 * 1024 * 1024;
 const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
 const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
+const TRANSFER_ACK_TIMEOUT_MS = 30000;
+const MAX_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
+
+function peerOptions() {
+  return {
+    host: window.location.hostname,
+    port: window.location.port ? Number(window.location.port) : window.location.protocol === 'https:' ? 443 : 80,
+    path: '/peerjs/',
+    secure: window.location.protocol === 'https:',
+    key: 'peerjs',
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+      ],
+    },
+  };
+}
 
 const els = {
   appState: document.getElementById('app-state'),
@@ -119,46 +132,11 @@ function setState(state) {
   els.appState.textContent = state;
 }
 
-function generateCode() {
-  const values = crypto.getRandomValues(new Uint32Array(1));
-  return FUN_CODES[values[0] % FUN_CODES.length];
-}
-
-function cleanCode(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, MAX_CODE_LENGTH);
-}
-
-function isValidCode(value) {
-  const code = cleanCode(value);
-  return FUN_CODES.includes(code);
-}
-
-function codeFromUrl(value) {
-  try {
-    const url = new URL(value, window.location.href);
-    return cleanCode(url.searchParams.get('receive') || value);
-  } catch {
-    return cleanCode(value);
-  }
-}
-
-function peerIdFor(code) {
-  return PEER_PREFIX + code.toLowerCase();
-}
-
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function receiveLinkFor(code) {
-  const url = new URL(window.location.href);
-  url.search = '';
-  url.hash = '';
-  url.searchParams.set('receive', code);
-  return url.toString();
 }
 
 async function copyText(text, button, doneLabel) {
@@ -321,13 +299,17 @@ const Sender = (() => {
 
   function createPeer() {
     peer?.destroy();
-    peer = new Peer(peerIdFor(code), { debug: 0 });
+    peer = new Peer(peerIdFor(code), peerOptions());
 
     peer.on('open', () => {
       els.senderStatus.textContent = 'Waiting for receiver...';
     });
 
     peer.on('connection', (conn) => {
+      if (connection?.open) {
+        conn.close();
+        return;
+      }
       connection = conn;
       els.senderStatus.textContent = 'Receiver found.';
       setState('connecting');
@@ -432,7 +414,14 @@ const Sender = (() => {
 
     const transferAck = waitForTransferAck();
     connection.send({ type: 'transfer-complete' });
-    await transferAck;
+    if (!(await transferAck)) {
+      if (!transferCancelled) {
+        transferCancelled = true;
+        els.senderStatus.textContent = 'Receiver did not confirm the download.';
+        setState('failed');
+      }
+      return;
+    }
     if (transferCancelled) return;
     transferFinished = true;
     showComplete();
@@ -459,9 +448,16 @@ const Sender = (() => {
   }
 
   function waitForTransferAck() {
-    if (transferCancelled) return Promise.resolve();
+    if (transferCancelled) return Promise.resolve(false);
     return new Promise((resolve) => {
-      transferAckResolve = resolve;
+      const timeout = setTimeout(() => {
+        transferAckResolve = null;
+        resolve(false);
+      }, TRANSFER_ACK_TIMEOUT_MS);
+      transferAckResolve = () => {
+        clearTimeout(timeout);
+        resolve(true);
+      };
     });
   }
 
@@ -565,6 +561,8 @@ const Receiver = (() => {
   let currentFileChunks = [];
   let currentWritable = null;
   let currentFileHandle = null;
+  let currentFileBytes = 0;
+  let nextFileIndex = 0;
   let pickerPromise = null;
   let totalBytesReceived = 0;
   let transferStartTime = null;
@@ -572,6 +570,8 @@ const Receiver = (() => {
   let transferCancelled = false;
   let lastProgressAckAt = 0;
   let dataQueue = Promise.resolve();
+  let pendingReceiveBytes = 0;
+  let transferGeneration = 0;
   let timeoutId = null;
   const lastProgressUpdate = { value: 0 };
 
@@ -584,12 +584,14 @@ const Receiver = (() => {
 
     stopScanner();
     resetConnectionOnly();
+    transferCancelled = false;
+    const connectionGeneration = transferGeneration;
     els.receiverInputSection.classList.add('hidden');
     els.receiverConnecting.classList.remove('hidden');
     els.codeInput.value = code;
     setState('connecting');
 
-    peer = new Peer({ debug: 0 });
+    peer = new Peer(`cd-r-${generateCode()}`, peerOptions());
 
     peer.on('open', () => {
       connection = peer.connect(peerIdFor(code), {
@@ -602,9 +604,17 @@ const Receiver = (() => {
       });
 
       connection.on('data', (data) => {
-        dataQueue = dataQueue.then(() => handleData(data)).catch(() => {
-        showError('The transfer tripped. Try again.');
-        });
+        if (connectionGeneration !== transferGeneration) return;
+        const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
+        pendingReceiveBytes += frameBytes;
+        if (pendingReceiveBytes > MAX_PENDING_RECEIVE_BYTES) {
+          failProtocol();
+          return;
+        }
+        dataQueue = dataQueue
+          .then(() => connectionGeneration === transferGeneration && handleData(data))
+          .catch(() => { if (connectionGeneration === transferGeneration) failProtocol(); })
+          .finally(() => { pendingReceiveBytes = Math.max(0, pendingReceiveBytes - frameBytes); });
       });
 
       connection.on('error', () => {
@@ -634,7 +644,7 @@ const Receiver = (() => {
   }
 
   async function handleData(data) {
-    if (transferCancelled && data?.type !== 'manifest') return;
+    if (transferCancelled) return;
 
     if (data instanceof ArrayBuffer || ArrayBuffer.isView(data) || data instanceof Blob) {
       await handleChunk(data);
@@ -649,7 +659,7 @@ const Receiver = (() => {
         await handleFileStart(data);
         break;
       case 'file-complete':
-        await handleFileComplete();
+        await handleFileComplete(data);
         break;
       case 'transfer-complete':
         handleTransferComplete();
@@ -659,20 +669,18 @@ const Receiver = (() => {
         showError('The sender canceled the transfer.');
         break;
       default:
-        break;
+        throw new Error('unexpected control message');
     }
   }
 
   function handleManifest(data) {
-    manifest = {
-      totalFiles: data.totalFiles,
-      totalSize: data.totalSize,
-      files: data.files
-    };
+    if (manifest) throw new Error('duplicate manifest');
+    manifest = parseManifest(data);
     totalBytesReceived = 0;
     transferStartTime = Date.now();
     transferCancelled = false;
     lastProgressAckAt = 0;
+    nextFileIndex = 0;
     lastProgressUpdate.value = 0;
 
     setManifestSummary();
@@ -704,9 +712,12 @@ const Receiver = (() => {
   }
 
   async function handleFileStart(data) {
-    if (!manifest) return;
+    if (!manifest || currentFile || !Number.isInteger(data.index) || data.index !== nextFileIndex) {
+      throw new Error('unexpected file start');
+    }
 
     currentFile = manifest.files[data.index];
+    currentFileBytes = 0;
     currentFileChunks = [];
     currentWritable = null;
     currentFileHandle = null;
@@ -739,10 +750,13 @@ const Receiver = (() => {
   }
 
   async function handleChunk(data) {
-    if (!currentFile) return;
+    if (!currentFile || !manifest) throw new Error('unexpected file bytes');
 
     const chunk = data instanceof Blob ? await data.arrayBuffer() : data;
     const chunkSize = chunk.byteLength;
+    if (chunkSize === 0 || currentFileBytes + chunkSize > currentFile.size || totalBytesReceived + chunkSize > manifest.totalSize) {
+      throw new Error('file size exceeded');
+    }
 
     if (currentWritable) {
       await currentWritable.write(chunk);
@@ -751,6 +765,7 @@ const Receiver = (() => {
     }
 
     totalBytesReceived += chunkSize;
+    currentFileBytes += chunkSize;
     lastProgressUpdate.value = updateProgress(
       els.receiverProgress,
       totalBytesReceived,
@@ -770,8 +785,10 @@ const Receiver = (() => {
     lastProgressAckAt = now;
   }
 
-  async function handleFileComplete() {
-    if (!currentFile) return;
+  async function handleFileComplete(data) {
+    if (!currentFile || data.index !== nextFileIndex || currentFileBytes !== currentFile.size) {
+      throw new Error('incomplete file');
+    }
 
     // Adopt the save stream if the dialog resolved while chunks streamed in.
     const picked = await pickerPromise;
@@ -803,6 +820,8 @@ const Receiver = (() => {
     );
     sendProgressAck(true);
     currentFile = null;
+    currentFileBytes = 0;
+    nextFileIndex += 1;
     currentFileChunks = [];
     currentWritable = null;
     currentFileHandle = null;
@@ -814,6 +833,9 @@ const Receiver = (() => {
   }
 
   function handleTransferComplete() {
+    if (!manifest || currentFile || nextFileIndex !== manifest.totalFiles || totalBytesReceived !== manifest.totalSize) {
+      throw new Error('incomplete transfer');
+    }
     transferComplete = true;
     clearTimeout(timeoutId);
     sendProgressAck(true);
@@ -849,6 +871,13 @@ const Receiver = (() => {
     setState('failed');
   }
 
+  function failProtocol() {
+    transferCancelled = true;
+    try { connection?.close(); } catch { /* Best effort. */ }
+    peer?.destroy();
+    showError('The sender sent invalid transfer data.');
+  }
+
   function cancel() {
     if (transferCancelled) return;
     transferCancelled = true;
@@ -861,6 +890,7 @@ const Receiver = (() => {
   }
 
   function resetConnectionOnly() {
+    transferGeneration += 1;
     transferCancelled = true;
     peer?.destroy();
     peer = null;
@@ -870,11 +900,14 @@ const Receiver = (() => {
     currentFileChunks = [];
     currentWritable = null;
     currentFileHandle = null;
+    currentFileBytes = 0;
+    nextFileIndex = 0;
     pickerPromise = null;
     totalBytesReceived = 0;
     transferStartTime = null;
     transferComplete = false;
     dataQueue = Promise.resolve();
+    pendingReceiveBytes = 0;
     clearTimeout(timeoutId);
   }
 
@@ -1037,8 +1070,9 @@ window.addEventListener('paste', (event) => {
 window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => event.preventDefault());
 
-const initialCode = cleanCode(new URLSearchParams(window.location.search).get('receive') || '');
+const initialCode = codeFromUrl(window.location.href, window.location.href);
 if (isValidCode(initialCode)) {
+  history.replaceState(null, '', window.location.pathname);
   switchToReceiveMode();
   els.codeInput.value = initialCode;
   Receiver.connect(initialCode);

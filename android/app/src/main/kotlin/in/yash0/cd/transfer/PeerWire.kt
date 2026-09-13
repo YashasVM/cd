@@ -36,6 +36,11 @@ object PeerWire {
     const val CHUNK_MTU = 16300
     const val DC_PREFIX = "dc_"
     const val SIGNALING_VERSION = "1.5.5"
+    const val MAX_FILES = 100
+    const val MAX_FILE_BYTES = 256L * 1024 * 1024
+    private const val MAX_CHUNK_PARTS = 64
+    private const val MAX_PENDING_CHUNKS = 8
+    private const val MAX_REASSEMBLED_BYTES = 1024 * 1024
 
     fun newConnectionId(): String =
         DC_PREFIX + UUID.randomUUID().toString().replace("-", "").take(12)
@@ -146,7 +151,7 @@ object PeerWire {
 
     /** Feeds raw data-channel messages; returns a completed frame when ready. */
     class Reassembler {
-        private data class Acc(val total: Int, val parts: MutableMap<Int, ByteArray> = mutableMapOf())
+        private data class Acc(val total: Int, val parts: MutableMap<Int, ByteArray> = mutableMapOf(), var bytes: Int = 0)
         private val pending = mutableMapOf<Long, Acc>()
 
         fun feed(frame: ByteArray): PeerFrame? {
@@ -160,8 +165,13 @@ object PeerWire {
             val n = (map["n"] as? Long)?.toInt() ?: return null
             val total = (map["total"] as? Long)?.toInt() ?: return null
             val data = map["data"] as? ByteArray ?: return null
+            if (total !in 1..MAX_CHUNK_PARTS || n !in 0 until total || data.size > CHUNK_MTU) return null
+            if (id !in pending && pending.size >= MAX_PENDING_CHUNKS) return null
             val acc = pending.getOrPut(id) { Acc(total) }
-            acc.parts[n] = data
+            if (acc.total != total) { pending.remove(id); return null }
+            val previous = acc.parts.putIfAbsent(n, data)
+            if (previous == null) acc.bytes += data.size
+            if (acc.bytes > MAX_REASSEMBLED_BYTES) { pending.remove(id); return null }
             if (acc.parts.size < acc.total) return null
             pending.remove(id)
             val ordered = (0 until acc.total).map { acc.parts[it] ?: return null }
@@ -199,18 +209,22 @@ object PeerWire {
         if (map["type"] != Wire.MANIFEST) return null
         @Suppress("UNCHECKED_CAST")
         val files = (map["files"] as? List<Map<String, Any?>>) ?: return null
-        return Manifest(
-            totalFiles = (map["totalFiles"] as? Long)?.toInt() ?: files.size,
-            totalSize = (map["totalSize"] as? Long) ?: files.sumOf { (it["size"] as? Long) ?: 0L },
-            files = files.mapIndexed { i, f ->
-                FileMeta(
-                    index = (f["index"] as? Long)?.toInt() ?: i,
-                    name = f["name"] as? String ?: "file",
-                    size = (f["size"] as? Long) ?: 0L,
-                    mimeType = f["mimeType"] as? String ?: "application/octet-stream",
-                )
-            },
-        )
+        val totalFiles = (map["totalFiles"] as? Long)?.toInt() ?: return null
+        if (totalFiles !in 1..MAX_FILES || files.size != totalFiles) return null
+        var computedTotal = 0L
+        val parsed = files.mapIndexed { i, f ->
+            val index = (f["index"] as? Long)?.toInt() ?: return null
+            val name = f["name"] as? String ?: return null
+            val size = f["size"] as? Long ?: return null
+            val mime = (f["mimeType"] as? String) ?: "application/octet-stream"
+            if (index != i || FileSaver.safeFilename(name) == null || size !in 0..MAX_FILE_BYTES) return null
+            if (mime.length > 127 || mime.any { it.code !in 32..126 }) return null
+            if (computedTotal > Long.MAX_VALUE - size) return null
+            computedTotal += size
+            FileMeta(index, name, size, mime)
+        }
+        if ((map["totalSize"] as? Long) != computedTotal) return null
+        return Manifest(totalFiles, computedTotal, parsed)
     }
 
     fun fileStartMap(index: Int): Map<String, Any?> = mapOf("type" to Wire.FILE_START, "index" to index.toLong())

@@ -7,6 +7,7 @@ import `in`.yash0.cd.data.TransferProgress
 import `in`.yash0.cd.data.Wire
 import `in`.yash0.cd.transfer.PeerFrame
 import `in`.yash0.cd.transfer.PeerWire
+import `in`.yash0.cd.transfer.FileSaver
 import `in`.yash0.cd.transfer.TransferProtocol
 import `in`.yash0.cd.util.formatSize
 import kotlinx.serialization.json.Json
@@ -16,6 +17,7 @@ import org.junit.Test
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -25,35 +27,30 @@ import kotlin.test.assertTrue
 class TransferLogicTest {
     private val json = Json { ignoreUnknownKeys = true }
 
-    // ---------- fun codes (must match web FUN_CODES) ----------
-
-    @Test fun funCodes_matchWebDictionary() {
-        val web = listOf(
-            "beep", "boop", "bork", "bonk", "blob", "cake", "clam", "clap", "dino", "drip",
-            "duck", "flap", "goof", "honk", "jazz", "mochi", "muffin", "nacho", "noodle",
-            "otter", "pickle", "pizza", "plop", "quack", "salsa", "snack", "spork", "taco",
-            "tofu", "wacky", "waffle", "yeti", "zippy",
-        )
-        assertEquals(web, FunCodes.All)
-    }
-
     @Test fun funCodes_generateCleanValidate() {
-        repeat(50) { assertTrue(FunCodes.isValid(FunCodes.generate())) }
-        assertEquals("waffle", FunCodes.clean("  Waffle!!"))
-        assertEquals("pickle", FunCodes.clean("picklehead").take(6))
-        assertTrue(FunCodes.isValid("TACO"))
+        val codes = (1..100).map { FunCodes.generate() }
+        assertEquals(100, codes.toSet().size)
+        assertTrue(codes.all { it.length == 22 && FunCodes.isValid(it) })
+        assertEquals("AbCdEfGhIjKlMnOpQrStUv", FunCodes.clean(" AbCdEfGhIjKlMnOpQrStUv!"))
+        assertTrue(!FunCodes.isValid("waffle"))
     }
 
     @Test fun funCodes_fromLinkOrCode() {
-        assertEquals("dino", FunCodes.fromLinkOrCode("https://cd.yash0.in/?receive=dino"))
-        assertEquals("dino", FunCodes.fromLinkOrCode("dino"))
-        assertEquals("cd-waffle", FunCodes.peerIdFor("waffle"))
+        val code = "AbCdEfGhIjKlMnOpQrStUv"
+        assertEquals(code, FunCodes.fromLinkOrCode("https://cd.yash0.in/#p2p.$code"))
+        assertEquals(code, FunCodes.fromLinkOrCode(code))
+        assertEquals("cd-$code", FunCodes.peerIdFor(code))
     }
 
     // ---------- protocol constants ----------
 
     @Test fun chunkSize_matchesWeb() {
         assertEquals(16 * 1024 - 128, TransferProtocol.CHUNK_SIZE)
+    }
+
+    @Test fun receiveLink_keepsCaseAndUsesFragment() {
+        val code = "AbCdEfGhIjKlMnOpQrStUv"
+        assertEquals("https://cd.yash0.in/#p2p.$code", TransferProtocol.receiveLink(code))
     }
 
     @Test fun appChunk_staysSinglePeerJsFrame() {
@@ -121,6 +118,18 @@ class TransferLogicTest {
         assertEquals(m, PeerWire.parseManifest(out.fields))
     }
 
+    @Test fun manifest_rejectsTraversalAndMismatchedTotals() {
+        val unsafe = Manifest(1, 1L, listOf(FileMeta(0, "../secret", 1L)))
+        val frame = PeerWire.Reassembler().feed(PeerWire.packControl(PeerWire.manifestMap(unsafe))[0]) as PeerFrame.Control
+        assertNull(PeerWire.parseManifest(frame.fields))
+
+        val mismatch = PeerWire.manifestMap(Manifest(1, 1L, listOf(FileMeta(0, "safe.txt", 1L)))).toMutableMap()
+        mismatch["totalSize"] = 2L
+        assertNull(PeerWire.parseManifest(mismatch))
+        assertEquals("safe.txt", FileSaver.safeFilename("safe.txt"))
+        assertNull(FileSaver.safeFilename("../secret"))
+    }
+
     @Test fun controlHelpers() {
         assertEquals(Wire.FILE_START, PeerWire.controlType(PeerWire.fileStartMap(2)))
         assertEquals(2, PeerWire.fileIndex(PeerWire.fileStartMap(2)))
@@ -130,9 +139,9 @@ class TransferLogicTest {
     // ---------- signaling envelopes ----------
 
     @Test fun wsUrl_carriesVersionAndIdentity() {
-        val url = PeerWire.wsUrl("0.peerjs.com", 443, "/", "peerjs", "cd-waffle", "tok", true)
-        assertTrue(url.startsWith("wss://0.peerjs.com:443/peerjs?"))
-        assertTrue(url.contains("key=peerjs") && url.contains("id=cd-waffle") && url.contains("token=tok"))
+        val url = PeerWire.wsUrl("cd.yash0.in", 443, "/peerjs/", "peerjs", "cd-example", "tok", true)
+        assertTrue(url.startsWith("wss://cd.yash0.in:443/peerjs/peerjs?"))
+        assertTrue(url.contains("key=peerjs") && url.contains("id=cd-example") && url.contains("token=tok"))
         assertEquals("1.5.5", Regex("version=([^&]+)").find(url)!!.groupValues[1])
         assertEquals(PeerWire.SIGNALING_VERSION, "1.5.5")
     }

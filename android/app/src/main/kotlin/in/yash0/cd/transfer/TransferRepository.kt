@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
+import kotlinx.coroutines.channels.Channel
 
 data class PickedFile(val uri: Uri, val name: String, val size: Long, val mime: String)
 
@@ -31,6 +31,7 @@ data class PickedFile(val uri: Uri, val name: String, val size: Long, val mime: 
  * Handshake + framing verified against peerjs@1.5.5 (see PeerWire).
  */
 class TransferRepository(private val context: Context) {
+    private data class InboundFrame(val session: Int, val frame: PeerFrame)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val saver = FileSaver(context)
     private val history = HistoryStore(context)
@@ -57,7 +58,24 @@ class TransferRepository(private val context: Context) {
     private var cancelled = false
     private var lastAckMs = 0L
     private var currentSink: FileSaver.Sink? = null
+    private var currentFileIndex = -1
+    private var currentFileBytes = 0L
+    private var nextFileIndex = 0
     private var hostRetries = 0
+    private var sessionGeneration = 0
+    private val inboundFrames = Channel<InboundFrame>(64)
+
+    init {
+        scope.launch {
+            for (inbound in inboundFrames) {
+                if (inbound.session != sessionGeneration) continue
+                when (val frame = inbound.frame) {
+                    is PeerFrame.Bytes -> handleFileBytes(frame.bytes)
+                    is PeerFrame.Control -> handleControl(frame.fields)
+                }
+            }
+        }
+    }
 
     fun setPickedUris(uris: List<Uri>) {
         _picked.value = uris.mapNotNull { resolve(it) }
@@ -94,6 +112,10 @@ class TransferRepository(private val context: Context) {
             _error.value = "Pick at least one file first."
             return
         }
+        if (_picked.value.size > PeerWire.MAX_FILES || _picked.value.any { it.size > PeerWire.MAX_FILE_BYTES || FileSaver.safeFilename(it.name) == null }) {
+            _error.value = "Select at most ${PeerWire.MAX_FILES} files, each no larger than 256 MB, with safe names."
+            return
+        }
         hostRetries = 0
         hostWithFreshCode()
     }
@@ -119,18 +141,19 @@ class TransferRepository(private val context: Context) {
         _code.value = c
         _state.value = TransferState.CONNECTING
         _status.value = "Finding the sender..."
-        val myId = "cd-r-" + UUID.randomUUID().toString().replace("-", "").take(8)
+        val myId = "cd-r-${FunCodes.generate()}"
         startStack(myId = myId, isSender = false, targetId = FunCodes.peerIdFor(c))
     }
 
     private fun startStack(myId: String, isSender: Boolean, targetId: String?) {
         cancelled = false
+        val session = sessionGeneration
         connectionId = PeerWire.newConnectionId()
         val cid = connectionId!!
         Log.d(TAG, "startStack myId=$myId sender=$isSender target=$targetId cid=$cid")
         val manager = RtcTransferManager(
             context = context,
-            onFrame = { handleFrame(it) },
+            onFrame = { handleFrame(session, it) },
             onConnected = {
                 scope.launch {
                     _status.value = if (isSender) "Receiver found." else "Connected."
@@ -149,7 +172,8 @@ class TransferRepository(private val context: Context) {
         rtc = manager
         manager.setIceEmitter { ice ->
             val dst = if (isSender) remoteId else targetId
-            dst?.let { signaling?.sendCandidate(it, cid, ice.sdp, ice.sdpMid, ice.sdpMLineIndex) }
+            val activeConnectionId = connectionId ?: return@setIceEmitter
+            dst?.let { signaling?.sendCandidate(it, activeConnectionId, ice.sdp, ice.sdpMid, ice.sdpMLineIndex) }
         }
         signaling = PeerJsSignalingClient(
             myId = myId,
@@ -224,23 +248,31 @@ class TransferRepository(private val context: Context) {
         _manifest.value = Manifest(files.size, total, metas)
         _progress.value = TransferProgress(0, total, System.currentTimeMillis())
         _state.value = TransferState.TRANSFERRING
-        rtc?.sendControl(PeerWire.manifestMap(_manifest.value!!))
+        if (rtc?.sendControl(PeerWire.manifestMap(_manifest.value!!)) != true) {
+            fail("Connection vanished."); return
+        }
         var sent = 0L
         for ((i, f) in files.withIndex()) {
             if (cancelled) return
             _status.value = "Sending ${i + 1} of ${files.size}…"
-            rtc?.sendControl(PeerWire.fileStartMap(i))
+            if (rtc?.sendControl(PeerWire.fileStartMap(i)) != true) {
+                fail("Connection vanished."); return
+            }
             try {
-                context.contentResolver.openInputStream(f.uri)?.use { input ->
+                val input = context.contentResolver.openInputStream(f.uri)
+                    ?: run { fail("Could not read ${f.name}."); return }
+                input.use {
                     val buf = ByteArray(TransferProtocol.CHUNK_SIZE)
                     while (!cancelled) {
-                        val n = input.read(buf)
+                        val n = it.read(buf)
                         if (n <= 0) break
                         while (rtc?.bufferedAmount() ?: 0L > TransferProtocol.BUFFER_LOW_AMOUNT && !cancelled) {
                             delay(16)
                         }
                         if (cancelled) return
-                        if (rtc?.sendFileBytes(buf, 0, n) == false) delay(16)
+                        if (rtc?.sendFileBytes(buf, 0, n) != true) {
+                            fail("Connection vanished."); return
+                        }
                         sent += n
                     }
                 }
@@ -248,78 +280,93 @@ class TransferRepository(private val context: Context) {
                 fail("Could not read ${f.name}."); return
             }
             if (cancelled) return
-            rtc?.sendControl(PeerWire.fileCompleteMap(i))
+            if (rtc?.sendControl(PeerWire.fileCompleteMap(i)) != true) {
+                fail("Connection vanished."); return
+            }
         }
-        rtc?.sendControl(PeerWire.transferCompleteMap())
+        if (rtc?.sendControl(PeerWire.transferCompleteMap()) != true) {
+            fail("Connection vanished."); return
+        }
         scope.launch {
-            delay(8000)
-            if (!cancelled && _state.value == TransferState.TRANSFERRING) finishSend()
+            delay(30_000)
+            if (!cancelled && _state.value == TransferState.TRANSFERRING) fail("Receiver did not confirm the download.")
         }
     }
 
     // ---------- receiving ----------
 
-    private fun handleFrame(frame: PeerFrame) {
-        scope.launch {
-            when (frame) {
-                is PeerFrame.Bytes -> handleFileBytes(frame.bytes)
-                is PeerFrame.Control -> handleControl(frame.fields)
-            }
-        }
+    private fun handleFrame(session: Int, frame: PeerFrame) {
+        if (inboundFrames.trySend(InboundFrame(session, frame)).isFailure) fail("Could not process transfer data.")
     }
 
     private suspend fun handleControl(map: Map<String, Any?>) {
         Log.d(TAG, "ctrl<< ${PeerWire.controlType(map)}")
         when (PeerWire.controlType(map)) {
             Wire.MANIFEST -> {
-                val m = PeerWire.parseManifest(map) ?: return
+                if (_manifest.value != null || currentFileIndex != -1) { fail("Invalid transfer order."); return }
+                val m = PeerWire.parseManifest(map) ?: run { fail("Invalid transfer details."); return }
                 _manifest.value = m
                 _progress.value = TransferProgress(0, m.totalSize, System.currentTimeMillis())
                 _state.value = TransferState.TRANSFERRING
                 _status.value = "Receiving…"
+                nextFileIndex = 0
             }
             Wire.FILE_START -> {
                 val index = PeerWire.fileIndex(map)
                 val meta = _manifest.value?.files?.getOrNull(index)
-                runCatching { currentSink?.stream?.close() }
-                currentSink = if (meta != null) runCatching { saver.open(meta.name, meta.mimeType) }.getOrNull() else null
+                if (meta == null || index != nextFileIndex || currentFileIndex != -1) { fail("Invalid transfer order."); return }
+                currentSink = runCatching { saver.open(meta.name, meta.mimeType) }.getOrElse { fail("Could not create ${meta.name}."); return }
+                currentFileIndex = index
+                currentFileBytes = 0
                 _state.value = TransferState.SAVING
             }
             Wire.FILE_COMPLETE -> {
-                runCatching { currentSink?.stream?.close() }
+                val index = PeerWire.fileIndex(map)
+                val meta = _manifest.value?.files?.getOrNull(currentFileIndex)
+                if (index != currentFileIndex || meta == null || currentFileBytes != meta.size) { fail("File was incomplete."); return }
+                runCatching { currentSink?.complete() }.getOrElse { fail("Could not finish saving ${meta.name}."); return }
                 currentSink = null
+                currentFileIndex = -1
+                currentFileBytes = 0
+                nextFileIndex++
                 ackProgress(force = true)
             }
             Wire.TRANSFER_COMPLETE -> {
-                runCatching { currentSink?.stream?.close() }
-                currentSink = null
-                rtc?.sendControl(PeerWire.transferAckMap())
+                val m = _manifest.value
+                if (m == null || currentFileIndex != -1 || nextFileIndex != m.totalFiles || _progress.value.bytes != m.totalSize) {
+                    fail("Transfer was incomplete."); return
+                }
+                if (rtc?.sendControl(PeerWire.transferAckMap()) != true) { fail("Connection vanished."); return }
                 finishReceive()
             }
             Wire.TRANSFER_ACK -> finishSend()
             Wire.PROGRESS -> {
                 val m = _manifest.value ?: return
-                val b = PeerWire.progressBytes(map).coerceAtMost(m.totalSize)
+                val b = PeerWire.progressBytes(map)
+                if (b !in _progress.value.bytes..m.totalSize) { fail("Invalid receiver progress."); return }
                 _progress.value = _progress.value.copy(bytes = maxOf(_progress.value.bytes, b))
             }
             Wire.CANCEL -> {
-                cancelled = true
-                _error.value = "The other side canceled the transfer."
-                _state.value = TransferState.FAILED
+                fail("The other side canceled the transfer.")
             }
-            else -> Unit
+            else -> fail("Invalid transfer message.")
         }
     }
 
     private suspend fun handleFileBytes(bytes: ByteArray) {
-        val m = _manifest.value ?: return
+        val m = _manifest.value ?: run { fail("File data arrived too early."); return }
+        val meta = m.files.getOrNull(currentFileIndex)
+        if (meta == null || currentSink == null || bytes.isEmpty() || currentFileBytes + bytes.size > meta.size || _progress.value.bytes + bytes.size > m.totalSize) {
+            fail("Invalid file data."); return
+        }
         try {
             currentSink?.stream?.write(bytes)
         } catch (t: Throwable) {
             fail("Could not save file."); return
         }
         val now = _progress.value.bytes + bytes.size
-        _progress.value = _progress.value.copy(bytes = now.coerceAtMost(m.totalSize))
+        currentFileBytes += bytes.size
+        _progress.value = _progress.value.copy(bytes = now)
         ackProgress(force = false)
     }
 
@@ -327,7 +374,7 @@ class TransferRepository(private val context: Context) {
         val now = System.currentTimeMillis()
         if (!force && now - lastAckMs < 120) return
         lastAckMs = now
-        rtc?.sendControl(PeerWire.progressMap(_progress.value.bytes))
+        if (rtc?.sendControl(PeerWire.progressMap(_progress.value.bytes)) != true) fail("Connection vanished.")
     }
 
     private suspend fun finishSend() {
@@ -358,7 +405,7 @@ class TransferRepository(private val context: Context) {
     private fun closeStack() {
         runCatching { signaling?.close() }
         runCatching { rtc?.close() }
-        runCatching { currentSink?.stream?.close() }
+        runCatching { currentSink?.abort() }
         signaling = null
         rtc = null
         currentSink = null
@@ -366,11 +413,12 @@ class TransferRepository(private val context: Context) {
     }
 
     private fun fail(message: String) {
-        scope.launch {
-            if (_state.value == TransferState.COMPLETE) return@launch
-            _error.value = message
-            _state.value = TransferState.FAILED
-        }
+        if (_state.value == TransferState.COMPLETE) return
+        sessionGeneration++
+        cancelled = true
+        _error.value = message
+        _state.value = TransferState.FAILED
+        closeStack()
     }
 
     fun cancel() {
@@ -378,19 +426,23 @@ class TransferRepository(private val context: Context) {
             if (cancelled) return@launch
             cancelled = true
             runCatching { rtc?.sendControl(PeerWire.cancelMap()) }
-            runCatching { currentSink?.stream?.close() }
+            runCatching { currentSink?.abort() }
             reset(keepPicked = true)
         }
     }
 
     fun reset(keepPicked: Boolean = false) {
+        sessionGeneration++
         cancelled = true
         runCatching { signaling?.close() }
         runCatching { rtc?.close() }
-        runCatching { currentSink?.stream?.close() }
+        runCatching { currentSink?.abort() }
         signaling = null
         rtc = null
         currentSink = null
+        currentFileIndex = -1
+        currentFileBytes = 0
+        nextFileIndex = 0
         remoteId = null
         connectionId = null
         cancelled = false

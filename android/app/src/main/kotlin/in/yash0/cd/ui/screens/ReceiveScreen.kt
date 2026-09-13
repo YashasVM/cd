@@ -51,12 +51,12 @@ fun ReceiveScreen(vm: TransferViewModel, onScan: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (state == TransferState.IDLE || state == TransferState.FAILED) {
             CdCard {
-                Kicker("enter the hand-off word")
+                Kicker("enter the private code")
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = input,
                         onValueChange = { input = FunCodes.clean(it) },
-                        placeholder = { Text("waffle") },
+                        placeholder = { Text("AbCdEfGhIjKlMnOpQrStUv") },
                         singleLine = true,
                         textStyle = CdType.Code.copy(fontSize = androidx.compose.ui.unit.TextUnit.Unspecified),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),

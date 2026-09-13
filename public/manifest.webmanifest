@@ -1,7 +1,7 @@
 {
   "name": "cd — direct browser transfer",
   "short_name": "cd",
-  "description": "Send files directly between browsers with a short word or QR code.",
+  "description": "Send files directly between browsers with a private code or QR link.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

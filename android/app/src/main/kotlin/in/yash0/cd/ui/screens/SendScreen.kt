@@ -59,7 +59,7 @@ fun SendScreen(vm: TransferViewModel) {
         CdCard {
             Kicker("payload")
             Text("Send a file", style = CdType.Body)
-            Text("Pick anything — photos, video, docs. We mint a tiny hand-off code.", style = CdType.SmallMono)
+            Text("Pick anything — photos, video, docs. We mint a private hand-off code.", style = CdType.SmallMono)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PrimaryBtn("Choose files", onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.weight(1f))

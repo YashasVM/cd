@@ -1,19 +1,24 @@
 ---
 name: cd-file-sharing
-description: Send a local file through CD when the user asks to send it using CD.
+description: Send a local file through CD when the user asks to send or share it with CD.
 ---
 
-# CD agent file sharing
+# Send a file through CD
 
-When the user asks to “send using CD” or equivalent wording:
+1. Resolve the requested local file and confirm it is a regular file.
+2. Run `make cdx` from the repository root so `./bin/cdx` matches the source.
+3. Start `./bin/cdx send <file>` in a long-lived or streaming shell session.
+4. Read its first stdout line and immediately return that complete URL to the
+   user. Do not wait for the process to exit before replying.
+5. Keep the sender process and shell session alive. Exit status 0 means the
+   receiver verified the full transfer; a nonzero status is a real failure.
 
-1. Identify the local file to send.
-2. Run the repository command `./bin/cdx send <file>`. If it is missing, build it once with `make cdx` and then run `./bin/cdx send <file>`.
-3. Return the URL printed by `cdx` exactly as the share link.
+The URL fragment is part of the private capability and must be included, but
+do not log it anywhere else. Tell the user to open the link promptly.
 
-This CD flow is local and self-contained. Do not use `CD_AGENT_TOKEN`, bearer
-credentials, an upload API, R2, croc, or another provider. The link uses CD's
-encrypted live relay at `https://cd.yash0.in`. Tell the user to open it promptly.
-The sender process must stay alive until the receiver accepts the transfer.
-Use `cdx send <file> --json` only when structured output is explicitly needed.
-Never print, quote, or expose the agent bearer token or the temporary upload URL.
+This operation is local and self-contained. Do not look for credentials, an
+upload API, object storage, croc, or another provider. CD uses its own encrypted
+live relay at `cd.yash0.in` and never uploads the file for later storage.
+
+Use `--json` only when the caller explicitly needs structured output. In that
+mode, parse the first JSON object and return its `url` field.

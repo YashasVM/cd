@@ -1,0 +1,12 @@
+title = "CD gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Historical invalid-secret test fixture"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "match"
+regexes = ['''invalid-secret-[0-9]+''']
+paths = ['''^cdx/src/transfer/transfer_test\.go$''']

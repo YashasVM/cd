@@ -19,6 +19,7 @@ import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * WebRTC data-channel transport speaking PeerJS `binary` serialization:
@@ -39,6 +40,7 @@ class RtcTransferManager(
     private var channel: DataChannel? = null
     private var egl: EglBase? = null
     private val reassembler = PeerWire.Reassembler()
+    private val connectedNotified = AtomicBoolean(false)
 
     val isConnected: Boolean get() = channel?.state() == DataChannel.State.OPEN
 
@@ -62,13 +64,6 @@ class RtcTransferManager(
         val ice = listOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
             PeerConnection.IceServer.builder("stun:global.stun.twilio.com:3478").createIceServer(),
-            // TURN relay: required behind symmetric NATs / emulator SLIRP where
-            // inbound srflx checks never arrive. Production builds should point
-            // this at the project's own coturn/Cloudflare TURN endpoint.
-            PeerConnection.IceServer.builder(TransferProtocol.turnUrl())
-                .setUsername(TransferProtocol.TURN_USER)
-                .setPassword(TransferProtocol.TURN_PASS)
-                .createIceServer(),
         )
         return PeerConnection.RTCConfiguration(ice).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
@@ -85,7 +80,6 @@ class RtcTransferManager(
         override fun onIceCandidatesRemoved(candidates: Array<IceCandidate>) {}
         override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
             Log.d(TAG, "pc state=$newState")
-            if (newState == PeerConnection.PeerConnectionState.CONNECTED) onConnected()
             if (newState == PeerConnection.PeerConnectionState.FAILED ||
                 newState == PeerConnection.PeerConnectionState.CLOSED
             ) onDisconnected()
@@ -114,12 +108,13 @@ class RtcTransferManager(
 
     private fun attachChannel(dc: DataChannel) {
         channel = dc
+        connectedNotified.set(false)
         Log.d(TAG, "attachChannel label=${dc.label()} state=${dc.state()}")
         dc.registerObserver(object : DataChannel.Observer {
             override fun onBufferedAmountChange(previous: Long) {}
             override fun onStateChange() {
                 Log.d(TAG, "dc state=${dc.state()} buffered=${dc.bufferedAmount()}")
-                if (dc.state() == DataChannel.State.OPEN) onConnected()
+                if (dc.state() == DataChannel.State.OPEN && connectedNotified.compareAndSet(false, true)) onConnected()
             }
             override fun onMessage(buffer: DataChannel.Buffer) {
                 val bytes = ByteArray(buffer.data.remaining())
@@ -130,6 +125,7 @@ class RtcTransferManager(
                 onFrame(frame)
             }
         })
+        if (dc.state() == DataChannel.State.OPEN && connectedNotified.compareAndSet(false, true)) onConnected()
     }
 
     /**
@@ -252,5 +248,6 @@ class RtcTransferManager(
         runCatching { peer?.close() }
         channel = null
         peer = null
+        connectedNotified.set(false)
     }
 }

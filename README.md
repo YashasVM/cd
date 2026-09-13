@@ -1,277 +1,139 @@
-<div align="center">
+# cd
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/cd-Modernized_Fork_of_Sha-f4ed28?style=for-the-badge&labelColor=101010">
-  <img alt="cd banner" src="https://img.shields.io/badge/cd-Modernized_Fork_of_Sha-164bff?style=for-the-badge&labelColor=f2ecd7">
-</picture>
+Fast, private file handoffs at [cd.yash0.in](https://cd.yash0.in).
 
-### A clearer, faster browser-to-browser file handoff app.
+CD supports two focused flows:
 
-[![Status](https://img.shields.io/badge/status-active-008f5a?style=flat-square&labelColor=111111)](https://github.com/YashasVM/cd)
-[![Origin](https://img.shields.io/badge/fork%20of-Sha-f04435?style=flat-square&labelColor=111111)](https://github.com/YashasVM/Sha)
-[![Stack](https://img.shields.io/badge/stack-Vite%20%2B%20WebRTC-f4ed28?style=flat-square&labelColor=111111)](https://vite.dev)
+- Browsers exchange one or more files directly over WebRTC.
+- Agents and terminals run `cdx send <file>` and produce one browser link.
 
+Files are never intentionally stored by CD. The orange CD interface is the
+receiver for both flows.
 
-[cd - Website](https://cd.yash0.in/) . [Original Sha Project](https://github.com/YashasVM/Sha) . [Source Code](https://github.com/YashasVM/cd)
----
+## Send a file from an agent or terminal
 
-</div>
-
-> [!IMPORTANT]
-> This is a fork of **Sha**, modified and modernized with a clearer UI, cleaner codebase, and faster transfer behavior. It exists as a separate project to maintain a clean separation from the clunkiness of the old project while preserving the original idea.
-
-## What is cd?
-
-cd is a direct browser-to-browser file sharing app. Pick files, get a friendly receive code, share the code or QR link, and keep both browser tabs open while the transfer runs.
-
-```text
-Sender Browser -> WebRTC Data Channel -> Receiver Browser
-       |                 ^
-       |                 |
-       +-- PeerJS signaling for connection setup
-```
-
-## Agent file sharing
-
-CD also provides a CLI path for agents that need to hand a file to a user:
-
-```text
-AI agent -> cdx send file -> encrypted CD relay -> https://cd.yash0.in/<code>#<key>
-```
-
-Build the small Go CLI from `cmd/cdx`:
+Install `cdx` with Go:
 
 ```bash
-make cdx
+go install github.com/YashasVM/cd/cmd/cdx@latest
 ```
+
+Or install the latest checksum-verified release on Linux or macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YashasVM/cd/master/scripts/install.sh | sh
+```
+
+Then send one regular file:
 
 ```bash
 cdx send ./app.apk
-cdx send ./archive.zip --json
 ```
 
-The default command prints a CD URL such as
-`https://cd.yash0.in/baker-fog-lurk#<key>`. The browser connects directly to
-CD's relay on that path. The relay sees encrypted frames only, while the key
-stays in the URL fragment and never reaches the server. The sender process
-remains alive until the recipient opens the link.
+The binary is named `cdx` because `cd` is already the shell's change-directory
+command.
 
-The project-local provider-agnostic agent instructions live at
-[`skills/cd-file-sharing/SKILL.md`](skills/cd-file-sharing/SKILL.md).
-Repository agents should also follow [`AGENTS.md`](AGENTS.md) for the command
-lookup and CD relay behavior.
+Standard output contains only the private share URL:
 
----
-
-## Links
-
-| Link | Purpose |
-|---|---|
-| [cd Repository](https://github.com/YashasVM/cd) | Modernized fork and active codebase |
-| [Original Sha Repository](https://github.com/YashasVM/Sha) | Source project this fork split from |
-| [Main website](https://cd.yash0.in/) | Main cd website and direct transfer UI |
-| [Vite](https://vite.dev) | Local dev server and production build tool |
-| [PeerJS](https://peerjs.com/) | WebRTC signaling library |
-| [QRCode](https://github.com/soldair/node-qrcode) | Sender QR generation |
-| [html5-qrcode](https://github.com/mebjas/html5-qrcode) | Receiver camera QR scanning |
-| [Cloudflare Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/) | Deployment target configured by `wrangler.jsonc` |
-
----
-
-## Features
-
-### Transfer Flow
-
-| Feature | Details |
-|---|---|
-| **Direct P2P Transfer** | Files transfer between browsers over WebRTC data channels |
-| **No Server Storage** | The hosted app does not intentionally store transferred file contents |
-| **Multi-File Batches** | Send one file or many files in a single session |
-| **Friendly Codes** | Human-readable receive words with compact joining |
-| **Share Links** | Receiver links support `?receive=code` deep linking |
-| **QR Handoff** | Sender generates a QR code for quick joining |
-
-### Modernization Goals
-
-| Area | What Changed |
-|---|---|
-| **UI** | Rebuilt into a focused, centered editorial interface |
-| **Codebase** | Moved from loose static scripts into a Vite ES module app |
-| **Speed** | Uses binary chunks, file streams, and data-channel backpressure |
-| **Safety** | Avoids CDN script injection and keeps file handling in browser APIs |
-| **Deployment** | Builds to `dist/` for cleaner Cloudflare static asset hosting |
-
----
-
-## Quick Start
-
-### 1. Install
-
-```bash
-npm install
+```text
+https://cd.yash0.in/s/3JgrxJIKt2cqd2V0aTDQyQ#v1.<private-key>
 ```
 
-### 2. Run Locally
+Send that complete URL to the receiver. Keep `cdx` running while they accept
+and download the file. Progress is written to standard error; exit status 0
+means the receiver verified the complete byte count. Use `--json` when a tool
+needs structured output.
+
+The URL fragment holds the encryption key. Browsers do not send fragments to
+the server, and the relay receives encrypted records only. A receiver must
+also prove knowledge of a token derived from that key before joining. Treat
+the full URL as a temporary secret.
+
+Repository agents should follow [AGENTS.md](AGENTS.md) and the reusable
+[CD file-sharing skill](skills/cd-file-sharing/SKILL.md).
+
+## Browser-to-browser sharing
+
+Open [cd.yash0.in](https://cd.yash0.in), choose files, and share the displayed
+128-bit private code, link, or QR code. The private code is placed in the URL
+fragment so it is not sent in HTTP requests. Keep both tabs open until the
+WebRTC transfer finishes. CD coordinates the connection through its own
+`cd.yash0.in` Worker; file bytes travel over the encrypted WebRTC data channel.
+WebRTC may use public STUN servers for NAT discovery, but they do not receive
+file bytes. This remains separate from the agent relay.
+
+## Develop locally
+
+Requirements: Node.js 24+, npm, and Go 1.26.8+.
 
 ```bash
+npm ci
 npm run dev
 ```
 
-Open the local Vite URL in two browser windows or on two devices.
-
-### 3. Send
-
-1. Choose or drop one or more files.
-2. Share the generated code, copy the join link, or show the QR code.
-3. Keep the sender tab open until the receiver connects.
-
-### 4. Receive
-
-1. Switch to **Receive**, open a receive link, or scan the QR code.
-2. Connect with the code.
-3. Save streamed files when prompted, or let the browser download Blob fallbacks.
-
----
-
-## Developer Setup
-
-### Prerequisites
-
-- Node.js 18 or newer
-- npm 9 or newer
-- Git
-- A modern Chromium, Firefox, or Safari browser for WebRTC testing
-
-### Clone
+Build the local CLI with `make cdx`; it is written to `bin/cdx`. Run the full
+production checks with:
 
 ```bash
-git clone https://github.com/YashasVM/cd.git
-cd cd
+npm test
+npm run test:cli
+npm run typecheck
+npm run verify:agent
+npm run deploy:dry
+cd android && ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-### Install Dependencies
+`verify:agent` starts a local Worker, builds the real Go sender, and drives the
+built receiver page in Chromium. It checks admission failures, duplicate
+participants, multi-chunk flow control, Unicode filenames, the downloaded
+bytes, visible CD branding, and the sender's completion status. Set
+`CHROMIUM_PATH` if Chromium is installed outside the common system paths.
+
+To exercise the browser receiver locally:
 
 ```bash
-npm install
+npx wrangler dev
+CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 \
+CD_PUBLIC_URL=http://127.0.0.1:8787 \
+./bin/cdx send ./README.md
 ```
-
-### Start Dev Server
-
-```bash
-npm run dev
-```
-
-Vite prints a local URL, usually `http://127.0.0.1:5173/`. Open it in two browser windows to test send and receive on one machine.
-
-### Build Production Assets
-
-```bash
-npm run build
-```
-
-The production build is written to `dist/`.
-
-### Run Dependency Audit
-
-```bash
-npm run audit
-```
-
-### Preview Production Build
-
-```bash
-npm run preview
-```
-
-### Deploy Notes
-
-`wrangler.jsonc` points Cloudflare at `./dist`, so deploy after running `npm run build`. The repo is structured for static asset hosting; no server-side file storage process is required.
-
-### Manual QA Checklist
-
-- Send one small file.
-- Send multiple files in one batch.
-- Receive with manual code entry.
-- Receive with a copied receive link.
-- Receive by scanning the generated QR code.
-- Try an invalid code and an unavailable sender.
-- Test at least one large file to watch speed and backpressure behavior.
-
----
 
 ## Architecture
 
 ```text
-+-------------------+        PeerJS signaling        +-------------------+
-|   Sender Browser  | <----------------------------> | Receiver Browser |
-|                   |                                |                  |
-| File picker/drop  |                                | Code/QR scanner  |
-| Manifest builder  |                                | Manifest reader  |
-| Stream reader     |                                | Save/download    |
-+---------+---------+                                +---------+--------+
-          |                                                    ^
-          |              WebRTC data channel                   |
-          +----------------------------------------------------+
-                         Raw binary chunks
+Browser sender  ── CD signaling ── WebRTC ── Browser receiver
+
+cdx sender ── encrypted WebSocket records ── CD relay ── Browser receiver
+                 key remains in URL fragment
 ```
 
-### Runtime Defaults
+The Cloudflare Worker uses one Durable Object room per random 128-bit transfer
+identifier. Rooms admit one sender and one authorized receiver, bound memory
+and frame sizes, expire automatically, and retain no file contents. The sender
+uses 64 KiB chunks with an acknowledged 1 MiB window. The browser streams to
+the File System Access API where available and otherwise offers a bounded
+256 MiB Blob download.
 
-| Parameter | Value |
-|---|---|
-| App Runtime | Vite vanilla JavaScript with ES modules |
-| Signaling | `peerjs@1.5.5` |
-| QR Generation | `qrcode@1.5.4` |
-| QR Scanning | `html5-qrcode@2.3.8` |
-| Hosting Target | Cloudflare static assets from `dist/` |
-| Buffer Guard | Data channel backpressure before large buffered queues build up |
+The exact protocol and trust boundaries are documented in
+[Agent transfer protocol v1](docs/agent-transfer-v1.md). Operational recovery
+notes are in [Production recovery](docs/production-recovery.md).
 
----
-
-## Repository Layout
+## Repository layout
 
 ```text
-/
-|-- index.html              App shell and accessible transfer views
-|-- src/
-|   |-- main.js             Sender, receiver, WebRTC, QR, and transfer logic
-|   `-- style.css           Responsive transfer interface
-|-- public/favicon.png      Generated app icon
-|-- package.json            Scripts and dependencies
-|-- package-lock.json       Locked dependency graph
-|-- wrangler.jsonc          Cloudflare static asset config
-`-- README.md               Project documentation
+cmd/cdx/                  Go sender CLI
+src/                      Browser UI and transfer protocols
+worker/                   Cloudflare Worker and Durable Object relay
+scripts/verify-agent.mjs  Deterministic end-to-end verification
+android/                  Android shell for the browser P2P flow
+skills/                   Instructions for AI agents
 ```
 
----
+## Deploy and release
 
-## Build and Checks
+`npm run build && npx wrangler deploy` publishes the Worker and assets using
+`wrangler.jsonc`. Pushing a `v*` tag runs the release workflow, cross-compiles
+`cdx`, publishes SHA-256 checksums, and creates a GitHub release.
 
-```bash
-npm run build
-npm run audit
-```
-
-Cloudflare serves the production build from `dist/`, as configured in `wrangler.jsonc`.
-
----
-
-## Safety Notes
-
-- File contents are sent over WebRTC data channels between connected browsers.
-- The hosted app serves static assets and does not intentionally store transferred files.
-- PeerJS signaling helps establish the connection, but it is not a file storage layer.
-- Share codes are temporary secrets. Send them only to the intended receiver.
-- The sender should keep the tab open until the transfer completes.
-- Browser support, NAT behavior, VPNs, and local network policies can affect peer connectivity.
-
----
-
-
-<div align="center">
-
-**Made by [@yashas.vm](https://github.com/YashasVM)**
-
-*A modernized split from Sha: clearer UI, cleaner code, faster handoffs.*
-
-</div>
+See [SECURITY.md](SECURITY.md) before reporting vulnerabilities. CD is
+available under the [MIT License](LICENSE).

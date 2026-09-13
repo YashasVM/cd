@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "audit": "npm audit --audit-level=moderate",
-    "test:cli": "go test ./cmd/cdx/...",
+    "test": "node --test src/*.test.js",
+    "test:cli": "go test ./...",
+    "typecheck": "tsc",
+    "verify:agent": "npm run build && node scripts/verify-agent.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run"
   },
   "dependencies": {
@@ -17,7 +20,9 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "vite": "8.0.14",
-    "wrangler": "^4.131.0"
+    "playwright-core": "1.63.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "wrangler": "4.131.1"
   }
 }
