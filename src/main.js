@@ -724,6 +724,7 @@ const Receiver = (() => {
       throw new Error('unexpected file start');
     }
 
+    const generation = transferGeneration;
     currentFile = manifest.files[data.index];
     currentFileBytes = 0;
     currentSink = null;
@@ -747,9 +748,19 @@ const Receiver = (() => {
       // location; instead chunks stage (preferably off-heap in OPFS) and
       // flush at file-complete.
       pickerPromise = openWritable(currentFile);
-      stageSink = await createStageSink({ name: currentFile.name, size: currentFile.size });
+      const staged = await createStageSink({ name: currentFile.name, size: currentFile.size });
+      if (generation !== transferGeneration || transferCancelled) {
+        await staged.discard();
+        return;
+      }
+      stageSink = staged;
     } else {
-      currentSink = await createSink({ mediaType: currentFile.mimeType, name: currentFile.name, size: currentFile.size });
+      const sink = await createSink({ mediaType: currentFile.mimeType, name: currentFile.name, size: currentFile.size });
+      if (generation !== transferGeneration || transferCancelled) {
+        await sink.abort();
+        return;
+      }
+      currentSink = sink;
     }
   }
 
@@ -814,13 +825,27 @@ const Receiver = (() => {
       throw new Error('incomplete file');
     }
 
+    const generation = transferGeneration;
+    const file = currentFile;
+    const activeSink = currentSink;
+    const activeStageSink = stageSink;
+
     // Adopt the save stream if the dialog resolved while chunks staged.
     const picked = await pickerPromise;
+    if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
+      try { await picked?.writable?.abort(); } catch { /* Best effort. */ }
+      return;
+    }
     pickerPromise = null;
     if (picked && !transferCancelled) {
       setState('saving');
-      if (stageSink) {
-        const staged = await stageSink.toFile(currentFile.mimeType);
+      if (activeStageSink) {
+        const staged = await activeStageSink.toFile(file.mimeType);
+        if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
+          await staged.cleanup();
+          try { await picked.writable.abort(); } catch { /* Best effort. */ }
+          return;
+        }
         stageSink = null;
         try {
           await staged.file.stream().pipeTo(picked.writable);
@@ -828,17 +853,31 @@ const Receiver = (() => {
           await staged.cleanup();
           throw error;
         }
+        if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
+          await staged.cleanup();
+          return;
+        }
         await staged.cleanup();
       }
-    } else if (currentSink) {
-      const result = await currentSink.close();
+    } else if (activeSink) {
+      const result = await activeSink.close();
+      if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
+        try { result?.revoke?.(); } catch { /* Best effort. */ }
+        return;
+      }
       currentSink = null;
-      downloadUrl(result.url, currentFile.name, result.revoke);
-    } else if (stageSink) {
-      const download = await stageSink.toDownload(currentFile.mimeType);
+      downloadUrl(result.url, file.name, result.revoke);
+    } else if (activeStageSink) {
+      const download = await activeStageSink.toDownload(file.mimeType);
+      if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
+        try { download?.revoke?.(); } catch { /* Best effort. */ }
+        return;
+      }
       stageSink = null;
-      downloadUrl(download.url, currentFile.name, download.revoke);
+      downloadUrl(download.url, file.name, download.revoke);
     }
+
+    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
 
     lastProgressUpdate.value = updateProgress(
       els.receiverProgress,
