@@ -1,6 +1,6 @@
 // Browser regression for cancellation while receiver sink initialization is pending.
 import assert from 'node:assert/strict';
-import { writeFile, mkdtemp, rm } from 'node:fs/promises';
+import { writeFile, readFile, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright-core';
@@ -39,6 +39,25 @@ try {
   await receiver.locator('#receiver-input-section:not(.hidden)').waitFor();
   assert.equal(await receiver.locator('#receiver-error').isVisible(), false);
   console.log('verified receiver cancellation during sink initialization');
+
+  // The canceled async continuation must not install its late sink into the
+  // next transfer. Restore OPFS and complete an exact-bytes transfer in the
+  // same receiver page to catch that stale-state regression.
+  await receiver.evaluate(() => window.__restoreOPFS?.());
+  const sender2 = await context.newPage();
+  await sender2.goto(baseUrl);
+  await sender2.locator('#file-input').setInputFiles(sourcePath);
+  await sender2.locator('#sender-code-section:not(.hidden)').waitFor();
+  const code2 = (await sender2.locator('#share-code').textContent()).trim();
+  await receiver.locator('#code-input').fill(code2);
+  const downloadEvent = receiver.waitForEvent('download', { timeout: 120_000 });
+  await receiver.locator('#connect-btn').click();
+  await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
+  const download = await downloadEvent;
+  const receivedPath = join(work, 'received.bin');
+  await download.saveAs(receivedPath);
+  assert.deepEqual(await readFile(receivedPath), await readFile(sourcePath));
+  console.log('verified exact bytes after canceled transfer');
 } finally {
   await context.close();
   await browser.close();
