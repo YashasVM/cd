@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
 const port = await availablePort();
+const baseUrl = process.env.CD_VERIFY_URL || `http://127.0.0.1:${port}`;
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-p2p-'));
 const sourcePath = join(work, 'p2p solicitée.bin');
 const source = Uint8Array.from({ length: 300 * 1024 }, (_, index) => (index * 31 + 17) % 256);
@@ -22,18 +23,22 @@ await writeFile(sourcePath, source);
 let worker;
 let browser;
 try {
-  const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
-  worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  await waitForHealth(`http://127.0.0.1:${port}/api/health`, worker);
+  if (!process.env.CD_VERIFY_URL) {
+    const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
+    worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    worker.stdout.resume();
+    worker.stderr.resume();
+    await waitForHealth(`${baseUrl}/api/health`, worker);
+  }
   browser = await chromium.launch({
     executablePath: await findChromium(),
     headless: true,
     args: ['--disable-dev-shm-usage']
   });
   for (const mode of ['opfs', 'blob']) {
-    await transferOnce(browser, work, port, sourcePath, source, mode);
+    await transferOnce(browser, work, baseUrl, sourcePath, source, mode);
     console.log(`verified P2P ${mode} tier: exact bytes, browser to browser`);
   }
 } finally {
@@ -42,7 +47,7 @@ try {
   await rm(work, { recursive: true, force: true });
 }
 
-async function transferOnce(browser, work, port, sourcePath, source, mode) {
+async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
   const context = await browser.newContext({ acceptDownloads: true });
   try {
     await context.addInitScript((tier) => {
@@ -53,12 +58,12 @@ async function transferOnce(browser, work, port, sourcePath, source, mode) {
     const receiver = await context.newPage();
     sender.setDefaultTimeout(30_000);
     receiver.setDefaultTimeout(120_000);
-    await sender.goto(`http://127.0.0.1:${port}/`);
+    await sender.goto(baseUrl);
     await sender.locator('#file-input').setInputFiles(sourcePath);
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await sender.locator('#share-code').textContent()).trim();
     assert.match(code, /^[A-Za-z0-9_-]{22}$/);
-    await receiver.goto(`http://127.0.0.1:${port}/`);
+    await receiver.goto(baseUrl);
     await receiver.locator('#receive-mode-btn').click();
     await receiver.locator('#code-input').fill(code);
     const downloadEvent = receiver.waitForEvent('download', { timeout: 120_000 });

@@ -21,7 +21,7 @@ go install github.com/YashasVM/cd/cmd/cdx@latest
 Or install the latest checksum-verified release on Linux or macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YashasVM/cd/master/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/YashasVM/cd/main/scripts/install.sh | sh
 ```
 
 Then send one regular file:
@@ -135,6 +135,11 @@ skills/                   Instructions for AI agents
 `npm run build && npx wrangler deploy` publishes the Worker and assets using
 `wrangler.jsonc`. Pushing a `v*` tag runs the release workflow, cross-compiles
 `cdx`, publishes SHA-256 checksums, and creates a GitHub release.
+
+After deployment, run `CD_VERIFY_URL=https://cd.yash0.in node scripts/verify-p2p.mjs`
+to verify that two browsers can transfer and save the exact file bytes through
+production signaling. This check sends a generated test file through both disk
+staging and the memory fallback.
 
 See [SECURITY.md](SECURITY.md) before reporting vulnerabilities. CD is
 available under the [MIT License](LICENSE).
