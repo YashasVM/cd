@@ -140,7 +140,7 @@ async function verifyPeerSignaling(port) {
   const urlFor = (id) => `ws://127.0.0.1:${port}/peerjs/peerjs?key=peerjs&id=${id}&token=test&version=1.5.5`;
   const sender = await connectPeer(urlFor(senderID));
   const receiver = await connectPeer(urlFor(receiverID));
-  const offer = { type: 'OFFER', dst: senderID, payload: { connectionId: 'dc_test', type: 'data' } };
+  const offer = { type: 'OFFER', src: 'forged-sender', dst: senderID, payload: { connectionId: 'dc_test', type: 'data' } };
   receiver.send(JSON.stringify(offer));
   assert.deepEqual(await nextJSON(sender), { ...offer, src: receiverID });
 
@@ -151,6 +151,10 @@ async function verifyPeerSignaling(port) {
   receiver.close(1000, 'test complete');
   assert.deepEqual(await leave, { type: 'LEAVE', src: receiverID });
   sender.close(1000, 'test complete');
+
+  for (const [index, invalid] of [null, [], 42, 'signal', {}, { type: 'OFFER', dst: '../bad' }].entries()) {
+    await expectClose(urlFor(`invalid-${index}`), invalid, 4400);
+  }
 }
 
 async function connectPeer(url) {

@@ -74,7 +74,7 @@ func endpointBase() (string, string, error) {
 	if parsedPublic.Scheme != "http" && parsedPublic.Scheme != "https" {
 		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: scheme must be https (http only for loopback dev)", public)
 	}
-	if (parsedPublic.Path != "" && parsedPublic.Path != "/") {
+	if parsedPublic.Path != "" && parsedPublic.Path != "/" {
 		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: must be the site origin without a path", public)
 	}
 	if parsedPublic.Scheme == "http" && !isLoopbackHost(parsedPublic.Hostname()) {
@@ -189,7 +189,7 @@ func sendFile(ctx context.Context, path string, onReady func(readyOutput) error)
 	}
 	fmt.Fprintf(os.Stderr, "sharing %s (%d bytes) — send the link above, keep this running\n", filename, ready.Size)
 	if ready.Size > 256*1024*1024 {
-		fmt.Fprintln(os.Stderr, "note: files over 256 MB can fail on Safari receivers — a desktop Chromium browser takes any size")
+		fmt.Fprintln(os.Stderr, "note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
 	}
 	fmt.Fprintln(os.Stderr, "waiting for receiver")
 	if err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {

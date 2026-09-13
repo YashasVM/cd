@@ -25,6 +25,13 @@ function isPeerID(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
 }
 
+function isPeerAttachment(value: unknown): value is PeerAttachment {
+  return !!value && typeof value === 'object'
+    && 'id' in value && isPeerID(value.id)
+    && 'peers' in value && Array.isArray(value.peers) && value.peers.every(isPeerID)
+    && 'messages' in value && typeof value.messages === 'number' && Number.isSafeInteger(value.messages) && value.messages >= 0;
+}
+
 function isBase64Url32(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
 }
@@ -137,7 +144,9 @@ export class TransferRoom extends DurableObject<Env> {
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
     const attachment: unknown = socket.deserializeAttachment();
-    if (!isSocketAttachment(attachment) || attachment.kind === 'pending') {
+    if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
+    if (attachment.kind === 'pending') {
+      if (attachment.expiresAt <= Date.now()) { reject(socket, 4408, 'join expired'); return; }
       if (typeof message !== 'string') { reject(socket, 4400, 'join required'); return; }
       const join = parseJoin(message);
       if (!join) { reject(socket, 4406, 'invalid protocol join'); return; }
@@ -278,9 +287,14 @@ export class PeerSignal extends DurableObject<Env> {
     const url = new URL(request.url);
     if (url.pathname === '/deliver' && request.method === 'POST') {
       const body = await request.text();
-      if (new TextEncoder().encode(body).byteLength > MAX_SIGNAL_BYTES) return new Response('too large', { status: 413 });
-      const socket = this.ctx.getWebSockets()[0];
+      const bodyBytes = new TextEncoder().encode(body).byteLength;
+      if (bodyBytes > MAX_SIGNAL_BYTES) return new Response('too large', { status: 413 });
+      const socket = this.ctx.getWebSockets().find((peer) => peer.readyState === WebSocket.OPEN && isPeerAttachment(peer.deserializeAttachment()));
       if (!socket) return new Response('peer unavailable', { status: 404 });
+      if (socket.bufferedAmount + bodyBytes > MAX_PEER_BUFFER_BYTES) {
+        socket.close(4429, 'peer is too slow');
+        return new Response('peer is too slow', { status: 429 });
+      }
       try { socket.send(body); } catch { return new Response('peer unavailable', { status: 404 }); }
       return new Response(null, { status: 204 });
     }
@@ -291,7 +305,7 @@ export class PeerSignal extends DurableObject<Env> {
     const client = pair[0];
     const server = pair[1];
     this.ctx.acceptWebSocket(server);
-    if (this.ctx.getWebSockets().some((socket) => socket !== server)) {
+    if (this.ctx.getWebSockets().some((socket) => socket !== server && socket.readyState === WebSocket.OPEN)) {
       server.send(JSON.stringify({ type: 'ID-TAKEN' }));
       server.close(4409, 'peer id taken');
       return new Response(null, { status: 101, webSocket: client });
@@ -302,15 +316,16 @@ export class PeerSignal extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    const attachment = socket.deserializeAttachment() as PeerAttachment | null;
-    if (!attachment || typeof message !== 'string' || new TextEncoder().encode(message).byteLength > MAX_SIGNAL_BYTES) {
+    const attachment: unknown = socket.deserializeAttachment();
+    if (!isPeerAttachment(attachment) || typeof message !== 'string' || new TextEncoder().encode(message).byteLength > MAX_SIGNAL_BYTES) {
       socket.close(4400, 'invalid signal');
       return;
     }
-    let value: Record<string, unknown>;
-    try { value = JSON.parse(message) as Record<string, unknown>; } catch { socket.close(4400, 'invalid signal'); return; }
+    let value: unknown;
+    try { value = JSON.parse(message); } catch { socket.close(4400, 'invalid signal'); return; }
+    if (!value || typeof value !== 'object' || !('type' in value)) { socket.close(4400, 'invalid signal'); return; }
     if (value.type === 'HEARTBEAT') return;
-    if (!['OFFER', 'ANSWER', 'CANDIDATE', 'LEAVE'].includes(String(value.type)) || !isPeerID(value.dst)) {
+    if (!['OFFER', 'ANSWER', 'CANDIDATE', 'LEAVE'].includes(String(value.type)) || !('dst' in value) || !isPeerID(value.dst)) {
       socket.close(4400, 'invalid signal');
       return;
     }
@@ -330,8 +345,8 @@ export class PeerSignal extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket): Promise<void> {
-    const attachment = socket.deserializeAttachment() as PeerAttachment | null;
-    if (!attachment) return;
+    const attachment: unknown = socket.deserializeAttachment();
+    if (!isPeerAttachment(attachment)) return;
     await Promise.all(attachment.peers.map(async (peer) => {
       try {
         await this.env.PEERS.getByName(peer).fetch('https://peer.internal/deliver', {
