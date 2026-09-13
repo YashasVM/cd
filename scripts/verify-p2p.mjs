@@ -37,7 +37,7 @@ try {
     headless: true,
     args: ['--disable-dev-shm-usage']
   });
-  for (const mode of ['opfs', 'blob']) {
+  for (const mode of ['opfs', 'blob', 'opfs-unavailable']) {
     await transferOnce(browser, work, baseUrl, sourcePath, source, mode);
     console.log(`verified P2P ${mode} tier: exact bytes, browser to browser`);
   }
@@ -53,11 +53,22 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     await context.addInitScript((tier) => {
       delete window.showSaveFilePicker;
       if (tier === 'blob') delete window.navigator.storage.getDirectory;
+      if (tier === 'opfs-unavailable') {
+        window.navigator.storage.getDirectory = async () => { throw new DOMException('Storage unavailable', 'NotAllowedError'); };
+      }
     }, mode);
     const sender = await context.newPage();
     const receiver = await context.newPage();
     sender.setDefaultTimeout(30_000);
     receiver.setDefaultTimeout(120_000);
+    // Keep browser failures actionable in CI. Playwright's event timeout only
+    // says that no download arrived; page errors and the receiver's rendered
+    // state identify whether the transfer failed before the save click.
+    const pageErrors = [];
+    receiver.on('pageerror', (error) => pageErrors.push(`pageerror: ${error.message}`));
+    receiver.on('console', (message) => {
+      if (message.type() === 'error') pageErrors.push(`console: ${message.text()}`);
+    });
     await sender.goto(baseUrl);
     await sender.locator('#file-input').setInputFiles(sourcePath);
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
@@ -67,9 +78,27 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     await receiver.locator('#receive-mode-btn').click();
     await receiver.locator('#code-input').fill(code);
     const downloadEvent = receiver.waitForEvent('download', { timeout: 120_000 });
+    // The completion assertion can fail before the download event timeout;
+    // mark this promise handled so its later rejection does not obscure the
+    // useful assertion error in Node's unhandled-rejection handler.
+    downloadEvent.catch(() => {});
     await receiver.locator('#connect-btn').click();
     await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
-    const download = await downloadEvent;
+    let download;
+    try {
+      download = await downloadEvent;
+    } catch (error) {
+      const state = await receiver.locator('#app-state').textContent().catch(() => 'unavailable');
+      const status = await receiver.locator('#receiver-error .error-message').textContent().catch(() => '');
+      const details = [
+        `mode=${mode}`,
+        `app-state=${state?.trim() || 'empty'}`,
+        status?.trim() && `receiver-error=${status.trim()}`,
+        ...pageErrors
+      ].filter(Boolean).join('; ');
+      error.message = `${error.message} (${details})`;
+      throw error;
+    }
     const receivedPath = join(work, `p2p-${mode}-${await download.suggestedFilename()}`);
     await download.saveAs(receivedPath);
     assert.deepEqual(Buffer.from(await readFile(receivedPath)), Buffer.from(source));
