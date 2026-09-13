@@ -99,3 +99,19 @@ body::before{content:"";position:fixed;z-index:0;inset:0 0 auto;height:58vh;poin
 .agent-offer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 16px;margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:6px;background:#1b0d09}
 .agent-offer strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}.agent-offer span{grid-column:1;color:var(--muted);font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.agent-offer button{grid-column:2;grid-row:1 / span 2}.agent-progress{margin-top:14px}.agent-progress .progress-bar{margin:20px 0 10px}.agent-progress>span{color:var(--muted);font:12px ui-monospace,SFMono-Regular,Menlo,monospace}
 @media(max-width:600px){.agent-offer{grid-template-columns:1fr}.agent-offer span,.agent-offer button{grid-column:1;grid-row:auto}.agent-offer button{width:100%;margin-top:8px}}
+
+/* Shared controls keep the warm palette legible across screen sizes. */
+:root{--muted:#b3a38c;--faint:#a28f79}
+.primary-btn,.secondary-btn,.mode-btn,.cancel-btn{min-height:44px}
+button:disabled{opacity:.55;cursor:wait;transform:none}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.drop-zone:hover,.drop-zone.drag-over{transform:none;background:rgba(229,138,87,.025)}
+.drop-zone.drag-over{border-color:var(--accent)}
+.code-block #share-code{font-size:clamp(19px,3.4vw,25px);line-height:1.5;letter-spacing:.025em;word-break:break-all;user-select:all}
+#code-input{font-size:clamp(16px,3.5vw,20px);letter-spacing:.015em}
+#code-input::placeholder{color:var(--faint)}
+.scanner-panel{flex-wrap:wrap}
+.qr-reader{flex-basis:100%;grid-column:1 / -1;max-width:100%}
+.watermark{position:relative;right:auto;bottom:auto;z-index:1;margin:-28px auto 0;padding:0 18px 16px;text-align:center;font-size:12px}
+.noscript-message{position:fixed;inset:auto 16px 16px;padding:16px;background:#24110c;color:var(--text);text-align:center}
+@media(max-width:600px){.watermark{display:block;margin:0}.share-grid{gap:12px}.code-block #share-code{font-size:22px}.cancel-btn{min-height:44px}.shell{min-height:calc(100svh - 48px)}}

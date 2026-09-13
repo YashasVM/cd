@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
       content="Send files directly between browsers with a private code or QR link. No upload queue, no cloud detour."
@@ -17,6 +17,10 @@
       property="og:description"
       content="Send files directly between browsers with a private code or QR link."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cd.yash0.in/" />
+    <link rel="canonical" href="https://cd.yash0.in/" />
+    <link rel="stylesheet" href="/src/style.css" />
     <title>cd | direct browser transfer</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -42,21 +46,21 @@
 
       <section class="workbench" aria-label="file transfer app">
         <div class="mode-selector" role="tablist" aria-label="Choose transfer mode">
-          <button id="send-mode-btn" class="mode-btn active" type="button" role="tab" aria-selected="true">
+          <button id="send-mode-btn" class="mode-btn active" type="button" role="tab" aria-selected="true" aria-controls="sender-view" tabindex="0">
             Send
           </button>
-          <button id="receive-mode-btn" class="mode-btn" type="button" role="tab" aria-selected="false">
+          <button id="receive-mode-btn" class="mode-btn" type="button" role="tab" aria-selected="false" aria-controls="receiver-view" tabindex="-1">
             Receive
           </button>
         </div>
 
-        <section id="sender-view" class="view active" aria-label="Send files">
+        <section id="sender-view" class="view active" role="tabpanel" aria-labelledby="send-mode-btn">
           <div id="drop-zone" class="drop-zone">
             <input id="file-input" type="file" multiple hidden />
             <span class="drop-mark" aria-hidden="true">+</span>
             <div>
             <h2>Send a file</h2>
-            <p>Drop anything here and we’ll make a private hand-off code.</p>
+            <p>Drop files here, or choose them below. Keep this tab open until they arrive.</p>
             </div>
             <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
           </div>
@@ -87,7 +91,7 @@
               <button id="copy-link-btn" class="secondary-btn" type="button">Copy link</button>
             </div>
 
-            <p class="status" id="sender-status">Waiting for receiver...</p>
+            <p class="status" role="status" id="sender-status">Waiting for receiver...</p>
           </div>
 
           <div id="sender-progress" class="progress-section hidden">
@@ -114,7 +118,7 @@
           </div>
         </section>
 
-        <section id="receiver-view" class="view hidden" aria-label="Receive files">
+        <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
           <div id="receiver-input-section" class="input-section">
               <label for="code-input">Enter the private code</label>
             <div class="code-input-wrapper">
@@ -122,7 +126,7 @@
                 id="code-input"
                 type="text"
                 maxlength="22"
-                placeholder="AbCdEfGhIjKlMnOpQrStUv"
+                placeholder="Paste a code or link" aria-describedby="scanner-status"
                 autocomplete="off"
                 autocapitalize="none"
                 autocorrect="off"
@@ -136,7 +140,7 @@
             <div class="scanner-panel">
               <button id="scan-qr-btn" class="secondary-btn" type="button">Scan code</button>
               <button id="stop-scan-btn" class="secondary-btn hidden" type="button">Stop scan</button>
-              <p id="scanner-status" class="scanner-status">Camera optional. Typing still works.</p>
+              <p id="scanner-status" class="scanner-status">Paste the sender's code or link, or scan their QR code.</p>
               <div id="qr-reader" class="qr-reader hidden"></div>
             </div>
           </div>
@@ -179,7 +183,7 @@
             <button id="receive-another-btn" class="primary-btn" type="button">Grab more stuff</button>
           </div>
 
-          <div id="receiver-error" class="result-section error hidden">
+          <div id="receiver-error" class="result-section error hidden" role="alert">
             <span class="result-mark">ERR</span>
             <p class="error-message"></p>
             <button id="retry-btn" class="primary-btn" type="button">Try again</button>
@@ -189,9 +193,10 @@
     </main>
 
     <footer class="watermark">
-      Made by <a href="https://github.com/YashasVM" target="_blank" rel="noreferrer">@Yashas.VM</a>
+      Made by <a href="https://yash0.in" target="_blank" rel="noreferrer">yashas</a>
     </footer>
 
+    <noscript><p class="noscript-message">Enable JavaScript to send and receive files.</p></noscript>
     <script type="module" src="/src/entry.js"></script>
   </body>
 </html>

@@ -1,5 +1,4 @@
 import { Peer } from 'peerjs';
-import './style.css';
 import { cleanCode, codeFromUrl, generateCode, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
 import { parseManifest } from './p2p-manifest.js';
 import {
@@ -1025,6 +1024,9 @@ async function stopScanner() {
 }
 
 function switchToSendMode() {
+  if (els.sendModeBtn.getAttribute('aria-selected') === 'true') return;
+  els.sendModeBtn.tabIndex = 0;
+  els.receiveModeBtn.tabIndex = -1;
   els.sendModeBtn.classList.add('active');
   els.receiveModeBtn.classList.remove('active');
   els.sendModeBtn.setAttribute('aria-selected', 'true');
@@ -1038,6 +1040,9 @@ function switchToSendMode() {
 }
 
 function switchToReceiveMode() {
+  if (els.receiveModeBtn.getAttribute('aria-selected') === 'true') return;
+  els.receiveModeBtn.tabIndex = 0;
+  els.sendModeBtn.tabIndex = -1;
   els.receiveModeBtn.classList.add('active');
   els.sendModeBtn.classList.remove('active');
   els.receiveModeBtn.setAttribute('aria-selected', 'true');
@@ -1059,6 +1064,18 @@ function switchToReceiveMode() {
 
 els.sendModeBtn.addEventListener('click', switchToSendMode);
 els.receiveModeBtn.addEventListener('click', switchToReceiveMode);
+
+for (const tab of [els.sendModeBtn, els.receiveModeBtn]) {
+  tab.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? els.sendModeBtn
+      : event.key === 'End' ? els.receiveModeBtn
+      : tab === els.sendModeBtn ? els.receiveModeBtn : els.sendModeBtn;
+    next.click();
+    next.focus();
+  });
+}
 
 els.selectFileBtn.addEventListener('click', (event) => {
   event.stopPropagation();
