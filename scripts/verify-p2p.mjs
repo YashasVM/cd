@@ -82,10 +82,10 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     // mark this promise handled so its later rejection does not obscure the
     // useful assertion error in Node's unhandled-rejection handler.
     downloadEvent.catch(() => {});
-    await receiver.locator('#connect-btn').click();
-    await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
     let download;
     try {
+      await receiver.locator('#connect-btn').click();
+      await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
       download = await downloadEvent;
     } catch (error) {
       const state = await receiver.locator('#app-state').textContent({ timeout: 1_000 }).catch(() => 'unavailable');
