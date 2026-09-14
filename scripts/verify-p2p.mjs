@@ -44,22 +44,23 @@ try {
   }
   await browser.close();
   browser = null;
-  await verifyCancellation(baseUrl);
+  await verifyScenario(baseUrl, 'verify-sender-ready.mjs');
+  await verifyScenario(baseUrl, 'verify-cancel.mjs');
 } finally {
   await browser?.close();
   await stopChild(worker);
   await rm(work, { recursive: true, force: true });
 }
 
-async function verifyCancellation(baseUrl) {
+async function verifyScenario(baseUrl, script) {
   const chromiumPath = await findChromium();
   await new Promise((resolve, reject) => {
-    const check = spawn(process.execPath, [fileURLToPath(new URL('./verify-cancel.mjs', import.meta.url))], {
+    const check = spawn(process.execPath, [fileURLToPath(new URL(script, import.meta.url))], {
       env: { ...process.env, CD_VERIFY_URL: baseUrl, CHROMIUM_PATH: chromiumPath },
       stdio: 'inherit'
     });
     check.once('error', reject);
-    check.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`cancellation verification exited with ${code}`)));
+    check.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`${script} exited with ${code}`)));
   });
 }
 
@@ -126,15 +127,22 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     let download;
     try {
       await receiver.locator('#connect-btn').click();
-      await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
+      await Promise.race([
+        receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 }),
+        receiver.locator('#receiver-error:not(.hidden)').waitFor({ timeout: 120_000 }).then(() => {
+          throw new Error('Receiver reported a transfer failure');
+        })
+      ]);
       download = await downloadEvent;
     } catch (error) {
       const state = await receiver.locator('#app-state').textContent({ timeout: 1_000 }).catch(() => 'unavailable');
       const status = await receiver.locator('#receiver-error .error-message').textContent({ timeout: 1_000 }).catch(() => '');
+      const senderStatus = await sender.locator('#sender-status').textContent({ timeout: 1_000 }).catch(() => '');
       const details = [
         `mode=${mode}`,
         `app-state=${state?.trim() || 'empty'}`,
         status?.trim() && `receiver-error=${status.trim()}`,
+        senderStatus?.trim() && `sender-status=${senderStatus.trim()}`,
         ...pageErrors
       ].filter(Boolean).join('; ');
       throw new Error(`P2P verification failed: ${details}`, { cause: error });
