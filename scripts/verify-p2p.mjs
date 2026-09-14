@@ -41,10 +41,25 @@ try {
     await transferOnce(browser, work, baseUrl, sourcePath, source, mode);
     console.log(`verified P2P ${mode} tier: exact bytes, browser to browser`);
   }
+  await browser.close();
+  browser = null;
+  await verifyCancellation(baseUrl);
 } finally {
   await browser?.close();
   await stopChild(worker);
   await rm(work, { recursive: true, force: true });
+}
+
+async function verifyCancellation(baseUrl) {
+  const chromiumPath = await findChromium();
+  await new Promise((resolve, reject) => {
+    const check = spawn(process.execPath, [fileURLToPath(new URL('./verify-cancel.mjs', import.meta.url))], {
+      env: { ...process.env, CD_VERIFY_URL: baseUrl, CHROMIUM_PATH: chromiumPath },
+      stdio: 'inherit'
+    });
+    check.once('error', reject);
+    check.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`cancellation verification exited with ${code}`)));
+  });
 }
 
 async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
