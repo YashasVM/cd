@@ -139,7 +139,9 @@ skills/                   Instructions for AI agents
 After deployment, run `CD_VERIFY_URL=https://cd.yash0.in node scripts/verify-p2p.mjs`
 to verify that two browsers can transfer and save the exact file bytes through
 production signaling. This check sends a generated test file through both disk
-staging and the memory fallback.
+staging and the memory fallback, including unavailable disk storage.
+Run `CD_VERIFY_URL=https://cd.yash0.in node scripts/verify-agent.mjs` to verify
+the encrypted CLI transfer and downloaded bytes against production as well.
 
 See [SECURITY.md](SECURITY.md) before reporting vulnerabilities. CD is
 available under the [MIT License](LICENSE).
