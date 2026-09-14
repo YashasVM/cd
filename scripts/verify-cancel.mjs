@@ -16,10 +16,20 @@ const context = await browser.newContext({ acceptDownloads: true });
 await context.addInitScript(() => {
   delete window.showSaveFilePicker;
   const original = navigator.storage.getDirectory.bind(navigator.storage);
+  let release;
+  const writable = {
+    async write() {}, async close() {}, async abort() {}
+  };
+  const root = {
+    async getFileHandle() {
+      return { async createWritable() { return writable; }, async getFile() { return new Blob(); } };
+    },
+    async removeEntry() { window.__opfsRemoved = true; }
+  };
   window.__restoreOPFS = () => { navigator.storage.getDirectory = original; };
   navigator.storage.getDirectory = () => {
     window.__opfsPending = true;
-    return new Promise((_, reject) => { window.__releaseOPFS = () => reject(new Error('released')); });
+    return new Promise((resolve) => { release = () => resolve(root); window.__releaseOPFS = release; });
   };
 });
 try {
@@ -35,7 +45,9 @@ try {
   await receiver.locator('#connect-btn').click();
   await receiver.waitForFunction(() => window.__opfsPending === true);
   await receiver.locator('#receiver-cancel-btn').click();
-  await receiver.evaluate(() => { window.__releaseOPFS?.(); window.__restoreOPFS?.(); });
+  await receiver.evaluate(() => window.__releaseOPFS?.());
+  await receiver.waitForFunction(() => window.__opfsRemoved === true);
+  await receiver.evaluate(() => window.__restoreOPFS?.());
   await receiver.locator('#receiver-input-section:not(.hidden)').waitFor();
   assert.equal(await receiver.locator('#receiver-error').isVisible(), false);
   console.log('verified receiver cancellation during sink initialization');
