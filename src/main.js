@@ -619,7 +619,11 @@ const Receiver = (() => {
         }
         dataQueue = dataQueue
           .then(() => connectionGeneration === transferGeneration && handleData(data))
-          .catch(() => { if (connectionGeneration === transferGeneration) failProtocol(); })
+          .catch((error) => {
+            if (connectionGeneration !== transferGeneration) return;
+            if (error?.message === DOWNLOAD_TOO_LARGE) refuseTransfer(DOWNLOAD_TOO_LARGE);
+            else failProtocol();
+          })
           .finally(() => {
             if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;
           });
