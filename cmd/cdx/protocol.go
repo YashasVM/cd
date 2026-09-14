@@ -152,14 +152,14 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 	if headerBytes+ciphertextLength > maxRecordBytes {
 		return nil, errors.New("record is too large")
 	}
-	header := make([]byte, headerBytes)
+	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
 	copy(header, []byte("CD"))
 	header[2] = protocolVersion
 	header[3] = byte(kind)
 	sequence := uint32(value.sequence)
 	binary.BigEndian.PutUint32(header[4:8], sequence)
 	binary.BigEndian.PutUint32(header[8:12], uint32(len(plaintext)))
-	record := append(header, value.aead.Seal(nil, recordNonce(value.direction, sequence), plaintext, recordAAD(header, value.id))...)
+	record := value.aead.Seal(header, recordNonce(value.direction, sequence), plaintext, recordAAD(header, value.id))
 	value.sequence++
 	return record, nil
 }

@@ -12,12 +12,15 @@ relay accepts the sender. Send that full link to the receiver and keep `cdx`
 running until they verify the file. Status goes to standard error, making the
 single stdout line safe for agents and shell scripts. `cdx send ./file.zip --json`
 (or `cdx send --json ./file.zip`) emits the same invitation with filename,
-byte size, and output schema version.
+byte size, and output schema version. A bare `cdx ./file.zip` works as
+shorthand for `cdx send ./file.zip`.
 
 Rules for v1:
 
 - One regular file per invocation. Zip a folder first to share it.
-- Flags may come before or after the file path.
+- Flags may come before or after the file path. Use `--` before a file whose
+  name starts with `-` (for example `cdx send -- -weird-name.bin`).
+- `cdx --help`, `cdx help send`, and `cdx --version` document the rest.
 - Exit status `0` means the browser verified every byte, `1` means the
   transfer failed, `2` means the command was used incorrectly.
 
