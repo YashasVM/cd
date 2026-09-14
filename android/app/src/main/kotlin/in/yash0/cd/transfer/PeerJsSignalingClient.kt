@@ -75,7 +75,7 @@ class PeerJsSignalingClient(
             override fun onClose(code: Int, reason: String?, remote: Boolean) {
                 Log.d(TAG, "ws close code=$code reason=$reason")
                 heartbeatJob?.cancel()
-                if (!closedByUs && !gotOpen) onError(reason?.ifBlank { null } ?: "signaling closed")
+                if (!closedByUs) onError(reason?.ifBlank { null } ?: "signaling closed")
             }
 
             override fun onError(ex: Exception) {

@@ -153,15 +153,17 @@ class TransferRepository(private val context: Context) {
         Log.d(TAG, "startStack myId=$myId sender=$isSender target=$targetId cid=$cid")
         val manager = RtcTransferManager(
             context = context,
-            onFrame = { handleFrame(session, it) },
+            onFrame = { if (session == sessionGeneration) handleFrame(session, it) },
             onConnected = {
                 scope.launch {
+                    if (session != sessionGeneration) return@launch
                     _status.value = if (isSender) "Receiver found." else "Connected."
                     if (isSender) sendAll()
                 }
             },
             onDisconnected = {
                 scope.launch {
+                    if (session != sessionGeneration) return@launch
                     if (_state.value != TransferState.COMPLETE && !cancelled) {
                         _error.value = "Connection vanished."
                         _state.value = TransferState.FAILED
@@ -171,6 +173,7 @@ class TransferRepository(private val context: Context) {
         )
         rtc = manager
         manager.setIceEmitter { ice ->
+            if (session != sessionGeneration) return@setIceEmitter
             val dst = if (isSender) remoteId else targetId
             val activeConnectionId = connectionId ?: return@setIceEmitter
             dst?.let { signaling?.sendCandidate(it, activeConnectionId, ice.sdp, ice.sdpMid, ice.sdpMLineIndex) }
@@ -179,39 +182,42 @@ class TransferRepository(private val context: Context) {
             myId = myId,
             onOpen = {
                 scope.launch {
+                    if (session != sessionGeneration) return@launch
                     if (!isSender && targetId != null) {
                         _status.value = "Finding the sender..."
                         manager.createOffer(
                             label = cid,
-                            onSdp = { _, sdp -> signaling?.sendOffer(targetId, cid, sdp, cid) },
-                            onFailure = { fail(it) },
+                            onSdp = { _, sdp -> if (session == sessionGeneration) signaling?.sendOffer(targetId, cid, sdp, cid) },
+                            onFailure = { if (session == sessionGeneration) fail(it) },
                         )
                     }
                 }
             },
             onOffer = { ev ->
                 // Sender side: the browser/app receiver dials us.
-                if (!isSender) return@PeerJsSignalingClient
+                if (!isSender || session != sessionGeneration) return@PeerJsSignalingClient
                 remoteId = ev.from
                 connectionId = ev.connectionId
                 scope.launch {
+                    if (session != sessionGeneration) return@launch
                     manager.createAnswer(
                         ev.sdp,
-                        onSdp = { _, sdp -> signaling?.sendAnswer(ev.from, ev.connectionId, sdp) },
-                        onFailure = { fail(it) },
+                        onSdp = { _, sdp -> if (session == sessionGeneration) signaling?.sendAnswer(ev.from, ev.connectionId, sdp) },
+                        onFailure = { if (session == sessionGeneration) fail(it) },
                     )
                 }
             },
             onAnswer = { ev ->
-                if (ev.connectionId != connectionId) return@PeerJsSignalingClient
+                if (session != sessionGeneration || ev.connectionId != connectionId) return@PeerJsSignalingClient
                 manager.acceptAnswer(ev.sdp)
             },
             onCandidate = { ev ->
-                if (ev.connectionId != connectionId) return@PeerJsSignalingClient
+                if (session != sessionGeneration || ev.connectionId != connectionId) return@PeerJsSignalingClient
                 manager.addRemoteCandidate(ev.candidate, ev.sdpMid, ev.sdpMLineIndex)
             },
             onIdTaken = {
                 scope.launch {
+                    if (session != sessionGeneration) return@launch
                     // Mirror web: colliding code -> mint a fresh one and re-host.
                     if (isSender && hostRetries < 5) {
                         hostRetries++
@@ -222,8 +228,10 @@ class TransferRepository(private val context: Context) {
                     }
                 }
             },
-            onPeerGone = { fail("Bad code, or the sender wandered off.") },
-            onError = { fail(it) },
+            onPeerGone = { if (session == sessionGeneration) fail("Bad code, or the sender wandered off.") },
+            // Signaling can disappear after ICE/data-channel setup; the
+            // established channel remains usable in that case.
+            onError = { if (session == sessionGeneration && !manager.isConnected) fail(it) },
         )
         signaling?.connect()
         scope.launch {

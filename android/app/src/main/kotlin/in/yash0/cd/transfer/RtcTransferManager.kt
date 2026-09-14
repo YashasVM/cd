@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.webrtc.DataChannel
 import org.webrtc.DefaultVideoDecoderFactory
@@ -244,10 +245,20 @@ class RtcTransferManager(
     }
 
     fun close() {
+        // Stop our coroutines and unregister native callbacks before releasing
+        // the WebRTC objects owned by this manager.
+        scope.cancel()
+        runCatching { channel?.unregisterObserver() }
         runCatching { channel?.close() }
         runCatching { peer?.close() }
+        runCatching { channel?.dispose() }
+        runCatching { peer?.dispose() }
         channel = null
         peer = null
         connectedNotified.set(false)
+        runCatching { factory?.dispose() }
+        factory = null
+        runCatching { egl?.release() }
+        egl = null
     }
 }
