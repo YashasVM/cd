@@ -23,6 +23,9 @@ The fixes address these concrete code-quality findings:
   transfer generation and release stale resources.
 - Service-worker writes were not tracked and cached error responses. Cache
   work now has an event lifetime, and only successful responses enter the cache.
+- Android retained native WebRTC resources across sessions and accepted late
+  callbacks from old connections. Teardown now disposes the resources, and
+  callbacks check their session before changing transfer state.
 
 These are behavior and lifecycle defects, not cosmetic refactoring requests.
 The review did not identify a conflicting documented coding standard.
@@ -44,6 +47,8 @@ The improvements address these user-visible gaps:
   footer now consistently identify CD and link to yash0.in.
 - Release checks omitted browser transfers. CI and release verification now
   include them, with hosted checks available for both transfer paths.
+- Android could remain waiting after its signaling connection closed. It now
+  reports that failure unless its data channel is already connected.
 
 ## Verification
 
@@ -53,7 +58,9 @@ deployment dry run. Browser checks compare downloaded bytes with generated
 source files through the CLI relay and browser-to-browser transfer paths.
 
 The browser matrix covers OPFS, memory fallback, and advertised-but-unavailable
-OPFS. Playwright checks also cover phone and desktop layout, keyboard tabs,
+OPFS. It also delays OPFS setup, cancels the receiver, checks cleanup, and
+verifies a subsequent transfer in the same page. Playwright checks cover phone
+and desktop layout, keyboard tabs,
 invalid-code feedback, and absence of horizontal overflow.
 
 This review does not establish a maximum transfer speed or unlimited file size.
