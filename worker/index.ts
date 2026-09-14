@@ -87,22 +87,9 @@ function equalTokenHashes(left: string, right: string): boolean {
     return false;
   }
   if (leftBytes.byteLength !== 32 || rightBytes.byteLength !== 32) return false;
-  // Prefer the runtime constant-time comparator when available, with a
-  // manual constant-time fallback so admission never depends on a
-  // non-standard API existing at a given compatibility date.
-  const subtle = crypto.subtle as SubtleCrypto & {
-    timingSafeEqual?(a: ArrayBufferView, b: ArrayBufferView): boolean;
-  };
-  if (typeof subtle.timingSafeEqual === 'function') {
-    try {
-      return subtle.timingSafeEqual(leftBytes, rightBytes);
-    } catch {
-      return false;
-    }
-  }
-  let diff = 0;
-  for (let index = 0; index < 32; index += 1) diff |= leftBytes[index] ^ rightBytes[index];
-  return diff === 0;
+  const subtle = crypto.subtle;
+  return 'timingSafeEqual' in subtle && typeof subtle.timingSafeEqual === 'function'
+    && subtle.timingSafeEqual(leftBytes, rightBytes);
 }
 
 function relayEvent(type: 'accepted' | 'peer-joined' | 'peer-left', extra: Record<string, string> = {}): string {
@@ -145,6 +132,10 @@ export class TransferRoom extends DurableObject<Env> {
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
+    if (this.isExpired()) {
+      await this.expireRoom();
+      return;
+    }
     if (attachment.kind === 'pending') {
       if (attachment.expiresAt <= Date.now()) { reject(socket, 4408, 'join expired'); return; }
       if (typeof message !== 'string') { reject(socket, 4400, 'join required'); return; }
@@ -157,7 +148,7 @@ export class TransferRoom extends DurableObject<Env> {
     if (typeof message === 'string' || message.byteLength > MAX_RECORD_BYTES) { reject(socket, 4403, 'invalid relay frame'); return; }
     const peer = this.peer(attachment.role === 'sender' ? 'receiver' : 'sender');
     if (!peer) { reject(socket, 4404, 'peer unavailable'); return; }
-    if (peer.bufferedAmount > MAX_PEER_BUFFER_BYTES) {
+    if (peer.bufferedAmount + message.byteLength > MAX_PEER_BUFFER_BYTES) {
       logEvent('backpressure_limit', { bufferedBytes: peer.bufferedAmount });
       reject(socket, 4429, 'peer is too slow');
       reject(peer, 4429, 'peer is too slow');
@@ -203,10 +194,8 @@ export class TransferRoom extends DurableObject<Env> {
       await this.scheduleAlarm();
       return;
     }
-    if (this.room.kind !== 'empty' && this.room.expiresAt <= now) {
-      logEvent('room_expired');
-      for (const socket of this.ctx.getWebSockets()) socket.close(4408, 'room expired');
-      await this.finishRoom();
+    if (this.isExpired()) {
+      await this.expireRoom();
       return;
     }
     await this.scheduleAlarm();
@@ -235,6 +224,10 @@ export class TransferRoom extends DurableObject<Env> {
       return;
     }
     const suppliedHash = await hashToken(join.receiverToken);
+    if (this.isExpired()) {
+      await this.expireRoom();
+      return;
+    }
     if (this.room.kind !== 'waiting' || !equalTokenHashes(suppliedHash, this.room.receiverTokenHash)) { reject(socket, 4401, 'receiver unauthorized'); return; }
     const sender = this.peer('sender');
     if (!sender) { reject(socket, 4404, 'sender unavailable'); return; }
@@ -258,8 +251,20 @@ export class TransferRoom extends DurableObject<Env> {
   private peer(role: Role): WebSocket | null {
     return this.ctx.getWebSockets().find((socket) => {
       const attachment: unknown = socket.deserializeAttachment();
-      return isSocketAttachment(attachment) && attachment.kind === 'peer' && attachment.role === role;
+      return socket.readyState === WebSocket.OPEN && isSocketAttachment(attachment) && attachment.kind === 'peer' && attachment.role === role;
     }) ?? null;
+  }
+
+  private isExpired(): boolean {
+    return (this.room.kind === 'waiting' || this.room.kind === 'paired') && this.room.expiresAt <= Date.now();
+  }
+
+  private async expireRoom(): Promise<void> {
+    logEvent('room_expired');
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket.readyState === WebSocket.OPEN) socket.close(4408, 'room expired');
+    }
+    await this.finishRoom();
   }
 
   private async finishRoom(): Promise<void> {
@@ -362,6 +367,18 @@ export class PeerSignal extends DurableObject<Env> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    // design.yash0.in serves the design-docs list site from /design/.
+    // Hash routing keeps every doc on one page, so extensionless paths
+    // fall back to the design index.
+    if (url.hostname === 'design.yash0.in') {
+      if (url.pathname.startsWith('/ws/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/peerjs/')) {
+        return new Response('not found', { status: 404 });
+      }
+      let assetPath = url.pathname.startsWith('/design/') ? url.pathname : `/design${url.pathname}`;
+      if (assetPath.endsWith('/')) assetPath += 'index.html';
+      else if (!assetPath.split('/').pop()?.includes('.')) assetPath = '/design/index.html';
+      return env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
+    }
     if (url.pathname === '/peerjs/peerjs') {
       const id = url.searchParams.get('id');
       if (!isPeerID(id) || url.searchParams.get('key') !== 'peerjs' || request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
