@@ -17,11 +17,9 @@ if ('serviceWorker' in navigator) {
       // Offline shell support is optional; transfers still work without it.
     });
   };
-  if ('requestIdleCallback' in window) {
-    window.addEventListener('load', () => requestIdleCallback(registerSw, { timeout: 4000 }));
-  } else {
-    window.addEventListener('load', () => setTimeout(registerSw, 1500));
-  }
+  const scheduleRegistration = () => warmUpOnIdle(registerSw);
+  if (document.readyState === 'complete') scheduleRegistration();
+  else window.addEventListener('load', scheduleRegistration, { once: true });
 }
 
 let qrCodeModulePromise;
@@ -602,11 +600,14 @@ const Receiver = (() => {
   function connect(rawCode) {
     const code = cleanCode(rawCode);
     if (!isValidCode(code)) {
-      showError('That code is a dud.');
+      els.scannerStatus.textContent = 'Paste the complete 22-character code or the sender’s link.';
+      els.codeInput.setAttribute('aria-invalid', 'true');
+      els.codeInput.focus();
       return;
     }
 
-    stopScanner();
+    els.codeInput.removeAttribute('aria-invalid');
+    void stopScanner();
     resetConnectionOnly();
     transferCancelled = false;
     const connectionGeneration = transferGeneration;
@@ -1060,8 +1061,23 @@ const Receiver = (() => {
 })();
 
 let scanner = null;
+let scannerGeneration = 0;
+let scannerStart = null;
+let scannerCleanup = Promise.resolve();
+
+async function releaseScanner(instance) {
+  if (!instance) return;
+  try {
+    if (instance.isScanning) await instance.stop();
+    await instance.clear();
+  } catch {
+    // A camera failure must not block manual receive.
+  }
+}
 
 async function startScanner() {
+  const generation = ++scannerGeneration;
+  let instance;
   els.scannerStatus.textContent = 'Waking the camera...';
   els.qrReader.classList.remove('hidden');
   els.scanQrBtn.classList.add('hidden');
@@ -1069,11 +1085,17 @@ async function startScanner() {
 
   try {
     const Html5Qrcode = await loadScanner();
-    scanner = new Html5Qrcode('qr-reader');
-    await scanner.start(
+    if (generation !== scannerGeneration) return;
+    instance = new Html5Qrcode('qr-reader');
+    scanner = instance;
+    scannerStart = instance.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 220, height: 220 } },
+      { fps: 10, qrbox: (width, height) => {
+        const size = Math.min(220, Math.floor(Math.min(width, height) * 0.8));
+        return { width: size, height: size };
+      } },
       (decodedText) => {
+        if (generation !== scannerGeneration) return;
         const code = codeFromUrl(decodedText);
         if (isValidCode(code)) {
           els.codeInput.value = code;
@@ -1081,28 +1103,33 @@ async function startScanner() {
         }
       }
     );
+    await scannerStart;
+    if (generation !== scannerGeneration) return;
     els.scannerStatus.textContent = 'Point it at the code.';
   } catch {
-    els.scannerStatus.textContent = 'Camera said no. Type the code.';
+    if (generation !== scannerGeneration) return;
     await stopScanner();
+    els.scannerStatus.textContent = 'Camera unavailable. Paste the sender’s code or link instead.';
   }
 }
 
 async function stopScanner() {
-  if (scanner) {
-    try {
-      if (scanner.isScanning) {
-        await scanner.stop();
-      }
-      await scanner.clear();
-    } catch {
-      // Camera cleanup should not block manual receive.
-    }
-  }
+  const generation = ++scannerGeneration;
+  const pendingStart = scannerStart;
+  scannerStart = null;
+  const instance = scanner;
   scanner = null;
   els.qrReader.classList.add('hidden');
   els.scanQrBtn.classList.remove('hidden');
   els.stopScanBtn.classList.add('hidden');
+  els.scannerStatus.textContent = "Paste the sender's code or link, or scan their QR code.";
+  els.scanQrBtn.disabled = true;
+  scannerCleanup = scannerCleanup.then(async () => {
+    try { await pendingStart; } catch { /* Camera permission can be denied. */ }
+    await releaseScanner(instance);
+  });
+  await scannerCleanup;
+  if (generation === scannerGeneration) els.scanQrBtn.disabled = false;
 }
 
 function switchToSendMode() {
@@ -1117,6 +1144,7 @@ function switchToSendMode() {
   els.senderView.classList.remove('hidden');
   els.receiverView.classList.remove('active');
   els.receiverView.classList.add('hidden');
+  void stopScanner();
   Receiver.reset();
   setState('idle');
 }
@@ -1135,13 +1163,6 @@ function switchToReceiveMode() {
   els.senderView.classList.add('hidden');
   Sender.reset();
   setState('idle');
-  // Warm the 369 KB scanner chunk while idle so tapping "Scan code" later
-  // opens the camera instead of downloading and parsing a library.
-  warmUpOnIdle(() => {
-    loadScanner().catch(() => {
-      // Retried on demand when scanning starts.
-    });
-  });
 }
 
 els.sendModeBtn.addEventListener('click', switchToSendMode);
@@ -1192,12 +1213,16 @@ els.codeInput.addEventListener('keydown', (event) => {
 });
 els.codeInput.addEventListener('input', (event) => {
   event.target.value = cleanCode(event.target.value);
+  els.codeInput.removeAttribute('aria-invalid');
 });
 els.codeInput.addEventListener('paste', (event) => {
   event.preventDefault();
   els.codeInput.value = codeFromUrl((event.clipboardData || window.clipboardData).getData('text'));
+  els.codeInput.removeAttribute('aria-invalid');
 });
 
+els.scanQrBtn.addEventListener('pointerenter', () => void loadScanner().catch(() => {}), { once: true });
+els.scanQrBtn.addEventListener('focus', () => void loadScanner().catch(() => {}), { once: true });
 els.scanQrBtn.addEventListener('click', () => void startScanner());
 els.stopScanBtn.addEventListener('click', () => void stopScanner());
 els.receiveAnotherBtn.addEventListener('click', () => Receiver.reset());
