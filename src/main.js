@@ -1072,6 +1072,13 @@ async function releaseScanner(instance) {
     await instance.clear();
   } catch {
     // A camera failure must not block manual receive.
+  } finally {
+    // Startup can fail after acquiring media but before isScanning becomes true.
+    for (const video of els.qrReader.querySelectorAll('video')) {
+      for (const track of video.srcObject?.getTracks?.() || []) track.stop();
+      video.srcObject = null;
+    }
+    els.qrReader.replaceChildren();
   }
 }
 
