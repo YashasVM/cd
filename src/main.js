@@ -262,11 +262,10 @@ const Sender = (() => {
 
     renderSelectionSummary();
     els.shareCode.textContent = code;
-    els.senderCodeSection.classList.remove('hidden');
-    els.dropZone.classList.add('hidden');
-    renderQr();
+    void renderQr().catch(() => { els.shareQr.hidden = true; });
     createPeer();
-    setState('waiting');
+    setState('connecting');
+    els.senderFileInfo.querySelector('.file-subtext').textContent = 'Getting a share code...';
   }
 
   function renderSelectionSummary() {
@@ -292,8 +291,11 @@ const Sender = (() => {
   }
 
   async function renderQr() {
+    const renderingCode = code;
     const QRCode = await loadQrCode();
-    await QRCode.toCanvas(els.shareQr, receiveLinkFor(code), {
+    if (code !== renderingCode) return;
+    els.shareQr.hidden = false;
+    await QRCode.toCanvas(els.shareQr, receiveLinkFor(renderingCode), {
       margin: 1,
       width: 180,
       color: {
@@ -305,13 +307,21 @@ const Sender = (() => {
 
   function createPeer() {
     peer?.destroy();
-    peer = new Peer(peerIdFor(code), peerOptions());
+    const activePeer = new Peer(peerIdFor(code), peerOptions());
+    peer = activePeer;
+    els.senderCodeSection.classList.add('hidden');
 
     peer.on('open', () => {
+      if (peer !== activePeer || transferCancelled) return;
+      renderSelectionSummary();
+      els.senderCodeSection.classList.remove('hidden');
+      els.dropZone.classList.add('hidden');
       els.senderStatus.textContent = 'Waiting for receiver...';
+      setState('waiting');
     });
 
     peer.on('connection', (conn) => {
+      if (peer !== activePeer || transferCancelled) { conn.close(); return; }
       if (connection?.open) {
         conn.close();
         return;
@@ -321,15 +331,18 @@ const Sender = (() => {
       setState('connecting');
 
       conn.on('open', () => {
+        if (peer !== activePeer || connection !== conn || transferCancelled) return;
         void sendFiles();
       });
 
       conn.on('error', () => {
+        if (peer !== activePeer || connection !== conn) return;
         els.senderStatus.textContent = 'Connection got grumpy. Try again.';
         setState('failed');
       });
 
       conn.on('data', (data) => {
+        if (peer !== activePeer || connection !== conn || transferCancelled) return;
         if (data?.type === 'progress') {
           bytesConfirmed = Math.max(bytesConfirmed, Math.min(data.bytes, totalSize));
           lastProgressUpdate.value = updateProgress(
@@ -362,6 +375,7 @@ const Sender = (() => {
       });
 
       conn.on('close', () => {
+        if (peer !== activePeer || connection !== conn) return;
         if (!transferFinished && !transferCancelled) {
           transferCancelled = true;
           transferAckResolve?.();
@@ -373,15 +387,19 @@ const Sender = (() => {
     });
 
     peer.on('error', (err) => {
+      if (peer !== activePeer || transferCancelled) return;
       if (err.type === 'unavailable-id') {
         code = generateCode();
         els.shareCode.textContent = code;
-        void renderQr();
+        void renderQr().catch(() => { els.shareQr.hidden = true; });
         createPeer();
         return;
       }
 
       els.senderStatus.textContent = 'Connection failed. Give it a refresh.';
+      els.senderFileInfo.querySelector('.file-subtext').textContent = 'Connection failed. Choose files to try again.';
+      els.dropZone.classList.remove('hidden');
+      els.senderCodeSection.classList.add('hidden');
       setState('failed');
     });
   }
@@ -600,12 +618,14 @@ const Receiver = (() => {
     peer = new Peer(`cd-r-${generateCode()}`, peerOptions());
 
     peer.on('open', () => {
+      if (connectionGeneration !== transferGeneration || transferCancelled) return;
       connection = peer.connect(peerIdFor(code), {
         reliable: true,
         serialization: 'binary'
       });
 
       connection.on('open', () => {
+        if (connectionGeneration !== transferGeneration || transferCancelled) return;
         els.receiverConnecting.classList.add('hidden');
       });
 
@@ -630,10 +650,12 @@ const Receiver = (() => {
       });
 
       connection.on('error', () => {
+        if (connectionGeneration !== transferGeneration || transferCancelled) return;
         showError('Connection vanished. Try again.');
       });
 
       connection.on('close', () => {
+        if (connectionGeneration !== transferGeneration) return;
         if (!transferCancelled && !transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
           showError('Connection vanished unexpectedly.');
         }
@@ -641,6 +663,7 @@ const Receiver = (() => {
     });
 
     peer.on('error', (err) => {
+      if (connectionGeneration !== transferGeneration || transferCancelled) return;
       if (err.type === 'peer-unavailable') {
         showError('Bad code, or the sender wandered off.');
         return;

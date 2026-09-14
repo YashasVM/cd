@@ -49,6 +49,12 @@ The improvements address these user-visible gaps:
   include them, with hosted checks available for both transfer paths.
 - Android could remain waiting after its signaling connection closed. It now
   reports that failure unless its data channel is already connected.
+- The initial controls could accept clicks before the lazy-loaded app attached
+  its handlers. They now remain inert until startup completes, with a reload
+  action if the app cannot load.
+- The browser sender displayed its code before signaling registration finished.
+  It now publishes the code only after registration, so an immediate receiver
+  can find the sender.
 
 ## Verification
 

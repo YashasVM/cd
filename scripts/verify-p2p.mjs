@@ -37,6 +37,7 @@ try {
     headless: true,
     args: ['--disable-dev-shm-usage']
   });
+  await verifyStartup(browser, baseUrl);
   for (const mode of ['opfs', 'blob', 'opfs-unavailable']) {
     await transferOnce(browser, work, baseUrl, sourcePath, source, mode);
     console.log(`verified P2P ${mode} tier: exact bytes, browser to browser`);
@@ -62,6 +63,29 @@ async function verifyCancellation(baseUrl) {
   });
 }
 
+async function verifyStartup(browser, baseUrl) {
+  const context = await browser.newContext();
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  try {
+    const page = await context.newPage();
+    await page.route('**/assets/main-*.js', async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await page.goto(baseUrl);
+    assert.equal(await page.locator('.workbench').evaluate((element) => element.inert), true);
+    assert.equal(await page.locator('#app-state').textContent(), 'loading');
+    release();
+    await page.locator('.workbench:not([inert])').waitFor();
+    assert.equal(await page.locator('#app-state').textContent(), 'idle');
+    console.log('verified controls wait for app startup on a slow connection');
+  } finally {
+    release();
+    await context.close();
+  }
+}
+
 async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
   const context = await browser.newContext({ acceptDownloads: true });
   try {
@@ -85,11 +109,13 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
       if (message.type() === 'error') pageErrors.push(`console: ${message.text()}`);
     });
     await sender.goto(baseUrl);
+    await sender.locator('.workbench:not([inert])').waitFor();
     await sender.locator('#file-input').setInputFiles(sourcePath);
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await sender.locator('#share-code').textContent()).trim();
     assert.match(code, /^[A-Za-z0-9_-]{22}$/);
     await receiver.goto(baseUrl);
+    await receiver.locator('.workbench:not([inert])').waitFor();
     await receiver.locator('#receive-mode-btn').click();
     await receiver.locator('#code-input').fill(code);
     const downloadEvent = receiver.waitForEvent('download', { timeout: 120_000 });
@@ -111,8 +137,7 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
         status?.trim() && `receiver-error=${status.trim()}`,
         ...pageErrors
       ].filter(Boolean).join('; ');
-      error.message = `${error.message} (${details})`;
-      throw error;
+      throw new Error(`P2P verification failed: ${details}`, { cause: error });
     }
     const receivedPath = join(work, `p2p-${mode}-${await download.suggestedFilename()}`);
     await download.saveAs(receivedPath);

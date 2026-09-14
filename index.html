@@ -40,11 +40,11 @@
 
         <div class="state-board" aria-live="polite">
           <span class="state-label">state</span>
-          <strong id="app-state">idle</strong>
+          <strong id="app-state">loading</strong>
         </div>
       </section>
 
-      <section class="workbench" aria-label="file transfer app">
+      <section class="workbench" aria-label="file transfer app" inert aria-busy="true">
         <div class="mode-selector" role="tablist" aria-label="Choose transfer mode">
           <button id="send-mode-btn" class="mode-btn active" type="button" role="tab" aria-selected="true" aria-controls="sender-view" tabindex="0">
             Send
