@@ -1,5 +1,5 @@
 import { Peer } from 'peerjs';
-import { cleanCode, codeFromUrl, generateCode, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
+import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
 import { parseManifest } from './p2p-manifest.js';
 import {
   DOWNLOAD_TOO_LARGE,
@@ -598,9 +598,9 @@ const Receiver = (() => {
   const lastProgressUpdate = { value: 0 };
 
   function connect(rawCode) {
-    const code = cleanCode(rawCode);
+    const code = codeFromUrl(rawCode, window.location.href);
     if (!isValidCode(code)) {
-      els.scannerStatus.textContent = 'Paste the complete 22-character code or the sender’s link.';
+      els.scannerStatus.textContent = 'Paste the sender’s funny code or their link.';
       els.codeInput.setAttribute('aria-invalid', 'true');
       els.codeInput.focus();
       return;
@@ -616,7 +616,7 @@ const Receiver = (() => {
     els.codeInput.value = code;
     setState('connecting');
 
-    peer = new Peer(`cd-r-${generateCode()}`, peerOptions());
+    peer = new Peer(`cd-r-${generateEphemeralId()}`, peerOptions());
 
     peer.on('open', () => {
       if (connectionGeneration !== transferGeneration || transferCancelled) return;
@@ -1219,7 +1219,10 @@ els.codeInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') Receiver.connect(els.codeInput.value);
 });
 els.codeInput.addEventListener('input', (event) => {
-  event.target.value = cleanCode(event.target.value);
+  const raw = event.target.value;
+  // Pasting a full link via autofill/drag doesn't fire a paste event, so
+  // detect link characters and extract the code instead of mangling it.
+  event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
   els.codeInput.removeAttribute('aria-invalid');
 });
 els.codeInput.addEventListener('paste', (event) => {

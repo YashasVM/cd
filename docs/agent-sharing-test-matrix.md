@@ -16,7 +16,7 @@ CD uses its own encrypted live relay and needs no cloud storage or token.
 | Sender exits early | Browser reports that the live transfer is unavailable |
 | Receiver verifies counts | Sender exits 0 only after the encrypted completion receipt |
 | Mobile browser | Orange CD receiver asks for consent and exposes a download after verification |
-| Browser/Android P2P code | 128-bit base64url code; full link stores it only in `#p2p.<code>` |
+| Browser/Android P2P code | Funny-word code (3-5 letters); legacy random codes still accepted; full link stores it only in `#p2p.<code>` |
 | Malicious P2P manifest | Receiver rejects traversal names, bad counts, oversized files, and byte mismatches |
 | Missing completion ACK | Sender fails instead of reporting a successful transfer |
 

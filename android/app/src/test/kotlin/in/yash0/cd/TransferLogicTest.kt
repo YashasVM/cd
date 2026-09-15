@@ -28,18 +28,25 @@ class TransferLogicTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test fun funCodes_generateCleanValidate() {
-        val codes = (1..100).map { FunCodes.generate() }
-        assertEquals(100, codes.toSet().size)
-        assertTrue(codes.all { it.length == 22 && FunCodes.isValid(it) })
-        assertEquals("AbCdEfGhIjKlMnOpQrStUv", FunCodes.clean(" AbCdEfGhIjKlMnOpQrStUv!"))
+        val codes = (1..50).map { FunCodes.generate() }
+        assertTrue(codes.all { it.length in 3..5 && FunCodes.isValid(it) })
+        assertTrue(codes.all { FunCodes.Words.contains(it) })
+        assertEquals("yeet", FunCodes.clean(" yeet!"))
+        assertEquals("yeet", FunCodes.normalize("YEET"))
         assertTrue(!FunCodes.isValid("waffle"))
+        assertTrue(!FunCodes.isValid("zzzz"))
+        // Legacy random codes stay receivable after the switch to words.
+        assertTrue(FunCodes.isValid("AbCdEfGh"))
+        assertTrue(FunCodes.isValid("AbCdEfGhIjKlMnOpQrStUv"))
     }
 
     @Test fun funCodes_fromLinkOrCode() {
-        val code = "AbCdEfGhIjKlMnOpQrStUv"
+        val code = "yeet"
         assertEquals(code, FunCodes.fromLinkOrCode("https://cd.yash0.in/#p2p.$code"))
         assertEquals(code, FunCodes.fromLinkOrCode(code))
+        assertEquals(code, FunCodes.fromLinkOrCode("YEET"))
         assertEquals("cd-$code", FunCodes.peerIdFor(code))
+        assertEquals("cd-$code", FunCodes.peerIdFor("YEET"))
     }
 
     // ---------- protocol constants ----------
@@ -49,7 +56,7 @@ class TransferLogicTest {
     }
 
     @Test fun receiveLink_keepsCaseAndUsesFragment() {
-        val code = "AbCdEfGhIjKlMnOpQrStUv"
+        val code = "yeet"
         assertEquals("https://cd.yash0.in/#p2p.$code", TransferProtocol.receiveLink(code))
     }
 

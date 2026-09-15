@@ -56,7 +56,7 @@ try {
   deliverOpen?.();
   await page.locator('#sender-code-section:not(.hidden)').waitFor();
   assert.equal(await page.locator('#sender-code-section').isVisible(), true);
-  assert.match((await page.locator('#share-code').textContent()).trim(), /^[A-Za-z0-9_-]{22}$/);
+  assert.match((await page.locator('#share-code').textContent()).trim(), /^[a-z]{3,5}$/);
   console.log('verified sender code waits for PeerJS registration OPEN');
   await context.close();
 } finally {

@@ -1,5 +1,7 @@
 package `in`.yash0.cd.transfer
 
+import `in`.yash0.cd.data.FunCodes
+
 /** Mirrors web runtime defaults in src/main.js. */
 object TransferProtocol {
     const val PEER_PREFIX = "cd-"
@@ -13,5 +15,5 @@ object TransferProtocol {
     const val PEER_KEY = "peerjs"
     const val PEER_SECURE = true
 
-    fun receiveLink(code: String): String = "https://cd.yash0.in/#p2p.$code"
+    fun receiveLink(code: String): String = "https://cd.yash0.in/#p2p.${FunCodes.normalize(code)}"
 }

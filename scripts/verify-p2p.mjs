@@ -114,7 +114,7 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     await sender.locator('#file-input').setInputFiles(sourcePath);
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await sender.locator('#share-code').textContent()).trim();
-    assert.match(code, /^[A-Za-z0-9_-]{22}$/);
+    assert.match(code, /^[a-z]{3,5}$/);
     await receiver.goto(baseUrl);
     await receiver.locator('.workbench:not([inert])').waitFor();
     await receiver.locator('#receive-mode-btn').click();

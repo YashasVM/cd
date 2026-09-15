@@ -27,8 +27,9 @@ This model does not hide traffic metadata, protect a compromised endpoint, or
 provide resumable/offline storage. See [the protocol](docs/agent-transfer-v1.md)
 for exact limits and wire behavior.
 
-Browser-to-browser and Android transfers use WebRTC encryption and a random
-128-bit rendezvous code. CD's Worker coordinates signaling but does not carry
+Browser-to-browser and Android transfers use WebRTC encryption and a short
+funny-word rendezvous code (3-5 letters, e.g. yeet; legacy random codes are
+still accepted). CD's Worker coordinates signaling but does not carry
 file bytes. WebRTC may contact public STUN servers for NAT discovery; those
 servers can observe endpoint IP addresses but not transfer contents. The `cdx`
 path uses only `cd.yash0.in` and does not need STUN or PeerJS infrastructure.
