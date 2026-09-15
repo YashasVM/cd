@@ -31,8 +31,8 @@ class TransferLogicTest {
         val codes = (1..50).map { FunCodes.generate() }
         assertTrue(codes.all { it.length in 3..5 && FunCodes.isValid(it) })
         assertTrue(codes.all { FunCodes.Words.contains(it) })
-        assertEquals("yeet", FunCodes.clean(" yeet!"))
-        assertEquals("yeet", FunCodes.normalize("YEET"))
+        assertEquals("river", FunCodes.clean(" river!"))
+        assertEquals("river", FunCodes.normalize("RIVER"))
         assertTrue(!FunCodes.isValid("waffle"))
         assertTrue(!FunCodes.isValid("zzzz"))
         // Legacy random codes stay receivable after the switch to words.
@@ -41,12 +41,12 @@ class TransferLogicTest {
     }
 
     @Test fun funCodes_fromLinkOrCode() {
-        val code = "yeet"
+        val code = "river"
         assertEquals(code, FunCodes.fromLinkOrCode("https://cd.yash0.in/#p2p.$code"))
         assertEquals(code, FunCodes.fromLinkOrCode(code))
-        assertEquals(code, FunCodes.fromLinkOrCode("YEET"))
+        assertEquals(code, FunCodes.fromLinkOrCode("RIVER"))
         assertEquals("cd-$code", FunCodes.peerIdFor(code))
-        assertEquals("cd-$code", FunCodes.peerIdFor("YEET"))
+        assertEquals("cd-$code", FunCodes.peerIdFor("RIVER"))
     }
 
     // ---------- protocol constants ----------
@@ -56,7 +56,7 @@ class TransferLogicTest {
     }
 
     @Test fun receiveLink_keepsCaseAndUsesFragment() {
-        val code = "yeet"
+        val code = "river"
         assertEquals("https://cd.yash0.in/#p2p.$code", TransferProtocol.receiveLink(code))
     }
 

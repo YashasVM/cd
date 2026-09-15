@@ -600,7 +600,7 @@ const Receiver = (() => {
   function connect(rawCode) {
     const code = codeFromUrl(rawCode, window.location.href);
     if (!isValidCode(code)) {
-      els.scannerStatus.textContent = 'Paste the sender’s funny code or their link.';
+      els.scannerStatus.textContent = 'Paste the sender’s code or their link.';
       els.codeInput.setAttribute('aria-invalid', 'true');
       els.codeInput.focus();
       return;
