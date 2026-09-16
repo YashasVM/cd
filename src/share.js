@@ -122,12 +122,42 @@ function waitForAcceptance(offer) {
   });
 }
 
-function renderProgress(received, total) {
+// Progress arrives per 64 KiB chunk; repainting the DOM that often janks the
+// page on fast links. Coalesce to ~10fps via rAF, with forced final paints.
+const PROGRESS_RENDER_MS = 100;
+let lastProgressPaint = 0;
+let progressQueued = false;
+let pendingProgress = null;
+
+function paintProgress(received, total) {
   const percent = total === 0n ? 100 : Math.min(Number(received * 1000n / total) / 10, 100);
   elements.progress.hidden = false;
   elements.progressFill.style.transform = `scaleX(${percent / 100})`;
   elements.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
   elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}`;
+}
+
+function renderProgress(received, total, force = false) {
+  const now = performance.now();
+  if (!force && now - lastProgressPaint < PROGRESS_RENDER_MS) {
+    pendingProgress = { received, total };
+    if (!progressQueued) {
+      progressQueued = true;
+      requestAnimationFrame(() => {
+        progressQueued = false;
+        if (pendingProgress && !failureShown) {
+          const { received: r, total: t } = pendingProgress;
+          pendingProgress = null;
+          paintProgress(r, t);
+          lastProgressPaint = performance.now();
+        }
+      });
+    }
+    return;
+  }
+  pendingProgress = null;
+  paintProgress(received, total);
+  lastProgressPaint = now;
 }
 
 function fail(error, socket, sink) {
@@ -199,7 +229,7 @@ async function receive() {
       elements.offer.hidden = true;
       elements.status.textContent = `Receiving ${offer.name}...`;
       state = 'receiving';
-      renderProgress(0n, offer.size);
+      renderProgress(0n, offer.size, true);
       await send(KIND_ACCEPT);
       return;
     }
@@ -220,7 +250,7 @@ async function receive() {
       if (ended.bytes !== offer.size || ended.bytes !== received || ended.chunks !== chunks) throw new Error('The transfer ended before the complete file arrived.');
       const result = await sink.close();
       state = 'complete';
-      renderProgress(received, offer.size);
+      renderProgress(received, offer.size, true);
       await send(KIND_COMPLETE, encodeCounts(chunks, received));
       if (sink.kind === 'download') {
         elements.download.href = result.url;
@@ -248,6 +278,11 @@ async function receive() {
       type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: encodeBase64Url(token)
     }));
   });
+  // Closing explicitly frees the sender's wait immediately; otherwise it only
+  // learns the receiver left via the worker's close propagation.
+  window.addEventListener('pagehide', () => {
+    try { socket.close(1000, 'receiver left'); } catch { /* Best effort. */ }
+  }, { once: true });
   socket.addEventListener('message', (event) => {
     const size = typeof event.data === 'string' ? event.data.length : event.data.byteLength;
     pendingBytes += size;

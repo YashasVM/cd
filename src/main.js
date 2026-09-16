@@ -1,4 +1,3 @@
-import { Peer } from 'peerjs';
 import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
 import { parseManifest } from './p2p-manifest.js';
 import {
@@ -24,6 +23,7 @@ if ('serviceWorker' in navigator) {
 
 let qrCodeModulePromise;
 let scannerModulePromise;
+let peerModulePromise;
 
 function loadQrCode() {
   qrCodeModulePromise ??= import('qrcode')
@@ -33,6 +33,18 @@ function loadQrCode() {
       throw error;
     });
   return qrCodeModulePromise;
+}
+
+function loadPeer() {
+  // PeerJS is the heaviest dependency on this page. Loading it on demand
+  // keeps first paint fast; transfers await it only when one starts.
+  peerModulePromise ??= import('peerjs')
+    .then((module) => module.Peer || module.default?.Peer || module.default)
+    .catch((error) => {
+      peerModulePromise = undefined;
+      throw error;
+    });
+  return peerModulePromise;
 }
 
 function loadScanner() {
@@ -54,17 +66,23 @@ function warmUpOnIdle(task) {
 }
 
 // Fetch the QR renderer during idle so the share panel paints instantly after
-// file selection instead of stalling on a dynamic import.
+// file selection instead of stalling on a dynamic import. PeerJS is warmed
+// the same way: free to download off the critical path, ready when needed.
 warmUpOnIdle(() => {
   loadQrCode().catch(() => {
     // Retried on demand when files are selected.
   });
+  loadPeer().catch(() => {
+    // Retried on demand when a transfer starts.
+  });
 });
 
-// PeerJS's binary serializer fragments payloads above its ~16 KB MTU. Keep
-// application chunks just below that limit to avoid an extra fragment/
-// reassembly cycle for every file chunk.
-const TRANSFER_CHUNK_SIZE = 16 * 1024 - 128;
+// WebRTC SCTP fragments large messages natively (cheap, inside the
+// transport), while every application chunk pays JS event-loop,
+// serialization, and receiver storage-write overhead. 64 KiB chunks mean
+// ~4x fewer messages than PeerJS's ~16 KiB fragmentation size with no
+// protocol change: the receiver bounds total pending bytes, not chunk size.
+const TRANSFER_CHUNK_SIZE = 64 * 1024 - 128;
 // PeerJS starts queueing internally at 8 MB. Stay below that threshold so
 // backpressure remains controlled by this transfer loop instead of creating a
 // second, opaque queue inside the library.
@@ -261,7 +279,7 @@ const Sender = (() => {
     renderSelectionSummary();
     els.shareCode.textContent = code;
     void renderQr().catch(() => { els.shareQr.hidden = true; });
-    createPeer();
+    void createPeer();
     setState('connecting');
     els.senderFileInfo.querySelector('.file-subtext').textContent = 'Getting a share code...';
   }
@@ -303,9 +321,18 @@ const Sender = (() => {
     });
   }
 
-  function createPeer() {
+  async function createPeer() {
+    const creatingCode = code;
     peer?.destroy();
-    const activePeer = new Peer(peerIdFor(code), peerOptions());
+    const PeerCtor = await loadPeer().catch(() => null);
+    if (code !== creatingCode || transferCancelled) return;
+    if (!PeerCtor) {
+      els.senderFileInfo.querySelector('.file-subtext').textContent = 'Could not start sharing. Check your connection and try again.';
+      els.dropZone.classList.remove('hidden');
+      setState('failed');
+      return;
+    }
+    const activePeer = new PeerCtor(peerIdFor(creatingCode), peerOptions());
     peer = activePeer;
     els.senderCodeSection.classList.add('hidden');
 
@@ -390,7 +417,7 @@ const Sender = (() => {
         code = generateCode();
         els.shareCode.textContent = code;
         void renderQr().catch(() => { els.shareQr.hidden = true; });
-        createPeer();
+        void createPeer();
         return;
       }
 
@@ -535,8 +562,10 @@ const Sender = (() => {
     } catch {
       // The connection may already be closing.
     }
-    els.senderStatus.textContent = message;
+    // reset() hides every panel and restores the default status text, so the
+    // reason (e.g. "Receiver canceled the transfer.") must be shown after it.
     reset();
+    setFileInfo(els.senderFileInfo, 'Transfer canceled', '', message);
     setState('idle');
   }
 
@@ -582,7 +611,8 @@ const Receiver = (() => {
   let currentFile = null;
   let currentSink = null;
   let stageSink = null;
-  let pendingDownloadUrl = null;
+  let pendingDownloadUrls = [];
+  const DOWNLOAD_URL_TTL_MS = 10 * 60 * 1000;
   let currentFileBytes = 0;
   let nextFileIndex = 0;
   let pickerPromise = null;
@@ -595,6 +625,8 @@ const Receiver = (() => {
   let pendingReceiveBytes = 0;
   let transferGeneration = 0;
   let timeoutId = null;
+  let lastArrivalAt = 0;
+  let stallIntervalId = null;
   const lastProgressUpdate = { value: 0 };
 
   function connect(rawCode) {
@@ -616,7 +648,23 @@ const Receiver = (() => {
     els.codeInput.value = code;
     setState('connecting');
 
-    peer = new Peer(`cd-r-${generateEphemeralId()}`, peerOptions());
+    void establishPeer(connectionGeneration, code);
+
+    timeoutId = setTimeout(() => {
+      if (!connection || !connection.open) {
+        showError('Connection timed out. Check the code and try again.');
+      }
+    }, CONNECTION_TIMEOUT_MS);
+  }
+
+  async function establishPeer(connectionGeneration, code) {
+    const PeerCtor = await loadPeer().catch(() => null);
+    if (connectionGeneration !== transferGeneration || transferCancelled) return;
+    if (!PeerCtor) {
+      showError('Could not start. Check your connection and try again.');
+      return;
+    }
+    peer = new PeerCtor(`cd-r-${generateEphemeralId()}`, peerOptions());
 
     peer.on('open', () => {
       if (connectionGeneration !== transferGeneration || transferCancelled) return;
@@ -632,6 +680,7 @@ const Receiver = (() => {
 
       connection.on('data', (data) => {
         if (connectionGeneration !== transferGeneration) return;
+        lastArrivalAt = Date.now();
         const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
         pendingReceiveBytes += frameBytes;
         if (pendingReceiveBytes > MAX_PENDING_RECEIVE_BYTES) {
@@ -671,12 +720,6 @@ const Receiver = (() => {
       }
       showError('Connection failed. Try again.');
     });
-
-    timeoutId = setTimeout(() => {
-      if (!connection || !connection.open) {
-        showError('Connection timed out. Check the code and try again.');
-      }
-    }, CONNECTION_TIMEOUT_MS);
   }
 
   async function handleData(data) {
@@ -709,6 +752,31 @@ const Receiver = (() => {
     }
   }
 
+  // A sender that stops sending without closing (dead network, a killed tab
+  // on a network that never delivers FIN) would otherwise leave the receiver
+  // on a progress bar forever. Arrival timestamps update for every frame,
+  // even while chunks queue, so only true silence trips this.
+  const STALL_TIMEOUT_MS = 45_000;
+  const STALL_CHECK_MS = 5_000;
+
+  function startStallWatch() {
+    stopStallWatch();
+    lastArrivalAt = Date.now();
+    stallIntervalId = setInterval(() => {
+      if (transferCancelled || transferComplete || !manifest) return;
+      if (Date.now() - lastArrivalAt > STALL_TIMEOUT_MS) {
+        failProtocol('Connection stalled. Check the network and try again.');
+      }
+    }, STALL_CHECK_MS);
+  }
+
+  function stopStallWatch() {
+    if (stallIntervalId !== null) {
+      clearInterval(stallIntervalId);
+      stallIntervalId = null;
+    }
+  }
+
   function handleManifest(data) {
     if (manifest) throw new Error('duplicate manifest');
     manifest = parseManifest(data);
@@ -718,6 +786,7 @@ const Receiver = (() => {
     lastProgressAckAt = 0;
     nextFileIndex = 0;
     lastProgressUpdate.value = 0;
+    startStallWatch();
 
     setManifestSummary();
     els.receiverProgress.classList.remove('hidden');
@@ -945,6 +1014,7 @@ const Receiver = (() => {
     }
     transferComplete = true;
     clearTimeout(timeoutId);
+    stopStallWatch();
     sendProgressAck(true);
     connection?.send({ type: 'transfer-ack' });
     els.receiverFileInfo.classList.add('hidden');
@@ -955,27 +1025,49 @@ const Receiver = (() => {
     setState('complete');
   }
 
-  function downloadBlob(blob, fileName) {
-    downloadUrl(URL.createObjectURL(blob), fileName);
+  function revokeDownload(entry) {
+    const index = pendingDownloadUrls.indexOf(entry);
+    if (index !== -1) pendingDownloadUrls.splice(index, 1);
+    clearTimeout(entry.timeoutId);
+    try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
+    URL.revokeObjectURL(entry.url);
+    entry.link?.remove();
   }
 
   function downloadUrl(url, fileName, revokeExtra) {
-    pendingDownloadUrl = { url, revokeExtra };
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => {
-      if (pendingDownloadUrl?.url === url) pendingDownloadUrl = null;
-      try { revokeExtra?.(); } catch { /* Best effort. */ }
-      URL.revokeObjectURL(url);
-    }, 60_000);
+    const entry = { url, revokeExtra, timeoutId: 0, link: null };
+    // Browsers can block automatic downloads after the first file, so every
+    // file also gets a manual re-download link. Without it a blocked second
+    // file is silently lost.
+    const manual = document.createElement('a');
+    manual.href = url;
+    manual.download = fileName;
+    manual.textContent = `Save ${fileName} again`;
+    manual.className = 'secondary-btn';
+    let list = els.receiverComplete.querySelector('.redownload-list');
+    if (!list) {
+      list = document.createElement('div');
+      list.className = 'redownload-list';
+      els.receiverComplete.insertBefore(list, els.receiveAnotherBtn);
+    }
+    list.appendChild(manual);
+    entry.link = manual;
+    pendingDownloadUrls.push(entry);
+
+    const auto = document.createElement('a');
+    auto.href = url;
+    auto.download = fileName;
+    document.body.appendChild(auto);
+    auto.click();
+    document.body.removeChild(auto);
+    // Revoking too early aborts large downloads still flushing to disk; the
+    // entry is also revoked on reset and pagehide.
+    entry.timeoutId = setTimeout(() => revokeDownload(entry), DOWNLOAD_URL_TTL_MS);
   }
 
   function showError(message) {
     clearTimeout(timeoutId);
+    stopStallWatch();
     els.receiverConnecting.classList.add('hidden');
     els.receiverInputSection.classList.add('hidden');
     els.receiverFileInfo.classList.add('hidden');
@@ -986,11 +1078,12 @@ const Receiver = (() => {
     setState('failed');
   }
 
-  function failProtocol() {
+  function failProtocol(message = 'The sender sent invalid transfer data.') {
     transferCancelled = true;
+    stopStallWatch();
     try { connection?.close(); } catch { /* Best effort. */ }
     peer?.destroy();
-    showError('The sender sent invalid transfer data.');
+    showError(message);
   }
 
   function refuseTransfer(message) {
@@ -1023,11 +1116,13 @@ const Receiver = (() => {
     if (stageSink) void stageSink.discard();
     currentSink = null;
     stageSink = null;
-    if (pendingDownloadUrl) {
-      try { pendingDownloadUrl.revokeExtra?.(); } catch { /* Best effort. */ }
-      URL.revokeObjectURL(pendingDownloadUrl.url);
+    for (const entry of pendingDownloadUrls) {
+      clearTimeout(entry.timeoutId);
+      try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
+      try { URL.revokeObjectURL(entry.url); } catch { /* Best effort. */ }
+      entry.link?.remove();
     }
-    pendingDownloadUrl = null;
+    pendingDownloadUrls = [];
     currentFileBytes = 0;
     nextFileIndex = 0;
     pickerPromise = null;
@@ -1037,6 +1132,7 @@ const Receiver = (() => {
     dataQueue = Promise.resolve();
     pendingReceiveBytes = 0;
     clearTimeout(timeoutId);
+    stopStallWatch();
   }
 
   function reset() {
@@ -1052,6 +1148,17 @@ const Receiver = (() => {
     resetProgress(els.receiverProgress);
     setState('idle');
   }
+
+  // Leaving with object URLs alive leaks the OPFS staging entries behind
+  // them; downloads already handed to the browser are unaffected.
+  window.addEventListener('pagehide', () => {
+    for (const entry of pendingDownloadUrls) {
+      clearTimeout(entry.timeoutId);
+      try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
+      try { URL.revokeObjectURL(entry.url); } catch { /* Best effort. */ }
+    }
+    pendingDownloadUrls = [];
+  });
 
   return {
     connect,

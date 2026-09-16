@@ -114,6 +114,47 @@ describe('download sink lifecycle', () => {
     });
   });
 
+  it('coalesces small OPFS writes into large flushes without losing bytes', async (t) => {
+    const writes = [];
+    let closed = 0;
+    await withBrowser(t, { async getDirectory() { return {
+      async getFileHandle() { return {
+        async createWritable() { return {
+          async write(bytes) { writes.push(Uint8Array.from(bytes)); },
+          async close() { closed++; },
+          async abort() {}
+        }; },
+        async getFile() { return new Blob([]); }
+      }; },
+      async removeEntry() {}
+    }; } }, async () => {
+      const sink = await createOPFSSink({ name: 'big.bin' });
+      const chunkSize = 64 * 1024;
+      for (let index = 0; index < 10; index++) {
+        const chunk = new Uint8Array(chunkSize).fill(index);
+        // Exercise every accepted input shape across the chunks.
+        if (index % 3 === 0) await sink.write(chunk);
+        else if (index % 3 === 1) await sink.write(chunk.buffer.slice(0));
+        else await sink.write(new DataView(chunk.buffer.slice(0)));
+      }
+      // 10 x 64 KiB: the 8th chunk completes 512 KiB and flushes once.
+      assert.equal(writes.length, 1);
+      assert.equal(writes[0].byteLength, 512 * 1024);
+      await sink.file();
+      assert.equal(writes.length, 2);
+      assert.equal(writes[1].byteLength, 2 * chunkSize);
+      assert.equal(closed, 1);
+      const total = writes[0].byteLength + writes[1].byteLength;
+      assert.equal(total, 10 * chunkSize);
+      const flat = new Uint8Array(total);
+      flat.set(writes[0]);
+      flat.set(writes[1], writes[0].byteLength);
+      for (let index = 0; index < 10; index++) {
+        assert.ok(flat.slice(index * chunkSize, (index + 1) * chunkSize).every((byte) => byte === index));
+      }
+    });
+  });
+
   it('preserves bytes in the fallback and revokes cleanup only once', async (t) => {
     await withBrowser(t, {}, async () => {
       const sink = await createSink({ name: 'hello.txt', size: 5, mediaType: 'text/plain' });

@@ -88,15 +88,50 @@ export async function createOPFSSink({ name }) {
     try { await root.removeEntry(internal); } catch { /* Best effort. */ }
     throw error;
   }
+  // Every write() is an IPC round-trip to the storage thread. Coalescing
+  // small network chunks (16-64 KiB) into ~512 KiB flushes cuts the syscall
+  // count by an order of magnitude; the copy is one fast memmove.
+  const FLUSH_BYTES = 512 * 1024;
+  let pending = [];
+  let pendingBytes = 0;
+  const flush = async () => {
+    if (pendingBytes === 0) return;
+    let merged;
+    if (pending.length === 1) {
+      merged = pending[0];
+    } else {
+      merged = new Uint8Array(pendingBytes);
+      let offset = 0;
+      for (const part of pending) {
+        merged.set(part, offset);
+        offset += part.byteLength;
+      }
+    }
+    pending = [];
+    pendingBytes = 0;
+    await writable.write(merged);
+  };
   const discard = async () => {
+    pending = [];
+    pendingBytes = 0;
     try { await writable.abort(); } catch { /* Best effort. */ }
     try { await root.removeEntry(internal); } catch { /* Best effort. */ }
   };
   return {
     kind: 'download',
     internalName: internal,
-    async write(bytes) { await writable.write(bytes); },
+    async write(bytes) {
+      const view = bytes instanceof Uint8Array
+        ? bytes
+        : ArrayBuffer.isView(bytes)
+          ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+          : new Uint8Array(bytes);
+      pending.push(view);
+      pendingBytes += view.byteLength;
+      if (pendingBytes >= FLUSH_BYTES) await flush();
+    },
     async file() {
+      await flush();
       await writable.close();
       return fileHandle.getFile();
     },
