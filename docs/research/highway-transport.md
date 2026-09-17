@@ -39,10 +39,13 @@ live relay is durable storage.
 Use one transfer protocol and three route candidates, selected in this order:
 
 1. **LAN direct:** advertise a short-lived CD service with Android NSD/DNS-SD
-   (`_cd-transfer._tcp`) and simultaneously listen on a local TCP or QUIC
-   socket. Put the transfer capability and protocol version in authenticated
-   TXT metadata, but never treat discovery as authorization. On Linux, use
-   mDNS/DNS-SD when available and retain the existing pasted code/link as the
+   (`_cd-transfer._tcp`) and simultaneously listen on a local stream socket.
+   The local socket transport is an unresolved architecture choice for the
+   implementation plan: a small TCP stream is simpler to ship, while QUIC
+   offers path validation and migration. Do not put the transfer capability or
+   any secret in public mDNS/TXT metadata. TXT may contain only an opaque
+   transfer ID, protocol version, port, and public-key fingerprint. On Linux,
+   use mDNS/DNS-SD when available and retain the pasted code/link as the
    deterministic fallback. A discovered peer must prove possession of the
    transfer capability before accepting data.
 2. **Internet direct:** keep WebRTC ICE for browser compatibility. Gather host,
@@ -59,13 +62,14 @@ Use one transfer protocol and three route candidates, selected in this order:
    is mathematically required, and TURN's defining purpose is precisely to
    provide that intermediate node (RFC 8656 / RFC 5766).
 
-For a native Linux/Android highway, QUIC is the better long-term transport than
-building a second ad-hoc reliable TCP protocol: it provides authenticated
-streams and can validate a new path after an address/NAT change. QUIC migration
-does not solve a completely disconnected process or a peer that is unreachable;
-the application still has to reconnect and resume by offset (RFC 9000,
-sections 8.2 and 9). Keep WebRTC as a compatibility adapter until browser and
-native implementations share a QUIC-capable stack.
+For a native Linux/Android highway, TCP and QUIC remain proposed alternatives
+for the first implementation. TCP is the smaller LAN MVP if route changes are
+handled by reconnect plus checkpoint resume. QUIC provides authenticated
+streams and can validate a new path after an address/NAT change, but it adds a
+native stack and does not solve a completely disconnected process or an
+unreachable peer. The implementation plan should choose one after a small
+interop/performance spike; either way, keep WebRTC as a compatibility adapter
+until browser and native implementations share the chosen native transport.
 
 ## Discovery and authentication contract
 
@@ -78,14 +82,15 @@ The sender creates a transfer record before advertising:
 * a signed or MACed `manifest_id` and route-independent session nonce.
 
 NSD/mDNS TXT records should contain only an opaque transfer ID, version, port,
-and a commitment/fingerprint. They are observable and spoofable on a LAN. The
-first connection performs a challenge-response with the capability and binds a
-stable peer key (TOFU on the first explicit pairing; remembered keys can then
-auto-accept). “Trusted recipients auto-accept” therefore means a previously
-trusted peer key, or a valid one-time capability, never “accept every LAN
-advertisement.” Unknown peers remain pending or fail closed. All data remains
-end-to-end authenticated and encrypted regardless of route; the relay sees
-metadata and ciphertext only.
+and a public-key fingerprint. They are observable and spoofable on a LAN. The
+first explicit pairing performs a challenge-response with the capability and
+binds a stable peer key (TOFU); remembered sender keys can then auto-accept.
+“Trusted recipients auto-accept” therefore means an already trusted sender key
+must authenticate the session. A valid one-time capability bootstraps an
+explicit first pairing; by itself it must not trigger automatic acceptance.
+Unknown keys remain pending or fail closed. All data remains end-to-end
+authenticated and encrypted regardless of route; the relay sees metadata and
+ciphertext only.
 
 ## Durable resume and integrity
 
@@ -166,9 +171,6 @@ resume option when the relay limit, room lifetime, or network is exhausted.
    make every route report the same checkpoint.
 5. Add Android foreground/user-initiated transfer lifecycle and Linux service
    lifecycle so process/background termination leaves a resumable journal.
-6. Add optional Drive spool behind explicit sign-in and a user setting; encrypt
-   objects client-side and enforce account/quota/expiry errors as terminal,
-   actionable states.
 
 ## Primary sources
 
@@ -179,4 +181,3 @@ resume option when the relay limit, room lifetime, or network is exhausted.
 * [Android NsdManager](https://developer.android.com/reference/android/net/nsd/NsdManager) — DNS-SD/mDNS discovery, multicast-lock and local-network permission constraints.
 * [Android data-transfer options](https://developer.android.com/develop/background-work/background-tasks/data-transfer-options) — connected-device foreground service and user-initiated transfer guidance.
 * [Google Drive resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads) — resumable session and byte-range recovery behavior.
-
