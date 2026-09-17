@@ -17,7 +17,9 @@ const port = await availablePort();
 const baseUrl = process.env.CD_VERIFY_URL || `http://127.0.0.1:${port}`;
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-p2p-'));
 const sourcePath = join(work, 'p2p solicitée.bin');
-const source = Uint8Array.from({ length: 300 * 1024 }, (_, index) => (index * 31 + 17) % 256);
+const sourceBytes = Number(process.env.CD_VERIFY_BYTES || 300 * 1024);
+assert.ok(Number.isSafeInteger(sourceBytes) && sourceBytes > 0 && sourceBytes <= 256 * 1024 * 1024);
+const source = Uint8Array.from({ length: sourceBytes }, (_, index) => (index * 31 + 17) % 256);
 await writeFile(sourcePath, source);
 
 let worker;
@@ -114,7 +116,7 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     await sender.locator('#file-input').setInputFiles(sourcePath);
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await sender.locator('#share-code').textContent()).trim();
-    assert.match(code, /^[a-z]{3,5}$/);
+    assert.match(code, /^[a-z]{3,5}(-[a-z]{3,5})?$/);
     await receiver.goto(baseUrl);
     await receiver.locator('.workbench:not([inert])').waitFor();
     await receiver.locator('#receive-mode-btn').click();

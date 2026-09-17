@@ -1,5 +1,5 @@
 import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
-import { parseManifest } from './p2p-manifest.js';
+import { MAX_P2P_FILES, MAX_P2P_FILE_BYTES, parseManifest } from './p2p-manifest.js';
 import {
   DOWNLOAD_TOO_LARGE,
   createSink,
@@ -94,6 +94,17 @@ const TRANSFER_ACK_TIMEOUT_MS = 30000;
 const MAX_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
 
 function peerOptions() {
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+  ];
+  // TURN-ready: set window.__CD_TURN_SERVERS__ to an array of RTCIceServer
+  // before creating a transfer to relay through TURN (symmetric NAT/CGNAT).
+  // STUN-only when unset.
+  try {
+    const injected = window.__CD_TURN_SERVERS__;
+    if (Array.isArray(injected) && injected.length > 0) iceServers.push(...injected);
+  } catch { /* STUN-only fallback */ }
   return {
     host: window.location.hostname,
     port: window.location.port ? Number(window.location.port) : window.location.protocol === 'https:' ? 443 : 80,
@@ -101,12 +112,7 @@ function peerOptions() {
     secure: window.location.protocol === 'https:',
     key: 'peerjs',
     debug: 0,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' },
-      ],
-    },
+    config: { iceServers },
   };
 }
 
@@ -255,6 +261,8 @@ const Sender = (() => {
   let connection = null;
   let files = [];
   let code = null;
+  let codeAttempts = 0;
+  const MAX_CODE_ATTEMPTS = 5;
   let bytesSent = 0;
   let bytesConfirmed = 0;
   let totalSize = 0;
@@ -269,7 +277,20 @@ const Sender = (() => {
     files = selectedFiles.filter(Boolean);
     if (files.length === 0) return;
 
+    if (files.length > MAX_P2P_FILES) {
+      setFileInfo(els.senderFileInfo, `${files.length} files selected`, '', `Too many files — max is ${MAX_P2P_FILES}. Send in batches.`);
+      setState('failed');
+      return;
+    }
+    const oversize = files.find((f) => f.size > MAX_P2P_FILE_BYTES);
+    if (oversize) {
+      setFileInfo(els.senderFileInfo, oversize.name, formatSize(oversize.size), 'That file is over 5 GB — split it and try again.');
+      setState('failed');
+      return;
+    }
+
     code = generateCode();
+    codeAttempts = 1;
     bytesSent = 0;
     bytesConfirmed = 0;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
@@ -277,8 +298,9 @@ const Sender = (() => {
     transferCancelled = false;
 
     renderSelectionSummary();
-    els.shareCode.textContent = code;
-    void renderQr().catch(() => { els.shareQr.hidden = true; });
+    // Reserve-then-display: only paint code/QR after the Worker owns the ID
+    // (peer open). Prevents copying a code that dials an unowned ID.
+    els.senderCodeSection.classList.add('hidden');
     void createPeer();
     setState('connecting');
     els.senderFileInfo.querySelector('.file-subtext').textContent = 'Getting a share code...';
@@ -312,8 +334,8 @@ const Sender = (() => {
     if (code !== renderingCode) return;
     els.shareQr.hidden = false;
     await QRCode.toCanvas(els.shareQr, receiveLinkFor(renderingCode), {
-      margin: 1,
-      width: 180,
+      margin: 2,
+      width: 220,
       color: {
         dark: '#0d0503',
         light: '#e4d4b6'
@@ -338,7 +360,10 @@ const Sender = (() => {
 
     peer.on('open', () => {
       if (peer !== activePeer || transferCancelled) return;
+      if (code !== creatingCode) return;
       renderSelectionSummary();
+      els.shareCode.textContent = creatingCode;
+      void renderQr().catch(() => { els.shareQr.hidden = true; });
       els.senderCodeSection.classList.remove('hidden');
       els.dropZone.classList.add('hidden');
       els.senderStatus.textContent = 'Waiting for receiver...';
@@ -414,10 +439,17 @@ const Sender = (() => {
     peer.on('error', (err) => {
       if (peer !== activePeer || transferCancelled) return;
       if (err.type === 'unavailable-id') {
+        if (codeAttempts >= MAX_CODE_ATTEMPTS) {
+          els.senderFileInfo.querySelector('.file-subtext').textContent = 'All share codes are busy right now. Wait a moment and try again.';
+          els.senderStatus.textContent = 'All share codes are busy right now. Wait a moment and try again.';
+          els.dropZone.classList.remove('hidden');
+          setState('failed');
+          return;
+        }
+        codeAttempts += 1;
         code = generateCode();
-        els.shareCode.textContent = code;
-        void renderQr().catch(() => { els.shareQr.hidden = true; });
-        void createPeer();
+        const delay = 300 * codeAttempts;
+        setTimeout(() => { if (!transferCancelled) void createPeer(); }, delay);
         return;
       }
 
@@ -692,7 +724,9 @@ const Receiver = (() => {
           .catch((error) => {
             if (connectionGeneration !== transferGeneration) return;
             if (error?.message === DOWNLOAD_TOO_LARGE) refuseTransfer(DOWNLOAD_TOO_LARGE);
-            else failProtocol();
+            else if (error?.message === 'invalid file size' || error?.message === 'invalid file count') {
+              refuseTransfer('That file is too large or too many files — max 5 GB per file, 100 files. Split it and try again.');
+            } else failProtocol();
           })
           .finally(() => {
             if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;

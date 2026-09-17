@@ -8,6 +8,29 @@
     { "pattern": "cd.yash0.in", "custom_domain": true },
     { "pattern": "design.yash0.in", "custom_domain": true }
   ],
+  // Test env: isolated Worker + DO namespaces on cd-test.yash0.in.
+  // Deploy with `wrangler deploy --env test`. Never bare-deploy from a branch.
+  // Note: durable_objects/ratelimits/migrations are NOT inherited by envs,
+  // so they are repeated here for isolated test namespaces.
+  "env": {
+    "test": {
+      "name": "cd-test",
+      "routes": [{ "pattern": "cd-test.yash0.in", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "TRANSFERS", "class_name": "TransferRoom" },
+          { "name": "PEERS", "class_name": "PeerSignal" }
+        ]
+      },
+      "ratelimits": [
+        {
+          "name": "CONNECTION_RATE_LIMITER",
+          "namespace_id": "9237401",
+          "simple": { "limit": 30, "period": 60 }
+        }
+      ]
+    }
+  },
   "durable_objects": {
     "bindings": [
       { "name": "TRANSFERS", "class_name": "TransferRoom" },

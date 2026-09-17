@@ -37,7 +37,10 @@ object PeerWire {
     const val DC_PREFIX = "dc_"
     const val SIGNALING_VERSION = "1.5.5"
     const val MAX_FILES = 100
-    const val MAX_FILE_BYTES = 256L * 1024 * 1024
+    // Keep the native client in sync with src/p2p-manifest.js. Files are
+    // streamed through FileSaver, so this limit does not imply whole-file RAM
+    // buffering.
+    const val MAX_FILE_BYTES = 5L * 1024 * 1024 * 1024
     private const val MAX_CHUNK_PARTS = 64
     private const val MAX_PENDING_CHUNKS = 8
     private const val MAX_REASSEMBLED_BYTES = 1024 * 1024

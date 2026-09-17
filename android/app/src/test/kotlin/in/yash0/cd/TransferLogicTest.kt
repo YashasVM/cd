@@ -68,7 +68,7 @@ class TransferLogicTest {
         assertEquals("", FunCodes.fromLinkOrCode("https://example.com/#notp2p.$code"))
         assertEquals("", FunCodes.fromLinkOrCode("https://example.com/#p2p.river-unknown"))
         assertEquals("cd-$code", FunCodes.peerIdFor(code))
-        assertEquals("cd-RIVER", FunCodes.peerIdFor("RIVER"))
+        assertEquals("cd-river", FunCodes.peerIdFor("RIVER"))
     }
 
     // ---------- protocol constants ----------

@@ -14,7 +14,10 @@ type PeerAttachment = { id: string; peers: string[]; messages: number };
 
 const MAX_JOIN_BYTES = 512;
 const MAX_RECORD_BYTES = 80 * 1024;
-const MAX_PEER_BUFFER_BYTES = 2 * 1024 * 1024;
+// 8 MiB peer buffer: absorbs phone-disk stalls without tripping the
+// abort-cliff on big files. Still a hard kill past this (no resume in v1),
+// but 4x rarer than the old 2 MiB cliff.
+const MAX_PEER_BUFFER_BYTES = 8 * 1024 * 1024;
 const JOIN_TIMEOUT_MS = 10 * 1000;
 const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1000;
 const TOMBSTONE_MS = 5 * 60 * 1000;

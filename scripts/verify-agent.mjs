@@ -120,7 +120,9 @@ try {
 
 async function assertVisibleBrand(page) {
   assert.equal(await page.locator('.brand-lockup h1').textContent(), 'cd');
-  assert.match(await page.locator('.watermark').textContent(), /cd\.yash0\.in/);
+  // Watermark shows the actual host under test (prod, cd-test, or local dev).
+  const expectedHost = new URL(publicBase).host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  assert.match(await page.locator('.watermark').textContent(), new RegExp(expectedHost));
   assert.match(await page.locator('.share-description').textContent(), /handed to you through CD/);
 }
 

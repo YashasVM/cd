@@ -1,8 +1,9 @@
-// Short-word rendezvous codes: plain everyday words (3-5 lowercase letters)
-// that are easy to read out loud and type, safe to show on a big screen.
-// The pool is small on purpose for a low-traffic site; collisions retry via
-// ID-TAKEN and words are only live while the sender tab stays open.
-export const P2P_WORDS = [
+// Short-word rendezvous codes: two plain everyday words (3-5 lowercase
+// letters each) joined by a dash, easy to read out loud and type, safe to
+// show on a big screen. Single words from before are still accepted so old
+// links/QRs keep connecting. 121^2 = 14641 pairs (~13.8 bits): collision
+// ~0.16% at 10 concurrent senders vs ~31% for single words.
+export const P2P_WORDS = Object.freeze([
   'sun', 'sky', 'sea', 'oak', 'elm', 'fox', 'owl', 'ant', 'bee', 'red',
   'cup', 'mug', 'pen', 'map', 'key', 'box', 'jar', 'egg', 'fig', 'pie',
   'tea', 'jam', 'bus', 'car', 'gem', 'toy', 'top', 'run',
@@ -16,7 +17,7 @@ export const P2P_WORDS = [
   'apple', 'bread', 'honey', 'cocoa', 'mocha', 'latte', 'melon', 'berry', 'peach', 'grape',
   'chair', 'table', 'clock', 'frame', 'photo', 'piano', 'flute', 'green', 'amber', 'dance',
   'smile', 'laugh', 'shine', 'happy', 'swift', 'brave', 'fresh', 'crisp', 'trail', 'grove',
-];
+]);
 
 const WORD_SET = new Set(P2P_WORDS);
 
@@ -30,18 +31,36 @@ function isLegacyCode(value) {
   return /^[A-Za-z0-9_-]{8}$/.test(value) || /^[A-Za-z0-9_-]{22}$/.test(value);
 }
 
+function isWordPair(value) {
+  if (typeof value !== 'string') return false;
+  const parts = value.toLowerCase().split('-');
+  return parts.length === 2 && WORD_SET.has(parts[0]) && WORD_SET.has(parts[1]);
+}
+
 export function normalizeCode(value) {
   if (typeof value !== 'string') return '';
   const lower = value.toLowerCase();
-  if (WORD_SET.has(lower)) return lower;
+  if (WORD_SET.has(lower) || isWordPair(lower)) return lower;
   return value;
 }
 
+function drawPairIndex(random) {
+  // Rejection-sample a Uint32 into 121^2 space: no modulo bias, tiny retry.
+  const space = P2P_WORDS.length * P2P_WORDS.length;
+  const limit = Math.floor(0x1_0000_0000 / space) * space;
+  for (;;) {
+    const bytes = new Uint8Array(4);
+    random.getRandomValues(bytes);
+    const n = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+    if (n < limit) return n % space;
+  }
+}
+
 export function generateCode(random = crypto) {
-  const bytes = new Uint8Array(4);
-  random.getRandomValues(bytes);
-  const n = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
-  return P2P_WORDS[n % P2P_WORDS.length];
+  const n = drawPairIndex(random);
+  const first = P2P_WORDS[Math.floor(n / P2P_WORDS.length)];
+  const second = P2P_WORDS[n % P2P_WORDS.length];
+  return `${first}-${second}`;
 }
 
 // Ephemeral receiver peer suffixes need uniqueness, not memorability, so
@@ -60,11 +79,12 @@ export function cleanCode(value) {
 
 export function isValidCode(value) {
   if (typeof value !== 'string') return false;
-  if (WORD_SET.has(value.toLowerCase())) return true;
+  const lower = value.toLowerCase();
+  if (WORD_SET.has(lower) || isWordPair(lower)) return true;
   return isLegacyCode(value);
 }
 
-export function codeFromUrl(value, base = 'https://cd.yash0.in/') {
+export function codeFromUrl(value, base = defaultOrigin()) {
   const raw = String(value ?? '').trim();
   if (isValidCode(raw)) return normalizeCode(raw);
   try {
@@ -80,7 +100,14 @@ export function codeFromUrl(value, base = 'https://cd.yash0.in/') {
   }
 }
 
-export function receiveLinkFor(code, current = 'https://cd.yash0.in/') {
+function defaultOrigin() {
+  try {
+    if (typeof window !== 'undefined' && window.location?.origin) return `${window.location.origin}/`;
+  } catch { /* SSR/Node fallback below */ }
+  return 'https://cd.yash0.in/';
+}
+
+export function receiveLinkFor(code, current = defaultOrigin()) {
   if (!isValidCode(code)) throw new Error('invalid P2P code');
   const url = new URL(current);
   url.pathname = '/';

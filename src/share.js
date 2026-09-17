@@ -18,7 +18,9 @@ import { createSink as createDownloadSink } from './sink.js';
 import './style.css';
 
 const ACK_INTERVAL = 256n * 1024n;
-const MAX_PENDING_BYTES = 2 * 1024 * 1024;
+// Match the relay's 8 MiB peer buffer: queue more undecrypted/unwritten bytes
+// before failing, so slow OPFS/disk on big files doesn't abort the transfer.
+const MAX_PENDING_BYTES = 8 * 1024 * 1024;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 let failureShown = false;
 
@@ -62,6 +64,12 @@ const elements = {
   progressCopy: document.getElementById('progress-copy'),
   download: document.getElementById('download')
 };
+
+// Watermark shows the actual host (cd-test vs prod) instead of hardcoding prod.
+try {
+  const mark = document.querySelector('.share-transfer-page .watermark a');
+  if (mark) mark.textContent = window.location.host;
+} catch { /* cosmetic only */ }
 
 function formatSize(bytes) {
   const value = Number(bytes);

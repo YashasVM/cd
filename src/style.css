@@ -114,4 +114,21 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 .qr-reader{flex-basis:100%;grid-column:1 / -1;max-width:100%}
 .watermark{position:relative;right:auto;bottom:auto;z-index:1;margin:-28px auto 0;padding:0 18px 16px;text-align:center;font-size:12px}
 .noscript-message{position:fixed;inset:auto 16px 16px;padding:16px;background:#24110c;color:var(--text);text-align:center}
-@media(max-width:600px){.watermark{display:block;margin:0}.share-grid{gap:12px}.code-block #share-code{font-size:22px}.cancel-btn{min-height:44px}.shell{min-height:calc(100svh - 48px)}}
+@media(max-width:600px){.watermark{display:block;margin:0}.share-grid{gap:12px}.cancel-btn{min-height:44px}.shell{min-height:calc(100svh - 48px)}}
+
+/* Prod polish pass: single-source responsive sizes, no cascade fights. */
+.code-block #share-code{font-size:clamp(19px,3.4vw,25px);line-height:1.35;letter-spacing:.025em;word-break:break-all;user-select:all}
+.qr-block{place-items:center}
+#share-qr{width:min(100%,220px)!important;height:auto!important;aspect-ratio:1/1;image-rendering:pixelated}
+.redownload-list{display:grid;gap:8px;margin-top:12px}
+.redownload-list a{display:block;text-align:center;text-decoration:none;padding:10px 14px;border:1px solid var(--line);border-radius:4px;background:#1b0d09;color:var(--text)}
+.progress-bar{overflow:clip}
+.progress-fill{inset:0}
+.progress-dino{left:clamp(10px,var(--progress,0%),calc(100% - 10px))}
+.qr-reader{width:100%;max-width:360px;aspect-ratio:4/3;min-height:0}
+.qr-reader video{width:100%!important;height:auto!important;object-fit:cover}
+@media(max-width:600px){
+  .drop-zone{grid-template-rows:auto auto;align-items:start;min-height:0}
+  .share-grid{gap:12px}
+  .progress-topline{grid-template-columns:minmax(0,1fr) auto auto}
+}

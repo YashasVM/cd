@@ -113,7 +113,7 @@ class TransferRepository(private val context: Context) {
             return
         }
         if (_picked.value.size > PeerWire.MAX_FILES || _picked.value.any { it.size > PeerWire.MAX_FILE_BYTES || FileSaver.safeFilename(it.name) == null }) {
-            _error.value = "Select at most ${PeerWire.MAX_FILES} files, each no larger than 256 MB, with safe names."
+            _error.value = "Select at most ${PeerWire.MAX_FILES} files, each no larger than 5 GB, with safe names."
             return
         }
         hostRetries = 0
