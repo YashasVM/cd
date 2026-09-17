@@ -47,7 +47,7 @@ Android’s official command-line tooling requires SDK packages plus `adb`, `avd
 
 ## Validation plan
 
-Run on at least API 29, API 34, and API 35/36, with one physical no-GMS device and one emulator/physical device with Play Services; run the Linux receiver under systemd. Record exact APK SHA, OS/build, battery percentage, Wi-Fi/cellular state, and transfer IDs.
+Run on at least API 29, API 34, and API 35/36, with the target Samsung Galaxy S24 Ultra (record its exact Android/One UI build rather than assuming it), one physical no-GMS device, and one emulator/physical device with Play Services; run the Linux receiver under systemd. On the Samsung, test both default battery optimization and the user-visible unrestricted/optimized app setting, plus Samsung’s background sleeping/deep-sleep policy, because those vendor policies can stop or defer long-lived sockets beyond AOSP behavior. Record exact APK SHA, OS/build, battery percentage, Wi-Fi/cellular state, and transfer IDs.
 
 1. Baseline: 1 GiB and 10 GiB files on the same Wi-Fi, screen on/off, activity backgrounded, and charging/unplugged. Measure throughput, CPU, radio/battery drain, notification lifetime, and final SHA-256.
 2. Lifecycle: lock screen, rotate/recreate activity, swipe task away, kill process, force-stop, reboot, and let the service hit its timeout. Expected: active foreground transfer survives activity/task removal; force-stop and reboot require explicit recovery; no silent data loss.
