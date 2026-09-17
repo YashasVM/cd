@@ -27,26 +27,48 @@ import kotlin.test.assertTrue
 class TransferLogicTest {
     private val json = Json { ignoreUnknownKeys = true }
 
-    @Test fun funCodes_generateCleanValidate() {
+    @Test fun funCodes_generateUnbiasedWordPairs() {
         val codes = (1..50).map { FunCodes.generate() }
-        assertTrue(codes.all { it.length in 3..5 && FunCodes.isValid(it) })
-        assertTrue(codes.all { FunCodes.Words.contains(it) })
-        assertEquals("river", FunCodes.clean(" river!"))
-        assertEquals("river", FunCodes.normalize("RIVER"))
-        assertTrue(!FunCodes.isValid("waffle"))
-        assertTrue(!FunCodes.isValid("zzzz"))
-        // Legacy random codes stay receivable after the switch to words.
-        assertTrue(FunCodes.isValid("AbCdEfGh"))
-        assertTrue(FunCodes.isValid("AbCdEfGhIjKlMnOpQrStUv"))
+        assertTrue(codes.all { FunCodes.isValid(it) })
+        assertTrue(codes.all { it.length <= FunCodes.MaxLength })
+        assertTrue(codes.all {
+            val parts = it.split('-')
+            parts.size == 2 && parts.all { word -> FunCodes.Words.contains(word) }
+        })
     }
 
-    @Test fun funCodes_fromLinkOrCode() {
-        val code = "river"
-        assertEquals(code, FunCodes.fromLinkOrCode("https://cd.yash0.in/#p2p.$code"))
+    @Test fun funCodes_validateNewAndLegacyCodes() {
+        assertTrue(FunCodes.isValid("river-brave"))
+        assertTrue(FunCodes.isValid("RIVER-BRAVE"))
+        assertTrue(FunCodes.isValid("river"))
+        assertTrue(FunCodes.isValid("AbCdEfGh"))
+        assertTrue(FunCodes.isValid("AbCdEfGhIjKlMnOpQrStUv"))
+        assertTrue(!FunCodes.isValid("waffle"))
+        assertTrue(!FunCodes.isValid("river-unknown"))
+        assertTrue(!FunCodes.isValid("AbCdEfG"))
+        assertTrue(!FunCodes.isValid("AbCdEfGhIjKlMnOpQrStUvw"))
+        assertEquals("a".repeat(FunCodes.MaxLength), FunCodes.clean("a".repeat(40)))
+        assertEquals("river", FunCodes.clean(" river!"))
+    }
+
+    @Test fun funCodes_normalizeCodes() {
+        assertEquals("river", FunCodes.normalize("RIVER"))
+        assertEquals("river-brave", FunCodes.normalize("RIVER-BRAVE"))
+        assertEquals("AbCdEfGh", FunCodes.normalize("AbCdEfGh"))
+    }
+
+    @Test fun funCodes_parseFullLinksAndFragments() {
+        val code = "river-brave"
+        assertEquals(code, FunCodes.fromLinkOrCode("https://cd.yash0.in/path?old=1#p2p.$code"))
+        assertEquals(code, FunCodes.fromLinkOrCode("#p2p.$code"))
+        assertEquals(code, FunCodes.fromLinkOrCode("https://example.com/#p2p.RIVER-BRAVE"))
+        assertEquals("AbCdEfGh", FunCodes.fromLinkOrCode("https://cd.yash0.in/#p2p.AbCdEfGh"))
         assertEquals(code, FunCodes.fromLinkOrCode(code))
-        assertEquals(code, FunCodes.fromLinkOrCode("RIVER"))
+        assertEquals("", FunCodes.fromLinkOrCode("https://example.com/p2p.$code"))
+        assertEquals("", FunCodes.fromLinkOrCode("https://example.com/#notp2p.$code"))
+        assertEquals("", FunCodes.fromLinkOrCode("https://example.com/#p2p.river-unknown"))
         assertEquals("cd-$code", FunCodes.peerIdFor(code))
-        assertEquals("cd-$code", FunCodes.peerIdFor("RIVER"))
+        assertEquals("cd-RIVER", FunCodes.peerIdFor("RIVER"))
     }
 
     // ---------- protocol constants ----------
