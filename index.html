@@ -30,11 +30,11 @@
     <main class="shell">
       <section class="brand-rail" aria-label="cd status board">
         <div class="brand-lockup">
-          <div class="brand-mark"><span></span><span></span><span></span></div>
-          <div>
+          <div class="brand-name">
             <h1>cd</h1>
-          <p class="tagline">/di·rect/</p>
+            <p class="tagline">/di·rect/</p>
           </div>
+          <p class="brand-intro">Direct browser-to-browser file transfer.</p>
           <p class="brand-note">no cloud detour</p>
         </div>
 
@@ -58,9 +58,9 @@
           <div id="drop-zone" class="drop-zone">
             <input id="file-input" type="file" multiple hidden />
             <span class="drop-mark" aria-hidden="true">+</span>
-            <div>
-            <h2>Send a file</h2>
-            <p>Drop files here, or choose them below. Keep this tab open until they arrive.</p>
+            <div class="drop-copy">
+              <h2>Send files</h2>
+              <p>Drop files here or choose them below. Keep this tab open until they arrive.</p>
             </div>
             <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
           </div>
@@ -79,6 +79,7 @@
               <div class="code-block">
                 <span class="panel-kicker">share this code</span>
                 <strong id="share-code"></strong>
+                <p class="code-help">On the other device, choose Receive and enter this code.</p>
               </div>
               <div class="qr-block">
                 <span class="panel-kicker">or scan it</span>
@@ -120,7 +121,7 @@
 
         <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
           <div id="receiver-input-section" class="input-section">
-              <label for="code-input">Enter the share code</label>
+            <label for="code-input">Enter the share code</label>
             <div class="code-input-wrapper">
               <input
                 id="code-input"
