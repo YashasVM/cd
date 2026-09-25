@@ -44,6 +44,12 @@ try {
     await transferOnce(browser, work, baseUrl, sourcePath, source, mode);
     console.log(`verified P2P ${mode} tier: exact bytes, browser to browser`);
   }
+  await transferOnce(browser, work, baseUrl, sourcePath, source, 'signaling-retry');
+  console.log('verified P2P transfer after each side loses its first signaling socket');
+  await transferBatch(browser, work, baseUrl);
+  console.log('verified P2P batch: five exact downloads, including an empty file');
+  await transferSlowReceiver(browser, work, baseUrl);
+  console.log('verified P2P slow receiver: exact bytes without receive queue overflow');
   await browser.close();
   browser = null;
   await verifyScenario(baseUrl, 'verify-sender-ready.mjs');
@@ -101,6 +107,18 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     }, mode);
     const sender = await context.newPage();
     const receiver = await context.newPage();
+    let senderAttempts = 0;
+    let receiverAttempts = 0;
+    if (mode === 'signaling-retry') {
+      await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
+        if (++senderAttempts === 1) void socket.close({ code: 1013, reason: 'temporary failure' });
+        else socket.connectToServer();
+      });
+      await receiver.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
+        if (++receiverAttempts === 1) void socket.close({ code: 1013, reason: 'temporary failure' });
+        else socket.connectToServer();
+      });
+    }
     sender.setDefaultTimeout(30_000);
     receiver.setDefaultTimeout(120_000);
     // Keep browser failures actionable in CI. Playwright's event timeout only
@@ -152,6 +170,130 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     const receivedPath = join(work, `p2p-${mode}-${await download.suggestedFilename()}`);
     await download.saveAs(receivedPath);
     assert.deepEqual(Buffer.from(await readFile(receivedPath)), Buffer.from(source));
+    if (mode === 'signaling-retry') {
+      assert.ok(senderAttempts >= 2, 'sender should retry signaling');
+      assert.ok(receiverAttempts >= 2, 'receiver should retry signaling');
+    }
+  } finally {
+    await context.close();
+  }
+}
+
+async function transferBatch(browser, work, baseUrl) {
+  const files = await Promise.all([0, 1, 65_000, 130_000, 257_000].map(async (size, index) => {
+    const name = `batch-${index}.bin`;
+    const path = join(work, name);
+    const bytes = Uint8Array.from({ length: size }, (_, offset) => (offset * 17 + index) % 256);
+    await writeFile(path, bytes);
+    return { name, path, bytes };
+  }));
+  const context = await browser.newContext({ acceptDownloads: true });
+  try {
+    await context.addInitScript(() => { delete window.showSaveFilePicker; });
+    const sender = await context.newPage();
+    const receiver = await context.newPage();
+    sender.setDefaultTimeout(30_000);
+    receiver.setDefaultTimeout(30_000);
+    const downloads = [];
+    receiver.on('download', (download) => downloads.push(download));
+    await sender.goto(baseUrl);
+    await sender.locator('.workbench:not([inert])').waitFor();
+    await sender.locator('#file-input').setInputFiles(files.map((file) => file.path));
+    await sender.locator('#sender-code-section:not(.hidden)').waitFor();
+    const code = (await sender.locator('#share-code').textContent()).trim();
+    await receiver.goto(baseUrl);
+    await receiver.locator('.workbench:not([inert])').waitFor();
+    await receiver.locator('#receive-mode-btn').click();
+    await receiver.locator('#code-input').fill(code);
+    await receiver.locator('#connect-btn').click();
+    try {
+      await receiver.locator('#receiver-complete:not(.hidden)').waitFor();
+    } catch (error) {
+      const state = await receiver.locator('#app-state').textContent();
+      const message = await receiver.locator('#receiver-error .error-message').textContent();
+      const senderState = await sender.locator('#app-state').textContent();
+      const senderStatus = await sender.locator('#sender-status').textContent();
+      throw new Error(`batch failed: receiver=${state} ${message}; sender=${senderState} ${senderStatus}; downloads=${downloads.length}`, { cause: error });
+    }
+    await receiver.waitForFunction((count) => document.querySelectorAll('.redownload-list a').length === count, files.length);
+    assert.equal(downloads.length, files.length, 'each file should start a download');
+    for (const file of files) {
+      const download = downloads.find((item) => item.suggestedFilename() === file.name);
+      assert.ok(download, `${file.name} should be offered`);
+      const saved = join(work, `received-${file.name}`);
+      await download.saveAs(saved);
+      assert.deepEqual(Buffer.from(await readFile(saved)), Buffer.from(file.bytes), file.name);
+    }
+    await sender.locator('#sender-complete:not(.hidden)').waitFor();
+  } finally {
+    await context.close();
+  }
+}
+
+async function transferSlowReceiver(browser, work, baseUrl) {
+  const source = Buffer.alloc(16 * 1024 * 1024, 0x5a);
+  const sourcePath = join(work, 'slow-receiver.bin');
+  await writeFile(sourcePath, source);
+  const context = await browser.newContext({ acceptDownloads: true });
+  try {
+    const sender = await context.newPage();
+    const receiver = await context.newPage();
+    sender.setDefaultTimeout(30_000);
+    receiver.setDefaultTimeout(60_000);
+    await receiver.addInitScript(() => {
+      delete window.showSaveFilePicker;
+      const storage = navigator.storage;
+      const original = storage.getDirectory.bind(storage);
+      storage.getDirectory = async () => {
+        const root = await original();
+        return {
+          getFileHandle: async (...args) => {
+            const handle = await root.getFileHandle(...args);
+            return {
+              getFile: () => handle.getFile(),
+              createWritable: async () => {
+                const writable = await handle.createWritable();
+                return {
+                  write: async (bytes) => {
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                    return writable.write(bytes);
+                  },
+                  close: () => writable.close(),
+                  abort: () => writable.abort()
+                };
+              }
+            };
+          },
+          removeEntry: (...args) => root.removeEntry(...args)
+        };
+      };
+    });
+    await sender.goto(baseUrl);
+    await sender.locator('.workbench:not([inert])').waitFor();
+    await sender.locator('#file-input').setInputFiles(sourcePath);
+    await sender.locator('#sender-code-section:not(.hidden)').waitFor();
+    const code = (await sender.locator('#share-code').textContent()).trim();
+    await receiver.goto(baseUrl);
+    await receiver.locator('.workbench:not([inert])').waitFor();
+    await receiver.locator('#receive-mode-btn').click();
+    await receiver.locator('#code-input').fill(code);
+    const downloadPromise = receiver.waitForEvent('download', { timeout: 60_000 });
+    downloadPromise.catch(() => {});
+    await receiver.locator('#connect-btn').click();
+    await Promise.race([
+      receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 60_000 }),
+      receiver.locator('#receiver-error:not(.hidden)').waitFor({ timeout: 60_000 }).then(async () => {
+        const message = await receiver.locator('#receiver-error .error-message').textContent();
+        const senderStatus = await sender.locator('#sender-status').textContent();
+        const senderState = await sender.locator('#app-state').textContent();
+        throw new Error(`slow receiver failed: ${message}; sender=${senderStatus}; sender state=${senderState}`);
+      })
+    ]);
+    const download = await downloadPromise;
+    const saved = join(work, 'received-slow-receiver.bin');
+    await download.saveAs(saved);
+    assert.deepEqual(await readFile(saved), source);
+    await sender.locator('#sender-complete:not(.hidden)').waitFor();
   } finally {
     await context.close();
   }

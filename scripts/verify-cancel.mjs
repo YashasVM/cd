@@ -68,7 +68,15 @@ try {
   const downloadEvent = receiver.waitForEvent('download', { timeout: 120_000 });
   downloadEvent.catch(() => {});
   await receiver.locator('#connect-btn').click();
-  await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
+  try {
+    await receiver.locator('#receiver-complete:not(.hidden)').waitFor({ timeout: 120_000 });
+  } catch (error) {
+    const state = await receiver.locator('#app-state').textContent();
+    const message = await receiver.locator('#receiver-error .error-message').textContent();
+    const senderState = await sender2.locator('#app-state').textContent();
+    const senderStatus = await sender2.locator('#sender-status').textContent();
+    throw new Error(`transfer after cancel failed: receiver=${state} ${message}; sender=${senderState} ${senderStatus}`, { cause: error });
+  }
   const download = await downloadEvent;
   const receivedPath = join(work, 'received.bin');
   await download.saveAs(receivedPath);

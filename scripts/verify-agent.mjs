@@ -110,6 +110,7 @@ try {
   const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish');
   assert.equal(exitCode, 0, await stderr);
   assert.deepEqual(Uint8Array.from(received), source);
+  if (!hosted) await verifyPeerRegistrationBurst(port);
   console.log(`verified ${received.byteLength} exact bytes through CLI, Worker, encryption, flow control, and receiver`);
 } finally {
   await browser?.close();
@@ -164,6 +165,17 @@ async function verifyPeerSignaling(port) {
   for (const [index, invalid] of [null, [], 42, 'signal', {}, { type: 'OFFER', dst: '../bad' }].entries()) {
     await expectClose(urlFor(`invalid-${index}`), invalid, 4400);
   }
+}
+
+async function verifyPeerRegistrationBurst(port) {
+  // Both endpoints can share one public IP. Repeated quick handoffs must not
+  // exhaust the signaling allowance while the stricter relay guard stays put.
+  for (let index = 0; index < 40; index += 1) {
+    const id = `burst-${index}`;
+    const socket = await connectPeer(`ws://127.0.0.1:${port}/peerjs/peerjs?key=peerjs&id=${id}&token=test&version=1.5.5`);
+    socket.close(1000, 'test complete');
+  }
+  console.log('verified 40 signaling registrations from one IP');
 }
 
 async function connectPeer(url) {
