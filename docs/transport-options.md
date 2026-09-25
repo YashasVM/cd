@@ -38,3 +38,5 @@ Use direct WebRTC where it connects. The existing Cloudflare Worker and SQLite-b
 Prioritize complete delivery of every selected file, receiver-confirmed progress, bounded memory, and clear failure across browsers and Android. An interrupted file may restart from byte zero after reconnecting. Do not add durable transfer checkpoints or stored file fragments for this handoff mode.
 
 The signaling path permits 120 WebSocket registrations per minute per public IP; the live CLI relay keeps its separate 30-per-minute guard. These are abuse limits, not capacity guarantees. Several devices behind one public IP share each allowance. The test deployment uses separate counters from production. [Cloudflare Rate Limiting API](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
+
+Android transfer changes are deferred for now. In particular, the Android sender still limits only its local WebRTC buffer; it does not wait for the receiver-written progress acknowledgements that bound the browser sender. This path needs a separate implementation and Android SDK verification before it can be called reliable under slow receiver storage.
