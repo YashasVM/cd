@@ -122,10 +122,6 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 
 .workbench {
   min-width: 0;
-  padding: 10px 24px 24px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
   animation: enter .7s cubic-bezier(.2, .8, .2, 1) .09s both;
 }
 @keyframes enter {
@@ -135,7 +131,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .mode-selector {
   display: flex;
   gap: 4px;
-  margin-bottom: 22px;
+  margin-bottom: 6px;
+  padding-top: 2px;
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 .mode-btn {
@@ -177,17 +175,15 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   align-content: center;
   align-items: start;
   gap: 18px;
-  min-height: 245px;
-  padding: 26px;
-  border: 1px dashed rgba(228, 212, 182, .3);
-  border-radius: 8px;
-  background: var(--block);
+  min-height: 220px;
+  padding: 28px 0 30px;
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
   transition: border-color .2s, background .2s;
 }
 .drop-zone:hover, .drop-zone.drag-over {
   border-color: var(--accent);
-  background: #24100a;
+  background: rgba(229, 138, 87, .025);
 }
 .drop-mark {
   display: grid;
@@ -240,14 +236,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 
 .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section {
   min-width: 0;
-  margin-top: 14px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--block);
+  margin-top: 18px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--line);
 }
 .file-info:first-child, .input-section:first-child, .connecting-section:first-child,
 .result-section:first-child { margin-top: 0; }
+.drop-zone:not(.hidden) + .file-info:not(.hidden) { margin-top: 14px; padding-top: 0; border-top: 0; }
 .file-info:not(.hidden), .share-panel:not(.hidden), .progress-section:not(.hidden),
 .result-section:not(.hidden), .connecting-section:not(.hidden), .agent-offer:not([hidden]) {
   animation: reveal .38s cubic-bezier(.2, .8, .2, 1) both;
@@ -294,16 +289,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .status {
   margin: 14px 0 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--panel);
+  padding: 6px 12px;
+  border-left: 1px solid var(--accent-soft);
   color: var(--muted);
   font: 12px/1.5 var(--mono);
   overflow-wrap: anywhere;
 }
 
-.input-section { margin-top: 0; }
+.input-section { margin-top: 0; padding: 18px 0 20px; border: 0; border-bottom: 1px solid var(--line); }
 .code-input-wrapper { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 #code-input {
   width: 100%;
@@ -407,11 +400,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .share-transfer-page .tagline { display: inline; margin-left: 16px; }
 .share-transfer-page .brand-note { margin-top: 28px; }
 .share-description { max-width: 350px; margin: 16px 0 0; font-size: clamp(23px, 2.7vw, 34px); line-height: 1.2; letter-spacing: -.035em; }
-.share-transfer-page .workbench { padding-top: 24px; }
 .share-transfer-page .share-panel { margin-top: 0; }
 .share-transfer-page .status { margin-top: 0; }
 .share-download { margin-top: 16px; }
-.agent-offer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 14px; margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.agent-offer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 14px; margin-top: 16px; padding: 16px 0 0; border-top: 1px solid var(--line); }
 .agent-offer strong { min-width: 0; overflow-wrap: anywhere; }
 .agent-offer span { grid-column: 1; color: var(--muted); font: 12px var(--mono); }
 .agent-offer button { grid-column: 2; grid-row: 1 / span 2; }
@@ -437,16 +429,17 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .brand-rail { padding: 0 4px; }
   .brand-name h1, .brand-lockup h1 { font-size: 39px; }
   .brand-intro { font-size: 20px; }
-  .workbench { margin-top: 26px; padding: 6px 14px 14px; border-radius: 10px; }
-  .mode-selector { margin-bottom: 16px; }
+  .workbench { margin-top: 26px; }
+  .mode-selector { margin-bottom: 6px; }
   .mode-btn { min-height: 48px; }
-  .drop-zone { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 18px; }
+  .drop-zone { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 22px 0 24px; }
   .drop-mark { width: 44px; height: 44px; font-size: 25px; }
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
   .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
   .primary-btn, .secondary-btn { min-height: 48px; }
-  .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section { padding: 16px; }
+  .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section { padding: 18px 0 0; }
+  .input-section { padding-bottom: 18px; }
   .file-header { display: grid; gap: 4px; }
   .share-grid { grid-template-columns: 1fr; }
   .qr-block { padding: 14px; }

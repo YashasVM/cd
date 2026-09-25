@@ -85,8 +85,8 @@ voice, mono for machine values. Dark only — there is no light theme.
 | `muted` | `#b3a38c` | Secondary text, descriptions, stats |
 | `faint` | `#a28f79` | Kickers, labels, hints, watermark |
 | `selection` | `#ffe4bf` | Selected text (on `accent-soft`) |
-| `panel` | `#160907` | Cards, share/progress/result panels |
-| `block` | `#1b0d09` | Inner blocks (code, QR frame, stat cells, status) |
+| `panel` | `#160907` | Code blocks and stat cells |
+| `block` | `#1b0d09` | Secondary controls and small inset details |
 | `ink` | `#070707` | Code input, QR canvas, pre blocks |
 | `button` | `#e58a57` | Primary action; hover `#f4a579` |
 | `line` | `rgba(228,212,182,.15)` | Borders, dividers (`#e4d4b6` at 15%) |
@@ -118,8 +118,9 @@ Rules:
 
 ### Shape and motion
 
-- Panels: 6–12px radius, 1px `line` border, flat `#160907` fill, no translucency
-  and no heavy shadow — the reference is textured, not glassy.
+- The transfer workbench sits directly on the page. Hairline rules separate
+  the tabs and transfer states. Code and QR blocks keep flat inset surfaces so
+  they remain distinct and easy to scan.
 - Buttons: 5px radius, minimum 44px touch target, lift 1px on hover.
 - Progress is high-contrast on purpose: gradient fill (`accent-soft` to
   `accent`) with a gentle glint and a 🦕 rider that bobs above the current
