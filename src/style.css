@@ -171,7 +171,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .mode-btn.active::after { transform: scaleX(1); }
 .view { display: none; min-width: 0; }
-.view.active { display: block; animation: reveal .36s cubic-bezier(.2, .8, .2, 1) both; }
+.view.active {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 210px;
+  animation: reveal .36s cubic-bezier(.2, .8, .2, 1) both;
+}
 @keyframes reveal {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
@@ -438,6 +444,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .workbench { margin-top: 26px; padding: 0 18px 20px; }
   .mode-selector { margin: 0 -18px 6px; padding: 0 8px; }
   .mode-btn { min-height: 48px; }
+  .view.active { min-height: 270px; }
   .drop-zone { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
   .drop-mark { width: 44px; height: 44px; font-size: 25px; }
   .drop-zone h2 { font-size: 18px; }

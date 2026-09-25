@@ -124,6 +124,9 @@ Rules:
   integrated tab strip. The idle send and receive controls have no inner card.
   Code and QR blocks keep flat inset surfaces so they remain distinct and easy
   to scan.
+- Send and Receive share the same resting panel height at each screen size.
+  Their controls sit within that space; transfer details can expand it when
+  needed.
 - Buttons: 5px radius, minimum 44px touch target, lift 1px on hover.
 - Progress is high-contrast on purpose: gradient fill (`accent-soft` to
   `accent`) with a gentle glint and a 🦕 rider that bobs above the current
