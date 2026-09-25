@@ -16,12 +16,22 @@ should receive an initial response within seven days.
 
 ## Security model
 
-Agent transfers are live and end-to-end encrypted. The URL fragment contains
+Full-link agent transfers (`cdx send --link`, or opening a share URL) are
+live and end-to-end encrypted. The URL fragment contains
 the transfer key and is not sent in HTTP requests. The relay sees a random
 transfer identifier, timing, byte counts, and encrypted frames; it does not
 store file contents or receive the master key. Anyone who obtains the complete
 link while its sender is online can receive the file, so treat the link as a
 secret and let it expire after use.
+
+Short share codes (the default `cdx send` code, and the browser `/send` page)
+are NOT end-to-end encrypted: the relay directory holds the transfer key so a
+5-digit code resolves on any device. TLS protects code transfers in transit
+and the relay forwards but never stores the bytes, but the relay could read
+them, and anyone who guesses an active code within its 15-minute lifetime can
+receive the file (code lookup shares the relay's 30/minute per-IP rate limit).
+Use codes for everyday one-time shares between friends; use `--link` mode for
+anything sensitive.
 
 This model does not hide traffic metadata, protect a compromised endpoint, or
 provide resumable/offline storage. See [the protocol](docs/agent-transfer-v1.md)

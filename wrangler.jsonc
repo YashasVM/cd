@@ -13,13 +13,41 @@
   // Note: durable_objects/ratelimits/migrations are NOT inherited by envs,
   // so they are repeated here for isolated test namespaces.
   "env": {
+    "cdx": {
+      // Staging twin for the CDX terminal-first work on cdx.yash0.in.
+      // Deploy with `wrangler deploy --env cdx`. Shares the production rate
+      // limit namespaces (staging traffic is negligible); split them if that
+      // ever changes. Merge back to production when verified.
+      "name": "cd-cdx",
+      "routes": [{ "pattern": "cdx.yash0.in", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "TRANSFERS", "class_name": "TransferRoom" },
+          { "name": "PEERS", "class_name": "PeerSignal" },
+          { "name": "CODES", "class_name": "CodeDirectory" }
+        ]
+      },
+      "ratelimits": [
+        {
+          "name": "CONNECTION_RATE_LIMITER",
+          "namespace_id": "9237401",
+          "simple": { "limit": 30, "period": 60 }
+        },
+        {
+          "name": "PEER_RATE_LIMITER",
+          "namespace_id": "9237402",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ]
+    },
     "test": {
       "name": "cd-test",
       "routes": [{ "pattern": "cd-test.yash0.in", "custom_domain": true }],
       "durable_objects": {
         "bindings": [
           { "name": "TRANSFERS", "class_name": "TransferRoom" },
-          { "name": "PEERS", "class_name": "PeerSignal" }
+          { "name": "PEERS", "class_name": "PeerSignal" },
+          { "name": "CODES", "class_name": "CodeDirectory" }
         ]
       },
       "ratelimits": [
@@ -41,7 +69,8 @@
   "durable_objects": {
     "bindings": [
       { "name": "TRANSFERS", "class_name": "TransferRoom" },
-      { "name": "PEERS", "class_name": "PeerSignal" }
+      { "name": "PEERS", "class_name": "PeerSignal" },
+      { "name": "CODES", "class_name": "CodeDirectory" }
     ]
   },
   "ratelimits": [
@@ -60,7 +89,8 @@
   ],
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["TransferRoom"] },
-    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] }
+    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] },
+    { "tag": "v3", "new_sqlite_classes": ["CodeDirectory"] }
   ],
   "assets": {
     "directory": "./dist",

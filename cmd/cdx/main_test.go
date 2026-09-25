@@ -47,6 +47,30 @@ func TestWriteReadyKeepsStdoutMachineReadable(t *testing.T) {
 	}
 }
 
+func TestWriteReadyPrefersShareCode(t *testing.T) {
+	ready := readyOutput{Version: 1, URL: "https://cd.yash0.in/s/id#v1.key", Code: "48291", Filename: "file.txt", Size: 42}
+
+	var plain bytes.Buffer
+	if err := writeReady(&plain, ready, false); err != nil {
+		t.Fatal(err)
+	}
+	if plain.String() != "48291\n" {
+		t.Fatalf("plain output = %q", plain.String())
+	}
+
+	var structured bytes.Buffer
+	if err := writeReady(&structured, ready, true); err != nil {
+		t.Fatal(err)
+	}
+	var decoded readyOutput
+	if err := json.Unmarshal(structured.Bytes(), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded != ready {
+		t.Fatalf("JSON output = %#v", decoded)
+	}
+}
+
 func TestParseSendArgsAcceptsFlagBeforeOrAfterFile(t *testing.T) {
 	before, err := parseSendArgs([]string{"--json", "file.bin"})
 	if err != nil || !before.jsonOutput || before.file != "file.bin" {
@@ -55,6 +79,10 @@ func TestParseSendArgsAcceptsFlagBeforeOrAfterFile(t *testing.T) {
 	after, err := parseSendArgs([]string{"file.bin", "--json"})
 	if err != nil || !after.jsonOutput || after.file != "file.bin" {
 		t.Fatalf("flag after file = %#v, %v", after, err)
+	}
+	link, err := parseSendArgs([]string{"--link", "file.bin"})
+	if err != nil || !link.linkMode || link.file != "file.bin" {
+		t.Fatalf("link flag = %#v, %v", link, err)
 	}
 }
 

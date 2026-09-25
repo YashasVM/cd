@@ -113,11 +113,17 @@
             </div>
           </div>
 
-          <div id="sender-complete" class="result-section hidden">
-            <span class="result-mark">OK</span>
-            <p id="sender-complete-message">Sent. Nice.</p>
-            <button id="send-another-btn" class="primary-btn" type="button">Send more stuff</button>
+          <div id="sender-complete" class="result-section complete-section hidden">
+            <span class="result-mark" aria-hidden="true">OK</span>
+            <div class="result-copy">
+              <p id="sender-complete-message" class="result-title">Sent. Nice.</p>
+              <div class="result-actions">
+                <button id="send-another-btn" class="primary-btn" type="button">Send more stuff</button>
+              </div>
+            </div>
           </div>
+
+          <p class="code-help">Sending to a terminal? <a href="/send">Share one file for <code>cdx receive</code></a>.</p>
         </section>
 
         <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
@@ -128,7 +134,7 @@
                 id="code-input"
                 type="text"
                 maxlength="512"
-                placeholder="Paste a code or link" aria-describedby="scanner-status"
+                placeholder="5-digit code, word code, or link" aria-describedby="scanner-status"
                 autocomplete="off"
                 autocapitalize="none"
                 autocorrect="off"
@@ -179,10 +185,14 @@
             </div>
           </div>
 
-          <div id="receiver-complete" class="result-section hidden">
-            <span class="result-mark">OK</span>
-            <p id="receiver-complete-message">All here. Nice.</p>
-            <button id="receive-another-btn" class="primary-btn" type="button">Grab more stuff</button>
+          <div id="receiver-complete" class="result-section complete-section hidden">
+            <span class="result-mark" aria-hidden="true">OK</span>
+            <div class="result-copy">
+              <p id="receiver-complete-message" class="result-title">All here. Nice.</p>
+              <div class="result-actions">
+                <button id="receive-another-btn" class="primary-btn" type="button">Grab more stuff</button>
+              </div>
+            </div>
           </div>
 
           <div id="receiver-error" class="result-section error hidden" role="alert">

@@ -3,10 +3,15 @@
 ## Caller contract
 
 `cdx send <file>` opens and validates one regular file, reserves a live relay
-room, then writes one capability URL to stdout. The process stays in the
-foreground. Status goes to stderr. Exit code 0 means the receiver reconstructed
-the authenticated byte stream and prepared it for download or finished writing
-it to a user-approved file destination.
+room, claims a short numeric share code, then writes the code to stdout. The
+process stays in the foreground. Status goes to stderr. Exit code 0 means the
+receiver reconstructed the authenticated byte stream and prepared it for
+download or finished writing it to a user-approved file destination.
+
+`cdx send --link <file>` skips the code claim and writes the full capability
+URL instead (see below). The browser `/send` page is an equivalent
+code-mode sender: it mints the same invitation, claims the same directory
+code, and shows the code plus a ready `cdx receive <code>` command.
 
 The URL has this form:
 
@@ -17,6 +22,30 @@ https://cd.yash0.in/s/<transfer-id>#v1.<master-key>
 The transfer ID is 16 random bytes encoded as 22 unpadded base64url characters.
 The master key is 32 random bytes encoded as 43 unpadded base64url characters.
 The fragment is never part of an HTTP or WebSocket request.
+
+## Short share codes
+
+Code mode keeps the room, records, and flow control above, but replaces the
+fragment capability with a 5-digit code from the relay directory:
+
+- The sender `POST /api/codes {transferId, key}` after admission and receives
+  `{code, expiresAt}` (code TTL: 15 minutes). Allocation retries random codes
+  inside a storage transaction, so two senders never own one code.
+- Any receiver (terminal or browser) `GET /api/codes/<code>` and receives
+  `{transferId, key}`, then joins the room exactly like a link receiver.
+- The browser Receive box and `cdx receive` both accept codes; links keep
+  working everywhere they did before.
+- The directory is a single Durable Object (`codes-v1`), bounded to 10,000
+  live codes with purge-on-claim and delete-on-expiry (no alarms), and both
+  endpoints share the relay's 30/minute per-IP rate limit, which also bounds
+  code guessing.
+
+Security difference: the directory holds the master key, so code transfers
+are not end-to-end encrypted. TLS protects them in transit; the relay
+forwards ciphertext-sized records it could decrypt but never stores. Anyone
+who guesses an active code within its lifetime receives the file; the room's
+single-receiver tombstone still prevents a second join. Sensitive files
+should use `--link` mode, which keeps the trust model in the section above.
 
 ## Trust model
 

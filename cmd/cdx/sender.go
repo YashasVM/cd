@@ -48,15 +48,15 @@ type fileOffer struct {
 func endpointBase() (string, string, error) {
 	relay := strings.TrimRight(os.Getenv("CD_RELAY_URL"), "/")
 	if relay == "" {
-		relay = "wss://cd.yash0.in/ws/v1"
+		relay = "wss://cdx.yash0.in/ws/v1"
 	}
 	public := strings.TrimRight(os.Getenv("CD_PUBLIC_URL"), "/")
 	if public == "" {
-		public = "https://cd.yash0.in"
+		public = "https://cdx.yash0.in"
 	}
 	parsedRelay, err := url.ParseRequestURI(relay)
 	if err != nil || parsedRelay.Host == "" || parsedRelay.User != nil || parsedRelay.RawQuery != "" || parsedRelay.Fragment != "" {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: use wss://cd.yash0.in/ws/v1", relay)
+		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: use wss://cdx.yash0.in/ws/v1", relay)
 	}
 	if parsedRelay.Scheme != "ws" && parsedRelay.Scheme != "wss" {
 		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: scheme must be wss (ws only for loopback dev)", relay)
@@ -69,7 +69,7 @@ func endpointBase() (string, string, error) {
 	}
 	parsedPublic, err := url.ParseRequestURI(public)
 	if err != nil || parsedPublic.Host == "" || parsedPublic.User != nil || parsedPublic.RawQuery != "" || parsedPublic.Fragment != "" {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: use https://cd.yash0.in", public)
+		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: use https://cdx.yash0.in", public)
 	}
 	if parsedPublic.Scheme != "http" && parsedPublic.Scheme != "https" {
 		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: scheme must be https (http only for loopback dev)", public)
@@ -224,7 +224,7 @@ func openSharedFile(path string) (*os.File, os.FileInfo, error) {
 	return file, current, nil
 }
 
-func sendFile(ctx context.Context, path string, onReady func(readyOutput) error) error {
+func sendFile(ctx context.Context, path string, linkMode bool, onReady func(readyOutput) error) error {
 	file, info, err := openSharedFile(path)
 	if err != nil {
 		return err
@@ -283,14 +283,33 @@ func sendFile(ctx context.Context, path string, onReady func(readyOutput) error)
 		URL:      publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
 		Filename: filename, Size: uint64(info.Size()),
 	}
-	if err := onReady(ready); err != nil {
-		return err
+	if linkMode {
+		if err := onReady(ready); err != nil {
+			return err
+		}
+	} else {
+		code, err := claimShareCode(ctx, publicBase, invitation.encodedID(), invitation.encodedKey())
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
+		}
+		ready.Code = code
+		if err := onReady(ready); err != nil {
+			return err
+		}
 	}
-	fmt.Fprintf(os.Stderr, "sharing %s (%s) — send the link above, keep this running\n", filename, formatBytes(ready.Size))
+	fmt.Fprintf(os.Stderr, "sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
 	if ready.Size > 256*1024*1024 {
 		fmt.Fprintln(os.Stderr, "note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
 	}
 	fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
+	if ready.Code != "" {
+		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
+	} else {
+		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+	}
 	if err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}

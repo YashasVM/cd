@@ -32,6 +32,7 @@ func cdxVersion() string {
 type readyOutput struct {
 	Version  int    `json:"version"`
 	URL      string `json:"url"`
+	Code     string `json:"code,omitempty"`
 	Filename string `json:"filename"`
 	Size     uint64 `json:"size"`
 }
@@ -40,49 +41,75 @@ func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
 	if jsonOutput {
 		return json.NewEncoder(output).Encode(value)
 	}
-	_, err := fmt.Fprintln(output, value.URL)
+	line := value.URL
+	if value.Code != "" {
+		line = value.Code
+	}
+	_, err := fmt.Fprintln(output, line)
+	return err
+}
+
+func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error {
+	if jsonOutput {
+		return json.NewEncoder(output).Encode(value)
+	}
+	_, err := fmt.Fprintln(output, value.Path)
 	return err
 }
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--json] [--] <file>")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--] <file>")
+	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Send one file through CD at https://cd.yash0.in.")
-	fmt.Fprintln(output, "Prints one private share URL to stdout, then waits")
-	fmt.Fprintln(output, "until the receiver verifies the file.")
+	fmt.Fprintln(output, "Send one file through CD at https://cdx.yash0.in, or receive one.")
+	fmt.Fprintln(output, "Send prints one short share code to stdout, then waits")
+	fmt.Fprintln(output, "until the receiver verifies the file. The code works in")
+	fmt.Fprintln(output, "any browser Receive box and in `cdx receive`. Receive")
+	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
-	fmt.Fprintln(output, "  send <file>   send one regular file (zip a folder first to share it)")
-	fmt.Fprintln(output, "  help [send]   show help")
-	fmt.Fprintln(output, "  version       show version")
+	fmt.Fprintln(output, "  send <file>        send one regular file (zip a folder first to share it)")
+	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
+	fmt.Fprintln(output, "  help [send|receive] show help")
+	fmt.Fprintln(output, "  version            show version")
+	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "options for receive:")
+	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
+	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
+	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
+	fmt.Fprintln(output, "  -h, --help     show help for receive")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for send:")
-	fmt.Fprintln(output, "  --json        print {\"version\",\"url\",\"filename\",\"size\"} instead of the bare URL")
-	fmt.Fprintln(output, "  --            treat the next argument as the file even if it starts with -")
-	fmt.Fprintln(output, "  -h, --help    show help for send")
-	fmt.Fprintln(output, "  -v, --version show version")
+	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
+	fmt.Fprintln(output, "  -h, --help     show help for send")
+	fmt.Fprintln(output, "  -v, --version  show version")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "examples:")
 	fmt.Fprintln(output, "  cdx send ./app.apk")
+	fmt.Fprintln(output, "  cdx receive 48291 --out ./downloads/")
 	fmt.Fprintln(output, "  cdx \"./my photo.zip\" --json")
 	fmt.Fprintln(output, "  cdx send -- -weird-name.bin")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "environment:")
-	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)")
-	fmt.Fprintln(output, "  CD_PUBLIC_URL  share-link origin (default https://cd.yash0.in)")
+	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cdx.yash0.in/ws/v1)")
+	fmt.Fprintln(output, "  CD_PUBLIC_URL  share-link origin (default https://cdx.yash0.in)")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "exit status 0 means the receiver verified every byte.")
+	fmt.Fprintln(output, "exit status 0 means the transfer verified every byte.")
 	fmt.Fprintln(output, "Exit status 1 means the transfer failed; exit status 2 means")
 	fmt.Fprintln(output, "the command was used incorrectly.")
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--json] [--] <file>")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--] <file>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <file>         one regular file to share (zip a folder first)")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"filename\",\"size\"} instead of the bare URL")
+	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show this help")
 	fmt.Fprintln(output, "  -v, --version  show version")
@@ -93,12 +120,38 @@ func sendUsage(output io.Writer) {
 	fmt.Fprintln(output, "  cdx send -- -weird-name.bin")
 }
 
+func receiveUsage(output io.Writer) {
+	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
+	fmt.Fprintln(output, "                   (a full share link works too)")
+	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
+	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
+	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
+	fmt.Fprintln(output, "  -h, --help     show this help")
+	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "examples:")
+	fmt.Fprintln(output, "  cdx receive 48291")
+	fmt.Fprintln(output, "  cdx receive 48291 --out ./downloads/ --force")
+}
+
 // sendRequest is the parsed form of send arguments.
 type sendRequest struct {
 	jsonOutput bool
+	linkMode   bool
 	file       string
 	help       bool
 	version    bool
+}
+
+// receiveRequest is the parsed form of receive arguments.
+type receiveRequest struct {
+	jsonOutput bool
+	force      bool
+	out        string
+	code       string
+	help       bool
 }
 
 func parseSendArgs(args []string) (sendRequest, error) {
@@ -123,11 +176,17 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			request.jsonOutput = true
 			continue
 		}
+		if !endOfFlags && argument == "--link" {
+			request.linkMode = true
+			continue
+		}
 		if !endOfFlags && strings.HasPrefix(argument, "-") && argument != "" {
 			hint := ""
 			switch {
 			case strings.HasPrefix(argument, "--js") || argument == "--JSON":
 				hint = " (did you mean --json?)"
+			case strings.HasPrefix(argument, "--li"):
+				hint = " (did you mean --link?)"
 			case strings.HasPrefix(argument, "--he"):
 				hint = " (did you mean --help?)"
 			case strings.HasPrefix(argument, "--ver"):
@@ -147,6 +206,80 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		return sendRequest{}, errors.New("cdx: send one file at a time (zip a folder first to share it)")
 	}
 	request.file = files[0]
+	return request, nil
+}
+
+func parseReceiveArgs(args []string) (receiveRequest, error) {
+	var request receiveRequest
+	var codes []string
+	endOfFlags := false
+	index := 0
+	for index < len(args) {
+		argument := args[index]
+		if !endOfFlags && argument == "--" {
+			endOfFlags = true
+			index++
+			continue
+		}
+		if !endOfFlags && (argument == "--help" || argument == "-h") {
+			return receiveRequest{help: true}, nil
+		}
+		if !endOfFlags && argument == "--json" {
+			request.jsonOutput = true
+			index++
+			continue
+		}
+		if !endOfFlags && argument == "--force" {
+			request.force = true
+			index++
+			continue
+		}
+		if !endOfFlags && (argument == "--out" || strings.HasPrefix(argument, "--out=")) {
+			value := ""
+			if strings.HasPrefix(argument, "--out=") {
+				value = strings.TrimPrefix(argument, "--out=")
+			} else {
+				index++
+				if index >= len(args) {
+					return receiveRequest{}, errors.New("cdx: --out needs a path")
+				}
+				value = args[index]
+			}
+			if value == "" {
+				return receiveRequest{}, errors.New("cdx: --out needs a path")
+			}
+			request.out = value
+			index++
+			continue
+		}
+		if !endOfFlags && strings.HasPrefix(argument, "-") && argument != "" {
+			hint := ""
+			switch {
+			case strings.HasPrefix(argument, "--ou"):
+				hint = " (did you mean --out?)"
+			case strings.HasPrefix(argument, "--for"):
+				hint = " (did you mean --force?)"
+			case strings.HasPrefix(argument, "--js") || argument == "--JSON":
+				hint = " (did you mean --json?)"
+			case strings.HasPrefix(argument, "--he"):
+				hint = " (did you mean --help?)"
+			}
+			return receiveRequest{}, fmt.Errorf("cdx: unknown option %s%s", argument, hint)
+		}
+		if argument == "" {
+			index++
+			continue
+		}
+		codes = append(codes, argument)
+		index++
+	}
+	if len(codes) == 0 {
+		return receiveRequest{}, errors.New("cdx: missing share code or link (paste the link from `cdx send`)")
+	}
+	if len(codes) > 1 {
+		return receiveRequest{}, errors.New("cdx: receive one transfer at a time")
+	}
+	request.code = codes[0]
 	return request, nil
 }
 
@@ -181,7 +314,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "help", "version"}
+	candidates := []string{"send", "receive", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -219,7 +352,7 @@ func runSend(request sendRequest) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	err := sendFile(ctx, request.file, func(value readyOutput) error {
+	err := sendFile(ctx, request.file, request.linkMode, func(value readyOutput) error {
 		return writeReady(os.Stdout, value, request.jsonOutput)
 	})
 	if err != nil {
@@ -241,6 +374,35 @@ func sendFailure(message string) int {
 	return 2
 }
 
+// receiveFailure prints a usage error for the receive command.
+func receiveFailure(message string) int {
+	fmt.Fprintln(os.Stderr, message)
+	fmt.Fprintln(os.Stderr, "")
+	receiveUsage(os.Stderr)
+	return 2
+}
+
+func runReceive(request receiveRequest) int {
+	if request.help {
+		receiveUsage(os.Stdout)
+		return 0
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
+	defer stop()
+	err := receiveFile(ctx, request.code, request.out, request.force, func(value receiveResult) error {
+		return writeReceived(os.Stdout, value, request.jsonOutput)
+	})
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
+		} else {
+			fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
+		}
+		return 1
+	}
+	return 0
+}
+
 func run(argv []string) int {
 	if len(argv) == 0 {
 		usage(os.Stderr)
@@ -253,11 +415,15 @@ func run(argv []string) int {
 				sendUsage(os.Stdout)
 				return 0
 			}
+			if argv[1] == "receive" {
+				receiveUsage(os.Stdout)
+				return 0
+			}
 			if suggestion, ok := looksLikeCommandTypo(argv[1]); ok {
 				fmt.Fprintf(os.Stderr, "cdx: unknown help topic %q (did you mean '%s'?)\n", argv[1], suggestion)
 				return 2
 			}
-			fmt.Fprintf(os.Stderr, "cdx: unknown help topic %q (try 'cdx help send')\n", argv[1])
+			fmt.Fprintf(os.Stderr, "cdx: unknown help topic %q (try 'cdx help send' or 'cdx help receive')\n", argv[1])
 			return 2
 		}
 		usage(os.Stdout)
@@ -271,6 +437,12 @@ func run(argv []string) int {
 			return sendFailure(strings.TrimSpace(err.Error()))
 		}
 		return runSend(request)
+	case "receive":
+		request, err := parseReceiveArgs(argv[1:])
+		if err != nil {
+			return receiveFailure(strings.TrimSpace(err.Error()))
+		}
+		return runReceive(request)
 	default:
 		if strings.HasPrefix(argv[0], "-") {
 			request, err := parseSendArgs(argv)

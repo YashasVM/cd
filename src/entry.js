@@ -1,8 +1,9 @@
 import { startAmbientDots } from './ambient-dots.js';
 
 const agentShare = /^\/s\/[A-Za-z0-9_-]{22}\/?$/.test(window.location.pathname);
+const agentSend = /^\/send\/?$/.test(window.location.pathname);
 
-const app = agentShare ? import('./share.js') : import('./main.js');
+const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
 app.then(() => {
   startAmbientDots();

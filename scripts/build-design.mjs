@@ -50,6 +50,17 @@ function splitRow(line) {
 }
 
 function renderTable(header, delimiter, bodyRows) {
+  // Showcase tables: the palette and typography spec tables render as
+  // visual cards (swatches / type specimens) instead of plain grids.
+  // The markdown tables stay the source of truth, so GitHub and the
+  // site never drift apart.
+  const headCells = splitRow(header).map((cell) => cell.toLowerCase().replace(/`+/g, ''));
+  if (headCells.includes('token') && headCells.some((cell) => cell.includes('hex'))) {
+    return renderPalette(bodyRows);
+  }
+  if (headCells.includes('role') && headCells.some((cell) => cell.includes('stack'))) {
+    return renderTypeSpecimens(bodyRows);
+  }
   const aligns = splitRow(delimiter).map((cell) => {
     const left = cell.startsWith(':');
     const right = cell.endsWith(':');
@@ -64,6 +75,76 @@ function renderTable(header, delimiter, bodyRows) {
     .map((row) => `<tr>${splitRow(row).map((cell, i) => `<td${aligns[i] && aligns[i] !== 'left' ? ` style="text-align:${aligns[i]}"` : ''}>${renderInline(escapeHtml(cell))}</td>`).join('')}</tr>`)
     .join('');
   return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function sanitizePreview(html) {
+  // design.md is our own file, but previews render as live HTML, so keep
+  // a tight allowlist: drop executable tags, event handlers, and
+  // javascript: URLs before embedding.
+  return html
+    .replace(/<\s*\/?\s*(script|iframe|object|embed|link|meta|style|form|base)\b[^>]*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
+
+function firstColor(value) {
+  const hex = value.match(/#[0-9a-fA-F]{3,8}\b/);
+  if (hex) return hex[0];
+  const rgb = value.match(/rgba?\([^)]*\)/);
+  return rgb ? rgb[0] : null;
+}
+
+function renderPalette(bodyRows) {
+  const cards = bodyRows.map((row) => {
+    const cells = splitRow(row);
+    const token = (cells[0] ?? '').replace(/`+/g, '').trim();
+    const hexRaw = (cells[1] ?? '').replace(/`+/g, '').trim();
+    const usage = cells.slice(2).join(' | ').trim();
+    const hexes = [...hexRaw.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((match) => match[0]);
+    const rgb = hexRaw.match(/rgba?\([^)]*\)/);
+    let chip = 'background:#000';
+    let copy = hexRaw;
+    if (hexes.length >= 2) {
+      chip = `background:linear-gradient(135deg, ${hexes[0]} 50%, ${hexes[1]} 50%)`;
+      copy = hexes.join(' / ');
+    } else if (hexes.length === 1) {
+      chip = `background:${hexes[0]}`;
+      copy = hexes[0];
+    } else if (rgb) {
+      // Translucent tokens (e.g. line) need a mid-tone underlay, otherwise
+      // the chip reads as empty on the dark card.
+      chip = `background:linear-gradient(${rgb[0]}, ${rgb[0]}), linear-gradient(#3a2a22, #3a2a22)`;
+      copy = rgb[0];
+    }
+    return `<button class="swatch" type="button" data-copy="${escapeHtml(copy)}">`
+      + `<span class="swatch-chip" style="${escapeHtml(chip)}"></span>`
+      + `<span class="swatch-token">${escapeHtml(token)}</span>`
+      + `<span class="swatch-hex">${escapeHtml(hexRaw)}</span>`
+      + `<span class="swatch-use">${renderInline(escapeHtml(usage))}</span>`
+      + `</button>`;
+  });
+  return `<div class="swatch-grid">${cards.join('')}</div>`
+    + `<p class="showcase-hint">Click any swatch to copy its value.</p>`;
+}
+
+function renderTypeSpecimens(bodyRows) {
+  const samples = { brand: 'cd', ui: 'Send files', mono: 'amber-river-42' };
+  const cards = bodyRows.map((row) => {
+    const cells = splitRow(row);
+    const role = (cells[0] ?? '').replace(/`+/g, '').trim();
+    const stack = (cells[1] ?? '').replace(/`+/g, '').trim();
+    const usage = cells.slice(2).join(' | ').trim();
+    const key = role.toLowerCase().includes('brand')
+      ? 'brand'
+      : role.toLowerCase().includes('mono') ? 'mono' : 'ui';
+    return `<div class="specimen specimen-${key}">`
+      + `<span class="specimen-role">${escapeHtml(role)}</span>`
+      + `<span class="specimen-sample">${escapeHtml(samples[key])}</span>`
+      + `<code class="specimen-stack">${escapeHtml(stack)}</code>`
+      + `<span class="specimen-use">${renderInline(escapeHtml(usage))}</span>`
+      + `</div>`;
+  });
+  return `<div class="type-grid">${cards.join('')}</div>`;
 }
 
 function renderMarkdown(source) {
@@ -96,13 +177,13 @@ function renderMarkdown(source) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Fenced code block
+    // Fenced code block (or live preview for ```preview fences)
     const fence = /^```(\S*)\s*$/.exec(line);
     if (fence) {
       flushParagraph();
       flushList(openList);
       openList = null;
-      const lang = fence[1] ? ` class="language-${escapeHtml(fence[1])}"` : '';
+      const lang = fence[1] ?? '';
       const code = [];
       i += 1;
       while (i < lines.length && !/^```\s*$/.test(lines[i])) {
@@ -110,7 +191,13 @@ function renderMarkdown(source) {
         i += 1;
       }
       i += 1; // consume closing fence
-      html.push(`<pre><code${lang}>${escapeHtml(code.join('\n'))}</code></pre>`);
+      if (lang === 'preview') {
+        html.push(`<div class="preview"><div class="preview-stage">${sanitizePreview(code.join('\n'))}</div>`
+          + `<p class="preview-note">Live preview — rendered with the same tokens as the app.</p></div>`);
+        continue;
+      }
+      const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : '';
+      html.push(`<pre><code${langClass}>${escapeHtml(code.join('\n'))}</code></pre>`);
       continue;
     }
 

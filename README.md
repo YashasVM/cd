@@ -33,13 +33,15 @@ cdx send ./app.apk
 The binary is named `cdx` because `cd` is already the shell's change-directory
 command.
 
-Standard output contains only the private share URL:
+Standard output contains only the short share code:
 
 ```text
-https://cd.yash0.in/s/3JgrxJIKt2cqd2V0aTDQyQ#v1.<private-key>
+48291
 ```
 
-Send that complete URL to the receiver. Keep `cdx` running while they accept
+Tell the receiver the code. They type it into the Receive box on
+[cdx.yash0.in](https://cdx.yash0.in) or run `cdx receive 48291`. Codes expire
+after 15 minutes and admit one receiver. Keep `cdx` running while they accept
 and download the file. Progress is written to standard error; exit status 0
 means the receiver verified the complete byte count. Use `--json` when a tool
 needs structured output.
@@ -48,6 +50,16 @@ The URL fragment holds the encryption key. Browsers do not send fragments to
 the server, and the relay receives encrypted records only. A receiver must
 also prove knowledge of a token derived from that key before joining. Treat
 the full URL as a temporary secret.
+
+Short share codes trade that end-to-end encryption for typability: the relay
+directory holds the transfer key so a 5-digit code resolves anywhere, and TLS
+plus the live relay carry the trust instead. Anyone who guesses an active
+code within its 15-minute lifetime can receive the file, so for sensitive
+files use the private-link mode:
+
+```bash
+cdx send --link ./secrets.zip
+```
 
 Repository agents should follow [AGENTS.md](AGENTS.md) and the reusable
 [CD file-sharing skill](skills/cd-file-sharing/SKILL.md).
@@ -61,6 +73,13 @@ WebRTC transfer finishes. CD coordinates the connection through its own
 `cd.yash0.in` Worker; file bytes travel over the encrypted WebRTC data channel.
 WebRTC may use public STUN servers for NAT discovery, but they do not receive
 file bytes. This remains separate from the agent relay.
+
+## Browser-to-terminal sharing
+
+Open [cd.yash0.in/send](https://cd.yash0.in/send), choose one file, and share
+the displayed 5-digit code. The receiver types it into the Receive box on any
+browser or runs `cdx receive <code>` in a terminal. The browser streams the
+file through the same live relay `cdx send` uses — no uploads, no stored copy.
 
 ## Develop locally
 
@@ -88,6 +107,8 @@ built receiver page in Chromium. It checks admission failures, duplicate
 participants, multi-chunk flow control, Unicode filenames, the downloaded
 bytes, visible CD branding, and the sender's completion status. Set
 `CHROMIUM_PATH` if Chromium is installed outside the common system paths.
+`verify:terminal` runs the same local setup for `cdx send` → `cdx receive`
+and browser `/send` → `cdx receive`, checking exact bytes both ways.
 
 To exercise the browser receiver locally:
 
@@ -135,6 +156,23 @@ skills/                   Instructions for AI agents
 `npm run build && npx wrangler deploy` publishes the Worker and assets using
 `wrangler.jsonc`. Pushing a `v*` tag runs the release workflow, cross-compiles
 `cdx`, publishes SHA-256 checksums, and creates a GitHub release.
+
+## Staging on cdx.yash0.in
+
+Terminal-first work stages on [cdx.yash0.in](https://cdx.yash0.in), separate
+from production, until it is verified and merged back:
+
+```bash
+npm run build && npx wrangler deploy --env cdx
+```
+
+The `cdx` env runs its own `cd-cdx` Worker with isolated Durable Object
+namespaces. The `cdx` CLI defaults to this host. Verify with:
+
+```bash
+CD_VERIFY_URL=https://cdx.yash0.in node scripts/verify-terminal.mjs
+CD_VERIFY_URL=https://cdx.yash0.in node scripts/verify-agent.mjs
+```
 
 After deployment, run `CD_VERIFY_URL=https://cd.yash0.in node scripts/verify-p2p.mjs`
 to verify that two browsers can transfer and save the exact file bytes through

@@ -13,6 +13,7 @@
     "typecheck": "tsc",
     "verify:agent": "npm run build && node scripts/verify-agent.mjs",
     "verify:p2p": "npm run build && node scripts/verify-p2p.mjs",
+    "verify:terminal": "npm run build && node scripts/verify-terminal.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run"
   },
   "dependencies": {

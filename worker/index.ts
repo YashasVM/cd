@@ -367,6 +367,115 @@ export class PeerSignal extends DurableObject<Env> {
   async webSocketError(socket: WebSocket): Promise<void> { await this.webSocketClose(socket); }
 }
 
+// Short numeric share codes ("48291") map to a transfer capability
+// (transfer ID + master key) so a 5-digit code typed anywhere — terminal or
+// browser — resolves to the same relay room. Codes are random, one batch per
+// room, expire after 15 minutes, and admit a single receiver through the
+// room's existing tombstone. Unlike full-link mode, the directory holds the
+// master key, so short-code transfers are NOT end-to-end encrypted: TLS
+// protects them in transit and the relay forwards (but never stores) the
+// bytes. Sensitive files should use a full link instead.
+const CODE_TTL_MS = 15 * 60 * 1000;
+const CODE_DIGITS = 5;
+const CODE_SPACE = 100_000;
+const CODE_CLAIM_ATTEMPTS = 12;
+const MAX_CODES = 10_000;
+const MAX_CODE_BODY_BYTES = 256;
+
+type CodeEntry = { transferId: string; key: string; expiresAt: number };
+
+function isTransferId(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{22}$/.test(value);
+}
+
+function isMasterKey(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
+}
+
+function isShareCode(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4,5}$/.test(value);
+}
+
+export class CodeDirectory extends DurableObject<Env> {
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    if (request.method === 'POST' && url.pathname === '/claim') {
+      return this.claim(request);
+    }
+    const lookup = /^\/code\/(\d{4,5})$/.exec(url.pathname);
+    if (request.method === 'GET' && lookup) {
+      return this.lookup(lookup[1]);
+    }
+    return new Response('not found', { status: 404 });
+  }
+
+  private async claim(request: Request): Promise<Response> {
+    let body: unknown;
+    try {
+      const text = await request.text();
+      if (new TextEncoder().encode(text).byteLength > MAX_CODE_BODY_BYTES) {
+        return new Response('too large', { status: 413 });
+      }
+      body = JSON.parse(text);
+    } catch {
+      return new Response('invalid claim', { status: 400 });
+    }
+    if (!body || typeof body !== 'object' || !('transferId' in body) || !('key' in body)) {
+      return new Response('invalid claim', { status: 400 });
+    }
+    const { transferId, key } = body as Record<string, unknown>;
+    if (!isTransferId(transferId) || !isMasterKey(key)) {
+      return new Response('invalid claim', { status: 400 });
+    }
+    const expiresAt = Date.now() + CODE_TTL_MS;
+    const entry: CodeEntry = { transferId, key, expiresAt };
+    // Bound the directory: purge expired codes, then refuse when still full.
+    const stored = await this.ctx.storage.list<CodeEntry>({ prefix: 'code:' });
+    let live = 0;
+    for (const [storageKey, existing] of stored) {
+      if (!existing || existing.expiresAt <= Date.now()) {
+        await this.ctx.storage.delete(storageKey);
+      } else {
+        live += 1;
+      }
+    }
+    if (live >= MAX_CODES) {
+      logEvent('code_directory_full', { codes: live });
+      return new Response('share codes are busy right now', { status: 503 });
+    }
+    // Allocation retries inside a transaction so two simultaneous senders can
+    // never own the same code.
+    for (let attempt = 0; attempt < CODE_CLAIM_ATTEMPTS; attempt += 1) {
+      const digits = new Uint32Array(1);
+      crypto.getRandomValues(digits);
+      const code = String(digits[0] % CODE_SPACE).padStart(CODE_DIGITS, '0');
+      const owned = await this.ctx.storage.transaction(async (txn) => {
+        const existing = await txn.get<CodeEntry>(`code:${code}`);
+        if (existing && existing.expiresAt > Date.now()) return false;
+        await txn.put<CodeEntry>(`code:${code}`, entry);
+        return true;
+      });
+      if (owned) {
+        logEvent('code_claimed', { code });
+        return Response.json({ code, expiresAt });
+      }
+    }
+    logEvent('code_space_exhausted');
+    return new Response('share codes are busy right now', { status: 503 });
+  }
+
+  private async lookup(code: string): Promise<Response> {
+    const entry = await this.ctx.storage.get<CodeEntry>(`code:${code}`);
+    if (!entry) return new Response('code unavailable', { status: 404 });
+    if (entry.expiresAt <= Date.now()) {
+      await this.ctx.storage.delete(`code:${code}`);
+      return new Response('code unavailable', { status: 404 });
+    }
+    logEvent('code_resolved', { code });
+    return Response.json({ transferId: entry.transferId, key: entry.key });
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -418,8 +527,37 @@ export default {
           { headers: { 'Cache-Control': 'no-store' } },
         );
       }
+      if (url.pathname === '/api/codes' && request.method === 'POST') {
+        return serveCodes(request, env, 'claim');
+      }
+      const codeLookup = /^\/api\/codes\/(\d{4,5})$/.exec(url.pathname);
+      if (codeLookup && request.method === 'GET') {
+        return serveCodes(request, env, `code/${codeLookup[1]}`);
+      }
       return new Response('not found', { status: 404 });
     }
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
+
+// Short-code directory requests share the relay's per-IP rate limit, which
+// also bounds code guessing to a trickle.
+async function serveCodes(request: Request, env: Env, suffix: string): Promise<Response> {
+  try {
+    const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+    const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+    if (!success) return new Response('connection rate limit reached', { status: 429 });
+    const body = suffix === 'claim' ? await request.text() : undefined;
+    if (body !== undefined && new TextEncoder().encode(body).byteLength > MAX_CODE_BODY_BYTES) {
+      return new Response('too large', { status: 413 });
+    }
+    return await env.CODES.getByName('codes-v1').fetch(`https://codes.internal/${suffix}`, {
+      method: request.method,
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'code_directory_failed', error: error instanceof Error ? error.message : 'unknown' }));
+    return new Response('share codes temporarily unavailable', { status: 503 });
+  }
+}

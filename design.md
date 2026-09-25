@@ -118,6 +118,159 @@ Rules:
 - Kickers and labels are 9–11px uppercase mono with wide letter-spacing.
 - The wordmark is always lowercase `cd` with the `/di·rect/` tagline.
 
+### Forms & components
+
+Every form below is shown live, rendered with the same tokens as the app.
+Send and Receive share one workbench, one tab strip, and one button set —
+the orange interface is the receiver for both flows.
+
+#### Mode tabs
+
+One tab strip, two modes. The active tab gets paper text and an orange
+underline; the idle tab stays faint.
+
+```preview
+<div class="pv-tabs">
+  <button class="pv-tab pv-tab-active" type="button">Send</button>
+  <button class="pv-tab" type="button">Receive</button>
+</div>
+```
+
+#### Buttons
+
+One primary action per view (dark text on accent), secondary actions for
+copies and scans, a small mono cancel for anything in flight. 5px radius,
+44px minimum touch target, lift 1px on hover.
+
+```preview
+<div class="pv-row">
+  <button class="pv-primary" type="button">Choose files</button>
+  <button class="pv-secondary" type="button">Copy code</button>
+  <button class="pv-cancel" type="button">Cancel</button>
+</div>
+```
+
+#### Send form
+
+A drop zone (drag files or pick them), a payload card once files are
+chosen, then a share panel with the code, the QR, and copy actions.
+Nothing uploads until the receiver joins.
+
+```preview
+<div class="pv-drop">
+  <span class="pv-drop-mark">+</span>
+  <div>
+    <strong>Send files</strong>
+    <p>Drop files here or choose them below. Keep this tab open until they arrive.</p>
+    <button class="pv-primary" type="button">Choose files</button>
+  </div>
+</div>
+<div class="pv-file">
+  <span class="pv-kicker">payload</span>
+  <div class="pv-file-head"><strong>diwali-photos.zip</strong><em>84.2 MB</em></div>
+  <span class="pv-sub">3 files · encrypted in your browser</span>
+</div>
+```
+
+#### Share code & QR
+
+The code is 25px mono in accent, selectable with one tap. The QR always
+sits on near-black (`#070707`) for scan contrast. Copy buttons are
+secondary — the code itself is the primary thing.
+
+```preview
+<div class="pv-share">
+  <div class="pv-code-block">
+    <span class="pv-kicker">share this code</span>
+    <strong class="pv-code">amber-river-42</strong>
+    <p>On the other device, choose Receive and enter this code.</p>
+  </div>
+  <div class="pv-qr-block">
+    <span class="pv-kicker">or scan it</span>
+    <span class="pv-qr">QR</span>
+  </div>
+</div>
+<div class="pv-row">
+  <button class="pv-secondary" type="button">Copy code</button>
+  <button class="pv-secondary" type="button">Copy link</button>
+</div>
+<p class="pv-status">Waiting for receiver...</p>
+```
+
+#### Receive form
+
+One mono input on near-black for the code or link, a primary Connect,
+and a scan option for the QR. Invalid codes ring the input in
+`#ff8a62` — nothing else on screen turns red.
+
+```preview
+<span class="pv-kicker">enter the share code</span>
+<div class="pv-code-row">
+  <input class="pv-input" type="text" value="amber-river-42" readonly aria-label="Share code preview" />
+  <button class="pv-primary" type="button">Connect</button>
+</div>
+<div class="pv-row">
+  <button class="pv-secondary" type="button">Scan code</button>
+</div>
+<p class="pv-sub">Paste the sender's code or link, or scan their QR code.</p>
+```
+
+#### Progress
+
+High-contrast on purpose: gradient fill (`accent-soft` to `accent`)
+with a gentle glint and a 🦕 rider bobbing above the current position.
+Speed / moved / left stats sit in inset cells below. Cancel is always
+visible while moving.
+
+```preview
+<div class="pv-topline"><span>uploading</span><strong>62%</strong><button class="pv-cancel" type="button">Cancel</button></div>
+<div class="pv-bar"><div class="pv-fill" style="width:62%"></div><span class="pv-dino" style="left:62%">🦕</span></div>
+<div class="pv-stats">
+  <span><b>speed</b><em>12.4 MB/s</em></span>
+  <span><b>moved</b><em>52.2 / 84.2 MB</em></span>
+  <span><b>left</b><em>3s</em></span>
+</div>
+```
+
+#### Results
+
+Success reads `Sent. Nice.` / `All here. Nice.` with an `OK` mark and
+one next step. Failure is the only red on screen: an `ERR` mark on
+`#5a160b`, the message in `#ff8a62`, one `Try again` action.
+
+```preview
+<div class="pv-result">
+  <span class="pv-mark">OK</span>
+  <div><strong>Sent. Nice.</strong><div class="pv-row"><button class="pv-primary" type="button">Send more stuff</button></div></div>
+</div>
+<div class="pv-result pv-error">
+  <span class="pv-mark">ERR</span>
+  <div><strong class="pv-err-text">The sender went away.</strong><div class="pv-row"><button class="pv-primary" type="button">Try again</button></div></div>
+</div>
+```
+
+#### Waiting & status
+
+Connecting shows a spinner (accent tick on a faint ring) with plain
+language underneath. Status lines are 12px mono, muted, with an ember
+left rule.
+
+```preview
+<div class="pv-connect"><span class="pv-spinner"></span><p>Finding the sender...</p></div>
+<p class="pv-status">Waiting for receiver...</p>
+```
+
+Form rules:
+
+- Every destructive or committing action (connect, cancel, retry) is a
+  visible button — no silent states, no auto-downloads.
+- The receiver always sees filename and size and accepts before a single
+  chunk flows.
+- One primary button per view. If two actions look primary, one of them
+  is wrong.
+- Phone-first: full-width primary actions, 48px+ controls, safe-area
+  padding, no horizontal overflow at 320px.
+
 ### Shape and motion
 
 - The transfer workbench uses one warm surface with a copper top rule and an

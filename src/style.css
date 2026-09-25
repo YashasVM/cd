@@ -391,6 +391,33 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .progress-stats em { min-width: 0; overflow: hidden; color: var(--text); font: 12px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .result-section { text-align: center; }
 .result-mark { display: inline-grid; place-items: center; width: 52px; height: 42px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); font: 14px var(--mono); }
+.complete-section {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-content: center;
+  align-items: start;
+  gap: 18px;
+  min-height: 210px;
+  padding: 26px 0 4px;
+  text-align: left;
+}
+.complete-section .result-mark {
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(229, 138, 87, .4);
+  border-radius: 6px;
+}
+.result-copy { min-width: 0; }
+.result-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+.result-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
 .result-section:not(.hidden) .result-mark { animation: mark-in .45s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes mark-in {
   from { opacity: 0; transform: scale(.7); }
@@ -398,9 +425,20 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .result-section.error .result-mark { border-color: #ff5d2a; background: #5a160b; color: #ff8a62; }
 .result-section p { margin: 14px 0 18px; color: var(--muted); }
+.complete-section .result-title { margin: 0; }
 .result-section .error-message { color: #ff8a62; }
-.redownload-list { display: grid; gap: 8px; margin-top: 14px; }
-.redownload-list a { padding: 10px 14px; border: 1px solid var(--line); border-radius: 5px; color: var(--text); text-decoration: none; }
+.redownload-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.redownload-list a {
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .redownload-list a:hover { border-color: var(--accent); }
 
 .watermark { position: relative; z-index: 1; margin: 0 auto; padding: 0 20px 20px; color: var(--faint); font: 11px var(--mono); text-align: center; }
@@ -422,6 +460,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .agent-progress { margin-top: 18px; }
 .agent-progress .progress-bar { margin: 10px 0; }
 .agent-progress > span { color: var(--muted); font: 12px var(--mono); }
+/* Browser terminal-send: one stacked panel with a big typable code. */
+.terminal-share { display: grid; gap: 10px; margin-top: 16px; padding: 16px 0 0; border-top: 1px solid var(--line); }
+.terminal-share #share-code { font-size: clamp(38px, 5vw, 52px); font-weight: 700; letter-spacing: .12em; line-height: 1; }
+.terminal-share .code-help { max-width: none; margin: 0; }
+.terminal-share #receive-command { display: block; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--block); color: var(--text); font: 13px var(--mono); overflow-wrap: anywhere; }
+.terminal-share #share-link { min-width: 0; color: var(--muted); font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.terminal-share .result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .share-transfer-page .watermark { grid-column: 1 / -1; padding: 0; }
 
 @media (max-width: 760px) {
@@ -450,6 +495,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
   .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
+  .complete-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
+  .complete-section .result-mark { width: 44px; height: 44px; }
+  .result-title { font-size: 18px; }
+  .result-actions { align-items: stretch; flex-direction: column; }
+  .result-actions .primary-btn { width: 100%; }
+  .redownload-list { flex-direction: column; align-items: stretch; width: 100%; }
+  .redownload-list a { width: 100%; text-align: center; }
   .primary-btn, .secondary-btn { min-height: 48px; }
   .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section { padding: 18px 0 0; }
   .input-section { padding: 20px 0 5px; }

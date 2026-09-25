@@ -70,6 +70,26 @@ async function main() {
     return;
   }
   window.addEventListener('hashchange', render);
+  // Swatch click-to-copy (delegated; previews re-render on navigation).
+  app.addEventListener('click', async (event) => {
+    const swatch = event.target.closest('[data-copy]');
+    if (!swatch) return;
+    const value = swatch.getAttribute('data-copy') ?? '';
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      return;
+    }
+    const hex = swatch.querySelector('.swatch-hex');
+    if (!hex || hex.dataset.copied) return;
+    hex.dataset.copied = '1';
+    const original = hex.textContent;
+    hex.textContent = 'copied!';
+    window.setTimeout(() => {
+      hex.textContent = original;
+      delete hex.dataset.copied;
+    }, 1200);
+  });
   render();
 }
 

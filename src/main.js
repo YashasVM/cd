@@ -1,4 +1,5 @@
 import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
+import { cleanShortCode, codeLookupPath, isShortCode, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { MAX_P2P_FILES, MAX_P2P_FILE_BYTES, parseManifest } from './p2p-manifest.js';
 import {
   DOWNLOAD_TOO_LARGE,
@@ -124,8 +125,35 @@ function peerOptions() {
   };
 }
 
-const els = {
-  appState: document.getElementById('app-state'),
+// Agent-relay links (from `cdx send` or a browser terminal-send) look like
+// https://cd.yash0.in/s/<22 chars>#v1.<43 chars>. The room lives on the
+// sender's origin, so receivers open the pasted link as-is instead of
+// treating it as a P2P word code.
+const AGENT_LINK_PATH = /^\/s\/([A-Za-z0-9_-]{22})\/?$/;
+const AGENT_LINK_KEY = /^v1\.([A-Za-z0-9_-]{43})$/;
+const AGENT_BARE_CODE = /^([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_-]{43})$/;
+
+function agentShareUrlFromInput(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw || !raw.includes('#v1.')) return '';
+  const candidates = [raw];
+  for (const token of raw.split(/[\s"'<>]+/)) {
+    if (token && token !== raw) candidates.push(token);
+  }
+  for (const candidate of candidates) {
+    const bare = AGENT_BARE_CODE.exec(candidate);
+    if (bare) return `${window.location.origin}/s/${bare[1]}#v1.${bare[2]}`;
+    try {
+      const url = new URL(candidate, window.location.href);
+      const path = AGENT_LINK_PATH.exec(url.pathname);
+      const key = AGENT_LINK_KEY.exec(url.hash.slice(1));
+      if (path && key) return url.toString();
+    } catch { /* Not a URL; try the next candidate. */ }
+  }
+  return '';
+}
+
+const els = {  appState: document.getElementById('app-state'),
   sendModeBtn: document.getElementById('send-mode-btn'),
   receiveModeBtn: document.getElementById('receive-mode-btn'),
   senderView: document.getElementById('sender-view'),
@@ -720,8 +748,14 @@ const Receiver = (() => {
   const lastProgressUpdate = { value: 0 };
 
   function connect(rawCode) {
-    const code = codeFromUrl(rawCode, window.location.href);
-    if (!isValidCode(code)) {
+    const agentUrl = agentShareUrlFromInput(rawCode);
+    if (agentUrl) {
+      window.location.href = agentUrl;
+      return;
+    }
+    const short = isShortCode(rawCode);
+    const code = short ? cleanShortCode(rawCode) : codeFromUrl(rawCode, window.location.href);
+    if (!short && !isValidCode(code)) {
       els.scannerStatus.textContent = 'Paste the sender’s code or their link.';
       els.codeInput.setAttribute('aria-invalid', 'true');
       els.codeInput.focus();
@@ -738,6 +772,11 @@ const Receiver = (() => {
     els.codeInput.value = code;
     setState('connecting');
 
+    if (short) {
+      void connectShortCode(connectionGeneration, code);
+      return;
+    }
+
     void establishPeer(connectionGeneration, code);
 
     timeoutId = setTimeout(() => {
@@ -745,6 +784,37 @@ const Receiver = (() => {
         showError('Connection timed out. Check the code and try again.');
       }
     }, CONNECTION_TIMEOUT_MS);
+  }
+
+  // Short numeric codes resolve through the relay directory to a transfer,
+  // then hand off to the private share page. Works for codes from `cdx send`
+  // and the browser terminal-send page alike.
+  async function connectShortCode(connectionGeneration, code) {
+    let response;
+    try {
+      response = await fetch(codeLookupPath(code));
+    } catch {
+      if (connectionGeneration !== transferGeneration) return;
+      showError('Could not reach CD. Check your connection and try again.');
+      return;
+    }
+    if (connectionGeneration !== transferGeneration || transferCancelled) return;
+    if (response.status === 404) {
+      showError('Bad code, or the sender wandered off.');
+      return;
+    }
+    if (!response.ok) {
+      showError('Connection failed. Try again.');
+      return;
+    }
+    let capability;
+    try {
+      capability = parseCapability(await response.json());
+    } catch {
+      showError('Bad code, or the sender wandered off.');
+      return;
+    }
+    window.location.href = shareUrlFromCapability(window.location.origin, capability.transferId, capability.key);
   }
 
   async function establishPeer(connectionGeneration, code, signalingRetries = 0) {
@@ -1138,6 +1208,8 @@ const Receiver = (() => {
     try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
     URL.revokeObjectURL(entry.url);
     entry.link?.remove();
+    const list = els.receiverComplete.querySelector('.redownload-list');
+    if (list && list.childElementCount === 0) list.remove();
   }
 
   function downloadUrl(url, fileName, revokeExtra) {
@@ -1150,11 +1222,12 @@ const Receiver = (() => {
     manual.download = fileName;
     manual.textContent = `Save ${fileName} again`;
     manual.className = 'secondary-btn';
+    const actions = els.receiverComplete.querySelector('.result-actions');
     let list = els.receiverComplete.querySelector('.redownload-list');
     if (!list) {
       list = document.createElement('div');
       list.className = 'redownload-list';
-      els.receiverComplete.insertBefore(list, els.receiveAnotherBtn);
+      actions.insertBefore(list, els.receiveAnotherBtn);
     }
     list.appendChild(manual);
     entry.link = manual;
@@ -1232,6 +1305,7 @@ const Receiver = (() => {
       entry.link?.remove();
     }
     pendingDownloadUrls = [];
+    els.receiverComplete.querySelector('.redownload-list')?.remove();
     currentFileBytes = 0;
     nextFileIndex = 0;
     pickerPromise = null;
@@ -1436,6 +1510,13 @@ els.codeInput.addEventListener('keydown', (event) => {
 });
 els.codeInput.addEventListener('input', (event) => {
   const raw = event.target.value;
+  // Agent links (from `cdx send`) navigate to their share page instead of
+  // being cleaned into a P2P code. Check before mangling the pasted text.
+  const agentUrl = agentShareUrlFromInput(raw);
+  if (agentUrl) {
+    window.location.href = agentUrl;
+    return;
+  }
   // Pasting a full link via autofill/drag doesn't fire a paste event, so
   // detect link characters and extract the code instead of mangling it.
   event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
@@ -1443,7 +1524,13 @@ els.codeInput.addEventListener('input', (event) => {
 });
 els.codeInput.addEventListener('paste', (event) => {
   event.preventDefault();
-  els.codeInput.value = codeFromUrl((event.clipboardData || window.clipboardData).getData('text'));
+  const text = (event.clipboardData || window.clipboardData).getData('text');
+  const agentUrl = agentShareUrlFromInput(text);
+  if (agentUrl) {
+    window.location.href = agentUrl;
+    return;
+  }
+  els.codeInput.value = codeFromUrl(text);
   els.codeInput.removeAttribute('aria-invalid');
 });
 

@@ -1,12 +1,13 @@
 .PHONY: cdx cdx-release test
 
 CDX_BUILD_FLAGS := -buildvcs=false -trimpath
-VERSION ?= dev
-CDX_RELEASE_FLAGS := -s -w -buildid= -X main.version=$(VERSION)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+CDX_VERSION_FLAGS := -X main.version=$(VERSION)
+CDX_RELEASE_FLAGS := -s -w -buildid= $(CDX_VERSION_FLAGS)
 
 cdx:
 	mkdir -p bin
-	CGO_ENABLED=0 go build $(CDX_BUILD_FLAGS) -o bin/cdx ./cmd/cdx
+	CGO_ENABLED=0 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_VERSION_FLAGS)' -o bin/cdx ./cmd/cdx
 
 cdx-release:
 	mkdir -p bin
