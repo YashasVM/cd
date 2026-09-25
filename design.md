@@ -122,13 +122,16 @@ Rules:
   and no heavy shadow — the reference is textured, not glassy.
 - Buttons: 5px radius, minimum 44px touch target, lift 1px on hover.
 - Progress is high-contrast on purpose: gradient fill (`accent-soft` to
-  `accent`) with a 🦕 rider that bobs above the current position. The one
-  playful element marks the one thing users watch.
+  `accent`) with a gentle glint and a 🦕 rider that bobs above the current
+  position. The one playful element marks the one thing users watch.
 - One background flourish only: a fixed ember-glow gradient with a sparse dot
-  grid, masked to the top 62% of the viewport.
+  grid, masked to the top 62% of the viewport. Nearby dots ease away from a
+  mouse or pen cursor, then return to the grid. Touch leaves them still.
+- The brand and transfer panel enter once. Tab panels and new transfer states
+  rise a few pixels into place. Buttons respond to hover and press.
 - Phone-first: full-width primary actions, 48px+ controls, safe-area padding, no
-  horizontal overflow at 320px. `prefers-reduced-motion` disables the dino
-  animation.
+  horizontal overflow at 320px. `prefers-reduced-motion` disables all motion,
+  including cursor response and the dino.
 
 ### Voice
 

@@ -31,12 +31,19 @@ body::before {
   z-index: 0;
   inset: 0 0 auto;
   height: 62vh;
-  background:
-    radial-gradient(circle at 20% 25%, rgba(229, 62, 15, .09) 0 1px, transparent 1.7px) 0 0 / 6px 6px,
-    linear-gradient(180deg, #1b0603 0%, #120504 60%, transparent 100%);
+  background: linear-gradient(180deg, #1b0603 0%, #120504 60%, transparent 100%);
   mask-image: linear-gradient(#000 0 45%, transparent 100%);
   pointer-events: none;
   content: "";
+}
+.ambient-dots {
+  position: fixed;
+  z-index: 0;
+  inset: 0 0 auto;
+  width: 100%;
+  height: 62vh;
+  mask-image: linear-gradient(#000 0 42%, transparent 100%);
+  pointer-events: none;
 }
 ::selection { background: var(--accent-soft); color: #ffe4bf; }
 button, input { font: inherit; }
@@ -61,7 +68,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   margin: 0 auto;
   padding: 56px 0 36px;
 }
-.brand-rail { min-width: 0; }
+.brand-rail { min-width: 0; animation: enter .65s cubic-bezier(.2, .8, .2, 1) both; }
 .brand-name { display: flex; align-items: baseline; gap: 16px; }
 .brand-name h1, .brand-lockup h1 {
   margin: 0;
@@ -119,6 +126,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
+  animation: enter .7s cubic-bezier(.2, .8, .2, 1) .09s both;
+}
+@keyframes enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .mode-selector {
   display: flex;
@@ -136,20 +148,28 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   color: var(--faint);
   font-size: 14px;
   cursor: pointer;
+  transition: color .2s;
 }
 .mode-btn:hover { color: var(--text); }
 .mode-btn.active { color: var(--text); }
-.mode-btn.active::after {
+.mode-btn::after {
   position: absolute;
   right: 16px;
   bottom: -1px;
   left: 16px;
   height: 2px;
   background: var(--accent);
+  transform: scaleX(0);
+  transition: transform .28s cubic-bezier(.2, .8, .2, 1);
   content: "";
 }
+.mode-btn.active::after { transform: scaleX(1); }
 .view { display: none; min-width: 0; }
-.view.active { display: block; }
+.view.active { display: block; animation: reveal .36s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 .drop-zone {
   display: grid;
@@ -178,7 +198,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   border-radius: 6px;
   color: var(--accent);
   font: 30px/1 var(--mono);
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1), border-color .25s;
 }
+.drop-zone:hover .drop-mark, .drop-zone.drag-over .drop-mark { transform: scale(1.08); border-color: var(--accent); }
 .drop-copy { min-width: 0; }
 .drop-zone h2 {
   margin: 0 0 5px;
@@ -207,6 +229,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .primary-btn { background: var(--accent); color: var(--bg); }
 .primary-btn:hover { background: #f4a579; transform: translateY(-1px); }
+.primary-btn:active, .secondary-btn:active, .cancel-btn:active { transform: translateY(1px) scale(.98); }
 .secondary-btn, .cancel-btn {
   border-color: var(--line);
   background: var(--block);
@@ -225,6 +248,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .file-info:first-child, .input-section:first-child, .connecting-section:first-child,
 .result-section:first-child { margin-top: 0; }
+.file-info:not(.hidden), .share-panel:not(.hidden), .progress-section:not(.hidden),
+.result-section:not(.hidden), .connecting-section:not(.hidden), .agent-offer:not([hidden]) {
+  animation: reveal .38s cubic-bezier(.2, .8, .2, 1) both;
+}
 .panel-kicker, .input-section label {
   display: block;
   margin-bottom: 11px;
@@ -323,6 +350,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow: visible;
 }
 .progress-fill {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   height: 100%;
   border-radius: inherit;
@@ -331,6 +360,15 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   transform-origin: left center;
   transition: transform 140ms ease-out;
 }
+.progress-fill::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 228, 191, .32) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: progress-glint 2.6s ease-in-out infinite;
+  content: "";
+}
+@keyframes progress-glint { to { transform: translateX(100%); } }
 .progress-dino {
   position: absolute;
   bottom: calc(100% + 2px);
@@ -348,6 +386,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .progress-stats em { min-width: 0; overflow: hidden; color: var(--text); font: 12px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .result-section { text-align: center; }
 .result-mark { display: inline-grid; place-items: center; width: 52px; height: 42px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); font: 14px var(--mono); }
+.result-section:not(.hidden) .result-mark { animation: mark-in .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes mark-in {
+  from { opacity: 0; transform: scale(.7); }
+  to { opacity: 1; transform: scale(1); }
+}
 .result-section.error .result-mark { border-color: #ff5d2a; background: #5a160b; color: #ff8a62; }
 .result-section p { margin: 14px 0 18px; color: var(--muted); }
 .result-section .error-message { color: #ff8a62; }
@@ -424,5 +467,5 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

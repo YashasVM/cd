@@ -25,6 +25,7 @@ const decoder = new TextDecoder('utf-8', { fatal: true });
 let failureShown = false;
 
 document.body.innerHTML = `
+  <canvas id="ambient-dots" class="ambient-dots" aria-hidden="true"></canvas>
   <main class="shell share-transfer-page">
     <header class="brand-rail">
       <div class="brand-lockup"><h1>cd</h1><span class="tagline">/di·rect/</span></div>
