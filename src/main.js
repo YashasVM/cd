@@ -92,6 +92,8 @@ const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
 const TRANSFER_ACK_TIMEOUT_MS = 30000;
 const MAX_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
+const RECEIVER_WINDOW_BYTES = 3 * 1024 * 1024;
+const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
 
 function peerOptions() {
   const iceServers = [
@@ -270,6 +272,7 @@ const Sender = (() => {
   let transferFinished = false;
   let transferCancelled = false;
   let transferAckResolve = null;
+  let capacityWaitResolve = null;
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
@@ -382,19 +385,24 @@ const Sender = (() => {
 
       conn.on('open', () => {
         if (peer !== activePeer || connection !== conn || transferCancelled) return;
-        void sendFiles();
+        void sendFiles().catch(() => failSend('Could not read or send a selected file.'));
       });
 
       conn.on('error', () => {
         if (peer !== activePeer || connection !== conn) return;
-        els.senderStatus.textContent = 'Connection got grumpy. Try again.';
-        setState('failed');
+        failSend('Connection failed. Try again.');
       });
 
       conn.on('data', (data) => {
         if (peer !== activePeer || connection !== conn || transferCancelled) return;
         if (data?.type === 'progress') {
-          bytesConfirmed = Math.max(bytesConfirmed, Math.min(data.bytes, totalSize));
+          if (!Number.isSafeInteger(data.bytes) || data.bytes < bytesConfirmed || data.bytes > bytesSent) {
+            failSend('Receiver sent invalid progress.');
+            return;
+          }
+          bytesConfirmed = data.bytes;
+          capacityWaitResolve?.(true);
+          capacityWaitResolve = null;
           lastProgressUpdate.value = updateProgress(
             els.senderProgress,
             bytesConfirmed,
@@ -406,6 +414,7 @@ const Sender = (() => {
           return;
         }
         if (data?.type === 'transfer-ack') {
+          if (bytesSent !== totalSize) return;
           bytesConfirmed = totalSize;
           lastProgressUpdate.value = updateProgress(
             els.senderProgress,
@@ -415,7 +424,7 @@ const Sender = (() => {
             true,
             lastProgressUpdate
           );
-          transferAckResolve?.();
+          transferAckResolve?.(true);
           transferAckResolve = null;
           return;
         }
@@ -427,11 +436,7 @@ const Sender = (() => {
       conn.on('close', () => {
         if (peer !== activePeer || connection !== conn) return;
         if (!transferFinished && !transferCancelled) {
-          transferCancelled = true;
-          transferAckResolve?.();
-          transferAckResolve = null;
-          els.senderStatus.textContent = 'Connection vanished mid-send.';
-          setState('failed');
+          failSend('Connection vanished mid-send.');
         }
       });
     });
@@ -463,12 +468,13 @@ const Sender = (() => {
 
   async function sendFiles() {
     if (!connection || files.length === 0) return;
+    const activeConnection = connection;
 
     els.senderCodeSection.classList.add('hidden');
     els.senderProgress.classList.remove('hidden');
     setState('transferring');
 
-    connection.send({
+    activeConnection.send({
       type: 'manifest',
       totalFiles: files.length,
       totalSize,
@@ -487,20 +493,15 @@ const Sender = (() => {
       if (transferCancelled) return;
       showCurrentFile(index);
       els.senderStatus.textContent = `Sending ${index + 1} of ${files.length}…`;
-      connection.send({ type: 'file-start', index });
-      await sendSingleFile(files[index]);
-      if (transferCancelled) return;
-      connection.send({ type: 'file-complete', index });
+      activeConnection.send({ type: 'file-start', index });
+      if (!(await sendSingleFile(files[index], activeConnection))) return;
+      activeConnection.send({ type: 'file-complete', index });
     }
 
     const transferAck = waitForTransferAck();
-    connection.send({ type: 'transfer-complete' });
+    activeConnection.send({ type: 'transfer-complete' });
     if (!(await transferAck)) {
-      if (!transferCancelled) {
-        transferCancelled = true;
-        els.senderStatus.textContent = 'Receiver did not confirm the download.';
-        setState('failed');
-      }
+      if (!transferCancelled) failSend('Receiver did not confirm the download.');
       return;
     }
     if (transferCancelled) return;
@@ -508,7 +509,7 @@ const Sender = (() => {
     showComplete();
   }
 
-  async function sendSingleFile(file) {
+  async function sendSingleFile(file, activeConnection) {
     let offset = 0;
     let nextChunk = file.slice(0, Math.min(TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
 
@@ -522,10 +523,34 @@ const Sender = (() => {
         ? file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer()
         : null;
 
-      await waitForBuffer();
-      connection.send(value);
+      if (!(await waitForReceiverCapacity(value.byteLength, activeConnection))) return false;
+      await waitForBuffer(activeConnection);
+      if (transferCancelled || connection !== activeConnection || !activeConnection.open) return false;
+      activeConnection.send(value);
       bytesSent += value.byteLength;
     }
+    return !transferCancelled && connection === activeConnection && activeConnection.open;
+  }
+
+  async function waitForReceiverCapacity(chunkBytes, activeConnection) {
+    while (!transferCancelled && activeConnection.open && connection === activeConnection &&
+        bytesSent - bytesConfirmed + chunkBytes > RECEIVER_WINDOW_BYTES) {
+      const advanced = await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          capacityWaitResolve = null;
+          resolve(false);
+        }, RECEIVER_PROGRESS_TIMEOUT_MS);
+        capacityWaitResolve = (value) => {
+          clearTimeout(timeout);
+          resolve(value);
+        };
+      });
+      if (!advanced) {
+        if (!transferCancelled) failSend('Receiver stopped saving the file. Try again.');
+        return false;
+      }
+    }
+    return !transferCancelled && activeConnection.open && connection === activeConnection;
   }
 
   function waitForTransferAck() {
@@ -535,15 +560,15 @@ const Sender = (() => {
         transferAckResolve = null;
         resolve(false);
       }, TRANSFER_ACK_TIMEOUT_MS);
-      transferAckResolve = () => {
+      transferAckResolve = (confirmed) => {
         clearTimeout(timeout);
-        resolve(true);
+        resolve(confirmed);
       };
     });
   }
 
-  function waitForBuffer() {
-    const dataChannel = connection?.dataChannel;
+  function waitForBuffer(activeConnection) {
+    const dataChannel = activeConnection.dataChannel;
     if (!dataChannel || dataChannel.bufferedAmount <= MAX_BUFFERED_AMOUNT) {
       return Promise.resolve();
     }
@@ -566,7 +591,7 @@ const Sender = (() => {
       };
 
       const onBufferedLow = () => {
-        if (transferCancelled || !connection?.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
+        if (transferCancelled || !activeConnection.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
           finish();
         } else {
           clearTimeout(fallbackId);
@@ -586,6 +611,18 @@ const Sender = (() => {
     setState('complete');
   }
 
+  function failSend(message) {
+    if (transferCancelled || transferFinished) return;
+    transferCancelled = true;
+    capacityWaitResolve?.(false);
+    capacityWaitResolve = null;
+    transferAckResolve?.(false);
+    transferAckResolve = null;
+    els.senderStatus.textContent = message;
+    setState('failed');
+    try { connection?.close(); } catch { /* The channel may already be closed. */ }
+  }
+
   function cancel(message = 'Transfer canceled.') {
     if (transferCancelled) return;
     transferCancelled = true;
@@ -603,6 +640,8 @@ const Sender = (() => {
 
   function reset() {
     transferCancelled = true;
+    capacityWaitResolve?.(false);
+    capacityWaitResolve = null;
     peer?.destroy();
     peer = null;
     connection = null;
@@ -613,7 +652,7 @@ const Sender = (() => {
     totalSize = 0;
     transferStartTime = null;
     transferFinished = false;
-    transferAckResolve?.();
+    transferAckResolve?.(false);
     transferAckResolve = null;
     lastProgressUpdate.value = 0;
 
