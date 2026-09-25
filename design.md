@@ -86,6 +86,8 @@ voice, mono for machine values. Dark only — there is no light theme.
 | `faint` | `#a28f79` | Kickers, labels, hints, watermark |
 | `selection` | `#ffe4bf` | Selected text (on `accent-soft`) |
 | `panel` | `#160907` | Code blocks and stat cells |
+| `workbench` | `#180a07` | Main transfer surface |
+| `workbench-tab` | `#1e0d09` | Integrated tab strip |
 | `block` | `#1b0d09` | Secondary controls and small inset details |
 | `ink` | `#070707` | Code input, QR canvas, pre blocks |
 | `button` | `#e58a57` | Primary action; hover `#f4a579` |
@@ -118,9 +120,10 @@ Rules:
 
 ### Shape and motion
 
-- The transfer workbench sits directly on the page. Hairline rules separate
-  the tabs and transfer states. Code and QR blocks keep flat inset surfaces so
-  they remain distinct and easy to scan.
+- The transfer workbench uses one warm surface with a copper top rule and an
+  integrated tab strip. The idle send and receive controls have no inner card.
+  Code and QR blocks keep flat inset surfaces so they remain distinct and easy
+  to scan.
 - Buttons: 5px radius, minimum 44px touch target, lift 1px on hover.
 - Progress is high-contrast on purpose: gradient fill (`accent-soft` to
   `accent`) with a gentle glint and a 🦕 rider that bobs above the current

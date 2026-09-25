@@ -2,6 +2,8 @@
   color-scheme: dark;
   --bg: #0d0503;
   --panel: #160907;
+  --workbench: #180a07;
+  --workbench-tab: #1e0d09;
   --block: #1b0d09;
   --ink: #070707;
   --text: #e4d4b6;
@@ -122,6 +124,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 
 .workbench {
   min-width: 0;
+  padding: 0 24px 22px;
+  border: 1px solid rgba(228, 212, 182, .12);
+  border-top: 2px solid rgba(229, 138, 87, .47);
+  border-radius: 8px;
+  background: var(--workbench);
   animation: enter .7s cubic-bezier(.2, .8, .2, 1) .09s both;
 }
 @keyframes enter {
@@ -131,10 +138,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .mode-selector {
   display: flex;
   gap: 4px;
-  margin-bottom: 6px;
-  padding-top: 2px;
-  border-top: 1px solid var(--line);
+  margin: 0 -24px 8px;
+  padding: 2px 14px 0;
   border-bottom: 1px solid var(--line);
+  border-radius: 7px 7px 0 0;
+  background: var(--workbench-tab);
 }
 .mode-btn {
   position: relative;
@@ -175,16 +183,15 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   align-content: center;
   align-items: start;
   gap: 18px;
-  min-height: 220px;
-  padding: 28px 0 30px;
-  border-bottom: 1px solid var(--line);
+  min-height: 210px;
+  padding: 26px 0 4px;
   cursor: pointer;
-  transition: border-color .2s, background .2s;
+  transition: background .2s;
 }
 .drop-zone:hover, .drop-zone.drag-over {
-  border-color: var(--accent);
   background: rgba(229, 138, 87, .025);
 }
+.drop-zone.drag-over { outline: 1px dashed var(--accent); outline-offset: -8px; border-radius: 6px; }
 .drop-mark {
   display: grid;
   place-items: center;
@@ -242,7 +249,6 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .file-info:first-child, .input-section:first-child, .connecting-section:first-child,
 .result-section:first-child { margin-top: 0; }
-.drop-zone:not(.hidden) + .file-info:not(.hidden) { margin-top: 14px; padding-top: 0; border-top: 0; }
 .file-info:not(.hidden), .share-panel:not(.hidden), .progress-section:not(.hidden),
 .result-section:not(.hidden), .connecting-section:not(.hidden), .agent-offer:not([hidden]) {
   animation: reveal .38s cubic-bezier(.2, .8, .2, 1) both;
@@ -296,7 +302,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.input-section { margin-top: 0; padding: 18px 0 20px; border: 0; border-bottom: 1px solid var(--line); }
+.input-section { margin-top: 0; padding: 22px 0 5px; border: 0; }
 .code-input-wrapper { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 #code-input {
   width: 100%;
@@ -400,7 +406,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .share-transfer-page .tagline { display: inline; margin-left: 16px; }
 .share-transfer-page .brand-note { margin-top: 28px; }
 .share-description { max-width: 350px; margin: 16px 0 0; font-size: clamp(23px, 2.7vw, 34px); line-height: 1.2; letter-spacing: -.035em; }
-.share-transfer-page .share-panel { margin-top: 0; }
+.share-transfer-page .share-panel { margin-top: 0; padding-top: 20px; border-top: 0; }
 .share-transfer-page .status { margin-top: 0; }
 .share-download { margin-top: 16px; }
 .agent-offer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 14px; margin-top: 16px; padding: 16px 0 0; border-top: 1px solid var(--line); }
@@ -429,17 +435,17 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .brand-rail { padding: 0 4px; }
   .brand-name h1, .brand-lockup h1 { font-size: 39px; }
   .brand-intro { font-size: 20px; }
-  .workbench { margin-top: 26px; }
-  .mode-selector { margin-bottom: 6px; }
+  .workbench { margin-top: 26px; padding: 0 18px 20px; }
+  .mode-selector { margin: 0 -18px 6px; padding: 0 8px; }
   .mode-btn { min-height: 48px; }
-  .drop-zone { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 22px 0 24px; }
+  .drop-zone { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
   .drop-mark { width: 44px; height: 44px; font-size: 25px; }
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
   .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
   .primary-btn, .secondary-btn { min-height: 48px; }
   .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section { padding: 18px 0 0; }
-  .input-section { padding-bottom: 18px; }
+  .input-section { padding: 20px 0 5px; }
   .file-header { display: grid; gap: 4px; }
   .share-grid { grid-template-columns: 1fr; }
   .qr-block { padding: 14px; }
