@@ -94,6 +94,12 @@ const TRANSFER_ACK_TIMEOUT_MS = 30000;
 const MAX_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
 const RECEIVER_WINDOW_BYTES = 3 * 1024 * 1024;
 const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
+const SIGNALING_RETRY_LIMIT = 3;
+const SIGNALING_RETRY_DELAY_MS = 300;
+
+function isTemporarySignalingError(error) {
+  return ['network', 'socket-error', 'socket-closed', 'server-error'].includes(error?.type);
+}
 
 function peerOptions() {
   const iceServers = [
@@ -265,6 +271,7 @@ const Sender = (() => {
   let code = null;
   let codeAttempts = 0;
   const MAX_CODE_ATTEMPTS = 5;
+  let signalingRetries = 0;
   let bytesSent = 0;
   let bytesConfirmed = 0;
   let totalSize = 0;
@@ -294,6 +301,7 @@ const Sender = (() => {
 
     code = generateCode();
     codeAttempts = 1;
+    signalingRetries = 0;
     bytesSent = 0;
     bytesConfirmed = 0;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
@@ -358,6 +366,7 @@ const Sender = (() => {
       return;
     }
     const activePeer = new PeerCtor(peerIdFor(creatingCode), peerOptions());
+    let retryScheduled = false;
     peer = activePeer;
     els.senderCodeSection.classList.add('hidden');
 
@@ -442,7 +451,7 @@ const Sender = (() => {
     });
 
     peer.on('error', (err) => {
-      if (peer !== activePeer || transferCancelled) return;
+      if (peer !== activePeer || transferCancelled || retryScheduled) return;
       if (err.type === 'unavailable-id') {
         if (codeAttempts >= MAX_CODE_ATTEMPTS) {
           els.senderFileInfo.querySelector('.file-subtext').textContent = 'All share codes are busy right now. Wait a moment and try again.';
@@ -454,7 +463,17 @@ const Sender = (() => {
         codeAttempts += 1;
         code = generateCode();
         const delay = 300 * codeAttempts;
-        setTimeout(() => { if (!transferCancelled) void createPeer(); }, delay);
+        retryScheduled = true;
+        setTimeout(() => { if (peer === activePeer && !transferCancelled) void createPeer(); }, delay);
+        return;
+      }
+      if (isTemporarySignalingError(err) && !connection && signalingRetries < SIGNALING_RETRY_LIMIT) {
+        signalingRetries += 1;
+        retryScheduled = true;
+        els.senderFileInfo.querySelector('.file-subtext').textContent = 'Reconnecting to share the code...';
+        setTimeout(() => {
+          if (peer === activePeer && code === creatingCode && !transferCancelled) void createPeer();
+        }, SIGNALING_RETRY_DELAY_MS * signalingRetries);
         return;
       }
 
@@ -728,29 +747,32 @@ const Receiver = (() => {
     }, CONNECTION_TIMEOUT_MS);
   }
 
-  async function establishPeer(connectionGeneration, code) {
+  async function establishPeer(connectionGeneration, code, signalingRetries = 0) {
     const PeerCtor = await loadPeer().catch(() => null);
     if (connectionGeneration !== transferGeneration || transferCancelled) return;
     if (!PeerCtor) {
       showError('Could not start. Check your connection and try again.');
       return;
     }
-    peer = new PeerCtor(`cd-r-${generateEphemeralId()}`, peerOptions());
+    const activePeer = new PeerCtor(`cd-r-${generateEphemeralId()}`, peerOptions());
+    peer = activePeer;
+    let retryScheduled = false;
 
     peer.on('open', () => {
-      if (connectionGeneration !== transferGeneration || transferCancelled) return;
-      connection = peer.connect(peerIdFor(code), {
+      if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled) return;
+      const activeConnection = activePeer.connect(peerIdFor(code), {
         reliable: true,
         serialization: 'binary'
       });
+      connection = activeConnection;
 
-      connection.on('open', () => {
-        if (connectionGeneration !== transferGeneration || transferCancelled) return;
+      activeConnection.on('open', () => {
+        if (connection !== activeConnection || connectionGeneration !== transferGeneration || transferCancelled) return;
         els.receiverConnecting.classList.add('hidden');
       });
 
-      connection.on('data', (data) => {
-        if (connectionGeneration !== transferGeneration) return;
+      activeConnection.on('data', (data) => {
+        if (connection !== activeConnection || connectionGeneration !== transferGeneration) return;
         lastArrivalAt = Date.now();
         const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
         pendingReceiveBytes += frameBytes;
@@ -772,13 +794,13 @@ const Receiver = (() => {
           });
       });
 
-      connection.on('error', () => {
-        if (connectionGeneration !== transferGeneration || transferCancelled) return;
+      activeConnection.on('error', () => {
+        if (connection !== activeConnection || connectionGeneration !== transferGeneration || transferCancelled) return;
         showError('Connection vanished. Try again.');
       });
 
-      connection.on('close', () => {
-        if (connectionGeneration !== transferGeneration) return;
+      activeConnection.on('close', () => {
+        if (connection !== activeConnection || connectionGeneration !== transferGeneration) return;
         if (!transferCancelled && !transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
           showError('Connection vanished unexpectedly.');
         }
@@ -786,9 +808,20 @@ const Receiver = (() => {
     });
 
     peer.on('error', (err) => {
-      if (connectionGeneration !== transferGeneration || transferCancelled) return;
+      if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled || retryScheduled) return;
       if (err.type === 'peer-unavailable') {
         showError('Bad code, or the sender wandered off.');
+        return;
+      }
+      if (isTemporarySignalingError(err) && !connection?.open && signalingRetries < SIGNALING_RETRY_LIMIT) {
+        retryScheduled = true;
+        connection = null;
+        activePeer.destroy();
+        setTimeout(() => {
+          if (peer === activePeer && connectionGeneration === transferGeneration && !transferCancelled) {
+            void establishPeer(connectionGeneration, code, signalingRetries + 1);
+          }
+        }, SIGNALING_RETRY_DELAY_MS * (signalingRetries + 1));
         return;
       }
       showError('Connection failed. Try again.');
@@ -1139,6 +1172,9 @@ const Receiver = (() => {
   }
 
   function showError(message) {
+    transferCancelled = true;
+    try { connection?.close(); } catch { /* The channel may already be closed. */ }
+    peer?.destroy();
     clearTimeout(timeoutId);
     stopStallWatch();
     els.receiverConnecting.classList.add('hidden');
