@@ -389,7 +389,7 @@ export default {
       }
       try {
         const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: `peer:${clientAddress}` });
+        const { success } = await env.PEER_RATE_LIMITER.limit({ key: clientAddress });
         if (!success) return new Response('connection rate limit reached', { status: 429 });
         const headers = new Headers(request.headers);
         headers.set('X-CD-Peer-ID', id);

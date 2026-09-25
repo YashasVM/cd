@@ -23,10 +23,17 @@
         ]
       },
       "ratelimits": [
+        // Keep CLI relay attempts strict, but allow repeated browser/Android
+        // signaling from a household or other shared public IP.
         {
           "name": "CONNECTION_RATE_LIMITER",
-          "namespace_id": "9237401",
+          "namespace_id": "9237404",
           "simple": { "limit": 30, "period": 60 }
+        },
+        {
+          "name": "PEER_RATE_LIMITER",
+          "namespace_id": "9237403",
+          "simple": { "limit": 120, "period": 60 }
         }
       ]
     }
@@ -38,10 +45,17 @@
     ]
   },
   "ratelimits": [
+    // Separate namespaces keep signaling bursts and test traffic from
+    // exhausting the production CLI relay allowance.
     {
       "name": "CONNECTION_RATE_LIMITER",
       "namespace_id": "9237401",
       "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      "name": "PEER_RATE_LIMITER",
+      "namespace_id": "9237402",
+      "simple": { "limit": 120, "period": 60 }
     }
   ],
   "migrations": [
