@@ -17,10 +17,10 @@ import {
 import { createSink as createDownloadSink } from './sink.js';
 import './style.css';
 
-const ACK_INTERVAL = 256n * 1024n;
-// Match the relay's 8 MiB peer buffer: queue more undecrypted/unwritten bytes
-// before failing, so slow OPFS/disk on big files doesn't abort the transfer.
-const MAX_PENDING_BYTES = 8 * 1024 * 1024;
+const ACK_INTERVAL = 1024n * 1024n;
+// Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
+// bytes before failing, so slow OPFS/disk on big files doesn't abort.
+const MAX_PENDING_BYTES = 32 * 1024 * 1024;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 let failureShown = false;
 
@@ -91,7 +91,7 @@ function parseOffer(plaintext) {
   if (typeof mediaType !== 'string' || mediaType.length > 127 || !/^[\x20-\x7e]+$/.test(mediaType)) throw new Error('The sender offered an invalid file type.');
   if (typeof size !== 'string' || !/^(0|[1-9][0-9]{0,19})$/.test(size)) throw new Error('The sender offered an invalid file size.');
   const byteSize = BigInt(size);
-  if (byteSize > 0xffffffffffffffffn || chunkSize !== 64 * 1024) throw new Error('The sender uses unsupported transfer limits.');
+  if (byteSize > 0xffffffffffffffffn || (chunkSize !== 64 * 1024 && chunkSize !== 256 * 1024)) throw new Error('The sender uses unsupported transfer limits.');
   return { name, mediaType, size: byteSize };
 }
 

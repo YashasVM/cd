@@ -9,8 +9,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 
-// Covers the terminal flows: cdx send -> cdx receive, and browser /send ->
-// cdx receive. Runs against a local Worker like verify-agent.mjs. Set
+// Covers the terminal flows: cd send -> cd receive, and browser /send ->
+// cd receive. Runs against a local Worker like verify-agent.mjs. Set
 // CHROMIUM_PATH if Chromium lives outside the common system paths.
 const hosted = process.env.CD_VERIFY_URL;
 const port = hosted ? null : await availablePort();
@@ -23,7 +23,7 @@ const childEnv = (extra = {}) => ({
   ...extra
 });
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-terminal-'));
-const executable = join(work, process.platform === 'win32' ? 'cdx.exe' : 'cdx');
+const executable = join(work, process.platform === 'win32' ? 'cd.exe' : 'cd');
 const sourcePath = join(work, 'terminal check.bin');
 const source = Uint8Array.from({ length: 384 * 1024 + 51 }, (_, index) => (index * 31 + 17) % 256);
 await writeFile(sourcePath, source);
@@ -32,7 +32,7 @@ const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 let worker;
 let browser;
 try {
-  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cdx']);
+  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cd']);
   if (!hosted) {
     const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
     worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {

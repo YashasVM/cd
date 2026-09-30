@@ -445,7 +445,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .watermark a { color: var(--text); }
 .noscript-message { position: fixed; right: 16px; bottom: 16px; left: 16px; padding: 16px; background: var(--block); color: var(--text); text-align: center; }
 
-/* The invitation opened from cdx uses the same panel and spacing. */
+/* The invitation opened from the relay uses the same panel and spacing. */
 .share-transfer-page .brand-lockup h1 { display: inline; }
 .share-transfer-page .tagline { display: inline; margin-left: 16px; }
 .share-transfer-page .brand-note { margin-top: 28px; }

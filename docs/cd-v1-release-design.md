@@ -1,8 +1,8 @@
-# `cdx` v1 release design
+# `cd` v1 release design
 
 ## Release contract
 
-The first supported release path is one regular file from the `cdx` command to
+The first supported release path is one regular file from the `cd` command to
 one browser receiver. The command accepts paths with spaces and Unicode names,
 prints one private `https://cd.yash0.in` capability URL to stdout as soon as the
 relay admits the sender, and keeps running until the browser verifies every
@@ -34,7 +34,7 @@ work without improving the contract.
 
 There is no resume support in v1. A disconnected transfer fails clearly and can
 be restarted with a new capability URL. Browser-to-browser WebRTC and Android
-remain separate clients, not dependencies of the `cdx` release contract.
+remain separate clients, not dependencies of the `cd` release contract.
 
 ## Design decision
 

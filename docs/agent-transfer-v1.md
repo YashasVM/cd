@@ -2,16 +2,16 @@
 
 ## Caller contract
 
-`cdx send <file>` opens and validates one regular file, reserves a live relay
+`cd send <file>` opens and validates one regular file, reserves a live relay
 room, claims a short numeric share code, then writes the code to stdout. The
 process stays in the foreground. Status goes to stderr. Exit code 0 means the
 receiver reconstructed the authenticated byte stream and prepared it for
 download or finished writing it to a user-approved file destination.
 
-`cdx send --link <file>` skips the code claim and writes the full capability
+`cd send --link <file>` skips the code claim and writes the full capability
 URL instead (see below). The browser `/send` page is an equivalent
 code-mode sender: it mints the same invitation, claims the same directory
-code, and shows the code plus a ready `cdx receive <code>` command.
+code, and shows the code plus a ready `cd receive <code>` command.
 
 The URL has this form:
 
@@ -33,7 +33,7 @@ fragment capability with a 5-digit code from the relay directory:
   inside a storage transaction, so two senders never own one code.
 - Any receiver (terminal or browser) `GET /api/codes/<code>` and receives
   `{transferId, key}`, then joins the room exactly like a link receiver.
-- The browser Receive box and `cdx receive` both accept codes; links keep
+- The browser Receive box and `cd receive` both accept codes; links keep
   working everywhere they did before.
 - The directory is a single Durable Object (`codes-v1`), bounded to 10,000
   live codes with purge-on-claim and delete-on-expiry (no alarms), and both
@@ -112,9 +112,12 @@ representation. Chunk content is raw bytes. Ack, end, and complete are fixed
 binary counters. Either peer closes the socket to abort.
 
 The receiver must explicitly accept the decrypted offer before chunks start.
-The sender permits at most 1 MiB of unacknowledged plaintext. An acknowledgement
-is sent only after the active byte sink owns the bytes. The receiver also caps
-pending encrypted input at 2 MiB and closes peers that ignore flow control.
+The sender permits at most 8 MiB of unacknowledged plaintext over a
+full-duplex pipeline (background ack reader, foreground writer). An
+acknowledgement is sent only after the active byte sink owns the bytes
+(every 1 MiB). The receiver also caps pending encrypted input at 32 MiB
+and closes peers that ignore flow control. Offer chunk sizes 64 KiB (legacy)
+and 256 KiB (current) are both accepted.
 
 The end record authenticates total bytes and chunk count. The receiver compares
 them with the offer and its committed counters before closing its sink. It sends
@@ -127,11 +130,12 @@ duplicated, missing, or extra content without a second file read.
 - Sender relay admission: 10 seconds.
 - Receiver wait: 15 minutes.
 - User consent after an offer: 10 minutes.
-- Transfer inactivity after acceptance: 45 seconds.
+- Transfer inactivity after acceptance: 90 seconds.
 - Hard room lifetime: 2 hours.
-- Plaintext chunk: 64 KiB.
-- Unacknowledged sender window: 1 MiB.
-- Pending receiver ciphertext: 2 MiB.
+- Plaintext chunk: 256 KiB (64 KiB senders still accepted).
+- Unacknowledged sender window: 8 MiB.
+- Relay frame cap: 1 MiB; peer buffer: 32 MiB.
+- Pending receiver ciphertext: 32 MiB.
 - Large-file receiver sink: File System Access streaming, then Origin
   Private File System staging, then a Blob download capped at 256 MiB
   on WebKit receivers (large blob downloads crash real iOS devices).

@@ -4,7 +4,7 @@ Research checked 2026-09-25. This is a design comparison for the [CD highway acc
 
 ## What CD has today
 
-Browser sharing uses PeerJS and a WebRTC data channel with CD's Worker for signaling. The Android client uses native WebRTC against that path. `cdx send` uses a separate encrypted WebSocket protocol through a Cloudflare Durable Object; it sends one file and has no resume support. The relay does not retain file data. See [README](../README.md), [agent transfer v1](agent-transfer-v1.md), and [release design](cdx-v1-release-design.md).
+Browser sharing uses PeerJS and a WebRTC data channel with CD's Worker for signaling. The Android client uses native WebRTC against that path. `cd send` uses a separate encrypted WebSocket protocol through a Cloudflare Durable Object; it sends one file and has no resume support. The relay does not retain file data. See [README](../README.md), [agent transfer v1](agent-transfer-v1.md), and [release design](cd-v1-release-design.md).
 
 The browser code's two-word code selects a PeerJS ID from 121², or 14,641, values. The sender accepts the first connecting peer and starts sending when its channel opens. This code is a rendezvous address, not strong authorization or an authenticated peer identity. The CLI link has a separate random 256-bit fragment key and authenticated records. See [`p2p-code.js`](../src/p2p-code.js), [`main.js`](../src/main.js), and [agent transfer v1](agent-transfer-v1.md).
 

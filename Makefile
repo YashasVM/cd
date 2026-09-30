@@ -1,22 +1,22 @@
-.PHONY: cdx cdx-release test
+.PHONY: cd cd-release test
 
-CDX_BUILD_FLAGS := -buildvcs=false -trimpath
+CD_BUILD_FLAGS := -buildvcs=false -trimpath
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-CDX_VERSION_FLAGS := -X main.version=$(VERSION)
-CDX_RELEASE_FLAGS := -s -w -buildid= $(CDX_VERSION_FLAGS)
+CD_VERSION_FLAGS := -X main.version=$(VERSION)
+CD_RELEASE_FLAGS := -s -w -buildid= $(CD_VERSION_FLAGS)
 
-cdx:
+cd:
 	mkdir -p bin
-	CGO_ENABLED=0 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_VERSION_FLAGS)' -o bin/cdx ./cmd/cdx
+	CGO_ENABLED=0 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_VERSION_FLAGS)' -o bin/cd ./cmd/cd
 
-cdx-release:
+cd-release:
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-linux-amd64 ./cmd/cdx
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-linux-arm64 ./cmd/cdx
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-darwin-amd64 ./cmd/cdx
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-darwin-arm64 ./cmd/cdx
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-windows-amd64.exe ./cmd/cdx
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(CDX_BUILD_FLAGS) -ldflags='$(CDX_RELEASE_FLAGS)' -o bin/cdx-windows-arm64.exe ./cmd/cdx
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-linux-amd64 ./cmd/cd
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-linux-arm64 ./cmd/cd
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-darwin-amd64 ./cmd/cd
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-darwin-arm64 ./cmd/cd
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-windows-amd64.exe ./cmd/cd
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(CD_BUILD_FLAGS) -ldflags='$(CD_RELEASE_FLAGS)' -o bin/cd-windows-arm64.exe ./cmd/cd
 
 test:
 	go test ./...

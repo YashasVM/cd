@@ -8,7 +8,7 @@ export const KIND_ACCEPT = 4;
 export const KIND_ACK = 5;
 export const KIND_COMPLETE = 6;
 
-export const MAX_RECORD_BYTES = 80 * 1024;
+export const MAX_RECORD_BYTES = 1024 * 1024;
 
 const HEADER_BYTES = 12;
 const VERSION = 1;

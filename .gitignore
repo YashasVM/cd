@@ -7,6 +7,10 @@ npm-debug.log*
 .agents/
 skills-lock.json
 
+# Generated from scripts/install.* at build time (see scripts/sync-install.mjs)
+public/install.sh
+public/install.ps1
+
 # Android (local SDK path + generated outputs)
 android/.gradle/
 android/build/

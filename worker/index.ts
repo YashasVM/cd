@@ -13,11 +13,11 @@ type Join = SenderJoin | ReceiverJoin;
 type PeerAttachment = { id: string; peers: string[]; messages: number };
 
 const MAX_JOIN_BYTES = 512;
-const MAX_RECORD_BYTES = 80 * 1024;
-// 8 MiB peer buffer: absorbs phone-disk stalls without tripping the
-// abort-cliff on big files. Still a hard kill past this (no resume in v1),
-// but 4x rarer than the old 2 MiB cliff.
-const MAX_PEER_BUFFER_BYTES = 8 * 1024 * 1024;
+const MAX_RECORD_BYTES = 1024 * 1024;
+// 32 MiB peer buffer: absorbs phone-disk stalls and the 8 MiB sender window
+// without tripping the abort-cliff on big files. Still a hard kill past this
+// (no resume in v1), but far rarer than the old 8 MiB cliff.
+const MAX_PEER_BUFFER_BYTES = 32 * 1024 * 1024;
 const JOIN_TIMEOUT_MS = 10 * 1000;
 const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1000;
 const TOMBSTONE_MS = 5 * 60 * 1000;
@@ -479,6 +479,9 @@ export class CodeDirectory extends DurableObject<Env> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /api/codes),
+    // and share pages (/send, /s/*) so every terminal<->browser combination
+    // works from one origin.
     // design.yash0.in serves the design-docs list site from /design/.
     // Hash routing keeps every doc on one page, so extensionless paths
     // fall back to the design index.

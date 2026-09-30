@@ -3,6 +3,9 @@ import { startAmbientDots } from './ambient-dots.js';
 const agentShare = /^\/s\/[A-Za-z0-9_-]{22}\/?$/.test(window.location.pathname);
 const agentSend = /^\/send\/?$/.test(window.location.pathname);
 
+// Single app: `/s/*` renders the relay receiver, `/send` the relay sender,
+// everything else the browser-to-browser P2P UI (which also resolves numeric
+// relay codes by redirecting to the share page).
 const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
 app.then(() => {

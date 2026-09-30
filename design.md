@@ -50,15 +50,15 @@ destructive or committing action (connect, cancel, retry) is a visible button.
 
 ### 5. Bounded everything
 
-Large files must not eat the device. 64 KiB chunks, 1 MiB unacknowledged
-window, 2 MiB pending-input cap. The receiver acknowledges a chunk only after
+Large files must not eat the device. 256 KiB chunks, 8 MiB unacknowledged
+window, 32 MiB pending-input cap. The receiver acknowledges a chunk only after
 it owns the bytes. Sinks degrade gracefully: File System streaming, then
 Origin Private File System staging, then Blob download — capped at 256 MiB on
 WebKit, where large blob downloads crash real devices.
 
 ### 6. Small surface, flat code
 
-One narrow release contract: one regular file from `cdx` to one browser.
+One narrow release contract: one regular file from `cd` to one browser.
 Browser-to-browser WebRTC and Android are separate clients, not dependencies.
 Modules stay flat; no package splits that add reader work without improving
 the contract. Same-origin throughout — no second domain, no extra service.

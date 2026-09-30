@@ -4,8 +4,8 @@ CD uses its own encrypted live relay and needs no cloud storage or token.
 
 | Case | Expected result |
 |---|---|
-| `cdx send notes.txt` | One complete `https://cd.yash0.in/s/<id>#v1.<key>` URL on stdout; process waits for completion |
-| `cdx send notes.txt --json` | One object containing schema `version`, `url`, `filename`, and numeric `size` |
+| `cd send notes.txt` | One complete `https://cd.yash0.in/s/<id>#v1.<key>` URL on stdout; process waits for completion |
+| `cd send notes.txt --json` | One object containing schema `version`, `url`, `filename`, and numeric `size` |
 | Missing or non-regular file | Nonzero exit and no stdout invitation |
 | Unicode filename | Decrypted browser offer preserves the exact safe basename |
 | Receiver before sender | Relay closes with sender-unavailable status |

@@ -24,12 +24,11 @@ import (
 )
 
 const (
-	chunkSize       = 64 * 1024
-	sendWindowBytes = 1024 * 1024
+	sendWindowBytes = 8 * 1024 * 1024
 	admissionWait   = 10 * time.Second
 	receiverWait    = 15 * time.Minute
 	consentWait     = 10 * time.Minute
-	transferIdle    = 45 * time.Second
+	transferIdle    = 90 * time.Second
 )
 
 type relayEvent struct {
@@ -48,15 +47,15 @@ type fileOffer struct {
 func endpointBase() (string, string, error) {
 	relay := strings.TrimRight(os.Getenv("CD_RELAY_URL"), "/")
 	if relay == "" {
-		relay = "wss://cdx.yash0.in/ws/v1"
+		relay = "wss://cd.yash0.in/ws/v1"
 	}
 	public := strings.TrimRight(os.Getenv("CD_PUBLIC_URL"), "/")
 	if public == "" {
-		public = "https://cdx.yash0.in"
+		public = "https://cd.yash0.in"
 	}
 	parsedRelay, err := url.ParseRequestURI(relay)
 	if err != nil || parsedRelay.Host == "" || parsedRelay.User != nil || parsedRelay.RawQuery != "" || parsedRelay.Fragment != "" {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: use wss://cdx.yash0.in/ws/v1", relay)
+		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: use wss://cd.yash0.in/ws/v1", relay)
 	}
 	if parsedRelay.Scheme != "ws" && parsedRelay.Scheme != "wss" {
 		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: scheme must be wss (ws only for loopback dev)", relay)
@@ -69,7 +68,7 @@ func endpointBase() (string, string, error) {
 	}
 	parsedPublic, err := url.ParseRequestURI(public)
 	if err != nil || parsedPublic.Host == "" || parsedPublic.User != nil || parsedPublic.RawQuery != "" || parsedPublic.Fragment != "" {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: use https://cdx.yash0.in", public)
+		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: use https://cd.yash0.in", public)
 	}
 	if parsedPublic.Scheme != "http" && parsedPublic.Scheme != "https" {
 		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: scheme must be https (http only for loopback dev)", public)
@@ -293,7 +292,7 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
+			return fmt.Errorf("%s (the private-link fallback is `cd send --link`)", err)
 		}
 		ready.Code = code
 		if err := onReady(ready); err != nil {
@@ -306,9 +305,9 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 	}
 	fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
 	if ready.Code != "" {
-		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
+		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cd receive <code>")
 	} else {
-		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+		fmt.Fprintln(os.Stderr, "terminal receivers: cd receive <paste-the-link-above>  ·  browsers: open the link")
 	}
 	if err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
@@ -332,19 +331,19 @@ func friendlyRelayError(err error) error {
 	}
 	switch closeError.Code {
 	case 4400:
-		return errors.New("CD relay rejected the transfer (invalid request): update cdx and try a fresh link")
+		return errors.New("CD relay rejected the transfer (invalid request): update cd and try a fresh link")
 	case 4401:
 		return errors.New("CD relay rejected the receiver (link key mismatch): send a fresh link")
 	case 4403:
-		return errors.New("CD relay rejected a transfer frame (protocol mismatch): update cdx and try again")
+		return errors.New("CD relay rejected a transfer frame (protocol mismatch): update cd and try again")
 	case 4404:
 		return errors.New("the other side is no longer available (they may have closed the link)")
 	case 4406:
-		return errors.New("CD relay rejected the protocol version: update cdx and try again")
+		return errors.New("CD relay rejected the protocol version: update cd and try again")
 	case 4408:
-		return errors.New("this CD link has expired: run `cdx send` again for a fresh link")
+		return errors.New("this CD link has expired: run `cd send` again for a fresh link")
 	case 4409:
-		return errors.New("this link is already claimed or expired (one receiver per link): run `cdx send` again")
+		return errors.New("this link is already claimed or expired (one receiver per link): run `cd send` again")
 	case 4429:
 		return errors.New("the transfer is too slow for the relay (backpressure): try again on a faster network")
 	default:
@@ -369,7 +368,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 			case "accepted":
 				return errors.New("CD relay did not answer within 10s: check your network and try again")
 			case "peer-joined":
-				return errors.New("no receiver joined within 15m: the link expired, run `cdx send` again")
+				return errors.New("no receiver joined within 15m: the link expired, run `cd send` again")
 			default:
 				return fmt.Errorf("timed out waiting for relay %s", expected)
 			}
@@ -413,7 +412,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 	kind, payload, err := readRecord(ctx, connection, opener, consentWait)
 	if err != nil {
 		if isTimeoutError(err) {
-			return errors.New("receiver did not accept within 10m: they may have closed the link, run `cdx send` again")
+			return errors.New("receiver did not accept within 10m: they may have closed the link, run `cd send` again")
 		}
 		return err
 	}
@@ -431,42 +430,61 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 		fmt.Fprintf(os.Stderr, "\rsent %s / %s (%.1f%%)", formatShortBytes(acknowledged), formatShortBytes(total), percent)
 	}
 
-	buffer := make([]byte, chunkSize)
-	var sent uint64
-	var acknowledged uint64
-	var chunks uint32
-	for {
-		count, readErr := file.Read(buffer)
-		if count > 0 {
-			if err := writeRecord(connection, sealer, kindChunk, buffer[:count]); err != nil {
-				if terminal && sent > 0 {
-					fmt.Fprintln(os.Stderr)
-				}
-				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
+	// Full-duplex pipeline: one reader goroutine owns the socket read side
+	// and streams acks/completion into a channel while the send loop only
+	// writes. The old stop-and-wait loop serialized every 1 MiB behind a
+	// round trip, capping throughput near 168 KiB/s on real RTTs. With an
+	// 8 MiB window and 256 KiB chunks the sender keeps up to 32 chunks in
+	// flight and only blocks when the window is genuinely full.
+	type inbound struct {
+		kind    messageKind
+		payload []byte
+		err     error
+	}
+	incoming := make(chan inbound, 64)
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		for {
+			kind, payload, err := readRecord(ctx, connection, opener, transferIdle)
+			select {
+			case incoming <- inbound{kind: kind, payload: payload, err: err}:
+			case <-ctx.Done():
+				return
 			}
-			sent += uint64(count)
-			chunks++
+			if err != nil {
+				return
+			}
+			if kind == kindComplete {
+				return
+			}
 		}
-		if sent-acknowledged >= sendWindowBytes || readErr == io.EOF {
-			for acknowledged < sent {
-				kind, payload, err = readRecord(ctx, connection, opener, transferIdle)
-				if err != nil {
+	}()
+
+	acknowledged := uint64(0)
+	waitForWindow := func(sent, chunks uint64, chunks32 uint32) error {
+		for sent-acknowledged >= sendWindowBytes {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case msg := <-incoming:
+				if msg.err != nil {
 					if terminal && sent > 0 {
 						fmt.Fprintln(os.Stderr)
 					}
-					if isTimeoutError(err) {
-						return errors.New("transfer stalled: no acknowledgement for 45s (network or receiver too slow)")
+					if isTimeoutError(msg.err) {
+						return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
 					}
-					return err
+					return msg.err
 				}
-				if kind != kindAck {
+				if msg.kind != kindAck {
 					if terminal && sent > 0 {
 						fmt.Fprintln(os.Stderr)
 					}
 					return errors.New("receiver sent an invalid acknowledgement")
 				}
-				ackChunks, ackBytes, err := decodeCounts(payload)
-				if err != nil || ackChunks > chunks || ackBytes < acknowledged || ackBytes > sent {
+				ackChunks, ackBytes, err := decodeCounts(msg.payload)
+				if err != nil || ackChunks > chunks32 || ackBytes < acknowledged || ackBytes > sent {
 					if terminal && sent > 0 {
 						fmt.Fprintln(os.Stderr)
 					}
@@ -476,15 +494,104 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 				reportProgress(acknowledged, ready.Size)
 			}
 		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			if terminal && sent > 0 {
-				fmt.Fprintln(os.Stderr)
+		return nil
+	}
+	drainAcks := func(sent uint64, chunks32 uint32) error {
+		for acknowledged < sent {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case msg := <-incoming:
+				if msg.err != nil {
+					if terminal && sent > 0 {
+						fmt.Fprintln(os.Stderr)
+					}
+					if isTimeoutError(msg.err) {
+						return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
+					}
+					return msg.err
+				}
+				if msg.kind == kindComplete {
+					// Completion arrived early (tiny file): stash it back by
+					// treating it as drained; the END phase below re-reads.
+					// Simplest: put it aside via a one-slot replay.
+					// We return a sentinel by pushing to a fresh channel is
+					// overkill — instead validate here if it matches.
+					// Fall through to ack validation; mismatch fails below.
+					if len(msg.payload) == 12 {
+						if cc, cb, cerr := decodeCounts(msg.payload); cerr == nil && cc == chunks32 && cb == sent {
+							acknowledged = sent
+							// Re-inject as completion for the END wait.
+							go func() {
+								select {
+								case incoming <- msg:
+								case <-ctx.Done():
+								}
+							}()
+							return nil
+						}
+					}
+					if terminal && sent > 0 {
+						fmt.Fprintln(os.Stderr)
+					}
+					return errors.New("receiver sent an invalid acknowledgement")
+				}
+				if msg.kind != kindAck {
+					if terminal && sent > 0 {
+						fmt.Fprintln(os.Stderr)
+					}
+					return errors.New("receiver sent an invalid acknowledgement")
+				}
+				ackChunks, ackBytes, err := decodeCounts(msg.payload)
+				if err != nil || ackChunks > chunks32 || ackBytes < acknowledged || ackBytes > sent {
+					if terminal && sent > 0 {
+						fmt.Fprintln(os.Stderr)
+					}
+					return errors.New("receiver sent invalid progress")
+				}
+				acknowledged = ackBytes
+				reportProgress(acknowledged, ready.Size)
 			}
-			return fmt.Errorf("read file while sending: %w", readErr)
 		}
+		return nil
+	}
+
+	buffer := make([]byte, chunkSize)
+	var sent uint64
+	var chunks uint32
+	sendErr := func() error {
+		for {
+			count, readErr := file.Read(buffer)
+			if count > 0 {
+				if err := writeRecord(connection, sealer, kindChunk, buffer[:count]); err != nil {
+					if terminal && sent > 0 {
+						fmt.Fprintln(os.Stderr)
+					}
+					return friendlyRelayError(fmt.Errorf("send file data: %w", err))
+				}
+				sent += uint64(count)
+				chunks++
+				if err := waitForWindow(sent, uint64(chunks), chunks); err != nil {
+					return err
+				}
+			}
+			if readErr == io.EOF {
+				break
+			}
+			if readErr != nil {
+				if terminal && sent > 0 {
+					fmt.Fprintln(os.Stderr)
+				}
+				return fmt.Errorf("read file while sending: %w", readErr)
+			}
+		}
+		return nil
+	}()
+	if sendErr != nil {
+		return sendErr
+	}
+	if err := drainAcks(sent, chunks); err != nil {
+		return err
 	}
 	if terminal && ready.Size > 0 {
 		fmt.Fprintln(os.Stderr)
@@ -497,17 +604,22 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 	if err := writeRecord(connection, sealer, kindEnd, encodeCounts(chunks, sent)); err != nil {
 		return friendlyRelayError(fmt.Errorf("finish transfer: %w", err))
 	}
-	kind, payload, err = readRecord(ctx, connection, opener, transferIdle)
-	if err != nil {
-		if isTimeoutError(err) {
-			return errors.New("receiver did not verify within 45s: they may have disconnected")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case msg := <-incoming:
+		if msg.err != nil {
+			if isTimeoutError(msg.err) {
+				return errors.New("receiver did not verify within 90s: they may have disconnected")
+			}
+			return msg.err
 		}
-		return err
+		completeChunks, completeBytes, countErr := decodeCounts(msg.payload)
+		if msg.kind != kindComplete || countErr != nil || completeChunks != chunks || completeBytes != sent {
+			return errors.New("receiver did not verify the transfer")
+		}
 	}
-	completeChunks, completeBytes, countErr := decodeCounts(payload)
-	if kind != kindComplete || countErr != nil || completeChunks != chunks || completeBytes != sent {
-		return errors.New("receiver did not verify the transfer")
-	}
+	<-readerDone
 	fmt.Fprintln(os.Stderr, "receiver verified the file")
 	return nil
 }

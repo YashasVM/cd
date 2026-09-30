@@ -24,9 +24,9 @@ func displayVersion(buildVersion string, info *debug.BuildInfo) string {
 	return "dev"
 }
 
-func cdxVersion() string {
+func cdVersion() string {
 	info, _ := debug.ReadBuildInfo()
-	return "cdx " + displayVersion(version, info)
+	return "cd " + displayVersion(version, info)
 }
 
 type readyOutput struct {
@@ -58,20 +58,21 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 }
 
 func usage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--] <file>")
-	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
-	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
+	fmt.Fprintln(output, "usage: cd <command> [options] [file]")
+	fmt.Fprintln(output, "   or: cd send [--link] [--json] [--] <file>")
+	fmt.Fprintln(output, "   or: cd receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "   or: cd [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Send one file through CD at https://cdx.yash0.in, or receive one.")
+	fmt.Fprintln(output, "Send one file through CD at https://cd.yash0.in, or receive one.")
 	fmt.Fprintln(output, "Send prints one short share code to stdout, then waits")
 	fmt.Fprintln(output, "until the receiver verifies the file. The code works in")
-	fmt.Fprintln(output, "any browser Receive box and in `cdx receive`. Receive")
+	fmt.Fprintln(output, "any browser Receive box and in `cd receive`. Receive")
 	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
 	fmt.Fprintln(output, "  send <file>        send one regular file (zip a folder first to share it)")
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
+	fmt.Fprintln(output, "  shell-init         print shell integration so `cd send` bypasses the shell builtin")
 	fmt.Fprintln(output, "  help [send|receive] show help")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
@@ -90,14 +91,14 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  -v, --version  show version")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "examples:")
-	fmt.Fprintln(output, "  cdx send ./app.apk")
-	fmt.Fprintln(output, "  cdx receive 48291 --out ./downloads/")
-	fmt.Fprintln(output, "  cdx \"./my photo.zip\" --json")
-	fmt.Fprintln(output, "  cdx send -- -weird-name.bin")
+	fmt.Fprintln(output, "  cd send ./app.apk")
+	fmt.Fprintln(output, "  cd receive 48291 --out ./downloads/")
+	fmt.Fprintln(output, "  cd \"./my photo.zip\" --json")
+	fmt.Fprintln(output, "  cd send -- -weird-name.bin")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "environment:")
-	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cdx.yash0.in/ws/v1)")
-	fmt.Fprintln(output, "  CD_PUBLIC_URL  share-link origin (default https://cdx.yash0.in)")
+	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)")
+	fmt.Fprintln(output, "  CD_PUBLIC_URL  share-link origin (default https://cd.yash0.in)")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "exit status 0 means the transfer verified every byte.")
 	fmt.Fprintln(output, "Exit status 1 means the transfer failed; exit status 2 means")
@@ -105,7 +106,7 @@ func usage(output io.Writer) {
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--] <file>")
+	fmt.Fprintln(output, "usage: cd send [--link] [--json] [--] <file>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <file>         one regular file to share (zip a folder first)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
@@ -115,15 +116,15 @@ func sendUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -v, --version  show version")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "examples:")
-	fmt.Fprintln(output, "  cdx send ./app.apk")
-	fmt.Fprintln(output, "  cdx send \"./my photo.zip\" --json")
-	fmt.Fprintln(output, "  cdx send -- -weird-name.bin")
+	fmt.Fprintln(output, "  cd send ./app.apk")
+	fmt.Fprintln(output, "  cd send \"./my photo.zip\" --json")
+	fmt.Fprintln(output, "  cd send -- -weird-name.bin")
 }
 
 func receiveUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "usage: cd receive [--out <path>] [--force] [--json] [--] <code>")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
+	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cd send` or a browser sender")
 	fmt.Fprintln(output, "                   (a full share link works too)")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
@@ -132,8 +133,8 @@ func receiveUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -h, --help     show this help")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "examples:")
-	fmt.Fprintln(output, "  cdx receive 48291")
-	fmt.Fprintln(output, "  cdx receive 48291 --out ./downloads/ --force")
+	fmt.Fprintln(output, "  cd receive 48291")
+	fmt.Fprintln(output, "  cd receive 48291 --out ./downloads/ --force")
 }
 
 // sendRequest is the parsed form of send arguments.
@@ -164,7 +165,7 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			continue
 		}
 		if argument == "-" {
-			return sendRequest{}, errors.New(`cdx: standard input ("-") is not supported: send one regular file`)
+			return sendRequest{}, errors.New(`cd: standard input ("-") is not supported: send one regular file`)
 		}
 		if !endOfFlags && (argument == "--help" || argument == "-h") {
 			return sendRequest{help: true}, nil
@@ -192,7 +193,7 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			case strings.HasPrefix(argument, "--ver"):
 				hint = " (did you mean --version?)"
 			}
-			return sendRequest{}, fmt.Errorf("cdx: unknown option %s%s", argument, hint)
+			return sendRequest{}, fmt.Errorf("cd: unknown option %s%s", argument, hint)
 		}
 		if argument == "" {
 			continue
@@ -200,10 +201,10 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		files = append(files, argument)
 	}
 	if len(files) == 0 {
-		return sendRequest{}, errors.New("cdx: missing file to send")
+		return sendRequest{}, errors.New("cd: missing file to send")
 	}
 	if len(files) > 1 {
-		return sendRequest{}, errors.New("cdx: send one file at a time (zip a folder first to share it)")
+		return sendRequest{}, errors.New("cd: send one file at a time (zip a folder first to share it)")
 	}
 	request.file = files[0]
 	return request, nil
@@ -241,12 +242,12 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 			} else {
 				index++
 				if index >= len(args) {
-					return receiveRequest{}, errors.New("cdx: --out needs a path")
+					return receiveRequest{}, errors.New("cd: --out needs a path")
 				}
 				value = args[index]
 			}
 			if value == "" {
-				return receiveRequest{}, errors.New("cdx: --out needs a path")
+				return receiveRequest{}, errors.New("cd: --out needs a path")
 			}
 			request.out = value
 			index++
@@ -264,7 +265,7 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 			case strings.HasPrefix(argument, "--he"):
 				hint = " (did you mean --help?)"
 			}
-			return receiveRequest{}, fmt.Errorf("cdx: unknown option %s%s", argument, hint)
+			return receiveRequest{}, fmt.Errorf("cd: unknown option %s%s", argument, hint)
 		}
 		if argument == "" {
 			index++
@@ -274,10 +275,10 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 		index++
 	}
 	if len(codes) == 0 {
-		return receiveRequest{}, errors.New("cdx: missing share code or link (paste the link from `cdx send`)")
+		return receiveRequest{}, errors.New("cd: missing share code or link (paste the link from `cd send`)")
 	}
 	if len(codes) > 1 {
-		return receiveRequest{}, errors.New("cdx: receive one transfer at a time")
+		return receiveRequest{}, errors.New("cd: receive one transfer at a time")
 	}
 	request.code = codes[0]
 	return request, nil
@@ -314,7 +315,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "help", "version"}
+	candidates := []string{"send", "receive", "shell-init", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -347,7 +348,7 @@ func runSend(request sendRequest) int {
 		return 0
 	}
 	if request.version {
-		fmt.Fprintln(os.Stdout, cdxVersion())
+		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
@@ -357,9 +358,9 @@ func runSend(request sendRequest) int {
 	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
+			fmt.Fprintln(os.Stderr, "cd: transfer canceled")
 		} else {
-			fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
+			fmt.Fprintln(os.Stderr, "cd:", strings.TrimSpace(err.Error()))
 		}
 		return 1
 	}
@@ -394,13 +395,27 @@ func runReceive(request receiveRequest) int {
 	})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
+			fmt.Fprintln(os.Stderr, "cd: transfer canceled")
 		} else {
-			fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
+			fmt.Fprintln(os.Stderr, "cd:", strings.TrimSpace(err.Error()))
 		}
 		return 1
 	}
 	return 0
+}
+
+func shellInitSnippet() string {
+	lines := []string{
+		"# cd shell integration: `cd send` / `cd receive` reach the CD binary;",
+		"# any other use falls through to the shell builtin. Add to ~/.bashrc or ~/.zshrc:",
+		"#   eval \"$(cd shell-init)\"",
+		"cd() {",
+		"  case \"$1\" in send|receive|shell-init|version|--version|-v|help|--help|-h|'') command cd \"$@\" ;;",
+		"    *) builtin cd \"$@\" ;;",
+		"  esac",
+		"}",
+	}
+	return strings.Join(lines, "\n") + "\n"
 }
 
 func run(argv []string) int {
@@ -420,16 +435,16 @@ func run(argv []string) int {
 				return 0
 			}
 			if suggestion, ok := looksLikeCommandTypo(argv[1]); ok {
-				fmt.Fprintf(os.Stderr, "cdx: unknown help topic %q (did you mean '%s'?)\n", argv[1], suggestion)
+				fmt.Fprintf(os.Stderr, "cd: unknown help topic %q (did you mean '%s'?)\n", argv[1], suggestion)
 				return 2
 			}
-			fmt.Fprintf(os.Stderr, "cdx: unknown help topic %q (try 'cdx help send' or 'cdx help receive')\n", argv[1])
+			fmt.Fprintf(os.Stderr, "cd: unknown help topic %q (try 'cd help send' or 'cd help receive')\n", argv[1])
 			return 2
 		}
 		usage(os.Stdout)
 		return 0
 	case "--version", "-v", "version":
-		fmt.Fprintln(os.Stdout, cdxVersion())
+		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	case "send":
 		request, err := parseSendArgs(argv[1:])
@@ -443,6 +458,9 @@ func run(argv []string) int {
 			return receiveFailure(strings.TrimSpace(err.Error()))
 		}
 		return runReceive(request)
+	case "shell-init":
+		fmt.Fprintln(os.Stdout, shellInitSnippet())
+		return 0
 	default:
 		if strings.HasPrefix(argv[0], "-") {
 			request, err := parseSendArgs(argv)
@@ -452,17 +470,17 @@ func run(argv []string) int {
 			return runSend(request)
 		}
 		if suggestion, ok := looksLikeCommandTypo(argv[0]); ok && len(argv) == 1 {
-			fmt.Fprintf(os.Stderr, "cdx: unknown command %q (did you mean '%s'?)\n\n", argv[0], suggestion)
+			fmt.Fprintf(os.Stderr, "cd: unknown command %q (did you mean '%s'?)\n\n", argv[0], suggestion)
 			usage(os.Stderr)
 			return 2
 		}
-		// Implicit send: `cdx <file>` behaves like `cdx send <file>`.
+		// Implicit send: `cd <file>` behaves like `cd send <file>`.
 		request, err := parseSendArgs(argv)
 		if err != nil {
 			message := strings.TrimSpace(err.Error())
 			if strings.Contains(message, "one file at a time") {
 				fmt.Fprintln(os.Stderr, message)
-				fmt.Fprintln(os.Stderr, "hint: cdx send [--json] [--] <file>")
+				fmt.Fprintln(os.Stderr, "hint: cd send [--json] [--] <file>")
 				return 2
 			}
 			return sendFailure(message)

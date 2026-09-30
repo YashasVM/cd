@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "node scripts/build-design.mjs && vite build",
+    "dev": "node scripts/sync-install.mjs && vite --host 127.0.0.1",
+    "build": "node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "audit": "npm audit --audit-level=moderate",
     "test": "node --test src/*.test.js",

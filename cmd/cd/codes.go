@@ -14,7 +14,7 @@ import (
 )
 
 // Short numeric share codes ("48291") are the one plane every sender and
-// receiver speaks: `cdx send` prints one, `cdx receive` and the browser
+// receiver speaks: `cd send` prints one, `cd receive` and the browser
 // Receive box accept it, and the relay directory resolves it to the transfer.
 // Codes are random, expire after 15 minutes, and admit a single receiver.
 // Unlike full links, the directory holds the transfer key, so code transfers

@@ -21,8 +21,9 @@ import (
 
 const (
 	// ackIntervalBytes mirrors the browser receiver: acknowledge at least
-	// every 256 KiB so the sender's 1 MiB window stays fed on fast links.
-	ackIntervalBytes = 256 * 1024
+	// every 1 MiB so the sender's 8 MiB window stays fed on fast links
+	// without drowning it in ack traffic.
+	ackIntervalBytes = 1024 * 1024
 	// offerWait caps how long a receiver waits for the sender's file offer
 	// after the relay admits it. The sender emits the offer immediately on
 	// pairing, so this is generous without hanging forever.
@@ -34,12 +35,12 @@ const (
 var invitationPattern = regexp.MustCompile(`([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_-]{43})`)
 
 // parseInvitationInput accepts the full share URL
-// (https://cdx.yash0.in/s/<id>#v1.<key>), the bare "<id>#v1.<key>" code, or any
+// (https://cd.yash0.in/s/<id>#v1.<key>), the bare "<id>#v1.<key>" code, or any
 // surrounding text containing one of them (for pasted messages).
 func parseInvitationInput(input string) (invitation, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		return invitation{}, errors.New("missing share code or link: paste the link from `cdx send`")
+		return invitation{}, errors.New("missing share code or link: paste the link from `cd send`")
 	}
 	if strings.Contains(trimmed, "://") || strings.Contains(trimmed, "/s/") {
 		if value, err := parseInvitationURL(trimmed); err == nil {
@@ -48,7 +49,7 @@ func parseInvitationInput(input string) (invitation, error) {
 	}
 	match := invitationPattern.FindStringSubmatch(trimmed)
 	if match == nil {
-		return invitation{}, errors.New("this CD code is invalid: paste the full link from `cdx send` (it looks like https://cdx.yash0.in/s/…#v1.…)")
+		return invitation{}, errors.New("this CD code is invalid: paste the full link from `cd send` (it looks like https://cd.yash0.in/s/…#v1.…)")
 	}
 	return parseInvitationParts(match[1], match[2])
 }
@@ -56,7 +57,7 @@ func parseInvitationInput(input string) (invitation, error) {
 func parseInvitationURL(raw string) (invitation, error) {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || parsed.Host == "" {
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
+		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cd send`")
 	}
 	pathMatch := regexp.MustCompile(`^/s/([A-Za-z0-9_-]{22})/?$`).FindStringSubmatch(parsed.Path)
 	fragmentMatch := regexp.MustCompile(`^v1\.([A-Za-z0-9_-]{43})$`).FindStringSubmatch(parsed.Fragment)
@@ -65,7 +66,7 @@ func parseInvitationURL(raw string) (invitation, error) {
 		if match := invitationPattern.FindStringSubmatch(raw); match != nil {
 			return parseInvitationParts(match[1], match[2])
 		}
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
+		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cd send`")
 	}
 	return parseInvitationParts(pathMatch[1], fragmentMatch[1])
 }
@@ -131,7 +132,7 @@ func parseReceivedOffer(payload []byte) (fileOffer, uint64, error) {
 	if err != nil {
 		return offer, 0, errors.New("the sender offered an invalid file size")
 	}
-	if offer.ChunkSize != chunkSize {
+	if offer.ChunkSize != chunkSize && offer.ChunkSize != chunkSizeLegacy {
 		return offer, 0, errors.New("the sender uses unsupported transfer limits")
 	}
 	return offer, size, nil
@@ -241,7 +242,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	kind, payload, err := readReceiverRecord(ctx, connection, opener, offerWait)
 	if err != nil {
 		if isTimeoutError(err) {
-			return errors.New("sender did not offer a file within 15m: ask them to run `cdx send` again")
+			return errors.New("sender did not offer a file within 15m: ask them to run `cd send` again")
 		}
 		return err
 	}
@@ -295,7 +296,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				fmt.Fprintln(os.Stderr)
 			}
 			if isTimeoutError(err) {
-				return errors.New("transfer stalled: no data for 45s (network or sender too slow)")
+				return errors.New("transfer stalled: no data for 90s (network or sender too slow)")
 			}
 			return err
 		}

@@ -16,8 +16,19 @@ import (
 const (
 	invitationBytes = 48
 	headerBytes     = 12
-	maxRecordBytes  = 80 * 1024
+	// 1 MiB frame cap: fits 256 KiB plaintext chunks with AES-GCM overhead
+	// and leaves headroom for future sizes. Must match the Worker's
+	// MAX_RECORD_BYTES and the browser's MAX_RECORD_BYTES.
+	maxRecordBytes  = 1024 * 1024
 	protocolVersion = 1
+)
+
+// Supported plaintext chunk sizes. Senders advertise one offer.chunkSize;
+// receivers accept any entry here so old 64 KiB senders keep working after
+// the upgrade to 256 KiB.
+const (
+	chunkSizeLegacy = 64 * 1024
+	chunkSize       = 256 * 1024
 )
 
 type direction byte
