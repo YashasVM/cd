@@ -33,17 +33,24 @@ The fragment is never part of an HTTP or WebSocket request.
 Code mode keeps the room, records, and flow control above, but replaces the
 fragment capability with a 5-digit code from the relay directory:
 
-- The sender `POST /api/codes {transferId, key}` after admission and receives
-  `{code, expiresAt}` (code TTL: 15 minutes). Allocation retries random codes
-  inside a storage transaction, so two senders never own one code.
+- The sender adds `"shareKey": "<master key>"` to its join. The room claims a
+  random code from the directory and returns it in the same event:
+  `{"type":"accepted","code":"48291","expiresAt":...}`. From connect to code
+  is one relay round trip after the WebSocket opens. Code TTL: 15 minutes.
+  A relay that returns no code (older deployments) makes the sender fall back
+  to `POST /api/codes {transferId, key}`, which older clients also use.
 - Any receiver (terminal or browser) `GET /api/codes/<code>` and receives
   `{transferId, key}`, then joins the room exactly like a link receiver.
+- The room releases its code as soon as a receiver pairs (or the room ends),
+  because a room admits one receiver. A used code stops resolving at once.
 - The browser Receive box and `cdx receive` both accept codes; links keep
   working everywhere they did before.
-- The directory is a single Durable Object (`codes-v1`), bounded to 10,000
-  live codes with purge-on-claim and delete-on-expiry (no alarms), and both
-  endpoints share the relay's 30/minute per-IP rate limit, which also bounds
-  code guessing.
+- The directory is ten Durable Objects (`codes-v2-<first digit>`), each a
+  SQLite table with an expiry index. A claim purges expired rows with an
+  indexed delete, checks the code, and inserts it, all without awaits, so it
+  is atomic. An alarm purges rows that expire without further claims. Each
+  shard holds at most 1,000 live codes (10,000 overall). Both endpoints share
+  the relay's 30/minute per-IP rate limit, which also bounds code guessing.
 
 Security difference: the directory holds the master key, so code transfers
 are not end-to-end encrypted. TLS protects them in transit; the relay

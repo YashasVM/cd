@@ -35,6 +35,8 @@ type relayEvent struct {
 	Type     string `json:"type"`
 	Protocol string `json:"protocol"`
 	Reason   string `json:"reason,omitempty"`
+	// Code is set on the sender's `accepted` when the join asked for one.
+	Code string `json:"code,omitempty"`
 }
 
 type fileOffer struct {
@@ -278,13 +280,19 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		"type": "join", "protocol": "cd-transfer-v1", "role": "sender",
 		"receiverTokenHash": base64.RawURLEncoding.EncodeToString(tokenHash),
 	}
+	if !linkMode {
+		// Code mode: the relay claims the share code during the join, saving
+		// a second connection. Link mode never sends the key anywhere.
+		join["shareKey"] = invitation.encodedKey()
+	}
 	if err := connection.SetWriteDeadline(time.Now().Add(admissionWait)); err != nil {
 		return err
 	}
 	if err := connection.WriteJSON(join); err != nil {
 		return fmt.Errorf("join CD relay: %w", err)
 	}
-	if err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
+	accepted, err := waitRelayEvent(ctx, connection, "accepted", admissionWait)
+	if err != nil {
 		return err
 	}
 	ready := readyOutput{
@@ -297,12 +305,16 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			return err
 		}
 	} else {
-		code, err := claimShareCode(ctx, publicBase, invitation.encodedID(), invitation.encodedKey())
-		if err != nil {
-			if ctx.Err() != nil {
-				return ctx.Err()
+		code := accepted.Code
+		if !isShortCode(code) {
+			// Relays that predate join-time codes: claim one separately.
+			code, err = claimShareCode(ctx, publicBase, invitation.encodedID(), invitation.encodedKey())
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
 			}
-			return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
 		}
 		ready.Code = code
 		if err := hooks.ready(ready); err != nil {
@@ -319,7 +331,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	} else {
 		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 	}
-	if err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
+	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "receiver connected — sending file offer")
@@ -367,32 +379,32 @@ func friendlyRelayError(err error) error {
 	}
 }
 
-func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected string, timeout time.Duration) error {
+func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected string, timeout time.Duration) (relayEvent, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return relayEvent{}, err
 	}
 	if err := connection.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		return err
+		return relayEvent{}, err
 	}
 	messageType, data, err := connection.ReadMessage()
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return relayEvent{}, ctx.Err()
 		}
 		if isTimeoutError(err) {
 			switch expected {
 			case "accepted":
-				return errors.New("CD relay did not answer within 10s: check your network and try again")
+				return relayEvent{}, errors.New("CD relay did not answer within 10s: check your network and try again")
 			case "peer-joined":
-				return errors.New("no receiver joined within 15m: the link expired, run `cdx send` again")
+				return relayEvent{}, errors.New("no receiver joined within 15m: the link expired, run `cdx send` again")
 			default:
-				return fmt.Errorf("timed out waiting for relay %s", expected)
+				return relayEvent{}, fmt.Errorf("timed out waiting for relay %s", expected)
 			}
 		}
-		return friendlyRelayError(fmt.Errorf("wait for relay %s: %w", expected, err))
+		return relayEvent{}, friendlyRelayError(fmt.Errorf("wait for relay %s: %w", expected, err))
 	}
 	if messageType != websocket.TextMessage {
-		return errors.New("CD relay sent an invalid response")
+		return relayEvent{}, errors.New("CD relay sent an invalid response")
 	}
 	var value relayEvent
 	if err := json.Unmarshal(data, &value); err != nil || value.Protocol != "cd-transfer-v1" || value.Type != expected {
@@ -403,9 +415,9 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 		if actual == "" {
 			actual = "empty response"
 		}
-		return fmt.Errorf("CD relay sent %s while waiting for %s", actual, expected)
+		return relayEvent{}, fmt.Errorf("CD relay sent %s while waiting for %s", actual, expected)
 	}
-	return nil
+	return value, nil
 }
 
 func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, ready readyOutput, invitation invitation, hooks sendHooks) error {

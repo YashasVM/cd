@@ -163,7 +163,7 @@ export function mountRelaySender(els, hooks = {}) {
       try { value = JSON.parse(event.data); } catch { return null; }
       if (value?.protocol !== 'cd-transfer-v1') return null;
       if (value.type === 'peer-left') throw new Error('The receiver left.');
-      return value.type === type ? true : null;
+      return value.type === type ? value : null;
     }, `Timed out waiting for ${type}.`);
   }
 
@@ -238,14 +238,16 @@ export function mountRelaySender(els, hooks = {}) {
     try {
       await opened;
       if (cancelled) return;
+      // shareKey asks the relay to claim the share code during the join.
       socket.send(JSON.stringify({
         type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
-        receiverTokenHash: encodeBase64Url(digest)
+        receiverTokenHash: encodeBase64Url(digest), shareKey: encodedKey
       }));
-      await waitForText('accepted', ADMISSION_WAIT_MS);
+      const accepted = await waitForText('accepted', ADMISSION_WAIT_MS);
       if (cancelled) return;
 
-      shareCode = await claimShareCode(encodedId, encodedKey);
+      // Relays that predate join-time codes: claim one separately.
+      shareCode = isShortCode(accepted.code) ? accepted.code : await claimShareCode(encodedId, encodedKey);
       if (cancelled) return;
 
     els.shareBox.hidden = false;

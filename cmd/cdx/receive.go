@@ -235,7 +235,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 
 	// Wait for admission, then for the sender's offer. Text frames are relay
 	// events (accepted / peer-joined); binary frames are encrypted records.
-	if err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
+	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "connected — waiting for sender's file offer")

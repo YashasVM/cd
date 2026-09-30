@@ -64,6 +64,23 @@ try {
     const senderCode = await withTimeout(senderExit, 30_000, 'terminal sender did not finish');
     assert.equal(senderCode, 0, await senderStderr);
     console.log(`verified terminal->terminal: ${received.byteLength} exact bytes`);
+    // The room releases its code once a receiver pairs: one receiver per code.
+    assert.equal((await fetch(`${publicBase}/api/codes/${code}`)).status, 404, 'code still resolves after pairing');
+    console.log('verified the share code is released once the receiver pairs');
+  }
+
+  // Older clients still claim codes over POST /api/codes (sharded directory).
+  {
+    const capability = { transferId: 'A'.repeat(21) + 'B', key: 'C'.repeat(43) };
+    const claim = await fetch(`${publicBase}/api/codes`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(capability)
+    });
+    assert.equal(claim.status, 200);
+    const { code } = await claim.json();
+    assert.match(code, /^\d{5}$/);
+    assert.deepEqual(await (await fetch(`${publicBase}/api/codes/${code}`)).json(), capability);
+    assert.equal((await fetch(`${publicBase}/api/codes`, { method: 'POST', body: '{"transferId":"x"}' })).status, 400);
+    console.log('verified POST /api/codes claims and resolves through the sharded directory');
   }
 
   // Flow 2: browser /send -> terminal.

@@ -1,13 +1,17 @@
 import { DurableObject } from 'cloudflare:workers';
 
 type Role = 'sender' | 'receiver';
-type SocketAttachment = { kind: 'pending'; expiresAt: number } | { kind: 'peer'; role: Role };
+type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string } | { kind: 'peer'; role: Role };
+// `code` is the room's short share code while the directory still holds it.
+type ShareCode = { code: string; transferId: string };
 type RoomState =
   | { kind: 'empty' }
-  | { kind: 'waiting'; receiverTokenHash: string; expiresAt: number }
-  | { kind: 'paired'; receiverTokenHash: string; expiresAt: number }
+  | { kind: 'waiting'; receiverTokenHash: string; expiresAt: number; shareCode?: ShareCode }
+  | { kind: 'paired'; receiverTokenHash: string; expiresAt: number; shareCode?: ShareCode }
   | { kind: 'terminal'; expiresAt: number };
-type SenderJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'sender'; receiverTokenHash: string };
+// A sender that includes `shareKey` gets its short share code in the
+// `accepted` event: one round trip from connect to code.
+type SenderJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'sender'; receiverTokenHash: string; shareKey?: string };
 type ReceiverJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'receiver'; receiverToken: string };
 type Join = SenderJoin | ReceiverJoin;
 type PeerAttachment = { id: string; peers: string[]; messages: number };
@@ -41,7 +45,10 @@ function isBase64Url32(value: unknown): value is string {
 
 function isSocketAttachment(value: unknown): value is SocketAttachment {
   if (!value || typeof value !== 'object' || !('kind' in value)) return false;
-  if (value.kind === 'pending') return 'expiresAt' in value && typeof value.expiresAt === 'number' && Number.isFinite(value.expiresAt);
+  if (value.kind === 'pending') {
+    return 'expiresAt' in value && typeof value.expiresAt === 'number' && Number.isFinite(value.expiresAt)
+      && (!('transferId' in value) || typeof value.transferId === 'string');
+  }
   return value.kind === 'peer' && 'role' in value && (value.role === 'sender' || value.role === 'receiver');
 }
 
@@ -53,7 +60,12 @@ function parseJoin(message: string): Join | null {
   if (!('type' in value) || !('protocol' in value) || !('role' in value)) return null;
   if (value.type !== 'join' || value.protocol !== 'cd-transfer-v1') return null;
   if (value.role === 'sender' && 'receiverTokenHash' in value && isBase64Url32(value.receiverTokenHash) && !('receiverToken' in value)) {
-    return { type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: value.receiverTokenHash };
+    const join: SenderJoin = { type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: value.receiverTokenHash };
+    if ('shareKey' in value) {
+      if (!isBase64Url32(value.shareKey)) return null;
+      join.shareKey = value.shareKey;
+    }
+    return join;
   }
   if (value.role === 'receiver' && 'receiverToken' in value && isBase64Url32(value.receiverToken) && !('receiverTokenHash' in value)) {
     return { type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: value.receiverToken };
@@ -95,7 +107,7 @@ function equalTokenHashes(left: string, right: string): boolean {
     && subtle.timingSafeEqual(leftBytes, rightBytes);
 }
 
-function relayEvent(type: 'accepted' | 'peer-joined' | 'peer-left', extra: Record<string, string> = {}): string {
+function relayEvent(type: 'accepted' | 'peer-joined' | 'peer-left', extra: Record<string, string | number> = {}): string {
   return JSON.stringify({ type, protocol: 'cd-transfer-v1', ...extra });
 }
 
@@ -125,7 +137,8 @@ export class TransferRoom extends DurableObject<Env> {
     const client = pair[0];
     const server = pair[1];
     const expiresAt = Date.now() + JOIN_TIMEOUT_MS;
-    server.serializeAttachment({ kind: 'pending', expiresAt } satisfies SocketAttachment);
+    const transferId = /^\/ws\/v1\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
+    server.serializeAttachment({ kind: 'pending', expiresAt, transferId } satisfies SocketAttachment);
     this.ctx.acceptWebSocket(server);
     const currentAlarm = await this.ctx.storage.getAlarm();
     if (currentAlarm === null || expiresAt < currentAlarm) await this.ctx.storage.setAlarm(expiresAt);
@@ -144,7 +157,7 @@ export class TransferRoom extends DurableObject<Env> {
       if (typeof message !== 'string') { reject(socket, 4400, 'join required'); return; }
       const join = parseJoin(message);
       if (!join) { reject(socket, 4406, 'invalid protocol join'); return; }
-      await this.admit(socket, join);
+      await this.admit(socket, join, attachment.transferId);
       return;
     }
     if (this.room.kind !== 'paired') { reject(socket, 4400, 'room is not paired'); return; }
@@ -204,18 +217,32 @@ export class TransferRoom extends DurableObject<Env> {
     await this.scheduleAlarm();
   }
 
-  private async admit(socket: WebSocket, join: Join): Promise<void> {
+  private async admit(socket: WebSocket, join: Join, transferId: string | undefined): Promise<void> {
     if (join.role === 'sender') {
       if (this.room.kind !== 'empty') { reject(socket, 4409, 'sender unavailable'); return; }
       const expiresAt = Date.now() + ROOM_LIFETIME_MS;
-      const nextRoom = { kind: 'waiting', receiverTokenHash: join.receiverTokenHash, expiresAt } satisfies RoomState;
+      const nextRoom: RoomState = { kind: 'waiting', receiverTokenHash: join.receiverTokenHash, expiresAt };
       socket.serializeAttachment({ kind: 'peer', role: 'sender' } satisfies SocketAttachment);
       await this.ctx.storage.put('room', nextRoom);
       this.room = nextRoom;
       await this.scheduleAlarm();
       logEvent('sender_admitted');
+      // A failed claim still admits the sender; it falls back to POST
+      // /api/codes, which reports the directory error.
+      let claimed: { code: string; expiresAt: number } | null = null;
+      if (join.shareKey && transferId) {
+        try {
+          claimed = await claimShareCode(this.env, { transferId, key: join.shareKey });
+        } catch (error) {
+          console.error(JSON.stringify({ event: 'code_directory_failed', error: error instanceof Error ? error.message : 'unknown' }));
+        }
+        if (claimed && this.room.kind === 'waiting') {
+          this.room = { ...this.room, shareCode: { code: claimed.code, transferId } };
+          await this.ctx.storage.put('room', this.room);
+        }
+      }
       try {
-        socket.send(relayEvent('accepted'));
+        socket.send(relayEvent('accepted', claimed ? { code: claimed.code, expiresAt: claimed.expiresAt } : {}));
       } catch {
         reject(socket, 1011, 'relay send failed');
         await this.finishRoom();
@@ -235,7 +262,8 @@ export class TransferRoom extends DurableObject<Env> {
     const sender = this.peer('sender');
     if (!sender) { reject(socket, 4404, 'sender unavailable'); return; }
     socket.serializeAttachment({ kind: 'peer', role: 'receiver' } satisfies SocketAttachment);
-    const nextRoom = { ...this.room, kind: 'paired' } satisfies RoomState;
+    const shareCode = this.room.shareCode;
+    const nextRoom: RoomState = { kind: 'paired', receiverTokenHash: this.room.receiverTokenHash, expiresAt: this.room.expiresAt };
     await this.ctx.storage.put('room', nextRoom);
     this.room = nextRoom;
     logEvent('room_paired');
@@ -249,6 +277,9 @@ export class TransferRoom extends DurableObject<Env> {
       reject(sender, 1011, 'relay send failed');
       await this.finishRoom();
     }
+    // The room admits one receiver, so the code has done its job: release
+    // it now instead of leaving it guessable until expiry.
+    await this.releaseCode(shareCode);
   }
 
   private peer(role: Role): WebSocket | null {
@@ -270,13 +301,22 @@ export class TransferRoom extends DurableObject<Env> {
     await this.finishRoom();
   }
 
+  private async releaseCode(shareCode: ShareCode | undefined): Promise<void> {
+    if (!shareCode) return;
+    try {
+      await codeShard(this.env, shareCode.code).release(shareCode.code, shareCode.transferId);
+    } catch { /* The code expires on its own. */ }
+  }
+
   private async finishRoom(): Promise<void> {
     if (this.room.kind === 'empty' || this.room.kind === 'terminal') return;
+    const shareCode = this.room.shareCode;
     const nextRoom = { kind: 'terminal', expiresAt: Date.now() + TOMBSTONE_MS } satisfies RoomState;
     await this.ctx.storage.put('room', nextRoom);
     this.room = nextRoom;
     logEvent('room_terminal');
     await this.scheduleAlarm();
+    await this.releaseCode(shareCode);
   }
 
   private async scheduleAlarm(): Promise<void> {
@@ -369,20 +409,28 @@ export class PeerSignal extends DurableObject<Env> {
 
 // Short numeric share codes ("48291") map to a transfer capability
 // (transfer ID + master key) so a 5-digit code typed anywhere — terminal or
-// browser — resolves to the same relay room. Codes are random, one batch per
-// room, expire after 15 minutes, and admit a single receiver through the
-// room's existing tombstone. Unlike full-link mode, the directory holds the
-// master key, so short-code transfers are NOT end-to-end encrypted: TLS
-// protects them in transit and the relay forwards (but never stores) the
-// bytes. Sensitive files should use a full link instead.
+// browser — resolves to the same relay room. Codes are random, expire after
+// 15 minutes, and are released as soon as a receiver pairs with the room.
+// Unlike full-link mode, the directory holds the master key, so short-code
+// transfers are NOT end-to-end encrypted: TLS protects them in transit and
+// the relay forwards (but never stores) the bytes. Sensitive files should use
+// a full link instead.
+//
+// The directory is sharded by the code's first digit (ten Durable Objects,
+// each with a SQLite table), so claims and lookups for different codes never
+// queue behind one global object. Expired rows are purged with an indexed
+// delete on claim and by an alarm, never by scanning every code.
 const CODE_TTL_MS = 15 * 60 * 1000;
 const CODE_DIGITS = 5;
 const CODE_SPACE = 100_000;
 const CODE_CLAIM_ATTEMPTS = 12;
-const MAX_CODES = 10_000;
+// 1,000 live codes per shard keeps each shard's 10,000-code space at most
+// 10% full, so random claims rarely collide. 10,000 live codes overall.
+const MAX_CODES_PER_SHARD = 1_000;
 const MAX_CODE_BODY_BYTES = 256;
 
-type CodeEntry = { transferId: string; key: string; expiresAt: number };
+type CodeCapability = { transferId: string; key: string };
+type CodeClaim = 'claimed' | 'taken' | 'full';
 
 function isTransferId(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{22}$/.test(value);
@@ -396,83 +444,76 @@ function isShareCode(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4,5}$/.test(value);
 }
 
-export class CodeDirectory extends DurableObject<Env> {
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    if (request.method === 'POST' && url.pathname === '/claim') {
-      return this.claim(request);
-    }
-    const lookup = /^\/code\/(\d{4,5})$/.exec(url.pathname);
-    if (request.method === 'GET' && lookup) {
-      return this.lookup(lookup[1]);
-    }
-    return new Response('not found', { status: 404 });
-  }
+function codeShard(env: Env, code: string) {
+  return env.CODES.getByName(`codes-v2-${code[0]}`);
+}
 
-  private async claim(request: Request): Promise<Response> {
-    let body: unknown;
-    try {
-      const text = await request.text();
-      if (new TextEncoder().encode(text).byteLength > MAX_CODE_BODY_BYTES) {
-        return new Response('too large', { status: 413 });
-      }
-      body = JSON.parse(text);
-    } catch {
-      return new Response('invalid claim', { status: 400 });
-    }
-    if (!body || typeof body !== 'object' || !('transferId' in body) || !('key' in body)) {
-      return new Response('invalid claim', { status: 400 });
-    }
-    const { transferId, key } = body as Record<string, unknown>;
-    if (!isTransferId(transferId) || !isMasterKey(key)) {
-      return new Response('invalid claim', { status: 400 });
-    }
+// claimShareCode reserves a random code for a transfer, retrying across
+// shards on collisions. Returns null when every attempt was taken or full.
+async function claimShareCode(env: Env, capability: CodeCapability): Promise<{ code: string; expiresAt: number } | null> {
+  for (let attempt = 0; attempt < CODE_CLAIM_ATTEMPTS; attempt += 1) {
+    const digits = new Uint32Array(1);
+    crypto.getRandomValues(digits);
+    const code = String(digits[0] % CODE_SPACE).padStart(CODE_DIGITS, '0');
     const expiresAt = Date.now() + CODE_TTL_MS;
-    const entry: CodeEntry = { transferId, key, expiresAt };
-    // Bound the directory: purge expired codes, then refuse when still full.
-    const stored = await this.ctx.storage.list<CodeEntry>({ prefix: 'code:' });
-    let live = 0;
-    for (const [storageKey, existing] of stored) {
-      if (!existing || existing.expiresAt <= Date.now()) {
-        await this.ctx.storage.delete(storageKey);
-      } else {
-        live += 1;
-      }
+    if (await codeShard(env, code).claim(code, capability, expiresAt) === 'claimed') {
+      logEvent('code_claimed', { code });
+      return { code, expiresAt };
     }
-    if (live >= MAX_CODES) {
-      logEvent('code_directory_full', { codes: live });
-      return new Response('share codes are busy right now', { status: 503 });
-    }
-    // Allocation retries inside a transaction so two simultaneous senders can
-    // never own the same code.
-    for (let attempt = 0; attempt < CODE_CLAIM_ATTEMPTS; attempt += 1) {
-      const digits = new Uint32Array(1);
-      crypto.getRandomValues(digits);
-      const code = String(digits[0] % CODE_SPACE).padStart(CODE_DIGITS, '0');
-      const owned = await this.ctx.storage.transaction(async (txn) => {
-        const existing = await txn.get<CodeEntry>(`code:${code}`);
-        if (existing && existing.expiresAt > Date.now()) return false;
-        await txn.put<CodeEntry>(`code:${code}`, entry);
-        return true;
-      });
-      if (owned) {
-        logEvent('code_claimed', { code });
-        return Response.json({ code, expiresAt });
-      }
-    }
-    logEvent('code_space_exhausted');
-    return new Response('share codes are busy right now', { status: 503 });
+  }
+  logEvent('code_space_exhausted');
+  return null;
+}
+
+export class CodeDirectory extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS codes (
+      code TEXT PRIMARY KEY,
+      transfer_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`);
+    ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS codes_by_expiry ON codes (expires_at)');
   }
 
-  private async lookup(code: string): Promise<Response> {
-    const entry = await this.ctx.storage.get<CodeEntry>(`code:${code}`);
-    if (!entry) return new Response('code unavailable', { status: 404 });
-    if (entry.expiresAt <= Date.now()) {
-      await this.ctx.storage.delete(`code:${code}`);
-      return new Response('code unavailable', { status: 404 });
+  // claim runs without awaits between its reads and writes, so the Durable
+  // Object's input gate makes it atomic: two senders never own one code.
+  async claim(code: string, capability: CodeCapability, expiresAt: number): Promise<CodeClaim> {
+    if (!isShareCode(code) || !isTransferId(capability.transferId) || !isMasterKey(capability.key)) return 'taken';
+    const sql = this.ctx.storage.sql;
+    sql.exec('DELETE FROM codes WHERE expires_at <= ?', Date.now());
+    if (sql.exec('SELECT 1 FROM codes WHERE code = ?', code).toArray().length > 0) return 'taken';
+    const live = sql.exec<{ live: number }>('SELECT COUNT(*) AS live FROM codes').one().live;
+    if (live >= MAX_CODES_PER_SHARD) {
+      logEvent('code_directory_full', { codes: live });
+      return 'full';
     }
-    logEvent('code_resolved', { code });
-    return Response.json({ transferId: entry.transferId, key: entry.key });
+    sql.exec('INSERT INTO codes (code, transfer_id, key, expires_at) VALUES (?, ?, ?, ?)', code, capability.transferId, capability.key, expiresAt);
+    const alarm = await this.ctx.storage.getAlarm();
+    if (alarm === null || expiresAt < alarm) await this.ctx.storage.setAlarm(expiresAt);
+    return 'claimed';
+  }
+
+  async lookup(code: string): Promise<CodeCapability | null> {
+    const row = this.ctx.storage.sql.exec<{ transfer_id: string; key: string }>(
+      'SELECT transfer_id, key FROM codes WHERE code = ? AND expires_at > ?', code, Date.now()
+    ).toArray()[0];
+    return row ? { transferId: row.transfer_id, key: row.key } : null;
+  }
+
+  // release frees a code once its room no longer needs it (paired or
+  // finished). The transfer ID guard keeps a stale room from releasing a
+  // code that was re-claimed after expiry.
+  async release(code: string, transferId: string): Promise<void> {
+    this.ctx.storage.sql.exec('DELETE FROM codes WHERE code = ? AND transfer_id = ?', code, transferId);
+  }
+
+  async alarm(): Promise<void> {
+    const sql = this.ctx.storage.sql;
+    sql.exec('DELETE FROM codes WHERE expires_at <= ?', Date.now());
+    const next = sql.exec<{ next: number | null }>('SELECT MIN(expires_at) AS next FROM codes').one().next;
+    if (next !== null) await this.ctx.storage.setAlarm(next);
   }
 }
 
@@ -531,11 +572,11 @@ export default {
         );
       }
       if (url.pathname === '/api/codes' && request.method === 'POST') {
-        return serveCodes(request, env, 'claim');
+        return serveCodes(request, env, null);
       }
       const codeLookup = /^\/api\/codes\/(\d{4,5})$/.exec(url.pathname);
       if (codeLookup && request.method === 'GET') {
-        return serveCodes(request, env, `code/${codeLookup[1]}`);
+        return serveCodes(request, env, codeLookup[1]);
       }
       return new Response('not found', { status: 404 });
     }
@@ -544,21 +585,30 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 // Short-code directory requests share the relay's per-IP rate limit, which
-// also bounds code guessing to a trickle.
-async function serveCodes(request: Request, env: Env, suffix: string): Promise<Response> {
+// also bounds code guessing to a trickle. Current senders get their code in
+// the relay join instead; POST /api/codes remains for older clients.
+async function serveCodes(request: Request, env: Env, code: string | null): Promise<Response> {
   try {
     const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
     const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
     if (!success) return new Response('connection rate limit reached', { status: 429 });
-    const body = suffix === 'claim' ? await request.text() : undefined;
-    if (body !== undefined && new TextEncoder().encode(body).byteLength > MAX_CODE_BODY_BYTES) {
-      return new Response('too large', { status: 413 });
+    if (code !== null) {
+      const capability = await codeShard(env, code).lookup(code);
+      if (!capability) return new Response('code unavailable', { status: 404 });
+      logEvent('code_resolved', { code });
+      return Response.json(capability);
     }
-    return await env.CODES.getByName('codes-v1').fetch(`https://codes.internal/${suffix}`, {
-      method: request.method,
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
+    const text = await request.text();
+    if (new TextEncoder().encode(text).byteLength > MAX_CODE_BODY_BYTES) return new Response('too large', { status: 413 });
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { return new Response('invalid claim', { status: 400 }); }
+    if (!body || typeof body !== 'object' || !('transferId' in body) || !('key' in body)
+      || !isTransferId(body.transferId) || !isMasterKey(body.key)) {
+      return new Response('invalid claim', { status: 400 });
+    }
+    const claimed = await claimShareCode(env, { transferId: body.transferId, key: body.key });
+    if (!claimed) return new Response('share codes are busy right now', { status: 503 });
+    return Response.json(claimed);
   } catch (error) {
     console.error(JSON.stringify({ event: 'code_directory_failed', error: error instanceof Error ? error.message : 'unknown' }));
     return new Response('share codes temporarily unavailable', { status: 503 });
