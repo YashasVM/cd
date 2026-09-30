@@ -40,7 +40,7 @@ var invitationPattern = regexp.MustCompile(`([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_
 func parseInvitationInput(input string) (invitation, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		return invitation{}, errors.New("missing share code or link: paste the link from `cd send`")
+		return invitation{}, errors.New("missing share code or link: paste the link from `cdx send`")
 	}
 	if strings.Contains(trimmed, "://") || strings.Contains(trimmed, "/s/") {
 		if value, err := parseInvitationURL(trimmed); err == nil {
@@ -49,7 +49,7 @@ func parseInvitationInput(input string) (invitation, error) {
 	}
 	match := invitationPattern.FindStringSubmatch(trimmed)
 	if match == nil {
-		return invitation{}, errors.New("this CD code is invalid: paste the full link from `cd send` (it looks like https://cd.yash0.in/s/…#v1.…)")
+		return invitation{}, errors.New("this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)")
 	}
 	return parseInvitationParts(match[1], match[2])
 }
@@ -57,7 +57,7 @@ func parseInvitationInput(input string) (invitation, error) {
 func parseInvitationURL(raw string) (invitation, error) {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || parsed.Host == "" {
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cd send`")
+		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
 	}
 	pathMatch := regexp.MustCompile(`^/s/([A-Za-z0-9_-]{22})/?$`).FindStringSubmatch(parsed.Path)
 	fragmentMatch := regexp.MustCompile(`^v1\.([A-Za-z0-9_-]{43})$`).FindStringSubmatch(parsed.Fragment)
@@ -66,7 +66,7 @@ func parseInvitationURL(raw string) (invitation, error) {
 		if match := invitationPattern.FindStringSubmatch(raw); match != nil {
 			return parseInvitationParts(match[1], match[2])
 		}
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cd send`")
+		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
 	}
 	return parseInvitationParts(pathMatch[1], fragmentMatch[1])
 }
@@ -242,7 +242,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	kind, payload, err := readReceiverRecord(ctx, connection, opener, offerWait)
 	if err != nil {
 		if isTimeoutError(err) {
-			return errors.New("sender did not offer a file within 15m: ask them to run `cd send` again")
+			return errors.New("sender did not offer a file within 15m: ask them to run `cdx send` again")
 		}
 		return err
 	}

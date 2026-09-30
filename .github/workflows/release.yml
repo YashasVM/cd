@@ -1,4 +1,4 @@
-name: Release cd
+name: Release cdx
 
 on:
   push:
@@ -60,11 +60,11 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: '0'
-        run: go build -buildvcs=false -trimpath -ldflags="-s -w -buildid= -X main.version=${GITHUB_REF_NAME}" -o "cd-${GOOS}-${GOARCH}${{ matrix.suffix }}" ./cmd/cd
+        run: go build -buildvcs=false -trimpath -ldflags="-s -w -buildid= -X main.version=${GITHUB_REF_NAME}" -o "cdx-${GOOS}-${GOARCH}${{ matrix.suffix }}" ./cmd/cdx
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: cd-${{ matrix.os }}-${{ matrix.arch }}
-          path: cd-*
+          name: cdx-${{ matrix.os }}-${{ matrix.arch }}
+          path: cdx-*
           if-no-files-found: error
 
   publish:
@@ -75,9 +75,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          pattern: cd-*
+          pattern: cdx-*
           merge-multiple: true
-      - run: sha256sum cd-* > checksums.txt
+      - run: sha256sum cdx-* > checksums.txt
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" cd-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes

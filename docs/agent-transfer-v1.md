@@ -2,16 +2,16 @@
 
 ## Caller contract
 
-`cd send <file>` opens and validates one regular file, reserves a live relay
+`cdx send <file>` opens and validates one regular file, reserves a live relay
 room, claims a short numeric share code, then writes the code to stdout. The
 process stays in the foreground. Status goes to stderr. Exit code 0 means the
 receiver reconstructed the authenticated byte stream and prepared it for
 download or finished writing it to a user-approved file destination.
 
-`cd send --link <file>` skips the code claim and writes the full capability
+`cdx send --link <file>` skips the code claim and writes the full capability
 URL instead (see below). The browser `/send` page is an equivalent
 code-mode sender: it mints the same invitation, claims the same directory
-code, and shows the code plus a ready `cd receive <code>` command.
+code, and shows the code plus a ready `cdx receive <code>` command.
 
 The URL has this form:
 
@@ -33,7 +33,7 @@ fragment capability with a 5-digit code from the relay directory:
   inside a storage transaction, so two senders never own one code.
 - Any receiver (terminal or browser) `GET /api/codes/<code>` and receives
   `{transferId, key}`, then joins the room exactly like a link receiver.
-- The browser Receive box and `cd receive` both accept codes; links keep
+- The browser Receive box and `cdx receive` both accept codes; links keep
   working everywhere they did before.
 - The directory is a single Durable Object (`codes-v1`), bounded to 10,000
   live codes with purge-on-claim and delete-on-expiry (no alarms), and both

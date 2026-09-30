@@ -3,7 +3,7 @@
 ## Definition of done
 
 CD is ready when a clean checkout can build the web app and CLI, a sender can run
-`cd send <file>` and receive one `https://cd.yash0.in` capability URL only after
+`cdx send <file>` and receive one `https://cd.yash0.in` capability URL only after
 the relay accepts the sender, and a phone-sized browser can use that URL to save
 the exact bytes. The sender must remain available until completion or a clear
 timeout. The relay must never receive the URL-fragment key or plaintext file
@@ -16,7 +16,7 @@ exercises the actual browser consent and download UI at phone and desktop sizes.
 The repository has three transfer paths:
 
 - `src/main.js` owns browser-to-browser WebRTC, coordinated by CD signaling.
-- `cmd/cd` owns agent-to-browser sending over a Cloudflare WebSocket relay.
+- `cmd/cdx` owns agent-to-browser sending over a Cloudflare WebSocket relay.
 - `worker/index.ts` routes each agent transfer to one Durable Object and serves
   the Vite assets.
 

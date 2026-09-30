@@ -18,7 +18,7 @@ const port = hosted ? null : await availablePort();
 const publicBase = hosted ? new URL(hosted).origin : `http://127.0.0.1:${port}`;
 const relayBase = publicBase.replace(/^http/, 'ws') + '/ws/v1';
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-'));
-const executable = join(work, process.platform === 'win32' ? 'cd.exe' : 'cd');
+const executable = join(work, process.platform === 'win32' ? 'cdx.exe' : 'cdx');
 const sourcePath = join(work, 'résumé final.bin');
 const source = Uint8Array.from({ length: 1536 * 1024 + 73 }, (_, index) => (index * 31 + 17) % 256);
 await writeFile(sourcePath, source);
@@ -27,7 +27,7 @@ let worker;
 let sender;
 let browser;
 try {
-  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cd']);
+  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cdx']);
   if (!hosted) {
     const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
     worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {

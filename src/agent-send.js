@@ -2,8 +2,8 @@ import { mountRelaySender } from './relay-sender.js';
 import './style.css';
 
 // Standalone browser sender for the agent relay: picks one file, mints a
-// share link, and streams it with the same encrypted records `cd send`
-// uses, so `cd receive <link>` (or another browser on the share page) can
+// share link, and streams it with the same encrypted records `cdx send`
+// uses, so `cdx receive <link>` (or another browser on the share page) can
 // take it. The send engine lives in relay-sender.js, shared with the unified
 // CD hub.
 
@@ -13,7 +13,7 @@ document.body.innerHTML = `
     <header class="brand-rail">
       <div class="brand-lockup"><h1>cd</h1><span class="tagline">/di·rect/</span></div>
       <p class="brand-note">send to a terminal</p>
-      <p class="share-description">Pick a file to hand it to <code>cd receive</code> or another browser.</p>
+      <p class="share-description">Pick a file to hand it to <code>cdx receive</code> or another browser.</p>
     </header>
     <section class="workbench">
       <div class="share-panel">

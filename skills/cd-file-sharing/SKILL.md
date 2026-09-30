@@ -6,18 +6,18 @@ description: Send a local file through CD when the user asks to send or share it
 # Send a file through CD
 
 1. Resolve the requested local file and confirm it is a regular file.
-2. Run `make cd` from the repository root so `./bin/cd` matches the source.
-3. Start `./bin/cd send <file>` in a long-lived or streaming shell session.
+2. Run `make cdx` from the repository root so `./bin/cdx` matches the source.
+3. Start `./bin/cdx send <file>` in a long-lived or streaming shell session.
 4. Read its first stdout line and immediately return that short share code to
    the user. Do not wait for the process to exit before replying.
 5. Keep the sender process and shell session alive. Exit status 0 means the
    receiver verified the full transfer; a nonzero status is a real failure.
 
-The code works in any browser Receive box and in `cd receive <code>`. Tell
+The code works in any browser Receive box and in `cdx receive <code>`. Tell
 the user to share it promptly: codes expire after 15 minutes and admit one
 receiver. Do not log the code anywhere else.
 
-For a sensitive file, send with `./bin/cd send --link <file>` instead and
+For a sensitive file, send with `./bin/cdx send --link <file>` instead and
 return the complete URL (fragment included); that mode stays end-to-end
 encrypted, while plain codes rely on TLS and the live relay.
 

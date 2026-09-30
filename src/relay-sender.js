@@ -16,7 +16,7 @@ import { isShortCode } from './agent-code.js';
 
 // Relay sender engine shared by the standalone `/send` page. Picks one
 // file, mints a numeric share code plus a share link, and streams it with
-// the same encrypted records `cd send` uses, so `cd receive <code>` (or
+// the same encrypted records `cdx send` uses, so `cdx receive <code>` (or
 // another browser on the share page) can take it.
 //
 // `els` must provide the same named nodes the `/send` page uses:
@@ -34,7 +34,7 @@ const TRANSFER_IDLE_MS = 90_000;
 const encoder = new TextEncoder();
 
 // Short codes come from the relay directory: typable in any browser Receive
-// box or `cd receive`. The directory holds the transfer key, so code mode
+// box or `cdx receive`. The directory holds the transfer key, so code mode
 // relies on TLS + the live relay rather than end-to-end encryption.
 async function claimShareCode(transferId, key) {
   let response;
@@ -251,7 +251,7 @@ export function mountRelaySender(els, hooks = {}) {
     els.shareBox.hidden = false;
     els.shareCode.textContent = shareCode;
     els.shareLink.textContent = shareUrl;
-    els.receiveCommand.textContent = `cd receive ${shareCode}`;
+    els.receiveCommand.textContent = `cdx receive ${shareCode}`;
     setStatus('Waiting for the receiver (up to 15 minutes)...');
     reportState('waiting');
     await waitForText('peer-joined', PEER_WAIT_MS);
@@ -365,7 +365,7 @@ export function mountRelaySender(els, hooks = {}) {
   els.copyLinkBtn.addEventListener('click', () => void copyText(shareUrl, els.copyLinkBtn));
   els.copyCodeBtn.addEventListener('click', () => void copyText(shareCode, els.copyCodeBtn));
   els.copyCmdBtn.addEventListener('click', () => {
-    void copyText(`cd receive ${shareCode}`, els.copyCmdBtn);
+    void copyText(`cdx receive ${shareCode}`, els.copyCmdBtn);
   });
 
   return { sendFile };

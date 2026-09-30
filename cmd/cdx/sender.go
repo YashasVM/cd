@@ -292,7 +292,7 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			return fmt.Errorf("%s (the private-link fallback is `cd send --link`)", err)
+			return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
 		}
 		ready.Code = code
 		if err := onReady(ready); err != nil {
@@ -305,9 +305,9 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 	}
 	fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
 	if ready.Code != "" {
-		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cd receive <code>")
+		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
 	} else {
-		fmt.Fprintln(os.Stderr, "terminal receivers: cd receive <paste-the-link-above>  ·  browsers: open the link")
+		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 	}
 	if err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
@@ -331,19 +331,19 @@ func friendlyRelayError(err error) error {
 	}
 	switch closeError.Code {
 	case 4400:
-		return errors.New("CD relay rejected the transfer (invalid request): update cd and try a fresh link")
+		return errors.New("CD relay rejected the transfer (invalid request): update cdx and try a fresh link")
 	case 4401:
 		return errors.New("CD relay rejected the receiver (link key mismatch): send a fresh link")
 	case 4403:
-		return errors.New("CD relay rejected a transfer frame (protocol mismatch): update cd and try again")
+		return errors.New("CD relay rejected a transfer frame (protocol mismatch): update cdx and try again")
 	case 4404:
 		return errors.New("the other side is no longer available (they may have closed the link)")
 	case 4406:
-		return errors.New("CD relay rejected the protocol version: update cd and try again")
+		return errors.New("CD relay rejected the protocol version: update cdx and try again")
 	case 4408:
-		return errors.New("this CD link has expired: run `cd send` again for a fresh link")
+		return errors.New("this CD link has expired: run `cdx send` again for a fresh link")
 	case 4409:
-		return errors.New("this link is already claimed or expired (one receiver per link): run `cd send` again")
+		return errors.New("this link is already claimed or expired (one receiver per link): run `cdx send` again")
 	case 4429:
 		return errors.New("the transfer is too slow for the relay (backpressure): try again on a faster network")
 	default:
@@ -368,7 +368,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 			case "accepted":
 				return errors.New("CD relay did not answer within 10s: check your network and try again")
 			case "peer-joined":
-				return errors.New("no receiver joined within 15m: the link expired, run `cd send` again")
+				return errors.New("no receiver joined within 15m: the link expired, run `cdx send` again")
 			default:
 				return fmt.Errorf("timed out waiting for relay %s", expected)
 			}
@@ -412,7 +412,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 	kind, payload, err := readRecord(ctx, connection, opener, consentWait)
 	if err != nil {
 		if isTimeoutError(err) {
-			return errors.New("receiver did not accept within 10m: they may have closed the link, run `cd send` again")
+			return errors.New("receiver did not accept within 10m: they may have closed the link, run `cdx send` again")
 		}
 		return err
 	}

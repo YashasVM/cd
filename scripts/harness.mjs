@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 export async function buildCLI(work) {
   const executable = join(work, process.platform === 'win32' ? 'cdx.exe' : 'cdx');
-  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cd']);
+  await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cdx']);
   return executable;
 }
 

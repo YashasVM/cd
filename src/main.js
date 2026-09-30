@@ -129,7 +129,7 @@ function peerOptions() {
   };
 }
 
-// Agent-relay links (from `cd send` or a browser terminal-send) look like
+// Agent-relay links (from `cdx send` or a browser terminal-send) look like
 // https://cd.yash0.in/s/<22 chars>#v1.<43 chars>. The room lives on the
 // sender's origin, so receivers open the pasted link as-is instead of
 // treating it as a P2P word code.
@@ -822,7 +822,7 @@ const Receiver = (() => {
   }
 
   // Short numeric codes resolve through the relay directory to a transfer,
-  // then hand off to the private share page. Works for codes from `cd send`
+  // then hand off to the private share page. Works for codes from `cdx send`
   // and the browser terminal-send page alike.
   async function connectShortCode(connectionGeneration, code) {
     let response;
@@ -1606,7 +1606,7 @@ els.codeInput.addEventListener('keydown', (event) => {
 });
 els.codeInput.addEventListener('input', (event) => {
   const raw = event.target.value;
-  // Agent links (from `cd send`) navigate to their share page instead of
+  // Agent links (from `cdx send`) navigate to their share page instead of
   // being cleaned into a P2P code. Check before mangling the pasted text.
   const agentUrl = agentShareUrlFromInput(raw);
   if (agentUrl) {
