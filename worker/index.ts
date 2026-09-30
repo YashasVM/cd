@@ -18,9 +18,10 @@ type PeerAttachment = { id: string; peers: string[]; messages: number };
 
 const MAX_JOIN_BYTES = 512;
 const MAX_RECORD_BYTES = 1024 * 1024;
-// 32 MiB peer buffer: absorbs phone-disk stalls and the 8 MiB sender window
-// without tripping the abort-cliff on big files. Still a hard kill past this
-// (no resume in v1), but far rarer than the old 8 MiB cliff.
+// 32 MiB peer buffer. Durable Object WebSockets cannot pause reading, so
+// the relay has no backpressure of its own: senders bound what it holds with
+// their end-to-end ack window (the CLI's adaptive window tops out at 24 MiB).
+// Only a sender that ignores flow control reaches this cap and is cut off.
 const MAX_PEER_BUFFER_BYTES = 32 * 1024 * 1024;
 const JOIN_TIMEOUT_MS = 10 * 1000;
 const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1000;

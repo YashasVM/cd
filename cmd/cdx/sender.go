@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	sendWindowBytes = 8 * 1024 * 1024
 	admissionWait   = 10 * time.Second
 	receiverWait    = 15 * time.Minute
 	consentWait     = 10 * time.Minute
@@ -461,8 +460,8 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 
 	// Full-duplex pipeline: one reader goroutine owns the socket read side
 	// and streams records into a channel while the send loop only writes.
-	// With an 8 MiB window and 256 KiB chunks the sender keeps up to 32
-	// chunks in flight and only blocks when the window is genuinely full.
+	// The in-flight window adapts to the path (8-24 MiB, see window.go), and
+	// the sender only blocks when it is genuinely full.
 	incoming := make(chan inboundRecord, 64)
 	readerDone := make(chan struct{})
 	go func() {
@@ -483,6 +482,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 	// Every inbound record goes through one state machine; the send loop
 	// only chooses what to wait for.
 	progress := &senderProgress{}
+	window := newAdaptiveWindow()
 	await := func(done func() bool) error {
 		for !done() {
 			select {
@@ -501,13 +501,16 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 				if err := progress.handle(msg.kind, msg.payload); err != nil {
 					return err
 				}
+				if msg.kind == kindAck {
+					window.acked(progress.acknowledged, time.Now())
+				}
 				reportProgress(progress.acknowledged, ready.Size)
 				hooks.report(phaseSending, progress.acknowledged)
 			}
 		}
 		return nil
 	}
-	windowOpen := func() bool { return progress.sent-progress.acknowledged < sendWindowBytes }
+	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
 	finishLine := func() {
 		if terminal && progress.sent > 0 {
 			fmt.Fprintln(os.Stderr)
@@ -524,6 +527,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 			}
 			progress.sent += uint64(count)
 			progress.chunks++
+			window.sent(progress.sent, time.Now())
 			if err := await(windowOpen); err != nil {
 				finishLine()
 				return err

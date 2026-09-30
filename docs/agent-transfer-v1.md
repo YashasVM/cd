@@ -124,7 +124,9 @@ representation. Chunk content is raw bytes. Ack, end, and complete are fixed
 binary counters. Either peer closes the socket to abort.
 
 The receiver must explicitly accept the decrypted offer before chunks start.
-The sender permits at most 8 MiB of unacknowledged plaintext over a
+The CLI sender permits 8–24 MiB of unacknowledged plaintext, sized to about
+two bandwidth-delay products (2 × delivered bytes per second × minimum ack
+RTT), over a
 full-duplex pipeline (background ack reader, foreground writer). An
 acknowledgement is sent only after the active byte sink owns the bytes
 (every 1 MiB). The receiver also caps pending encrypted input at 32 MiB
@@ -149,8 +151,11 @@ duplicated, missing, or extra content without a second file read.
 - Transfer inactivity after acceptance: 90 seconds.
 - Hard room lifetime: 2 hours.
 - Plaintext chunk: 256 KiB (64 KiB senders still accepted).
-- Unacknowledged sender window: 8 MiB.
-- Relay frame cap: 1 MiB; peer buffer: 32 MiB.
+- Unacknowledged sender window: 8–24 MiB, adaptive (CLI); 8 MiB (browser `/send`).
+- Relay frame cap: 1 MiB; peer buffer: 32 MiB. Durable Object WebSockets
+  cannot pause reading, so the relay cannot push back on a sender. The
+  end-to-end ack window keeps compliant senders under the cap; only a sender
+  that ignores flow control reaches it and is disconnected.
 - Pending receiver ciphertext: 32 MiB.
 - Large-file receiver sink: File System Access streaming, then Origin
   Private File System staging, then a Blob download capped at 256 MiB
