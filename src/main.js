@@ -773,6 +773,7 @@ const Receiver = (() => {
   let transferComplete = false;
   let transferCancelled = false;
   let lastProgressAckAt = 0;
+  let progressAckTimer = 0;
   let dataQueue = Promise.resolve();
   let pendingReceiveBytes = 0;
   let transferGeneration = 0;
@@ -1170,7 +1171,18 @@ const Receiver = (() => {
   function sendProgressAck(force = false) {
     if (!connection?.open) return;
     const now = performance.now();
-    if (!force && now - lastProgressAckAt < PROGRESS_UPDATE_INTERVAL) return;
+    const wait = PROGRESS_UPDATE_INTERVAL - (now - lastProgressAckAt);
+    if (!force && wait > 0) {
+      // Throttled acks are deferred, never dropped: a sender with a full
+      // window sends nothing more until it hears the latest count.
+      progressAckTimer ||= setTimeout(() => {
+        progressAckTimer = 0;
+        sendProgressAck(true);
+      }, wait);
+      return;
+    }
+    clearTimeout(progressAckTimer);
+    progressAckTimer = 0;
     connection.send({ type: 'progress', bytes: totalBytesReceived });
     lastProgressAckAt = now;
   }
@@ -1396,6 +1408,8 @@ const Receiver = (() => {
     transferComplete = false;
     dataQueue = Promise.resolve();
     pendingReceiveBytes = 0;
+    clearTimeout(progressAckTimer);
+    progressAckTimer = 0;
     clearTimeout(timeoutId);
     stopStallWatch();
   }

@@ -17,7 +17,8 @@ const port = await availablePort();
 const baseUrl = process.env.CD_VERIFY_URL || `http://127.0.0.1:${port}`;
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-p2p-'));
 const sourcePath = join(work, 'p2p solicitée.bin');
-const sourceBytes = Number(process.env.CD_VERIFY_BYTES || 300 * 1024);
+// Larger than the 3 MiB receiver window so every run exercises flow control.
+const sourceBytes = Number(process.env.CD_VERIFY_BYTES || 4 * 1024 * 1024 + 123);
 assert.ok(Number.isSafeInteger(sourceBytes) && sourceBytes > 0 && sourceBytes <= 256 * 1024 * 1024);
 const source = Uint8Array.from({ length: sourceBytes }, (_, index) => (index * 31 + 17) % 256);
 await writeFile(sourcePath, source);
