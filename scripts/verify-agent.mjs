@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -110,6 +110,7 @@ try {
   const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish');
   assert.equal(exitCode, 0, await stderr);
   assert.deepEqual(Uint8Array.from(received), source);
+  await verifyFolderBundle(context);
   if (!hosted) await verifyPeerRegistrationBurst(port);
   console.log(`verified ${received.byteLength} exact bytes through CLI, Worker, encryption, flow control, and receiver`);
 } finally {
@@ -117,6 +118,36 @@ try {
   await stopChild(sender);
   await stopChild(worker);
   await rm(work, { recursive: true, force: true });
+}
+
+// A folder plus a file go out detached as one streamed zip; the browser
+// share page receives it like any other file.
+async function verifyFolderBundle(context) {
+  const folder = join(work, 'bundle folder');
+  await mkdir(join(folder, 'nested'), { recursive: true });
+  await writeFile(join(folder, 'nested', 'a.bin'), source);
+  await writeFile(join(work, 'extra.txt'), 'extra');
+  const bundleSender = spawn(executable, ['send', '--link', folder, join(work, 'extra.txt')], {
+    env: { ...process.env, CD_RELAY_URL: relayBase, CD_PUBLIC_URL: publicBase, CD_STATE_DIR: join(work, 'state') },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const bundleLink = await firstLine(bundleSender.stdout);
+  assert.equal(await new Promise((resolve) => bundleSender.once('exit', resolve)), 0, 'detached bundle send did not exit 0');
+  const page = await context.newPage();
+  await page.goto(bundleLink);
+  await page.locator('#offer:not([hidden])').waitFor();
+  assert.equal(await page.locator('#file-name').textContent(), 'bundle folder-and-1-more.zip');
+  await page.locator('#accept').click();
+  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  const downloadEvent = page.waitForEvent('download');
+  await page.locator('#download').click();
+  const bundlePath = join(work, 'received-bundle.zip');
+  await (await downloadEvent).saveAs(bundlePath);
+  const bundle = await readFile(bundlePath);
+  assert.deepEqual([...bundle.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04], 'bundle is not a zip');
+  assert.ok(bundle.includes(Buffer.from('bundle folder/nested/a.bin')), 'bundle is missing the nested file');
+  await page.close();
+  console.log(`verified a ${bundle.byteLength}-byte folder bundle into the browser`);
 }
 
 async function assertVisibleBrand(page) {

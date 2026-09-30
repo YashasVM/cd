@@ -189,7 +189,7 @@ func pruneStates(dir string, now time.Time) {
 	}
 }
 
-func holderArgs(request sendRequest, absolutePath string) []string {
+func holderArgs(request sendRequest, absolutePaths []string) []string {
 	args := []string{holderCommand}
 	if request.linkMode {
 		args = append(args, "--link")
@@ -197,7 +197,7 @@ func holderArgs(request sendRequest, absolutePath string) []string {
 	if request.jsonOutput {
 		args = append(args, "--json")
 	}
-	return append(args, "--", absolutePath)
+	return append(append(args, "--"), absolutePaths...)
 }
 
 // runDetachedSend starts the background holder and returns once it has
@@ -208,20 +208,19 @@ func runDetachedSend(request sendRequest) int {
 		fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
 		return 1
 	}
-	file, _, err := openSharedFile(request.file)
-	if err != nil {
-		return fail(err)
-	}
-	_ = file.Close()
-	if _, err := safeFilename(request.file); err != nil {
+	if _, err := prepareSource(request.files); err != nil {
 		return fail(err)
 	}
 	if _, _, err := endpointBase(); err != nil {
 		return fail(err)
 	}
-	absolutePath, err := filepath.Abs(request.file)
-	if err != nil {
-		return fail(err)
+	absolutePaths := make([]string, len(request.files))
+	for index, path := range request.files {
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return fail(err)
+		}
+		absolutePaths[index] = absolute
 	}
 	dir, err := stateDir()
 	if err != nil {
@@ -244,7 +243,7 @@ func runDetachedSend(request sendRequest) int {
 	}
 	defer logFile.Close()
 
-	holder := exec.Command(executable, holderArgs(request, absolutePath)...)
+	holder := exec.Command(executable, holderArgs(request, absolutePaths)...)
 	holder.Env = append(os.Environ(), "CD_STATE_DIR="+dir, "CD_HOLDER_LOG="+logPath)
 	holder.Stderr = logFile
 	holder.SysProcAttr = detachAttributes()
@@ -322,7 +321,7 @@ func runHolder(args []string) int {
 		lastWrite = time.Now()
 	}
 	pipe := os.Stdout
-	err = sendFile(ctx, request.file, request.linkMode, sendHooks{
+	err = sendFile(ctx, request.files, request.linkMode, sendHooks{
 		ready: func(value readyOutput) error {
 			state.Code = value.Code
 			state.TransferID = transferIDFromURL(value.URL)

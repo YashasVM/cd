@@ -8,8 +8,10 @@ description: Send a local file to the user (their phone, browser, or another mac
 Run:
 
 ```bash
-cdx send <file>
+cdx send <path>...
 ```
+
+Several paths or a folder arrive as one `.zip`.
 
 It prints one line to stdout, a short share code such as `48291`, and exits 0
 while a background sender keeps the transfer live. Reply to the user with that

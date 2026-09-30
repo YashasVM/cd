@@ -2,7 +2,9 @@
 
 ## Caller contract
 
-`cdx send <file>` opens and validates one regular file, reserves a live relay
+`cdx send <path>...` opens and validates one regular file (or, for a folder
+or several paths, streams one uncompressed zip whose size is computed up
+front, so the offer below is unchanged), reserves a live relay
 room, claims a short numeric share code, then writes the code to stdout.
 Status goes to stderr. In the foreground (a terminal, or `--wait`), exit code
 0 means the receiver reconstructed the authenticated byte stream and prepared

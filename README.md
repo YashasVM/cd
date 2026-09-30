@@ -30,10 +30,11 @@ Or install it on Windows (PowerShell):
 irm https://cd.yash0.in/install.ps1 | iex
 ```
 
-Then send one regular file:
+Then send a file (or several files and folders, which arrive as one `.zip`):
 
 ```bash
 cdx send ./app.apk
+cdx send ./screenshots ./notes.md
 ```
 
 The CLI is called `cdx` because `cd` is a shell builtin: agents and scripts

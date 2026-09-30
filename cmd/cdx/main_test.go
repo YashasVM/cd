@@ -73,26 +73,26 @@ func TestWriteReadyPrefersShareCode(t *testing.T) {
 
 func TestParseSendArgsAcceptsFlagBeforeOrAfterFile(t *testing.T) {
 	before, err := parseSendArgs([]string{"--json", "file.bin"})
-	if err != nil || !before.jsonOutput || before.file != "file.bin" {
+	if err != nil || !before.jsonOutput || before.files[0] != "file.bin" {
 		t.Fatalf("flag before file = %#v, %v", before, err)
 	}
 	after, err := parseSendArgs([]string{"file.bin", "--json"})
-	if err != nil || !after.jsonOutput || after.file != "file.bin" {
+	if err != nil || !after.jsonOutput || after.files[0] != "file.bin" {
 		t.Fatalf("flag after file = %#v, %v", after, err)
 	}
 	link, err := parseSendArgs([]string{"--link", "file.bin"})
-	if err != nil || !link.linkMode || link.file != "file.bin" {
+	if err != nil || !link.linkMode || link.files[0] != "file.bin" {
 		t.Fatalf("link flag = %#v, %v", link, err)
 	}
 }
 
 func TestParseSendArgsSupportsDoubleDashForLeadingDashNames(t *testing.T) {
 	request, err := parseSendArgs([]string{"--", "-weird.bin"})
-	if err != nil || request.file != "-weird.bin" {
+	if err != nil || request.files[0] != "-weird.bin" {
 		t.Fatalf("double dash = %#v, %v", request, err)
 	}
 	request, err = parseSendArgs([]string{"--", "--json"})
-	if err != nil || request.file != "--json" {
+	if err != nil || request.files[0] != "--json" {
 		t.Fatalf("double dash flag-like file = %#v, %v", request, err)
 	}
 	if _, err := parseSendArgs([]string{"-weird.bin"}); err == nil {
@@ -103,7 +103,7 @@ func TestParseSendArgsSupportsDoubleDashForLeadingDashNames(t *testing.T) {
 func TestParseSendArgsTreatsBareHelpAndVersionAsFiles(t *testing.T) {
 	for _, name := range []string{"help", "version"} {
 		request, err := parseSendArgs([]string{name})
-		if err != nil || request.file != name || request.help || request.version {
+		if err != nil || request.files[0] != name || request.help || request.version {
 			t.Fatalf("%q = %#v, %v (must be a sendable file, not help/version)", name, request, err)
 		}
 	}
@@ -119,8 +119,8 @@ func TestParseSendArgsRejectsStdinAndBadOptions(t *testing.T) {
 	if _, err := parseSendArgs([]string{}); err == nil {
 		t.Fatal("missing file was accepted")
 	}
-	if _, err := parseSendArgs([]string{"a", "b"}); err == nil {
-		t.Fatal("two files were accepted")
+	if request, err := parseSendArgs([]string{"a", "--json", "b"}); err != nil || len(request.files) != 2 {
+		t.Fatalf("two paths = %#v, %v", request, err)
 	}
 }
 

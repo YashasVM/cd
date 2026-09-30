@@ -59,11 +59,11 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--detach|--wait] [--] <file>")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Send one file through CD at https://cd.yash0.in, or receive one.")
+	fmt.Fprintln(output, "Send files through CD at https://cd.yash0.in, or receive them.")
 	fmt.Fprintln(output, "Send prints one short share code to stdout. In a terminal it then waits")
 	fmt.Fprintln(output, "until the receiver verifies the file; otherwise (agents, scripts, pipes)")
 	fmt.Fprintln(output, "it hands the transfer to a background sender and exits 0 right away.")
@@ -71,7 +71,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
-	fmt.Fprintln(output, "  send <file>        send one regular file (zip a folder first to share it)")
+	fmt.Fprintln(output, "  send <path>...     send a file, or several files and folders as one .zip")
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
@@ -110,9 +110,9 @@ func usage(output io.Writer) {
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file>")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "  <file>         one regular file to share (zip a folder first)")
+	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (sent as one .zip)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
@@ -149,7 +149,7 @@ type sendRequest struct {
 	linkMode   bool
 	detach     bool
 	wait       bool
-	file       string
+	files      []string
 	help       bool
 	version    bool
 }
@@ -173,7 +173,7 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			continue
 		}
 		if argument == "-" {
-			return sendRequest{}, errors.New(`cdx: standard input ("-") is not supported: send one regular file`)
+			return sendRequest{}, errors.New(`cdx: standard input ("-") is not supported: send files or folders`)
 		}
 		if !endOfFlags && (argument == "--help" || argument == "-h") {
 			return sendRequest{help: true}, nil
@@ -221,15 +221,12 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		files = append(files, argument)
 	}
 	if len(files) == 0 {
-		return sendRequest{}, errors.New("cdx: missing file to send")
-	}
-	if len(files) > 1 {
-		return sendRequest{}, errors.New("cdx: send one file at a time (zip a folder first to share it)")
+		return sendRequest{}, errors.New("cdx: missing file or folder to send")
 	}
 	if request.detach && request.wait {
 		return sendRequest{}, errors.New("cdx: --detach and --wait cannot be combined")
 	}
-	request.file = files[0]
+	request.files = files
 	return request, nil
 }
 
@@ -388,7 +385,7 @@ func runSend(request sendRequest) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	err := sendFile(ctx, request.file, request.linkMode, sendHooks{ready: func(value readyOutput) error {
+	err := sendFile(ctx, request.files, request.linkMode, sendHooks{ready: func(value readyOutput) error {
 		return writeReady(os.Stdout, value, request.jsonOutput)
 	}})
 	if err != nil {
@@ -501,13 +498,7 @@ func run(argv []string) int {
 		// Implicit send: `cdx <file>` behaves like `cdx send <file>`.
 		request, err := parseSendArgs(argv)
 		if err != nil {
-			message := strings.TrimSpace(err.Error())
-			if strings.Contains(message, "one file at a time") {
-				fmt.Fprintln(os.Stderr, message)
-				fmt.Fprintln(os.Stderr, "hint: cdx send [--json] [--] <file>")
-				return 2
-			}
-			return sendFailure(message)
+			return sendFailure(strings.TrimSpace(err.Error()))
 		}
 		return runSend(request)
 	}

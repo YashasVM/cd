@@ -181,7 +181,7 @@ func openSharedFile(path string) (*os.File, os.FileInfo, error) {
 		return nil, nil, errors.New("missing file to send")
 	}
 	if path == "-" {
-		return nil, nil, errors.New(`standard input ("-") is not supported: send one regular file`)
+		return nil, nil, errors.New(`standard input ("-") is not supported: send files or folders`)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -195,7 +195,7 @@ func openSharedFile(path string) (*os.File, os.FileInfo, error) {
 		return nil, nil, fmt.Errorf("cannot access %q: %s", path, reason)
 	}
 	if info.IsDir() {
-		return nil, nil, fmt.Errorf("%q is a folder: zip it first, then send the .zip", path)
+		return nil, nil, fmt.Errorf("%q is a folder", path)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, nil, fmt.Errorf("%q is not a regular file: send one normal file", path)
@@ -237,19 +237,15 @@ func (hooks sendHooks) report(phase string, acknowledged uint64) {
 	}
 }
 
-func sendFile(ctx context.Context, path string, linkMode bool, hooks sendHooks) error {
-	file, info, err := openSharedFile(path)
+func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHooks) error {
+	source, err := prepareSource(paths)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	if info.Size() < 0 {
-		return errors.New("file size is invalid")
+	if source.skipped > 0 {
+		fmt.Fprintf(os.Stderr, "skipped %d symlinks or special files (only regular files and folders are bundled)\n", source.skipped)
 	}
-	filename, err := safeFilename(path)
-	if err != nil {
-		return err
-	}
+	filename := source.name
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -294,7 +290,7 @@ func sendFile(ctx context.Context, path string, linkMode bool, hooks sendHooks) 
 	ready := readyOutput{
 		Version:  1,
 		URL:      publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
-		Filename: filename, Size: uint64(info.Size()),
+		Filename: filename, Size: source.size,
 	}
 	if linkMode {
 		if err := hooks.ready(ready); err != nil {
@@ -328,7 +324,12 @@ func sendFile(ctx context.Context, path string, linkMode bool, hooks sendHooks) 
 	}
 	fmt.Fprintln(os.Stderr, "receiver connected — sending file offer")
 	hooks.report(phaseConnected, 0)
-	return transfer(ctx, connection, file, ready, invitation, hooks)
+	reader, err := source.open()
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	return transfer(ctx, connection, reader, ready, invitation, hooks)
 }
 
 // isTimeoutError reports whether err is a network deadline timeout.
@@ -407,7 +408,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 	return nil
 }
 
-func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, ready readyOutput, invitation invitation, hooks sendHooks) error {
+func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, ready readyOutput, invitation invitation, hooks sendHooks) error {
 	sealer, err := newSealer(invitation, senderDirection)
 	if err != nil {
 		return err
