@@ -353,6 +353,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := writeReceiverRecord(connection, sealer, kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 			}
+			closeGracefully(connection, closeWait)
 			abs, _ := filepath.Abs(final)
 			if abs == "" {
 				abs = final

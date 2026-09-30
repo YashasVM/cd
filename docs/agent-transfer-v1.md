@@ -121,7 +121,11 @@ and 256 KiB (current) are both accepted.
 
 The end record authenticates total bytes and chunk count. The receiver compares
 them with the offer and its committed counters before closing its sink. It sends
-complete with the matching counters. Per-record authentication, ordered
+complete with the matching counters, then closes with a normal WebSocket
+close frame and waits up to 3 seconds for the relay's close reply. Dropping
+TCP right after `complete` let the relay edge discard that last frame, so the
+sender saw `peer-left` and exited 1 for a delivered file. The sender sends
+`end` as soon as the file is read and then waits for acks and `complete`. Per-record authentication, ordered
 sequences, and authenticated terminal counts detect changed, reordered,
 duplicated, missing, or extra content without a second file read.
 

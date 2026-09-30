@@ -431,197 +431,147 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 	}
 
 	// Full-duplex pipeline: one reader goroutine owns the socket read side
-	// and streams acks/completion into a channel while the send loop only
-	// writes. The old stop-and-wait loop serialized every 1 MiB behind a
-	// round trip, capping throughput near 168 KiB/s on real RTTs. With an
-	// 8 MiB window and 256 KiB chunks the sender keeps up to 32 chunks in
-	// flight and only blocks when the window is genuinely full.
-	type inbound struct {
-		kind    messageKind
-		payload []byte
-		err     error
-	}
-	incoming := make(chan inbound, 64)
+	// and streams records into a channel while the send loop only writes.
+	// With an 8 MiB window and 256 KiB chunks the sender keeps up to 32
+	// chunks in flight and only blocks when the window is genuinely full.
+	incoming := make(chan inboundRecord, 64)
 	readerDone := make(chan struct{})
 	go func() {
 		defer close(readerDone)
 		for {
 			kind, payload, err := readRecord(ctx, connection, opener, transferIdle)
 			select {
-			case incoming <- inbound{kind: kind, payload: payload, err: err}:
+			case incoming <- inboundRecord{kind: kind, payload: payload, err: err}:
 			case <-ctx.Done():
 				return
 			}
-			if err != nil {
-				return
-			}
-			if kind == kindComplete {
+			if err != nil || kind == kindComplete {
 				return
 			}
 		}
 	}()
 
-	acknowledged := uint64(0)
-	waitForWindow := func(sent, chunks uint64, chunks32 uint32) error {
-		for sent-acknowledged >= sendWindowBytes {
+	// Every inbound record goes through one state machine; the send loop
+	// only chooses what to wait for.
+	progress := &senderProgress{}
+	await := func(done func() bool) error {
+		for !done() {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case msg := <-incoming:
 				if msg.err != nil {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
 					if isTimeoutError(msg.err) {
+						if progress.ended {
+							return errors.New("receiver did not verify within 90s: they may have disconnected")
+						}
 						return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
 					}
 					return msg.err
 				}
-				if msg.kind != kindAck {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return errors.New("receiver sent an invalid acknowledgement")
+				if err := progress.handle(msg.kind, msg.payload); err != nil {
+					return err
 				}
-				ackChunks, ackBytes, err := decodeCounts(msg.payload)
-				if err != nil || ackChunks > chunks32 || ackBytes < acknowledged || ackBytes > sent {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return errors.New("receiver sent invalid progress")
-				}
-				acknowledged = ackBytes
-				reportProgress(acknowledged, ready.Size)
+				reportProgress(progress.acknowledged, ready.Size)
 			}
 		}
 		return nil
 	}
-	drainAcks := func(sent uint64, chunks32 uint32) error {
-		for acknowledged < sent {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case msg := <-incoming:
-				if msg.err != nil {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					if isTimeoutError(msg.err) {
-						return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
-					}
-					return msg.err
-				}
-				if msg.kind == kindComplete {
-					// Completion arrived early (tiny file): stash it back by
-					// treating it as drained; the END phase below re-reads.
-					// Simplest: put it aside via a one-slot replay.
-					// We return a sentinel by pushing to a fresh channel is
-					// overkill — instead validate here if it matches.
-					// Fall through to ack validation; mismatch fails below.
-					if len(msg.payload) == 12 {
-						if cc, cb, cerr := decodeCounts(msg.payload); cerr == nil && cc == chunks32 && cb == sent {
-							acknowledged = sent
-							// Re-inject as completion for the END wait.
-							go func() {
-								select {
-								case incoming <- msg:
-								case <-ctx.Done():
-								}
-							}()
-							return nil
-						}
-					}
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return errors.New("receiver sent an invalid acknowledgement")
-				}
-				if msg.kind != kindAck {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return errors.New("receiver sent an invalid acknowledgement")
-				}
-				ackChunks, ackBytes, err := decodeCounts(msg.payload)
-				if err != nil || ackChunks > chunks32 || ackBytes < acknowledged || ackBytes > sent {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return errors.New("receiver sent invalid progress")
-				}
-				acknowledged = ackBytes
-				reportProgress(acknowledged, ready.Size)
-			}
+	windowOpen := func() bool { return progress.sent-progress.acknowledged < sendWindowBytes }
+	finishLine := func() {
+		if terminal && progress.sent > 0 {
+			fmt.Fprintln(os.Stderr)
 		}
-		return nil
 	}
 
 	buffer := make([]byte, chunkSize)
-	var sent uint64
-	var chunks uint32
-	sendErr := func() error {
-		for {
-			count, readErr := file.Read(buffer)
-			if count > 0 {
-				if err := writeRecord(connection, sealer, kindChunk, buffer[:count]); err != nil {
-					if terminal && sent > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
-					return friendlyRelayError(fmt.Errorf("send file data: %w", err))
-				}
-				sent += uint64(count)
-				chunks++
-				if err := waitForWindow(sent, uint64(chunks), chunks); err != nil {
-					return err
-				}
+	for {
+		count, readErr := file.Read(buffer)
+		if count > 0 {
+			if err := writeRecord(connection, sealer, kindChunk, buffer[:count]); err != nil {
+				finishLine()
+				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
 			}
-			if readErr == io.EOF {
-				break
-			}
-			if readErr != nil {
-				if terminal && sent > 0 {
-					fmt.Fprintln(os.Stderr)
-				}
-				return fmt.Errorf("read file while sending: %w", readErr)
+			progress.sent += uint64(count)
+			progress.chunks++
+			if err := await(windowOpen); err != nil {
+				finishLine()
+				return err
 			}
 		}
-		return nil
-	}()
-	if sendErr != nil {
-		return sendErr
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			finishLine()
+			return fmt.Errorf("read file while sending: %w", readErr)
+		}
 	}
-	if err := drainAcks(sent, chunks); err != nil {
-		return err
-	}
-	if terminal && ready.Size > 0 {
-		fmt.Fprintln(os.Stderr)
-	} else if !terminal && ready.Size >= 1024*1024 {
-		fmt.Fprintf(os.Stderr, "sent %s\n", formatBytes(sent))
-	}
-	if sent != ready.Size {
+	if progress.sent != ready.Size {
+		finishLine()
 		return errors.New("file changed while it was being sent")
 	}
-	if err := writeRecord(connection, sealer, kindEnd, encodeCounts(chunks, sent)); err != nil {
+	if err := writeRecord(connection, sealer, kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
+		finishLine()
 		return friendlyRelayError(fmt.Errorf("finish transfer: %w", err))
 	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case msg := <-incoming:
-		if msg.err != nil {
-			if isTimeoutError(msg.err) {
-				return errors.New("receiver did not verify within 90s: they may have disconnected")
-			}
-			return msg.err
-		}
-		completeChunks, completeBytes, countErr := decodeCounts(msg.payload)
-		if msg.kind != kindComplete || countErr != nil || completeChunks != chunks || completeBytes != sent {
-			return errors.New("receiver did not verify the transfer")
-		}
+	progress.ended = true
+	err = await(func() bool { return progress.completed })
+	finishLine()
+	if err != nil {
+		return err
+	}
+	if !terminal && ready.Size >= 1024*1024 {
+		fmt.Fprintf(os.Stderr, "sent %s\n", formatBytes(progress.sent))
 	}
 	<-readerDone
+	closeGracefully(connection, closeWait)
 	fmt.Fprintln(os.Stderr, "receiver verified the file")
 	return nil
+}
+
+type inboundRecord struct {
+	kind    messageKind
+	payload []byte
+	err     error
+}
+
+// senderProgress is the sender's view of the receiver: the bytes it has
+// written, the bytes the receiver acknowledged, and whether the receiver
+// verified the whole stream. handle validates each receiver record against
+// that state.
+type senderProgress struct {
+	sent         uint64
+	chunks       uint32
+	acknowledged uint64
+	ended        bool
+	completed    bool
+}
+
+func (p *senderProgress) handle(kind messageKind, payload []byte) error {
+	switch {
+	case p.completed:
+		return errors.New("receiver sent data after verifying the transfer")
+	case kind == kindAck:
+		chunks, bytes, err := decodeCounts(payload)
+		if err != nil || chunks > p.chunks || bytes < p.acknowledged || bytes > p.sent {
+			return errors.New("receiver sent invalid progress")
+		}
+		p.acknowledged = bytes
+		return nil
+	case kind == kindComplete && p.ended:
+		chunks, bytes, err := decodeCounts(payload)
+		if err != nil || chunks != p.chunks || bytes != p.sent {
+			return errors.New("receiver did not verify the transfer")
+		}
+		p.acknowledged = bytes
+		p.completed = true
+		return nil
+	case kind == kindComplete:
+		return errors.New("receiver claimed completion before the transfer ended")
+	default:
+		return errors.New("receiver sent an invalid acknowledgement")
+	}
 }
 
 func writeRecord(connection *websocket.Conn, sealer *recordSealer, kind messageKind, payload []byte) error {
