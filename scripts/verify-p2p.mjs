@@ -49,6 +49,8 @@ try {
   console.log('verified P2P transfer after each side loses its first signaling socket');
   await transferOnce(browser, work, baseUrl, sourcePath, source, 'relay-fallback');
   console.log('verified relay fallback: exact bytes when the direct data channel cannot connect');
+  await transferOnce(browser, work, baseUrl, sourcePath, source, 'legacy-framing');
+  console.log('verified PeerJS framing when the sender does not know the raw channel (Android, old pages)');
   await transferBatch(browser, work, baseUrl);
   console.log('verified P2P batch: five exact downloads, including an empty file');
   await transferSlowReceiver(browser, work, baseUrl);
@@ -117,6 +119,18 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
         window.RTCPeerConnection.prototype = NativePeerConnection.prototype;
       }
     }, mode);
+    // Count bytes each data channel sends, by label, to see which one
+    // carried the file.
+    await context.addInitScript(() => {
+      window.__cdChannelBytes = {};
+      const nativeSend = RTCDataChannel.prototype.send;
+      RTCDataChannel.prototype.send = function send(data) {
+        const bytes = typeof data === 'string' ? data.length : data.byteLength ?? data.size ?? 0;
+        const label = this.label === 'cd-raw' ? 'raw' : 'peerjs';
+        window.__cdChannelBytes[label] = (window.__cdChannelBytes[label] ?? 0) + bytes;
+        return nativeSend.call(this, data);
+      };
+    });
     const sender = await context.newPage();
     const receiver = await context.newPage();
     // The sender only opens a relay socket when it falls back.
@@ -124,6 +138,22 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     sender.on('websocket', (socket) => { if (socket.url().includes('/ws/v1/')) senderRelaySockets += 1; });
     let senderAttempts = 0;
     let receiverAttempts = 0;
+    if (mode === 'legacy-framing') {
+      // Hide the receiver's raw-channel offer from the sender, as an Android
+      // or old sender would ignore it.
+      await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
+        const server = socket.connectToServer();
+        socket.onMessage((message) => server.send(message));
+        server.onMessage((message) => {
+          const value = JSON.parse(message);
+          if (value.type === 'OFFER' && value.payload?.metadata) {
+            delete value.payload.metadata.raw;
+            delete value.payload.metadata.window;
+          }
+          socket.send(JSON.stringify(value));
+        });
+      });
+    }
     if (mode === 'signaling-retry') {
       await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
         if (++senderAttempts === 1) void socket.close({ code: 1013, reason: 'temporary failure' });
@@ -191,6 +221,12 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     }
     if (mode === 'relay-fallback') assert.ok(senderRelaySockets >= 1, 'sender should fall back to the relay');
     else assert.equal(senderRelaySockets, 0, 'direct P2P should not touch the relay');
+    const channelBytes = await sender.evaluate(() => window.__cdChannelBytes);
+    if (mode === 'legacy-framing') {
+      assert.ok((channelBytes.peerjs ?? 0) >= source.byteLength && !channelBytes.raw, `legacy sender should use the PeerJS channel: ${JSON.stringify(channelBytes)}`);
+    } else if (mode !== 'relay-fallback') {
+      assert.ok((channelBytes.raw ?? 0) >= source.byteLength, `file should travel over the raw channel: ${JSON.stringify(channelBytes)}`);
+    }
   } finally {
     await context.close();
   }

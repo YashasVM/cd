@@ -170,6 +170,9 @@ export function openRelayTunnel({ capability, role, connect, location = globalTh
 
   return {
     get open() { return open; },
+    // Relay records carry up to 1 MiB; 256 KiB chunks keep per-record
+    // overhead low without large bursts.
+    maxChunkBytes: 256 * 1024,
     // P2P backpressure reads bufferedAmount; queued plaintext still waiting
     // to be sealed counts too.
     dataChannel: {

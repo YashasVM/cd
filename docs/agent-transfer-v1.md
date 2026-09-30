@@ -190,3 +190,19 @@ directions use both kinds, and tunnel openers reject file-transfer kinds and
 vice versa. The receiver commits to whichever transport delivers the first
 message and closes the other. Signaling carries the key, so the tunnel has
 the same trust as short share codes.
+
+## Browser P2P raw channel and window
+
+PeerJS `binary` serialization BinaryPacks every message and re-splits
+anything over 16,300 bytes into packed pieces the receiver reassembles. A
+receiver that supports it therefore adds `raw: 1` and `window: <bytes>` to its
+PeerJS connect metadata and creates a pre-negotiated data channel (`cd-raw`,
+SCTP stream id 1000) on the same peer connection. A sender that sees `raw: 1`
+creates the matching channel and sends the same P2P messages on it: control
+messages as JSON strings, file bytes as ArrayBuffers of up to 256 KiB (capped
+by the connection's SCTP `maxMessageSize`). The sender keeps at most `window`
+unacknowledged bytes in flight: 16 MiB from desktop receivers, 4 MiB from
+phones, 3 MiB when no window was announced. The receiver's pending-input
+cap grows to match. Peers that ignore the metadata (the Android app, cached
+old pages) keep using the PeerJS channel, and the receiver commits to
+whichever channel delivers the first message.

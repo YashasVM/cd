@@ -2,6 +2,7 @@ import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode,
 import { cleanShortCode, codeLookupPath, isShortCode, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { MAX_P2P_FILES, MAX_P2P_FILE_BYTES, parseManifest } from './p2p-manifest.js';
 import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
+import { openRawChannel, parseTransferOffer, receiveWindowFor } from './raw-channel.js';
 import {
   DOWNLOAD_TOO_LARGE,
   createSink,
@@ -93,8 +94,10 @@ const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
 const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
 const TRANSFER_ACK_TIMEOUT_MS = 30000;
-const MAX_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
-const RECEIVER_WINDOW_BYTES = 3 * 1024 * 1024;
+const MIN_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
+// Unacknowledged bytes a sender keeps in flight when the receiver did not
+// announce its own window (old pages, the Android app).
+const DEFAULT_SEND_WINDOW_BYTES = 3 * 1024 * 1024;
 const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
 const SIGNALING_RETRY_LIMIT = 3;
 const SIGNALING_RETRY_DELAY_MS = 300;
@@ -306,6 +309,7 @@ const Sender = (() => {
   let signalingRetries = 0;
   let bytesSent = 0;
   let bytesConfirmed = 0;
+  let sendWindow = DEFAULT_SEND_WINDOW_BYTES;
   let totalSize = 0;
   let transferStartTime = null;
   let transferFinished = false;
@@ -424,8 +428,17 @@ const Sender = (() => {
       els.senderStatus.textContent = 'Receiver found.';
       setState('connecting');
       attachConnection(conn, activePeer);
+      const offer = parseTransferOffer(conn.metadata);
+      sendWindow = offer.window ?? DEFAULT_SEND_WINDOW_BYTES;
+      if (offer.raw) {
+        // The receiver opened the raw channel too: send through it and keep
+        // the PeerJS channel only as the owner of the peer connection.
+        const raw = openRawChannel(conn);
+        connection = raw;
+        attachConnection(raw, activePeer);
+      }
       const capability = parseTunnelCapability(conn.metadata);
-      if (capability) scheduleRelayFallback(conn, capability, activePeer);
+      if (capability) scheduleRelayFallback(connection, conn, capability, activePeer);
     });
 
     peer.on('error', (err) => {
@@ -531,9 +544,9 @@ const Sender = (() => {
   // channel, and there is no TURN on the free plan. If the channel is not
   // open soon after the receiver arrives, meet in the relay room the
   // receiver already opened and send the same messages through it.
-  function scheduleRelayFallback(conn, capability, activePeer) {
+  function scheduleRelayFallback(direct, conn, capability, activePeer) {
     setTimeout(() => {
-      if (peer !== activePeer || connection !== conn || conn.open || transferCancelled) return;
+      if (peer !== activePeer || connection !== direct || direct.open || transferCancelled) return;
       const tunnel = openRelayTunnel({ capability, role: 'joiner', connect: (url) => new WebSocket(url) });
       connection = tunnel;
       try { conn.close(); } catch { /* The data channel never opened. */ }
@@ -586,8 +599,9 @@ const Sender = (() => {
   }
 
   async function sendSingleFile(file, activeConnection) {
+    const chunkSize = activeConnection.maxChunkBytes ?? TRANSFER_CHUNK_SIZE;
     let offset = 0;
-    let nextChunk = file.slice(0, Math.min(TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer();
+    let nextChunk = file.slice(0, Math.min(chunkSize, file.size)).arrayBuffer();
 
     while (offset < file.size && !transferCancelled) {
       // Start reading the next chunk before waiting for the data channel. On
@@ -596,7 +610,7 @@ const Sender = (() => {
       const value = await nextChunk;
       offset += value.byteLength;
       nextChunk = offset < file.size
-        ? file.slice(offset, Math.min(offset + TRANSFER_CHUNK_SIZE, file.size)).arrayBuffer()
+        ? file.slice(offset, Math.min(offset + chunkSize, file.size)).arrayBuffer()
         : null;
 
       if (!(await waitForReceiverCapacity(value.byteLength, activeConnection))) return false;
@@ -610,7 +624,7 @@ const Sender = (() => {
 
   async function waitForReceiverCapacity(chunkBytes, activeConnection) {
     while (!transferCancelled && activeConnection.open && connection === activeConnection &&
-        bytesSent - bytesConfirmed + chunkBytes > RECEIVER_WINDOW_BYTES) {
+        bytesSent - bytesConfirmed + chunkBytes > sendWindow) {
       const advanced = await new Promise((resolve) => {
         const timeout = setTimeout(() => {
           capacityWaitResolve = null;
@@ -725,6 +739,7 @@ const Sender = (() => {
     code = null;
     bytesSent = 0;
     bytesConfirmed = 0;
+    sendWindow = DEFAULT_SEND_WINDOW_BYTES;
     totalSize = 0;
     transferStartTime = null;
     transferFinished = false;
@@ -776,6 +791,9 @@ const Receiver = (() => {
   let progressAckTimer = 0;
   let dataQueue = Promise.resolve();
   let pendingReceiveBytes = 0;
+  // The window this receiver announces; pending input may reach it.
+  const receiveWindow = receiveWindowFor(navigator.userAgent, navigator.userAgentData?.mobile);
+  const maxPendingReceiveBytes = Math.max(MIN_PENDING_RECEIVE_BYTES, receiveWindow + 2 * 1024 * 1024);
   let transferGeneration = 0;
   let timeoutId = null;
   let lastArrivalAt = 0;
@@ -869,13 +887,16 @@ const Receiver = (() => {
       // another round trip if the data channel never connects.
       const capability = generateTunnelCapability();
       const tunnel = openRelayTunnel({ capability, role: 'creator', connect: (url) => new WebSocket(url) });
+      // `raw: 1` offers the raw data channel; senders that don't know it
+      // (the Android app, old pages) use the PeerJS channel as before.
       const directConnection = activePeer.connect(peerIdFor(code), {
         reliable: true,
         serialization: 'binary',
-        metadata: { relay: capability }
+        metadata: { relay: capability, raw: 1, window: receiveWindow }
       });
+      const raw = openRawChannel(directConnection);
       closeCandidates();
-      candidates = [directConnection, tunnel];
+      candidates = [directConnection, raw, tunnel];
       for (const transport of candidates) attachTransport(transport, connectionGeneration);
     });
 
@@ -929,7 +950,7 @@ const Receiver = (() => {
       lastArrivalAt = Date.now();
       const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
       pendingReceiveBytes += frameBytes;
-      if (pendingReceiveBytes > MAX_PENDING_RECEIVE_BYTES) {
+      if (pendingReceiveBytes > maxPendingReceiveBytes) {
         failProtocol();
         return;
       }
@@ -964,7 +985,8 @@ const Receiver = (() => {
     connection = transport;
     els.receiverConnecting.classList.add('hidden');
     for (const candidate of candidates) {
-      if (candidate === transport) continue;
+      // The raw channel lives on its PeerJS owner's peer connection.
+      if (candidate === transport || candidate === transport.owner) continue;
       try { candidate.close(); } catch { /* Best effort. */ }
     }
     candidates = [transport];
