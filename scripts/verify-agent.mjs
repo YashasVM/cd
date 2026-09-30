@@ -59,7 +59,7 @@ try {
       type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     }, 4409);
   }
-  sender = spawn(executable, ['send', '--link', sourcePath], {
+  sender = spawn(executable, ['send', '--wait', '--link', sourcePath], {
     env: {
       ...process.env,
       CD_RELAY_URL: relayBase,

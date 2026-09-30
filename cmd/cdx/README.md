@@ -30,8 +30,18 @@ receiver types it into the browser Receive box or runs `cdx receive <code>`.
 Codes expire after 15 minutes and admit one receiver. Status goes to standard
 error, making the single stdout line safe for agents and shell scripts.
 `cdx send ./file.zip --json` emits the code with the filename, byte size, and
-output schema version. A bare `cd ./file.zip` works as shorthand for
+output schema version. A bare `cdx ./file.zip` works as shorthand for
 `cdx send ./file.zip`.
+
+When stdout is not a terminal, `send` detaches: it re-executes itself as a
+background holder in a new session (Windows: a detached process group) and
+exits 0 once the holder prints the code. The holder records its progress in
+`<user cache dir>/cdx/transfers/<code>.json` (override with `CD_STATE_DIR`)
+and logs to a file beside it. `cdx wait <code>` blocks until the receiver
+verifies the file (exit 0) or the transfer fails (exit 1), including when the
+holder process died. `cdx status [code]` prints `<code> <phase> <file>` lines
+(`--json` for objects). `--wait` forces the foreground and `--detach` forces
+the background.
 
 Receiving takes the code (a full share link works too), saves the offered
 file, and prints the saved path to stdout (`--json` emits the filename, size,

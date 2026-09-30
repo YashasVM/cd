@@ -3,10 +3,13 @@
 ## Caller contract
 
 `cdx send <file>` opens and validates one regular file, reserves a live relay
-room, claims a short numeric share code, then writes the code to stdout. The
-process stays in the foreground. Status goes to stderr. Exit code 0 means the
-receiver reconstructed the authenticated byte stream and prepared it for
-download or finished writing it to a user-approved file destination.
+room, claims a short numeric share code, then writes the code to stdout.
+Status goes to stderr. In the foreground (a terminal, or `--wait`), exit code
+0 means the receiver reconstructed the authenticated byte stream and prepared
+it for download or finished writing it to a user-approved file destination.
+When stdout is not a terminal (or with `--detach`), a background holder keeps
+the room and the command exits 0 once the code is live. `cdx wait <code>`
+then carries the same exit-code meaning as a foreground send.
 
 `cdx send --link <file>` skips the code claim and writes the full capability
 URL instead (see below). The browser `/send` page is an equivalent

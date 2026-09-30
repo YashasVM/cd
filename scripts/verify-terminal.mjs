@@ -45,11 +45,16 @@ try {
   {
     const outDir = join(work, 't2t');
     await mkdir(outDir, { recursive: true });
-    const sender = spawn(executable, ['send', sourcePath], { env: childEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
-    const senderExit = new Promise((resolve) => sender.once('exit', resolve));
-    const senderStderr = collect(sender.stderr);
+    // The agent path: a detached send exits 0 with the code, and
+    // `cdx wait` reports the verified result.
+    const stateEnv = { CD_STATE_DIR: join(work, 'state') };
+    const sender = spawn(executable, ['send', sourcePath], { env: childEnv(stateEnv), stdio: ['ignore', 'pipe', 'pipe'] });
     const code = await firstLine(sender.stdout);
     assert.match(code, /^\d{4,5}$/);
+    assert.equal(await childExit(sender), 0, 'detached send did not exit 0');
+    const waiter = spawn(executable, ['wait', code], { env: childEnv(stateEnv), stdio: ['ignore', 'pipe', 'pipe'] });
+    const senderExit = new Promise((resolve) => waiter.once('exit', resolve));
+    const senderStderr = collect(waiter.stderr);
     const receiver = spawn(executable, ['receive', code, '--out', outDir], { env: childEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
     const receiverStderr = collect(receiver.stderr);
     const receiverExit = await childExit(receiver);

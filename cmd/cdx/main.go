@@ -59,19 +59,22 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--] <file>")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--detach|--wait] [--] <file>")
 	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Send one file through CD at https://cd.yash0.in, or receive one.")
-	fmt.Fprintln(output, "Send prints one short share code to stdout, then waits")
-	fmt.Fprintln(output, "until the receiver verifies the file. The code works in")
-	fmt.Fprintln(output, "any browser Receive box and in `cdx receive`. Receive")
+	fmt.Fprintln(output, "Send prints one short share code to stdout. In a terminal it then waits")
+	fmt.Fprintln(output, "until the receiver verifies the file; otherwise (agents, scripts, pipes)")
+	fmt.Fprintln(output, "it hands the transfer to a background sender and exits 0 right away.")
+	fmt.Fprintln(output, "The code works in any browser Receive box and in `cdx receive`. Receive")
 	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
 	fmt.Fprintln(output, "  send <file>        send one regular file (zip a folder first to share it)")
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
+	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
+	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
 	fmt.Fprintln(output, "  help [send|receive] show help")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
@@ -85,6 +88,8 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "options for send:")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
+	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show help for send")
 	fmt.Fprintln(output, "  -v, --version  show version")
@@ -99,17 +104,19 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)")
 	fmt.Fprintln(output, "  CD_PUBLIC_URL  share-link origin (default https://cd.yash0.in)")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "exit status 0 means the transfer verified every byte.")
-	fmt.Fprintln(output, "Exit status 1 means the transfer failed; exit status 2 means")
-	fmt.Fprintln(output, "the command was used incorrectly.")
+	fmt.Fprintln(output, "Exit status 0 means the transfer verified every byte (for a background")
+	fmt.Fprintln(output, "send: the code is live; `cdx wait` reports verification). Exit status 1")
+	fmt.Fprintln(output, "means the transfer failed; exit status 2 means the command was used incorrectly.")
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--] <file>")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <file>         one regular file to share (zip a folder first)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
+	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show this help")
 	fmt.Fprintln(output, "  -v, --version  show version")
@@ -140,6 +147,8 @@ func receiveUsage(output io.Writer) {
 type sendRequest struct {
 	jsonOutput bool
 	linkMode   bool
+	detach     bool
+	wait       bool
 	file       string
 	help       bool
 	version    bool
@@ -180,6 +189,14 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			request.linkMode = true
 			continue
 		}
+		if !endOfFlags && argument == "--detach" {
+			request.detach = true
+			continue
+		}
+		if !endOfFlags && argument == "--wait" {
+			request.wait = true
+			continue
+		}
 		if !endOfFlags && strings.HasPrefix(argument, "-") && argument != "" {
 			hint := ""
 			switch {
@@ -187,6 +204,10 @@ func parseSendArgs(args []string) (sendRequest, error) {
 				hint = " (did you mean --json?)"
 			case strings.HasPrefix(argument, "--li"):
 				hint = " (did you mean --link?)"
+			case strings.HasPrefix(argument, "--det"):
+				hint = " (did you mean --detach?)"
+			case strings.HasPrefix(argument, "--wa"):
+				hint = " (did you mean --wait?)"
 			case strings.HasPrefix(argument, "--he"):
 				hint = " (did you mean --help?)"
 			case strings.HasPrefix(argument, "--ver"):
@@ -204,6 +225,9 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	}
 	if len(files) > 1 {
 		return sendRequest{}, errors.New("cdx: send one file at a time (zip a folder first to share it)")
+	}
+	if request.detach && request.wait {
+		return sendRequest{}, errors.New("cdx: --detach and --wait cannot be combined")
 	}
 	request.file = files[0]
 	return request, nil
@@ -314,7 +338,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "help", "version"}
+	candidates := []string{"send", "receive", "status", "wait", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -341,6 +365,15 @@ func looksLikeCommandTypo(argument string) (string, bool) {
 	return "", false
 }
 
+// shouldDetach picks background mode: explicit flags win; otherwise detach
+// when stdout is not a terminal (agents, scripts, pipes).
+func shouldDetach(request sendRequest, stdoutIsTerminal bool) bool {
+	if request.wait {
+		return false
+	}
+	return request.detach || !stdoutIsTerminal
+}
+
 func runSend(request sendRequest) int {
 	if request.help {
 		sendUsage(os.Stdout)
@@ -350,11 +383,14 @@ func runSend(request sendRequest) int {
 		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	}
+	if shouldDetach(request, isTerminal(os.Stdout)) {
+		return runDetachedSend(request)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	err := sendFile(ctx, request.file, request.linkMode, func(value readyOutput) error {
+	err := sendFile(ctx, request.file, request.linkMode, sendHooks{ready: func(value readyOutput) error {
 		return writeReady(os.Stdout, value, request.jsonOutput)
-	})
+	}})
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
@@ -443,6 +479,12 @@ func run(argv []string) int {
 			return receiveFailure(strings.TrimSpace(err.Error()))
 		}
 		return runReceive(request)
+	case "status":
+		return runStatus(argv[1:])
+	case "wait":
+		return runWait(argv[1:])
+	case holderCommand:
+		return runHolder(argv[1:])
 	default:
 		if strings.HasPrefix(argv[0], "-") {
 			request, err := parseSendArgs(argv)

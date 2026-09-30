@@ -48,10 +48,15 @@ Standard output contains only the short share code:
 
 Tell the receiver the code. They type it into the Receive box on
 [cd.yash0.in](https://cd.yash0.in) or run `cdx receive 48291`. Codes expire
-after 15 minutes and admit one receiver. Keep `cdx` running while they accept
-and download the file. Progress is written to standard error; exit status 0
-means the receiver verified the complete byte count. Use `--json` when a tool
-needs structured output.
+after 15 minutes and admit one receiver.
+
+In a terminal, `cdx send` stays in the foreground until the receiver verifies
+the file (exit status 0). When stdout isn't a terminal (agents, scripts,
+pipes), it hands the transfer to a background sender and exits 0 as soon as
+the code is live. `cdx wait <code>` then exits 0 once the receiver has
+verified every byte, or 1 if the transfer failed. `cdx status` lists recent
+background sends. `--wait` and `--detach` override the default. Progress goes
+to standard error. Use `--json` when a tool needs structured output.
 
 The URL fragment holds the encryption key. Browsers do not send fragments to
 the server, and the relay receives encrypted records only. A receiver must

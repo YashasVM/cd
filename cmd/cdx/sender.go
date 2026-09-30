@@ -223,7 +223,21 @@ func openSharedFile(path string) (*os.File, os.FileInfo, error) {
 	return file, current, nil
 }
 
-func sendFile(ctx context.Context, path string, linkMode bool, onReady func(readyOutput) error) error {
+// sendHooks lets callers observe a send. ready receives the code or link
+// once the room exists; phase (optional) receives each transition and the
+// bytes the receiver has acknowledged so far.
+type sendHooks struct {
+	ready func(readyOutput) error
+	phase func(phase string, acknowledged uint64)
+}
+
+func (hooks sendHooks) report(phase string, acknowledged uint64) {
+	if hooks.phase != nil {
+		hooks.phase(phase, acknowledged)
+	}
+}
+
+func sendFile(ctx context.Context, path string, linkMode bool, hooks sendHooks) error {
 	file, info, err := openSharedFile(path)
 	if err != nil {
 		return err
@@ -283,7 +297,7 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 		Filename: filename, Size: uint64(info.Size()),
 	}
 	if linkMode {
-		if err := onReady(ready); err != nil {
+		if err := hooks.ready(ready); err != nil {
 			return err
 		}
 	} else {
@@ -295,7 +309,7 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 			return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
 		}
 		ready.Code = code
-		if err := onReady(ready); err != nil {
+		if err := hooks.ready(ready); err != nil {
 			return err
 		}
 	}
@@ -313,7 +327,8 @@ func sendFile(ctx context.Context, path string, linkMode bool, onReady func(read
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "receiver connected — sending file offer")
-	return transfer(ctx, connection, file, ready, invitation)
+	hooks.report(phaseConnected, 0)
+	return transfer(ctx, connection, file, ready, invitation, hooks)
 }
 
 // isTimeoutError reports whether err is a network deadline timeout.
@@ -392,7 +407,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 	return nil
 }
 
-func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, ready readyOutput, invitation invitation) error {
+func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, ready readyOutput, invitation invitation, hooks sendHooks) error {
 	sealer, err := newSealer(invitation, senderDirection)
 	if err != nil {
 		return err
@@ -420,6 +435,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 		return errors.New("receiver sent an invalid acceptance")
 	}
 	fmt.Fprintln(os.Stderr, "receiver accepted — sending file")
+	hooks.report(phaseSending, 0)
 
 	terminal := isTerminal(os.Stderr)
 	reportProgress := func(acknowledged, total uint64) {
@@ -473,6 +489,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file *os.File, re
 					return err
 				}
 				reportProgress(progress.acknowledged, ready.Size)
+				hooks.report(phaseSending, progress.acknowledged)
 			}
 		}
 		return nil
