@@ -34,10 +34,14 @@ test('still accepts legacy single words', () => {
   assert.equal(peerIdFor('river'), 'cd-river');
 });
 
-test('ephemeral ids stay random base64url', () => {
-  const id = generateEphemeralId({ getRandomValues: (bytes) => bytes.fill(0xff) });
-  assert.equal(id, '________');
-  assert.equal(id.length, 8);
+test('ephemeral ids are always valid PeerJS ids', () => {
+  // PeerJS: alphanumerics joined by single separators.
+  const peerId = /^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$/;
+  for (let value = 0; value < 256; value += 1) {
+    const id = generateEphemeralId({ getRandomValues: (bytes) => bytes.fill(value) });
+    assert.equal(id.length, 12);
+    assert.match(`cd-r-${id}`, peerId);
+  }
 });
 
 test('codes are case-insensitive but links stay lowercase', () => {

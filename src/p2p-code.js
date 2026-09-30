@@ -63,14 +63,13 @@ export function generateCode(random = crypto) {
   return `${first}-${second}`;
 }
 
-// Ephemeral receiver peer suffixes need uniqueness, not memorability, so
-// they stay random base64url instead of short words.
+// Ephemeral receiver peer suffixes need uniqueness, not memorability. They
+// are hex: PeerJS rejects IDs with a leading, trailing, or doubled `-`/`_`,
+// which random base64url produced for a few percent of receivers.
 export function generateEphemeralId(random = crypto) {
   const bytes = new Uint8Array(6);
   random.getRandomValues(bytes);
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function cleanCode(value) {
