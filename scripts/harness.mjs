@@ -118,3 +118,21 @@ export function withTimeout(promise, timeoutMilliseconds, message) {
   });
   return Promise.race([promise, expired]).finally(() => clearTimeout(timeout));
 }
+
+export async function findChromium() {
+  const { access } = await import('node:fs/promises');
+  const candidates = [
+    process.env.CHROMIUM_PATH,
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser'
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {}
+  }
+  throw new Error('Chromium was not found; set CHROMIUM_PATH');
+}

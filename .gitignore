@@ -18,3 +18,7 @@ android/app/build/
 android/local.properties
 *.iml
 .idea/
+
+# Stray `go build` outputs at the repository root
+/cd
+/cdx
