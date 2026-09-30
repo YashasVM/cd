@@ -46,6 +46,8 @@ try {
   }
   await transferOnce(browser, work, baseUrl, sourcePath, source, 'signaling-retry');
   console.log('verified P2P transfer after each side loses its first signaling socket');
+  await transferOnce(browser, work, baseUrl, sourcePath, source, 'relay-fallback');
+  console.log('verified relay fallback: exact bytes when the direct data channel cannot connect');
   await transferBatch(browser, work, baseUrl);
   console.log('verified P2P batch: five exact downloads, including an empty file');
   await transferSlowReceiver(browser, work, baseUrl);
@@ -104,9 +106,21 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
       if (tier === 'opfs-unavailable') {
         window.navigator.storage.getDirectory = async () => { throw new DOMException('Storage unavailable', 'NotAllowedError'); };
       }
+      if (tier === 'relay-fallback') {
+        // CGNAT stand-in: relay-only ICE with no TURN servers gathers no
+        // candidates, so the data channel can never open.
+        const NativePeerConnection = window.RTCPeerConnection;
+        window.RTCPeerConnection = function RTCPeerConnection(config = {}) {
+          return new NativePeerConnection({ ...config, iceTransportPolicy: 'relay' });
+        };
+        window.RTCPeerConnection.prototype = NativePeerConnection.prototype;
+      }
     }, mode);
     const sender = await context.newPage();
     const receiver = await context.newPage();
+    // The sender only opens a relay socket when it falls back.
+    let senderRelaySockets = 0;
+    sender.on('websocket', (socket) => { if (socket.url().includes('/ws/v1/')) senderRelaySockets += 1; });
     let senderAttempts = 0;
     let receiverAttempts = 0;
     if (mode === 'signaling-retry') {
@@ -174,6 +188,8 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
       assert.ok(senderAttempts >= 2, 'sender should retry signaling');
       assert.ok(receiverAttempts >= 2, 'receiver should retry signaling');
     }
+    if (mode === 'relay-fallback') assert.ok(senderRelaySockets >= 1, 'sender should fall back to the relay');
+    else assert.equal(senderRelaySockets, 0, 'direct P2P should not touch the relay');
   } finally {
     await context.close();
   }

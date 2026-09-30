@@ -7,6 +7,11 @@ export const KIND_END = 3;
 export const KIND_ACCEPT = 4;
 export const KIND_ACK = 5;
 export const KIND_COMPLETE = 6;
+// Tunnel records carry the browser P2P messages over a relay room when the
+// data channel cannot connect. Both directions use both kinds; a tunnel
+// opener rejects file-transfer kinds and vice versa.
+export const KIND_TUNNEL_JSON = 7;
+export const KIND_TUNNEL_BYTES = 8;
 
 export const MAX_RECORD_BYTES = 1024 * 1024;
 
@@ -14,7 +19,7 @@ const HEADER_BYTES = 12;
 const VERSION = 1;
 const encoder = new TextEncoder();
 
-function decodeBase64Url(value) {
+export function decodeBase64Url(value) {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('This CD link is invalid.');
   const padded = value.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - value.length % 4) % 4);
   const binary = atob(padded);
@@ -62,7 +67,8 @@ async function recordKey(invitation, direction) {
   return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
-function isValidKind(direction, kind) {
+function isValidKind(direction, kind, tunnel) {
+  if (tunnel) return kind === KIND_TUNNEL_JSON || kind === KIND_TUNNEL_BYTES;
   return direction === SENDER_DIRECTION
     ? kind >= KIND_OFFER && kind <= KIND_END
     : kind >= KIND_ACCEPT && kind <= KIND_COMPLETE;
@@ -82,12 +88,12 @@ function additionalData(header, id) {
   return value;
 }
 
-export async function createSealer(invitation, direction) {
+export async function createSealer(invitation, direction, { tunnel = false } = {}) {
   const key = await recordKey(invitation, direction);
   let sequence = 0;
   return {
     async seal(kind, plaintext) {
-      if (!isValidKind(direction, kind)) throw new Error('Message kind is invalid for direction.');
+      if (!isValidKind(direction, kind, tunnel)) throw new Error('Message kind is invalid for direction.');
       if (sequence > 0xffffffff) throw new Error('Record sequence exhausted.');
       const header = new Uint8Array(HEADER_BYTES);
       header.set([0x43, 0x44, VERSION, kind]);
@@ -109,7 +115,7 @@ export async function createSealer(invitation, direction) {
   };
 }
 
-export async function createOpener(invitation, direction) {
+export async function createOpener(invitation, direction, { tunnel = false } = {}) {
   const key = await recordKey(invitation, direction);
   let expectedSequence = 0;
   return {
@@ -120,7 +126,7 @@ export async function createOpener(invitation, direction) {
       const view = new DataView(header.buffer);
       const kind = header[3];
       if (header[0] !== 0x43 || header[1] !== 0x44 || header[2] !== VERSION) throw new Error('Record protocol is invalid.');
-      if (!isValidKind(direction, kind)) throw new Error('Message kind is invalid for direction.');
+      if (!isValidKind(direction, kind, tunnel)) throw new Error('Message kind is invalid for direction.');
       const sequence = view.getUint32(4);
       if (sequence !== expectedSequence) throw new Error(`Record sequence ${sequence}, expected ${expectedSequence}.`);
       if (view.getUint32(8) + HEADER_BYTES + 16 !== record.byteLength) throw new Error('Record plaintext length is invalid.');

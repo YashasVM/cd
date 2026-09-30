@@ -1,6 +1,7 @@
 import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
 import { cleanShortCode, codeLookupPath, isShortCode, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { MAX_P2P_FILES, MAX_P2P_FILE_BYTES, parseManifest } from './p2p-manifest.js';
+import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
 import {
   DOWNLOAD_TOO_LARGE,
   createSink,
@@ -97,6 +98,9 @@ const RECEIVER_WINDOW_BYTES = 3 * 1024 * 1024;
 const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
 const SIGNALING_RETRY_LIMIT = 3;
 const SIGNALING_RETRY_DELAY_MS = 300;
+// How long the sender waits for the direct data channel before switching the
+// transfer to the relay tunnel. LAN and STUN-direct links open well within it.
+const P2P_FALLBACK_MS = 3000;
 
 function isTemporarySignalingError(error) {
   return ['network', 'socket-error', 'socket-closed', 'server-error'].includes(error?.type);
@@ -419,67 +423,15 @@ const Sender = (() => {
       connection = conn;
       els.senderStatus.textContent = 'Receiver found.';
       setState('connecting');
-
-      conn.on('open', () => {
-        if (peer !== activePeer || connection !== conn || transferCancelled) return;
-        void sendFiles().catch(() => failSend('Could not read or send a selected file.'));
-      });
-
-      conn.on('error', () => {
-        if (peer !== activePeer || connection !== conn) return;
-        failSend('Connection failed. Try again.');
-      });
-
-      conn.on('data', (data) => {
-        if (peer !== activePeer || connection !== conn || transferCancelled) return;
-        if (data?.type === 'progress') {
-          if (!Number.isSafeInteger(data.bytes) || data.bytes < bytesConfirmed || data.bytes > bytesSent) {
-            failSend('Receiver sent invalid progress.');
-            return;
-          }
-          bytesConfirmed = data.bytes;
-          capacityWaitResolve?.(true);
-          capacityWaitResolve = null;
-          lastProgressUpdate.value = updateProgress(
-            els.senderProgress,
-            bytesConfirmed,
-            totalSize,
-            transferStartTime,
-            false,
-            lastProgressUpdate
-          );
-          return;
-        }
-        if (data?.type === 'transfer-ack') {
-          if (bytesSent !== totalSize) return;
-          bytesConfirmed = totalSize;
-          lastProgressUpdate.value = updateProgress(
-            els.senderProgress,
-            bytesConfirmed,
-            totalSize,
-            transferStartTime,
-            true,
-            lastProgressUpdate
-          );
-          transferAckResolve?.(true);
-          transferAckResolve = null;
-          return;
-        }
-        if (data?.type === 'cancel') {
-          cancel('Receiver canceled the transfer.');
-        }
-      });
-
-      conn.on('close', () => {
-        if (peer !== activePeer || connection !== conn) return;
-        if (!transferFinished && !transferCancelled) {
-          failSend('Connection vanished mid-send.');
-        }
-      });
+      attachConnection(conn, activePeer);
+      const capability = parseTunnelCapability(conn.metadata);
+      if (capability) scheduleRelayFallback(conn, capability, activePeer);
     });
 
     peer.on('error', (err) => {
       if (peer !== activePeer || transferCancelled || retryScheduled) return;
+      // Signaling is only needed to connect; losing it mid-transfer is harmless.
+      if (connection?.open && isTemporarySignalingError(err)) return;
       if (err.type === 'unavailable-id') {
         if (codeAttempts >= MAX_CODE_ATTEMPTS) {
           els.senderFileInfo.querySelector('.file-subtext').textContent = 'All share codes are busy right now. Wait a moment and try again.';
@@ -511,6 +463,83 @@ const Sender = (() => {
       els.senderCodeSection.classList.add('hidden');
       setState('failed');
     });
+  }
+
+  // attachConnection wires one transport (PeerJS data channel or relay
+  // tunnel) to the send flow. Handlers ignore a transport once `connection`
+  // has moved on, so a replaced data channel closing is not a failure.
+  function attachConnection(conn, activePeer) {
+    conn.on('open', () => {
+      if (peer !== activePeer || connection !== conn || transferCancelled) return;
+      void sendFiles().catch(() => failSend('Could not read or send a selected file.'));
+    });
+
+    conn.on('error', () => {
+      if (peer !== activePeer || connection !== conn) return;
+      failSend('Connection failed. Try again.');
+    });
+
+    conn.on('data', (data) => {
+      if (peer !== activePeer || connection !== conn || transferCancelled) return;
+      if (data?.type === 'progress') {
+        if (!Number.isSafeInteger(data.bytes) || data.bytes < bytesConfirmed || data.bytes > bytesSent) {
+          failSend('Receiver sent invalid progress.');
+          return;
+        }
+        bytesConfirmed = data.bytes;
+        capacityWaitResolve?.(true);
+        capacityWaitResolve = null;
+        lastProgressUpdate.value = updateProgress(
+          els.senderProgress,
+          bytesConfirmed,
+          totalSize,
+          transferStartTime,
+          false,
+          lastProgressUpdate
+        );
+        return;
+      }
+      if (data?.type === 'transfer-ack') {
+        if (bytesSent !== totalSize) return;
+        bytesConfirmed = totalSize;
+        lastProgressUpdate.value = updateProgress(
+          els.senderProgress,
+          bytesConfirmed,
+          totalSize,
+          transferStartTime,
+          true,
+          lastProgressUpdate
+        );
+        transferAckResolve?.(true);
+        transferAckResolve = null;
+        return;
+      }
+      if (data?.type === 'cancel') {
+        cancel('Receiver canceled the transfer.');
+      }
+    });
+
+    conn.on('close', () => {
+      if (peer !== activePeer || connection !== conn) return;
+      if (!transferFinished && !transferCancelled) {
+        failSend('Connection vanished mid-send.');
+      }
+    });
+  }
+
+  // Browsers on CGNAT or mobile data often cannot open a direct data
+  // channel, and there is no TURN on the free plan. If the channel is not
+  // open soon after the receiver arrives, meet in the relay room the
+  // receiver already opened and send the same messages through it.
+  function scheduleRelayFallback(conn, capability, activePeer) {
+    setTimeout(() => {
+      if (peer !== activePeer || connection !== conn || conn.open || transferCancelled) return;
+      const tunnel = openRelayTunnel({ capability, role: 'joiner', connect: (url) => new WebSocket(url) });
+      connection = tunnel;
+      try { conn.close(); } catch { /* The data channel never opened. */ }
+      els.senderStatus.textContent = 'No direct route. Sending through the relay...';
+      attachConnection(tunnel, activePeer);
+    }, P2P_FALLBACK_MS);
   }
 
   async function sendFiles() {
@@ -724,7 +753,12 @@ const Sender = (() => {
 
 const Receiver = (() => {
   let peer = null;
+  // `connection` is the committed transport: whichever of the data channel
+  // or the relay tunnel delivered the sender's first message. Until then
+  // both are candidates.
   let connection = null;
+  let candidates = [];
+  const lostCandidates = new Set();
   let manifest = null;
   let currentFile = null;
   let currentSink = null;
@@ -780,7 +814,7 @@ const Receiver = (() => {
     void establishPeer(connectionGeneration, code);
 
     timeoutId = setTimeout(() => {
-      if (!connection || !connection.open) {
+      if (!connection) {
         showError('Connection timed out. Check the code and try again.');
       }
     }, CONNECTION_TIMEOUT_MS);
@@ -830,55 +864,24 @@ const Receiver = (() => {
 
     peer.on('open', () => {
       if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled) return;
-      const activeConnection = activePeer.connect(peerIdFor(code), {
+      // Open the relay room up front so the sender can switch to it without
+      // another round trip if the data channel never connects.
+      const capability = generateTunnelCapability();
+      const tunnel = openRelayTunnel({ capability, role: 'creator', connect: (url) => new WebSocket(url) });
+      const directConnection = activePeer.connect(peerIdFor(code), {
         reliable: true,
-        serialization: 'binary'
+        serialization: 'binary',
+        metadata: { relay: capability }
       });
-      connection = activeConnection;
-
-      activeConnection.on('open', () => {
-        if (connection !== activeConnection || connectionGeneration !== transferGeneration || transferCancelled) return;
-        els.receiverConnecting.classList.add('hidden');
-      });
-
-      activeConnection.on('data', (data) => {
-        if (connection !== activeConnection || connectionGeneration !== transferGeneration) return;
-        lastArrivalAt = Date.now();
-        const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
-        pendingReceiveBytes += frameBytes;
-        if (pendingReceiveBytes > MAX_PENDING_RECEIVE_BYTES) {
-          failProtocol();
-          return;
-        }
-        dataQueue = dataQueue
-          .then(() => connectionGeneration === transferGeneration && handleData(data))
-          .catch((error) => {
-            if (connectionGeneration !== transferGeneration) return;
-            if (error?.message === DOWNLOAD_TOO_LARGE) refuseTransfer(DOWNLOAD_TOO_LARGE);
-            else if (error?.message === 'invalid file size' || error?.message === 'invalid file count') {
-              refuseTransfer('That file is too large or too many files — max 5 GB per file, 100 files. Split it and try again.');
-            } else failProtocol();
-          })
-          .finally(() => {
-            if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;
-          });
-      });
-
-      activeConnection.on('error', () => {
-        if (connection !== activeConnection || connectionGeneration !== transferGeneration || transferCancelled) return;
-        showError('Connection vanished. Try again.');
-      });
-
-      activeConnection.on('close', () => {
-        if (connection !== activeConnection || connectionGeneration !== transferGeneration) return;
-        if (!transferCancelled && !transferComplete && totalBytesReceived < (manifest?.totalSize ?? Infinity)) {
-          showError('Connection vanished unexpectedly.');
-        }
-      });
+      closeCandidates();
+      candidates = [directConnection, tunnel];
+      for (const transport of candidates) attachTransport(transport, connectionGeneration);
     });
 
     peer.on('error', (err) => {
       if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled || retryScheduled) return;
+      // Signaling is only needed to connect; losing it mid-transfer is harmless.
+      if (connection?.open && isTemporarySignalingError(err)) return;
       if (err.type === 'peer-unavailable') {
         showError('Bad code, or the sender wandered off.');
         return;
@@ -896,6 +899,83 @@ const Receiver = (() => {
       }
       showError('Connection failed. Try again.');
     });
+  }
+
+  function attachTransport(transport, connectionGeneration) {
+    const current = () => connectionGeneration === transferGeneration && candidates.includes(transport);
+    // A candidate that fails before the sender commits to it is not an
+    // error while the other one may still carry the transfer.
+    const lose = (message) => {
+      if (!current()) return;
+      if (connection === transport) {
+        if (!transferCancelled && !transferComplete) showError(message);
+        return;
+      }
+      if (connection) return;
+      lostCandidates.add(transport);
+      if (!transferCancelled && candidates.every((candidate) => lostCandidates.has(candidate))) showError('Connection failed. Try again.');
+    };
+
+    transport.on('open', () => {
+      if (!current() || transferCancelled || (connection && connection !== transport)) return;
+      els.receiverConnecting.classList.add('hidden');
+    });
+
+    transport.on('data', (data) => {
+      if (!current()) return;
+      if (!connection) commitTransport(transport);
+      if (connection !== transport) return;
+      lastArrivalAt = Date.now();
+      const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
+      pendingReceiveBytes += frameBytes;
+      if (pendingReceiveBytes > MAX_PENDING_RECEIVE_BYTES) {
+        failProtocol();
+        return;
+      }
+      dataQueue = dataQueue
+        .then(() => connectionGeneration === transferGeneration && handleData(data))
+        .catch((error) => {
+          if (connectionGeneration !== transferGeneration) return;
+          if (error?.message === DOWNLOAD_TOO_LARGE) refuseTransfer(DOWNLOAD_TOO_LARGE);
+          else if (error?.message === 'invalid file size' || error?.message === 'invalid file count') {
+            refuseTransfer('That file is too large or too many files — max 5 GB per file, 100 files. Split it and try again.');
+          } else failProtocol();
+        })
+        .finally(() => {
+          if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;
+        });
+    });
+
+    transport.on('error', () => {
+      if (transferCancelled) return;
+      lose('Connection vanished. Try again.');
+    });
+
+    transport.on('close', () => {
+      if (connection === transport && totalBytesReceived >= (manifest?.totalSize ?? Infinity)) return;
+      lose('Connection vanished unexpectedly.');
+    });
+  }
+
+  // commitTransport keeps the transport the sender chose and closes the
+  // other candidate.
+  function commitTransport(transport) {
+    connection = transport;
+    els.receiverConnecting.classList.add('hidden');
+    for (const candidate of candidates) {
+      if (candidate === transport) continue;
+      try { candidate.close(); } catch { /* Best effort. */ }
+    }
+    candidates = [transport];
+  }
+
+  function closeCandidates() {
+    const closing = candidates;
+    candidates = [];
+    lostCandidates.clear();
+    for (const candidate of closing) {
+      try { candidate.close(); } catch { /* Best effort. */ }
+    }
   }
 
   async function handleData(data) {
@@ -1247,6 +1327,7 @@ const Receiver = (() => {
   function showError(message) {
     transferCancelled = true;
     try { connection?.close(); } catch { /* The channel may already be closed. */ }
+    closeCandidates();
     peer?.destroy();
     clearTimeout(timeoutId);
     stopStallWatch();
@@ -1291,6 +1372,7 @@ const Receiver = (() => {
     transferCancelled = true;
     peer?.destroy();
     peer = null;
+    closeCandidates();
     connection = null;
     manifest = null;
     currentFile = null;

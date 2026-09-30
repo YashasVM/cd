@@ -164,3 +164,17 @@ Primary references:
 - https://github.com/schollz/croc/blob/main/src/docs/STORED_TRANSFERS.md
 - https://developers.cloudflare.com/durable-objects/best-practices/websockets/
 - https://developers.cloudflare.com/durable-objects/platform/limits/
+
+## Browser P2P relay tunnel
+
+Browser-to-browser transfers try a WebRTC data channel first. The receiver
+also mints a fresh capability (transfer ID + key), opens the relay room as the
+room's `sender` role, and passes the capability to the sender inside the PeerJS
+connect metadata. If the sender's data channel is not open 3 seconds after the
+receiver arrives, the sender joins that room as `receiver` and sends the
+unchanged P2P messages (manifest, file-start, chunks, progress, and so on) as
+records of two tunnel kinds: `7` (JSON message) and `8` (bytes). Both
+directions use both kinds, and tunnel openers reject file-transfer kinds and
+vice versa. The receiver commits to whichever transport delivers the first
+message and closes the other. Signaling carries the key, so the tunnel has
+the same trust as short share codes.

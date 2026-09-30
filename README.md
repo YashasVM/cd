@@ -86,7 +86,10 @@ fragment so it is not sent in HTTP requests. Keep both tabs open until the
 WebRTC transfer finishes. CD coordinates the connection through its own
 `cd.yash0.in` Worker; file bytes travel over the encrypted WebRTC data channel.
 WebRTC may use public STUN servers for NAT discovery, but they do not receive
-file bytes. This remains separate from the agent relay.
+file bytes. If the direct channel doesn't open within 3 seconds (common on
+mobile data and carrier-grade NAT, since CD runs no TURN server), the transfer
+switches to the live relay: the same messages, AES-GCM encrypted with a fresh
+key that the receiver passes to the sender through signaling. Nothing is stored.
 
 ## Browser-to-terminal sharing
 
