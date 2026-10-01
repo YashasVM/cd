@@ -310,3 +310,25 @@ func TestDirectPathConnectsWithTrickledCandidates(t *testing.T) {
 		t.Fatalf("route = %q for a local connection", route)
 	}
 }
+
+// TestPeerLeftRightAfterCompleteIsNotAFailure reproduces production: the
+// relay forwards COMPLETE and then peer-left back to back.
+func TestPeerLeftRightAfterCompleteIsNotAFailure(t *testing.T) {
+	value := testInvitation()
+	receiverSealer, _ := newSealer(value, receiverDirection)
+	senderOpener, _ := newOpener(value, receiverDirection)
+	link := &recordLink{opener: senderOpener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32][]byte{}}
+	complete, _ := receiverSealer.seal(kindComplete, encodeCounts(0, 0))
+	link.items <- linkItem{record: complete}
+	link.items <- linkItem{err: errors.New("receiver disconnected")}
+	progress := &senderProgress{ended: true}
+	for !progress.completed {
+		kind, payload, ok, err := link.poll()
+		if err != nil || !ok {
+			t.Fatalf("poll before COMPLETE = %v %v", ok, err)
+		}
+		if err := progress.handle(kind, payload); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

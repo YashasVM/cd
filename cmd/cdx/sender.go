@@ -560,8 +560,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	await := func(done func() bool) error {
 		for {
 			// Take everything already received before deciding to wait, so
-			// acks reach the window estimate on time.
-			for {
+			// acks reach the window estimate on time. After COMPLETE the
+			// relay's peer-left follows immediately; it is not a failure.
+			for !progress.completed {
 				kind, payload, ok, err := link.poll()
 				if err != nil {
 					return linkError(err)
