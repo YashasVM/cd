@@ -182,6 +182,10 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket, code: number, reason: string): Promise<void> {
+    // Complete the close handshake. Clients wait for this reply to know every
+    // frame they sent before it (such as COMPLETE) reached the room; without
+    // it they sit out their close timeout.
+    try { socket.close(code === 1005 || code === 1006 ? 1000 : code, 'closed'); } catch { /* Already closed. */ }
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment) || attachment.kind !== 'peer') return;
     const peer = this.peer(attachment.role === 'sender' ? 'receiver' : 'sender');
