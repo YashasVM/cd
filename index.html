@@ -41,7 +41,7 @@
 
         <div class="state-board" aria-live="polite">
           <span class="state-label">state</span>
-          <strong id="app-state">loading</strong>
+          <strong id="app-state" data-state="loading">loading</strong>
         </div>
       </section>
 
@@ -104,26 +104,26 @@
             </div>
             <div class="progress-bar" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
-              <span class="progress-dino" aria-hidden="true">🦕</span>
             </div>
             <div class="progress-stats">
-              <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
-              <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+              <span><b>speed</b><em class="progress-speed">–</em></span>
+              <span><b>moved</b><em class="progress-transferred">–</em></span>
               <span><b>left</b><em class="progress-eta">–</em></span>
             </div>
           </div>
 
           <div id="sender-complete" class="result-section complete-section hidden">
-            <span class="result-mark" aria-hidden="true">OK</span>
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
             <div class="result-copy">
-              <p id="sender-complete-message" class="result-title">Sent. Nice.</p>
+              <p id="sender-complete-message" class="result-title">Sent</p>
+              <p id="sender-complete-detail" class="result-detail"></p>
               <div class="result-actions">
-                <button id="send-another-btn" class="primary-btn" type="button">Send more stuff</button>
+                <button id="send-another-btn" class="primary-btn" type="button">Send more files</button>
               </div>
             </div>
           </div>
 
-          <p class="code-help">Sending to a terminal? <a href="/send">Share one file for <code>cdx receive</code></a>.</p>
+          <p class="code-help terminal-hint">Sending to a terminal? <a href="/send">Share one file for <code>cdx receive</code></a>.</p>
         </section>
 
         <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
@@ -176,27 +176,27 @@
             </div>
             <div class="progress-bar" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
-              <span class="progress-dino" aria-hidden="true">🦕</span>
             </div>
             <div class="progress-stats">
-              <span><b>speed</b><em class="progress-speed">0 MB/s</em></span>
-              <span><b>moved</b><em class="progress-transferred">0 / 0 MB</em></span>
+              <span><b>speed</b><em class="progress-speed">–</em></span>
+              <span><b>moved</b><em class="progress-transferred">–</em></span>
               <span><b>left</b><em class="progress-eta">–</em></span>
             </div>
           </div>
 
           <div id="receiver-complete" class="result-section complete-section hidden">
-            <span class="result-mark" aria-hidden="true">OK</span>
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
             <div class="result-copy">
-              <p id="receiver-complete-message" class="result-title">All here. Nice.</p>
+              <p id="receiver-complete-message" class="result-title">Saved</p>
+              <p id="receiver-complete-detail" class="result-detail"></p>
               <div class="result-actions">
-                <button id="receive-another-btn" class="primary-btn" type="button">Grab more stuff</button>
+                <button id="receive-another-btn" class="primary-btn" type="button">Receive another</button>
               </div>
             </div>
           </div>
 
           <div id="receiver-error" class="result-section error hidden" role="alert">
-            <span class="result-mark">ERR</span>
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>
             <p class="error-message"></p>
             <button id="retry-btn" class="primary-btn" type="button">Try again</button>
           </div>

@@ -23,8 +23,13 @@ Branches:
 - **Sensitive file**: run `cdx send --link <file>` and reply with the full URL
   on stdout, fragment included. Links are end-to-end encrypted; codes rely on
   TLS and the live relay.
-- **User wants delivery confirmed**: run `cdx wait <code>` after replying. Exit
-  0 means the receiver verified every byte; exit 1 and stderr give the reason.
+- **User wants delivery confirmed**: run `cdx wait --timeout 10m --json <code>`
+  after replying. Exit 0 means the receiver verified every byte; exit 1 means it
+  failed (`errorKind` says why); exit 3 means nobody has finished yet and the
+  send is still live.
+- **A command fails**: with `--json`, stdout carries
+  `{"error":{"kind","message"}}`. Retry `expired`, `disconnected`, `stalled` and
+  `busy` with a fresh `cdx send`; report the others to the user.
 - **`cdx` is not on PATH**: inside the CD repository, run `make cdx` and use
   `./bin/cdx`. Elsewhere, install it with
   `curl -fsSL https://cd.yash0.in/install.sh | sh`.

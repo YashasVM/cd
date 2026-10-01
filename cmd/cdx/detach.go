@@ -53,6 +53,7 @@ type transferState struct {
 	Phase        string    `json:"phase"`
 	Acknowledged uint64    `json:"acknowledged"`
 	Error        string    `json:"error,omitempty"`
+	ErrorKind    string    `json:"errorKind,omitempty"`
 	PID          int       `json:"pid"`
 	Log          string    `json:"log,omitempty"`
 	StartedAt    time.Time `json:"startedAt"`
@@ -144,6 +145,7 @@ func effectiveState(dir string, state transferState) transferState {
 	}
 	state.Phase = phaseFailed
 	state.Error = "the background sender stopped before the receiver verified the file"
+	state.ErrorKind = failureDisconnected
 	return state
 }
 
@@ -205,7 +207,7 @@ func holderArgs(request sendRequest, absolutePaths []string) []string {
 // starts, with the same messages as a foreground send.
 func runDetachedSend(request sendRequest) int {
 	fail := func(err error) int {
-		fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
 		return 1
 	}
 	if _, err := prepareSource(request.files); err != nil {
@@ -272,13 +274,11 @@ func runDetachedSend(request sendRequest) int {
 	case <-time.After(readyWait):
 		_ = holder.Process.Kill()
 		_ = holder.Wait()
-		fmt.Fprintln(os.Stderr, "cdx: CD relay did not answer within 30s: check your network and try again")
-		return 1
+		return fail(errors.New("CD relay did not answer within 30s: check your network and try again"))
 	}
 	reason := holderFailure(logPath)
 	_ = os.Remove(logPath)
-	fmt.Fprintln(os.Stderr, reason)
-	return 1
+	return fail(errors.New(reason))
 }
 
 // holderFailure extracts the holder's final `cdx:` error line from its log.
@@ -351,6 +351,7 @@ func runHolder(args []string) int {
 		} else {
 			state.Error = strings.TrimSpace(err.Error())
 		}
+		state.ErrorKind = classifyFailure(err)
 		save(true)
 		fmt.Fprintln(os.Stderr, "cdx:", state.Error)
 		return 1
@@ -395,8 +396,8 @@ func writeStateOutput(output io.Writer, state transferState, jsonOutput bool) {
 
 // runStatus prints one transfer, or every recent one when no code is given.
 func runStatus(args []string) int {
-	jsonOutput, rest, err := parseStateArgs(args)
-	if err != nil || len(rest) > 1 {
+	jsonOutput, timeout, rest, err := parseStateArgs(args)
+	if err != nil || len(rest) > 1 || timeout != 0 {
 		fmt.Fprintln(os.Stderr, "usage: cdx status [--json] [code]")
 		return 2
 	}
@@ -406,7 +407,7 @@ func runStatus(args []string) int {
 		return 1
 	}
 	if len(rest) == 1 {
-		state, code := lookupState(dir, rest[0])
+		state, code := lookupState(dir, rest[0], jsonOutput)
 		if code != 0 {
 			return code
 		}
@@ -428,9 +429,9 @@ func runStatus(args []string) int {
 // runWait blocks until the transfer finishes. Exit 0 means the receiver
 // verified the file, 1 means it failed.
 func runWait(args []string) int {
-	jsonOutput, rest, err := parseStateArgs(args)
+	jsonOutput, timeout, rest, err := parseStateArgs(args)
 	if err != nil || len(rest) != 1 {
-		fmt.Fprintln(os.Stderr, "usage: cdx wait [--json] <code>")
+		fmt.Fprintln(os.Stderr, "usage: cdx wait [--json] [--timeout <duration>] <code>")
 		return 2
 	}
 	dir, err := stateDir()
@@ -440,9 +441,13 @@ func runWait(args []string) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	state, code := lookupState(dir, rest[0])
+	state, code := lookupState(dir, rest[0], jsonOutput)
 	if code != 0 {
 		return code
+	}
+	var deadline <-chan time.Time
+	if timeout > 0 {
+		deadline = time.After(timeout)
 	}
 	for {
 		state = effectiveState(dir, state)
@@ -452,6 +457,11 @@ func runWait(args []string) int {
 		select {
 		case <-ctx.Done():
 			return 1
+		case <-deadline:
+			// The send keeps going; only the wait gave up.
+			writeStateOutput(os.Stdout, state, jsonOutput)
+			fmt.Fprintf(os.Stderr, "cdx: %s not verified within %s (still %s)\n", rest[0], timeout, state.Phase)
+			return exitTimeout
 		case <-time.After(waitPollInterval):
 		}
 		if fresh, err := readState(dir, state.key()); err == nil {
@@ -465,36 +475,55 @@ func runWait(args []string) int {
 	return 1
 }
 
-func lookupState(dir, input string) (transferState, int) {
+func lookupState(dir, input string, jsonOutput bool) (transferState, int) {
 	key, err := stateKeyFromInput(input)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cdx:", err)
+		reportFailure(os.Stdout, os.Stderr, err, jsonOutput)
 		return transferState{}, 2
 	}
 	state, err := readState(dir, key)
 	if errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintf(os.Stderr, "cdx: no transfer %s was sent from this machine\n", key)
+		reportFailure(os.Stdout, os.Stderr, fmt.Errorf("no transfer %s was sent from this machine", key), jsonOutput)
 		return transferState{}, 1
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cdx:", err)
+		reportFailure(os.Stdout, os.Stderr, err, jsonOutput)
 		return transferState{}, 1
 	}
 	return state, 0
 }
 
-func parseStateArgs(args []string) (bool, []string, error) {
+// exitTimeout is `cdx wait --timeout` giving up while the send continues.
+const exitTimeout = 3
+
+func parseStateArgs(args []string) (bool, time.Duration, []string, error) {
 	jsonOutput := false
+	var timeout time.Duration
 	var rest []string
-	for _, argument := range args {
+	for index := 0; index < len(args); index++ {
+		argument := args[index]
 		switch {
 		case argument == "--json":
 			jsonOutput = true
+		case argument == "--timeout" || strings.HasPrefix(argument, "--timeout="):
+			value, found := strings.CutPrefix(argument, "--timeout=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return false, 0, nil, errors.New("--timeout needs a duration such as 90s or 5m")
+				}
+				value = args[index]
+			}
+			parsed, err := time.ParseDuration(value)
+			if err != nil || parsed <= 0 {
+				return false, 0, nil, fmt.Errorf("--timeout %q is not a duration such as 90s or 5m", value)
+			}
+			timeout = parsed
 		case strings.HasPrefix(argument, "-"):
-			return false, nil, fmt.Errorf("unknown option %s", argument)
+			return false, 0, nil, fmt.Errorf("unknown option %s", argument)
 		default:
 			rest = append(rest, argument)
 		}
 	}
-	return jsonOutput, rest, nil
+	return jsonOutput, timeout, rest, nil
 }

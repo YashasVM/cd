@@ -518,12 +518,12 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	hooks.report(phaseSending, 0)
 
 	terminal := isTerminal(os.Stderr)
-	reportProgress := func(acknowledged, total uint64) {
-		if total == 0 || !terminal {
-			return
+	bar := newProgressBar(os.Stderr, "sending", ready.Size)
+	bar.jsonLines = jsonProgress && !terminal
+	reportProgress := func(acknowledged uint64) {
+		if terminal || bar.jsonLines {
+			bar.update(acknowledged)
 		}
-		percent := float64(acknowledged) / float64(total) * 100
-		fmt.Fprintf(os.Stderr, "\rsent %s / %s (%.1f%%)", formatShortBytes(acknowledged), formatShortBytes(total), percent)
 	}
 
 	// The link's reader goroutine buffers inbound records while this loop
@@ -544,7 +544,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			window.acked(progress.acknowledged, time.Now())
 			link.acknowledged(progress.acknowledged)
 		}
-		reportProgress(progress.acknowledged, ready.Size)
+		reportProgress(progress.acknowledged)
 		hooks.report(phaseSending, progress.acknowledged)
 		return nil
 	}
@@ -587,11 +587,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		}
 	}
 	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
-	finishLine := func() {
-		if terminal && progress.sent > 0 {
-			fmt.Fprintln(os.Stderr)
-		}
-	}
+	finishLine := bar.finish
 
 	buffer := make([]byte, chunkSize)
 	for {

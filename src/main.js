@@ -160,7 +160,8 @@ function agentShareUrlFromInput(value) {
   return '';
 }
 
-const els = {  appState: document.getElementById('app-state'),
+const els = {
+  appState: document.getElementById('app-state'),
   sendModeBtn: document.getElementById('send-mode-btn'),
   receiveModeBtn: document.getElementById('receive-mode-btn'),
   senderView: document.getElementById('sender-view'),
@@ -179,6 +180,7 @@ const els = {  appState: document.getElementById('app-state'),
   senderCancelBtn: document.getElementById('sender-cancel-btn'),
   senderComplete: document.getElementById('sender-complete'),
   senderCompleteMessage: document.getElementById('sender-complete-message'),
+  senderCompleteDetail: document.getElementById('sender-complete-detail'),
   sendAnotherBtn: document.getElementById('send-another-btn'),
   receiverInputSection: document.getElementById('receiver-input-section'),
   codeInput: document.getElementById('code-input'),
@@ -194,13 +196,43 @@ const els = {  appState: document.getElementById('app-state'),
   receiverCancelBtn: document.getElementById('receiver-cancel-btn'),
   receiverComplete: document.getElementById('receiver-complete'),
   receiverCompleteMessage: document.getElementById('receiver-complete-message'),
+  receiverCompleteDetail: document.getElementById('receiver-complete-detail'),
   receiverError: document.getElementById('receiver-error'),
   retryBtn: document.getElementById('retry-btn'),
   receiveAnotherBtn: document.getElementById('receive-another-btn')
 };
 
+const STATE_LABELS = {
+  idle: 'ready',
+  connecting: 'connecting',
+  waiting: 'waiting for receiver',
+  transferring: 'transferring',
+  saving: 'saving',
+  complete: 'done',
+  failed: 'failed'
+};
+// Closing the tab mid-transfer kills it, so the browser asks first.
+const BUSY_STATES = new Set(['connecting', 'waiting', 'transferring', 'saving']);
+const BASE_TITLE = document.title;
+
 function setState(state) {
-  els.appState.textContent = state;
+  els.appState.textContent = STATE_LABELS[state] || state;
+  els.appState.dataset.state = state;
+  if (state === 'complete') document.title = `Done · ${BASE_TITLE}`;
+  else if (state === 'failed') document.title = `Failed · ${BASE_TITLE}`;
+  else if (state !== 'transferring') document.title = BASE_TITLE;
+}
+
+window.addEventListener('beforeunload', (event) => {
+  if (BUSY_STATES.has(els.appState.dataset.state)) event.preventDefault();
+});
+
+// shortenMiddle keeps both ends of a long filename, where the extension and
+// the distinguishing suffix usually are.
+function shortenMiddle(text, max = 32) {
+  if (text.length <= max) return text;
+  const keep = max - 1;
+  return `${text.slice(0, Math.ceil(keep / 2))}…${text.slice(-Math.floor(keep / 2))}`;
 }
 
 function formatSize(bytes) {
@@ -264,8 +296,8 @@ function resetProgress(container) {
   refs.fill.style.transform = 'scaleX(0)';
   refs.bar.setAttribute('aria-valuenow', '0');
   refs.percent.textContent = '0%';
-  refs.speed.textContent = '0 MB/s';
-  refs.transferred.textContent = '0 / 0 MB';
+  refs.speed.textContent = '–';
+  refs.transferred.textContent = '–';
   if (refs.eta) refs.eta.textContent = '–';
 }
 
@@ -290,7 +322,9 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
   refs.bar.style.setProperty('--progress', `${percent}%`);
   refs.bar.setAttribute('aria-valuenow', percent.toFixed(1));
   refs.percent.textContent = `${percent.toFixed(1)}%`;
-  refs.speed.textContent = `${formatSize(refs.emaSpeed)}/s`;
+  document.title = `${Math.floor(percent)}% · ${BASE_TITLE}`;
+  // No speed until bytes move: "0 B/s" while connecting reads as a stall.
+  refs.speed.textContent = bytes > 0 ? `${formatSize(refs.emaSpeed)}/s` : '–';
   refs.transferred.textContent = `${formatSize(bytes)} / ${formatSize(total)}`;
   if (refs.eta) {
     refs.eta.textContent = bytes >= total || refs.emaSpeed <= 0 ? '–' : formatEta((total - bytes) / refs.emaSpeed);
@@ -697,7 +731,10 @@ const Sender = (() => {
   function showComplete() {
     els.senderProgress.classList.add('hidden');
     els.senderComplete.classList.remove('hidden');
-    els.senderCompleteMessage.textContent = files.length === 1 ? 'Sent. Nice.' : `${files.length} files escaped.`;
+    els.senderCompleteMessage.textContent = files.length === 1 ? 'Sent' : `Sent ${files.length} files`;
+    els.senderCompleteDetail.textContent = files.length === 1
+      ? `${shortenMiddle(files[0].name, 48)} · ${formatSize(totalSize)}`
+      : formatSize(totalSize);
     setState('complete');
   }
 
@@ -1310,8 +1347,10 @@ const Receiver = (() => {
     els.receiverFileInfo.classList.add('hidden');
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.remove('hidden');
-    els.receiverCompleteMessage.textContent =
-      manifest && manifest.totalFiles > 1 ? `${manifest.totalFiles} files landed.` : 'All here. Nice.';
+    els.receiverCompleteMessage.textContent = manifest.totalFiles > 1 ? `Saved ${manifest.totalFiles} files` : 'Saved';
+    els.receiverCompleteDetail.textContent = manifest.totalFiles > 1
+      ? `${formatSize(manifest.totalSize)} · check your downloads folder`
+      : `${shortenMiddle(manifest.files[0].name, 48)} · ${formatSize(manifest.totalSize)}`;
     setState('complete');
   }
 
@@ -1334,7 +1373,10 @@ const Receiver = (() => {
     const manual = document.createElement('a');
     manual.href = url;
     manual.download = fileName;
-    manual.textContent = `Save ${fileName} again`;
+    manual.textContent = pendingDownloadUrls.length === 0 && (!manifest || manifest.totalFiles === 1)
+      ? 'Download again'
+      : `Download ${shortenMiddle(fileName, 24)}`;
+    manual.title = `Download ${fileName} again`;
     manual.className = 'secondary-btn';
     const actions = els.receiverComplete.querySelector('.result-actions');
     let list = els.receiverComplete.querySelector('.redownload-list');
@@ -1639,6 +1681,8 @@ els.codeInput.addEventListener('input', (event) => {
   // detect link characters and extract the code instead of mangling it.
   event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
   els.codeInput.removeAttribute('aria-invalid');
+  // Five digits is the longest numeric code, so nothing else is coming.
+  if (/^\d{5}$/.test(event.target.value.trim())) Receiver.connect(event.target.value);
 });
 els.codeInput.addEventListener('paste', (event) => {
   event.preventDefault();
@@ -1650,6 +1694,9 @@ els.codeInput.addEventListener('paste', (event) => {
   }
   els.codeInput.value = codeFromUrl(text);
   els.codeInput.removeAttribute('aria-invalid');
+  // A pasted code is complete; don't make people find the Connect button.
+  if (isShortCode(text)) Receiver.connect(text);
+  else if (isValidCode(els.codeInput.value)) Receiver.connect(els.codeInput.value);
 });
 
 els.scanQrBtn.addEventListener('pointerenter', () => void loadScanner().catch(() => {}), { once: true });

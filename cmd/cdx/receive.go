@@ -289,12 +289,12 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	}
 
 	terminal := isTerminal(os.Stderr)
-	reportProgress := func(received, total uint64) {
-		if total == 0 || !terminal {
-			return
+	bar := newProgressBar(os.Stderr, "receiving", size)
+	bar.jsonLines = jsonProgress && !terminal
+	reportProgress := func(received uint64) {
+		if terminal || bar.jsonLines {
+			bar.update(received)
 		}
-		percent := float64(received) / float64(total) * 100
-		fmt.Fprintf(os.Stderr, "\rreceived %s / %s (%.1f%%)", formatShortBytes(received), formatShortBytes(total), percent)
 	}
 
 	var received uint64
@@ -303,9 +303,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	for {
 		kind, payload, err = link.next(ctx, transferIdle)
 		if err != nil {
-			if terminal && received > 0 {
-				fmt.Fprintln(os.Stderr)
-			}
+			bar.finish()
 			if isTimeoutError(err) {
 				return errors.New("transfer stalled: no data for 90s (network or sender too slow)")
 			}
@@ -314,33 +312,25 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		switch kind {
 		case kindChunk:
 			if len(payload) == 0 || received+uint64(len(payload)) > size {
-				if terminal && received > 0 {
-					fmt.Fprintln(os.Stderr)
-				}
+				bar.finish()
 				return errors.New("the sender sent more data than promised")
 			}
 			if _, err := stagingFile.Write(payload); err != nil {
-				if terminal && received > 0 {
-					fmt.Fprintln(os.Stderr)
-				}
+				bar.finish()
 				return fmt.Errorf("write file while receiving: %s", underlyingReason(err))
 			}
 			received += uint64(len(payload))
 			chunks++
-			reportProgress(received, size)
+			reportProgress(received)
 			if received-acknowledged >= ackIntervalBytes || received == size {
 				if err := link.send(kindAck, encodeCounts(chunks, received)); err != nil {
-					if terminal && received > 0 {
-						fmt.Fprintln(os.Stderr)
-					}
+					bar.finish()
 					return friendlyRelayError(fmt.Errorf("acknowledge file data: %w", err))
 				}
 				acknowledged = received
 			}
 		case kindEnd:
-			if terminal && size > 0 {
-				fmt.Fprintln(os.Stderr)
-			}
+			bar.finish()
 			endChunks, endBytes, err := decodeCounts(payload)
 			if err != nil || endBytes != size || endBytes != received || endChunks != chunks {
 				return errors.New("the transfer ended before the complete file arrived")
@@ -376,9 +366,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			}
 			return nil
 		default:
-			if terminal && received > 0 {
-				fmt.Fprintln(os.Stderr)
-			}
+			bar.finish()
 			return errors.New("the sender sent a message out of order")
 		}
 	}

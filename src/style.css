@@ -121,6 +121,12 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .state-label { text-transform: uppercase; }
 .state-label::after { content: " /"; }
 .state-board strong { color: var(--accent); font-weight: 400; }
+.state-board:has([data-state="transferring"], [data-state="connecting"], [data-state="waiting"])::before { animation: state-pulse 1.2s ease-in-out infinite; }
+.state-board:has([data-state="complete"])::before { background: #7fd18b; box-shadow: 0 0 0 3px rgba(127, 209, 139, .14); }
+.state-board:has([data-state="complete"]) strong { color: #7fd18b; }
+.state-board:has([data-state="failed"])::before { background: #ff5d2a; box-shadow: 0 0 0 3px rgba(255, 93, 42, .16); }
+.state-board:has([data-state="failed"]) strong { color: #ff8a62; }
+@keyframes state-pulse { 50% { opacity: .35; } }
 
 .workbench {
   min-width: 0;
@@ -249,12 +255,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 
 .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section {
   min-width: 0;
+}
+/* Divide only between visible sections, so a lone result never opens with a stray rule. */
+.view > :not(.hidden, [hidden]) ~ :is(.file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section):not(.hidden) {
   margin-top: 18px;
-  padding: 20px 0 0;
+  padding-top: 20px;
   border-top: 1px solid var(--line);
 }
-.file-info:first-child, .input-section:first-child, .connecting-section:first-child,
-.result-section:first-child { margin-top: 0; }
 .file-info:not(.hidden), .share-panel:not(.hidden), .progress-section:not(.hidden),
 .result-section:not(.hidden), .connecting-section:not(.hidden), .agent-offer:not([hidden]) {
   animation: reveal .38s cubic-bezier(.2, .8, .2, 1) both;
@@ -374,17 +381,6 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   content: "";
 }
 @keyframes progress-glint { to { transform: translateX(100%); } }
-.progress-dino {
-  position: absolute;
-  bottom: calc(100% + 2px);
-  left: clamp(10px, var(--progress, 0%), calc(100% - 10px));
-  font-size: 18px;
-  line-height: 1;
-  pointer-events: none;
-  transform: translateX(-50%);
-  animation: dino-bob .65s ease-in-out infinite alternate;
-}
-@keyframes dino-bob { to { transform: translate(-50%, -3px); } }
 .progress-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .progress-stats span { display: grid; min-width: 0; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
 .progress-stats b { color: var(--faint); font: 10px var(--mono); text-transform: uppercase; }
@@ -426,6 +422,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .result-section.error .result-mark { border-color: #ff5d2a; background: #5a160b; color: #ff8a62; }
 .result-section p { margin: 14px 0 18px; color: var(--muted); }
 .complete-section .result-title { margin: 0; }
+.result-section .result-detail { margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
+.result-section.complete-section .result-mark { color: #7fd18b; border-color: rgba(127, 209, 139, .4); }
+.redownload-list .secondary-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The terminal hint only helps someone who hasn't picked files yet. */
+#sender-view:has(#drop-zone.hidden) > .terminal-hint { display: none; }
 .result-section .error-message { color: #ff8a62; }
 .redownload-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .redownload-list a {

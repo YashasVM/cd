@@ -14,6 +14,10 @@ import (
 
 var version = "dev"
 
+// jsonProgress is set by --json: when stderr is not a terminal, progress is
+// written there as JSON lines instead of a bar.
+var jsonProgress bool
+
 func displayVersion(buildVersion string, info *debug.BuildInfo) string {
 	if buildVersion != "" && buildVersion != "dev" {
 		return buildVersion
@@ -75,6 +79,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
+	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
 	fmt.Fprintln(output, "  help [send|receive] show help")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
@@ -106,7 +111,14 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Exit status 0 means the transfer verified every byte (for a background")
 	fmt.Fprintln(output, "send: the code is live; `cdx wait` reports verification). Exit status 1")
-	fmt.Fprintln(output, "means the transfer failed; exit status 2 means the command was used incorrectly.")
+	fmt.Fprintln(output, "means the transfer failed; exit status 2 means the command was used incorrectly;")
+	fmt.Fprintln(output, "exit status 3 means `cdx wait --timeout` ran out first.")
+	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "With --json, a failure also prints {\"version\",\"error\":{\"kind\",\"message\"}} to")
+	fmt.Fprintln(output, "stdout. kind is one of: canceled, invalid_code, not_found, expired, claimed,")
+	fmt.Fprintln(output, "exists, busy, stalled, disconnected, network, local_file, protocol, failed.")
+	fmt.Fprintln(output, "When stderr is not a terminal, --json also writes progress there as")
+	fmt.Fprintln(output, "{\"progress\":{\"phase\",\"done\",\"total\",\"bytesPerSecond\",\"etaSeconds\"}} lines.")
 }
 
 func sendUsage(output io.Writer) {
@@ -380,6 +392,7 @@ func runSend(request sendRequest) int {
 		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	}
+	jsonProgress = request.jsonOutput
 	if shouldDetach(request, isTerminal(os.Stdout)) {
 		return runDetachedSend(request)
 	}
@@ -389,11 +402,7 @@ func runSend(request sendRequest) int {
 		return writeReady(os.Stdout, value, request.jsonOutput)
 	}})
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
-		} else {
-			fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
-		}
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
 		return 1
 	}
 	return 0
@@ -420,17 +429,14 @@ func runReceive(request receiveRequest) int {
 		receiveUsage(os.Stdout)
 		return 0
 	}
+	jsonProgress = request.jsonOutput
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
 	err := receiveFile(ctx, request.code, request.out, request.force, func(value receiveResult) error {
 		return writeReceived(os.Stdout, value, request.jsonOutput)
 	})
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			fmt.Fprintln(os.Stderr, "cdx: transfer canceled")
-		} else {
-			fmt.Fprintln(os.Stderr, "cdx:", strings.TrimSpace(err.Error()))
-		}
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
 		return 1
 	}
 	return 0

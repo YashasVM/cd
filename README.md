@@ -34,7 +34,8 @@ To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in
 | --- | --- |
 | `cdx status [code]` | List background sends |
 | `cdx wait <code>` | Exit 0 once the receiver has verified every byte, or 1 if the transfer failed |
-| `--json` | Machine-readable output |
+| `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
+| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
 | `--wait` / `--detach` | Force foreground or background sending |
 
 **Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
