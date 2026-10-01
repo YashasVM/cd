@@ -61,7 +61,7 @@
             <span class="drop-mark" aria-hidden="true">+</span>
             <div class="drop-copy">
               <h2>Send files</h2>
-              <p>Drop files here or choose them below. Keep this tab open until they arrive.</p>
+              <p>Drop files here or choose them. You get a 5-digit code that works in any browser or with <code>cdx receive</code>. Keep this tab open until they arrive.</p>
             </div>
             <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
           </div>
@@ -80,20 +80,22 @@
               <div class="code-block">
                 <span class="panel-kicker">share this code</span>
                 <strong id="share-code"></strong>
-                <p class="code-help">On the other device, choose Receive and enter this code.</p>
+                <p class="code-help">On the other device, open <strong>cd.yash0.in</strong> → Receive and type it. In a terminal:</p>
+                <code id="receive-command" class="receive-command"></code>
               </div>
               <div class="qr-block">
                 <span class="panel-kicker">or scan it</span>
-                <canvas id="share-qr" width="220" height="220" aria-label="QR code for receive link"></canvas>
+                <canvas id="share-qr" width="220" height="220" aria-label="QR code that opens this transfer"></canvas>
               </div>
             </div>
 
             <div class="share-actions">
               <button id="copy-code-btn" class="secondary-btn" type="button">Copy code</button>
-              <button id="copy-link-btn" class="secondary-btn" type="button">Copy link</button>
+              <button id="copy-cmd-btn" class="secondary-btn" type="button">Copy command</button>
+              <button id="copy-link-btn" class="secondary-btn" type="button">Copy private link</button>
             </div>
 
-            <p class="status" role="status" id="sender-status">Waiting for receiver...</p>
+            <p class="status" role="status" id="sender-status"></p>
           </div>
 
           <div id="sender-progress" class="progress-section hidden">
@@ -109,6 +111,17 @@
               <span><b>speed</b><em class="progress-speed">–</em></span>
               <span><b>moved</b><em class="progress-transferred">–</em></span>
               <span><b>left</b><em class="progress-eta">–</em></span>
+            </div>
+          </div>
+
+          <div id="sender-error" class="result-section error hidden" role="alert">
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>
+            <div class="result-copy">
+              <p class="result-title">That didn’t work</p>
+              <p class="error-message result-detail"></p>
+              <div class="result-actions">
+                <button id="sender-retry-btn" class="primary-btn" type="button">Try again</button>
+              </div>
             </div>
           </div>
 
@@ -146,10 +159,8 @@
             </div>
 
             <div class="scanner-panel">
-              <button id="scan-qr-btn" class="secondary-btn" type="button">Scan code</button>
-              <button id="stop-scan-btn" class="secondary-btn hidden" type="button">Stop scan</button>
+              <button id="scan-qr-btn" class="secondary-btn" type="button">Scan QR code</button>
               <p id="scanner-status" class="scanner-status" role="status">Use your camera to scan the sender's QR code.</p>
-              <div id="qr-reader" class="qr-reader hidden"></div>
             </div>
           </div>
 
@@ -213,6 +224,18 @@
         </section>
       </section>
     </main>
+
+    <div id="qr-reader" class="scanner-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+      <video id="qr-video" class="scanner-video" muted playsinline></video>
+      <div class="scanner-frame" aria-hidden="true"></div>
+      <div class="scanner-bar">
+        <div>
+          <p id="scanner-title" class="scanner-title">Scan the sender’s QR code</p>
+          <p id="scanner-live" class="scanner-live" role="status">Starting the camera…</p>
+        </div>
+        <button id="stop-scan-btn" class="secondary-btn" type="button">Close</button>
+      </div>
+    </div>
 
     <footer class="watermark">
       Made by <a href="https://yash0.in" target="_blank" rel="noreferrer">yashas</a>

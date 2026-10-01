@@ -302,7 +302,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow-wrap: anywhere;
   user-select: all;
 }
-.code-help { max-width: 300px; margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.receive-command { display: block; width: fit-content; max-width: 100%; margin-top: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--ink); color: var(--text); font: 13px var(--mono); overflow-wrap: anywhere; user-select: all; }
+.drop-zone p code { font: 13px var(--mono); color: var(--text); }
+.code-help strong { color: var(--text); font-weight: 550; }
+.code-help { max-width: 320px; margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .qr-block { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--ink); }
 .qr-block .panel-kicker { align-self: stretch; }
 #share-qr { display: block; width: min(100%, 132px) !important; height: auto !important; aspect-ratio: 1; image-rendering: pixelated; }
@@ -338,8 +341,36 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 #code-input[aria-invalid="true"] { border-color: #ff8a62; }
 .scanner-panel { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px; margin-top: 14px; }
 .scanner-status { min-width: 0; margin: 0; color: var(--muted); font-size: 13px; }
-.qr-reader { grid-column: 1 / -1; width: min(100%, 360px); aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
-.qr-reader video { width: 100% !important; height: auto !important; object-fit: cover; }
+/* The scanner takes the whole viewport (dvh tracks mobile browser bars), so
+   the camera, the aim frame, and Close always fit without scrolling. */
+html.scanning, html.scanning body { overflow: hidden; }
+.scanner-overlay { position: fixed; z-index: 50; inset: 0; height: 100dvh; background: #000; }
+.scanner-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scanner-frame {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  width: min(68vw, 46dvh, 320px);
+  aspect-ratio: 1;
+  border-radius: 18px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55), inset 0 0 0 2px var(--accent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.scanner-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  background: linear-gradient(transparent, rgba(0, 0, 0, .8) 35%);
+}
+.scanner-title { margin: 0; color: var(--text); font-size: 16px; font-weight: 550; }
+.scanner-live { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 
 .spinner {
   display: block;

@@ -2,8 +2,8 @@
 
 Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 
-- **Browser → browser:** pick files, share a short code, and the bytes go over WebRTC.
-- **Terminal or agent → anyone:** `cdx send <file>` prints a code. The receiver opens it in a browser or with `cdx receive`.
+- **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
+  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files arrive as one .zip.
 
 CD never stores files. Transfers are live and end-to-end encrypted.
 
@@ -52,9 +52,8 @@ Agents should follow [AGENTS.md](AGENTS.md) and the [file-sharing skill](skills/
 ## Architecture
 
 ```text
-Browser ── CD signaling ── WebRTC (relay fallback) ── Browser
-cdx     ── encrypted WebSocket ── CD relay (Durable Object) ── Browser / cdx
-            └─ direct WebRTC upgrade for large files ─┘
+Browser / cdx ── encrypted WebSocket ── CD relay (Durable Object) ── Browser / cdx
+                └─ direct WebRTC upgrade for large files from cdx ─┘
 ```
 
 One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code directory (`/api/codes`).
@@ -86,7 +85,7 @@ CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 CD_PUBLIC_URL=http://127.0.0.1:8787 ./bin
 | `npm run test:cli` | Go CLI tests |
 | `npm run typecheck` | TypeScript |
 | `npm run verify:agent` | CLI → Worker → browser, end to end in Chromium |
-| `npm run verify:p2p` | Browser → browser, P2P and relay fallback |
+| `npm run verify:browser` | Browser send → browser (typed code and scanned QR) and → `cdx receive` |
 | `npm run verify:terminal` | CLI ↔ CLI and browser → CLI |
 | `npm run bench` | Throughput benchmarks |
 | `npm run deploy:dry` | Worker bundle |
