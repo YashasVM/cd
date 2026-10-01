@@ -108,7 +108,11 @@ try {
   await download.saveAs(receivedPath);
   const received = await readFile(receivedPath);
   const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish');
-  assert.equal(exitCode, 0, await stderr);
+  const senderLog = await stderr;
+  assert.equal(exitCode, 0, senderLog);
+  // Same machine: the browser answers the CLI's WebRTC offer and the file
+  // moves off the relay onto the direct path.
+  assert.match(senderLog, /switched to a direct connection/, senderLog);
   assert.deepEqual(Uint8Array.from(received), source);
   await verifyFolderBundle(context);
   if (!hosted) await verifyPeerRegistrationBurst(port);

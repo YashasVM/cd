@@ -46,6 +46,10 @@ const (
 	kindAccept
 	kindAck
 	kindComplete
+	// kindSignal (receiver→sender) carries the receiver's WebRTC answer for
+	// the direct path. Receivers send it only when the offer included SDP,
+	// so senders that predate it never see it.
+	kindSignal messageKind = 9
 )
 
 type invitation struct {
@@ -133,7 +137,7 @@ func validKind(valueDirection direction, kind messageKind) bool {
 	if valueDirection == senderDirection {
 		return kind >= kindOffer && kind <= kindEnd
 	}
-	return kind >= kindAccept && kind <= kindComplete
+	return kind >= kindAccept && kind <= kindComplete || kind == kindSignal
 }
 
 func recordNonce(valueDirection direction, sequence uint32) []byte {

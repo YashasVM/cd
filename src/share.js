@@ -5,6 +5,7 @@ import {
   KIND_COMPLETE,
   KIND_END,
   KIND_OFFER,
+  KIND_SIGNAL,
   MAX_RECORD_BYTES,
   RECEIVER_DIRECTION,
   SENDER_DIRECTION,
@@ -15,6 +16,7 @@ import {
   receiverAdmission
 } from './agent-protocol.js';
 import { createSink as createDownloadSink } from './sink.js';
+import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
 import './style.css';
 
 const ACK_INTERVAL = 1024n * 1024n;
@@ -92,7 +94,7 @@ function parseOffer(plaintext) {
   if (typeof size !== 'string' || !/^(0|[1-9][0-9]{0,19})$/.test(size)) throw new Error('The sender offered an invalid file size.');
   const byteSize = BigInt(size);
   if (byteSize > 0xffffffffffffffffn || (chunkSize !== 64 * 1024 && chunkSize !== 256 * 1024)) throw new Error('The sender uses unsupported transfer limits.');
-  return { name, mediaType, size: byteSize };
+  return { name, mediaType, size: byteSize, directSdp: parseDirectOffer(value) };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -169,9 +171,12 @@ function renderProgress(received, total, force = false) {
   lastProgressPaint = now;
 }
 
+let closeDirect = () => {};
+
 function fail(error, socket, sink) {
   if (failureShown) return;
   failureShown = true;
+  closeDirect();
   if (sink) void sink.abort().catch(() => {});
   if (socket?.readyState === WebSocket.OPEN) socket.close(4400, 'receiver failed');
   elements.offer.hidden = true;
@@ -213,16 +218,84 @@ async function receive() {
   let chunks = 0;
   let pendingBytes = 0;
   let queue = Promise.resolve();
+  // Records from the relay and the direct path, in sequence order.
+  const merger = createRecordMerger();
+  let direct = null;
+  let directUsed = false;
+  // Records sent on the relay while the direct path may still open; they
+  // go out again on it when it does (the sender drops second copies).
+  let retained = [];
+  let switched = false;
+  let sendChain = Promise.resolve();
 
-  async function send(kind, payload = new Uint8Array()) {
-    socket.send(await sealer.seal(kind, payload));
+  // Sealing is async and sequence-numbered, so sends run on one chain.
+  function send(kind, payload = new Uint8Array()) {
+    sendChain = sendChain.catch(() => {}).then(async () => {
+      const record = await sealer.seal(kind, payload);
+      if (direct?.open) {
+        directUsed = true;
+        if (!switched) {
+          switched = true;
+          for (const earlier of retained.splice(0)) direct.send(earlier);
+        }
+        direct.send(record);
+        return;
+      }
+      if (direct && !switched) retained.push(record);
+      socket.send(record);
+    });
+    return sendChain;
+  }
+
+  function enqueueRecords(records, size) {
+    pendingBytes += size;
+    if (pendingBytes > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
+      fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
+      return;
+    }
+    let ordered;
+    try {
+      ordered = merger.push(records);
+    } catch (error) {
+      fail(error, socket, sink);
+      return;
+    }
+    if (ordered.length === 0) {
+      pendingBytes -= size;
+      return;
+    }
+    queue = queue.then(async () => {
+      for (const record of ordered) await processMessage(record);
+    }).finally(() => { pendingBytes -= size; });
+    queue.catch((error) => fail(error, socket, sink));
+  }
+
+  // startDirect answers the sender's direct-path offer in the background;
+  // the transfer starts on the relay and moves over when the channel opens.
+  function startDirect(offerSdp) {
+    answerDirect({
+      offerSdp,
+      onSignal: (signal) => { void send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))).catch(() => {}); },
+      onRecord: (record) => {
+        directUsed = true;
+        enqueueRecords(record, record.byteLength);
+      },
+      onOpen: () => {},
+      onLost: (error) => {
+        if (directUsed && state !== 'complete') fail(error, socket, sink);
+      }
+    }).then((path) => {
+      direct = path;
+      closeDirect = () => path.close();
+    }).catch(() => { /* The transfer stays on the relay. */ });
   }
 
   async function processMessage(data) {
     if (typeof data === 'string') {
       const value = JSON.parse(data);
       if (value.protocol !== 'cd-transfer-v1') throw new Error('The sender uses an incompatible CD version.');
-      if (value.type === 'peer-left') throw new Error('The sender is no longer available.');
+      // Once the direct path carries the transfer, the relay is optional.
+      if (value.type === 'peer-left' && !directUsed) throw new Error('The sender is no longer available.');
       if (value.type === 'accepted') elements.status.textContent = 'Connected. Waiting for file details...';
       return;
     }
@@ -230,6 +303,7 @@ async function receive() {
     if (state === 'connecting' && kind === KIND_OFFER) {
       offer = parseOffer(plaintext);
       state = 'offered';
+      if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp);
       sink = await waitForAcceptance(offer);
       if (failureShown) {
         await sink.abort();
@@ -293,22 +367,24 @@ async function receive() {
     try { socket.close(1000, 'receiver left'); } catch { /* Best effort. */ }
   }, { once: true });
   socket.addEventListener('message', (event) => {
-    const size = typeof event.data === 'string' ? event.data.length : event.data.byteLength;
-    pendingBytes += size;
-    if (pendingBytes > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
-      fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
+    if (typeof event.data !== 'string') {
+      enqueueRecords(event.data, event.data.byteLength);
       return;
     }
+    const size = event.data.length;
+    pendingBytes += size;
     queue = queue.then(() => processMessage(event.data)).finally(() => { pendingBytes -= size; });
     queue.catch((error) => fail(error, socket, sink));
   });
-  socket.addEventListener('error', () => fail(new Error('This CD transfer is unavailable or has expired.'), socket, sink));
+  socket.addEventListener('error', () => {
+    if (!directUsed) fail(new Error('This CD transfer is unavailable or has expired.'), socket, sink);
+  });
   const connectTimeout = setTimeout(() => {
     if (state === 'connecting') fail(new Error('Could not reach the CD relay. Check your connection and reload the link.'), socket, sink);
   }, 15_000);
   socket.addEventListener('close', (event) => {
     clearTimeout(connectTimeout);
-    if (state !== 'complete') fail(new Error(closeReasonMessage(event)), null, sink);
+    if (state !== 'complete' && !directUsed) fail(new Error(closeReasonMessage(event)), null, sink);
   });
 }
 

@@ -14,9 +14,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/webrtc/v4"
 )
 
 const (
@@ -233,13 +235,17 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		return err
 	}
 
-	// Wait for admission, then for the sender's offer. Text frames are relay
-	// events (accepted / peer-joined); binary frames are encrypted records.
+	// Wait for admission, then for the sender's offer. The link skips relay
+	// events (peer-joined) and merges records from the relay and, once
+	// connected, the direct path.
 	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
 	fmt.Fprintln(os.Stderr, "connected — waiting for sender's file offer")
-	kind, payload, err := readReceiverRecord(ctx, connection, opener, offerWait)
+	link := newRecordLink(connection, sealer, opener, errors.New("sender disconnected (they closed the tab or lost network)"))
+	defer link.close()
+	link.start()
+	kind, payload, err := link.next(ctx, offerWait)
 	if err != nil {
 		if isTimeoutError(err) {
 			return errors.New("sender did not offer a file within 15m: ask them to run `cdx send` again")
@@ -273,8 +279,13 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		}
 	}()
 
-	if err := writeReceiverRecord(connection, sealer, kindAccept, nil); err != nil {
+	if err := link.send(kindAccept, nil); err != nil {
 		return friendlyRelayError(fmt.Errorf("accept file offer: %w", err))
+	}
+	// Data starts on the relay right away; answer a direct-path offer in the
+	// background and the sender moves over when the data channel opens.
+	if offer.Direct != nil && directEnabled() {
+		go answerDirectPath(link, offer.Direct.SDP)
 	}
 
 	terminal := isTerminal(os.Stderr)
@@ -290,7 +301,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	var chunks uint32
 	var acknowledged uint64
 	for {
-		kind, payload, err = readReceiverRecord(ctx, connection, opener, transferIdle)
+		kind, payload, err = link.next(ctx, transferIdle)
 		if err != nil {
 			if terminal && received > 0 {
 				fmt.Fprintln(os.Stderr)
@@ -318,7 +329,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			chunks++
 			reportProgress(received, size)
 			if received-acknowledged >= ackIntervalBytes || received == size {
-				if err := writeReceiverRecord(connection, sealer, kindAck, encodeCounts(chunks, received)); err != nil {
+				if err := link.send(kindAck, encodeCounts(chunks, received)); err != nil {
 					if terminal && received > 0 {
 						fmt.Fprintln(os.Stderr)
 					}
@@ -350,10 +361,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				}
 				_ = os.Remove(staging)
 			}
-			if err := writeReceiverRecord(connection, sealer, kindComplete, encodeCounts(chunks, received)); err != nil {
+			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 			}
-			closeGracefully(connection, closeWait)
+			link.finish(true)
 			abs, _ := filepath.Abs(final)
 			if abs == "" {
 				abs = final
@@ -371,57 +382,6 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			return errors.New("the sender sent a message out of order")
 		}
 	}
-}
-
-// readReceiverRecord reads one encrypted sender record, skipping relay text
-// events (accepted / peer-joined). A peer-left event means the sender is gone.
-func readReceiverRecord(ctx context.Context, connection *websocket.Conn, opener *recordOpener, timeout time.Duration) (messageKind, []byte, error) {
-	for {
-		if err := ctx.Err(); err != nil {
-			return 0, nil, err
-		}
-		if err := connection.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-			return 0, nil, err
-		}
-		messageType, data, err := connection.ReadMessage()
-		if err != nil {
-			if ctx.Err() != nil {
-				return 0, nil, ctx.Err()
-			}
-			return 0, nil, friendlyRelayError(fmt.Errorf("receive from CD: %w", err))
-		}
-		if messageType == websocket.TextMessage {
-			var value relayEvent
-			if json.Unmarshal(data, &value) == nil {
-				switch value.Type {
-				case "accepted", "peer-joined":
-					continue
-				case "peer-left":
-					return 0, nil, errors.New("sender disconnected (they closed the tab or lost network)")
-				}
-			}
-			return 0, nil, errors.New("CD relay sent unexpected text (transfer aborted)")
-		}
-		if messageType != websocket.BinaryMessage {
-			return 0, nil, errors.New("CD relay sent an invalid frame")
-		}
-		kind, plaintext, err := opener.open(data)
-		if err != nil {
-			return 0, nil, fmt.Errorf("the sender sent invalid transfer data: %w", err)
-		}
-		return kind, plaintext, nil
-	}
-}
-
-func writeReceiverRecord(connection *websocket.Conn, sealer *recordSealer, kind messageKind, payload []byte) error {
-	record, err := sealer.seal(kind, payload)
-	if err != nil {
-		return err
-	}
-	if err := connection.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
-		return err
-	}
-	return connection.WriteMessage(websocket.BinaryMessage, record)
 }
 
 func copyFile(source, dest string) error {
@@ -451,4 +411,55 @@ func copyFile(source, dest string) error {
 		}
 	}
 	return out.Sync()
+}
+
+// answerDirectPath answers the sender's direct-path offer with a signal
+// record, then trickles each local ICE candidate in its own signal record,
+// so the answer waits for no STUN round trip. Any failure leaves the
+// transfer on the relay.
+func answerDirectPath(link *recordLink, offerSDP string) {
+	path, err := newDirectPath(link.directRecord, link.directLost)
+	if err != nil {
+		return
+	}
+	link.attachDirect(path)
+	// Candidates found before the answer is sent wait for it: the sender
+	// can only add candidates after applying the answer.
+	var mutex sync.Mutex
+	answered := false
+	var early []webrtc.ICECandidateInit
+	sendCandidate := func(candidate webrtc.ICECandidateInit) {
+		signal, err := json.Marshal(directSignal{Candidate: &candidate})
+		if err == nil {
+			_ = link.send(kindSignal, signal)
+		}
+	}
+	answer, err := path.answerOffer(offerSDP, func(candidate webrtc.ICECandidateInit) {
+		mutex.Lock()
+		defer mutex.Unlock()
+		if !answered {
+			early = append(early, candidate)
+			return
+		}
+		sendCandidate(candidate)
+	})
+	if err != nil {
+		return
+	}
+	signal, err := json.Marshal(directSignal{SDP: answer})
+	if err != nil || link.send(kindSignal, signal) != nil {
+		return
+	}
+	mutex.Lock()
+	answered = true
+	for _, candidate := range early {
+		sendCandidate(candidate)
+	}
+	early = nil
+	mutex.Unlock()
+	select {
+	case <-path.opened:
+		fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+	case <-path.lost:
+	}
 }

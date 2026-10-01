@@ -47,6 +47,12 @@ Standard output contains only the short share code:
 48291
 ```
 
+Large files (1 MiB and up) also try a direct WebRTC connection through the
+same code: on the same Wi-Fi the bytes go device to device, and over the
+internet they take a direct path when NAT allows. The transfer starts on the
+relay and moves over mid-stream when the direct link opens, so nothing waits
+on it.
+
 Tell the receiver the code. They type it into the Receive box on
 [cd.yash0.in](https://cd.yash0.in) or run `cdx receive 48291`. Codes expire
 after 15 minutes and admit one receiver.

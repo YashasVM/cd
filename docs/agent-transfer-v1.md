@@ -211,3 +211,33 @@ phones, 3 MiB when no window was announced. The receiver's pending-input
 cap grows to match. Peers that ignore the metadata (the Android app, cached
 old pages) keep using the PeerJS channel, and the receiver commits to
 whichever channel delivers the first message.
+
+## Direct path (WebRTC) for relay transfers
+
+The relay room doubles as the rendezvous for a direct connection. For files
+of 1 MiB or more, `cdx send` gathers ICE candidates (host, then STUN) while
+it waits for the receiver and adds `"direct": {"sdp": "<offer>"}` to the
+encrypted file offer. Receivers that predate it ignore the field.
+
+A current receiver (`cdx receive` or the browser share page) answers with a
+`signal` record (kind `9`, receiver→sender, JSON `{"sdp": ...}`), then sends
+one `signal` record per local ICE candidate as it is found (`{"candidate":
+{...}}`, trickle ICE). It sends `signal` only when the offer included SDP, so
+older senders never see it. Both sides create a pre-negotiated data channel
+(`cd-direct`, stream id 1).
+
+The transfer starts on the relay immediately after `accept`. Each side sends
+on the data channel once it is open, otherwise on the relay, and splits each
+record into 64 KiB messages that the peer rebuilds from the 12-byte header.
+Inbound records from both paths are merged by their header sequence number.
+While the direct path may still open, each side keeps the records it sent
+on the relay and re-sends them on the data channel when it opens, so the
+transfer never waits for a slow relay to drain. The receiver of two copies
+keeps the first and drops the second (the kept copy is still authenticated
+when opened). The sender releases retained chunks as acks cover them.
+
+Records keep their AES-GCM encryption on the data channel, which adds DTLS
+underneath. Once a record has crossed the direct path, losing the relay
+WebSocket is harmless and losing the direct path is fatal. Before that, a
+direct path that fails or never connects changes nothing. `CD_DIRECT=0`
+forces the relay.

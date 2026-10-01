@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	admissionWait   = 10 * time.Second
-	receiverWait    = 15 * time.Minute
-	consentWait     = 10 * time.Minute
-	transferIdle    = 90 * time.Second
+	admissionWait = 10 * time.Second
+	receiverWait  = 15 * time.Minute
+	consentWait   = 10 * time.Minute
+	transferIdle  = 90 * time.Second
 )
 
 type relayEvent struct {
@@ -43,6 +43,9 @@ type fileOffer struct {
 	MediaType string `json:"mediaType"`
 	Size      string `json:"size"`
 	ChunkSize int    `json:"chunkSize"`
+	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
+	// that predate it ignore the field.
+	Direct *directOffer `json:"direct,omitempty"`
 }
 
 func endpointBase() (string, string, error) {
@@ -330,6 +333,31 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	} else {
 		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 	}
+	sealer, err := newSealer(invitation, senderDirection)
+	if err != nil {
+		return err
+	}
+	opener, err := newOpener(invitation, receiverDirection)
+	if err != nil {
+		return err
+	}
+	link := newRecordLink(connection, sealer, opener, errors.New("receiver disconnected (they closed the tab or lost network)"))
+	defer link.close()
+	// Gather direct-path candidates while waiting for the receiver.
+	var offerSDP chan string
+	if directEnabled() && source.size >= directMinBytes {
+		if path, err := newDirectPath(link.directRecord, link.directLost); err == nil {
+			link.attachDirect(path)
+			offerSDP = make(chan string, 1)
+			go func() {
+				sdp, err := path.createOffer()
+				if err != nil {
+					sdp = ""
+				}
+				offerSDP <- sdp
+			}()
+		}
+	}
 	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}
@@ -340,7 +368,8 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		return err
 	}
 	defer reader.Close()
-	return transfer(ctx, connection, reader, ready, invitation, hooks)
+	link.start()
+	return transfer(ctx, link, reader, ready, offerSDP, hooks)
 }
 
 // isTimeoutError reports whether err is a network deadline timeout.
@@ -419,32 +448,71 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 	return value, nil
 }
 
-func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, ready readyOutput, invitation invitation, hooks sendHooks) error {
-	sealer, err := newSealer(invitation, senderDirection)
+// transfer streams one source over a paired link. offerSDP, when not nil,
+// yields the direct-path offer to embed in the file offer.
+func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
+	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize}
+	if offerSDP != nil {
+		if sdp := <-offerSDP; sdp != "" {
+			offer.Direct = &directOffer{SDP: sdp}
+		}
+	}
+	encoded, err := json.Marshal(offer)
 	if err != nil {
 		return err
 	}
-	opener, err := newOpener(invitation, receiverDirection)
-	if err != nil {
-		return err
-	}
-	offer, err := json.Marshal(fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize})
-	if err != nil {
-		return err
-	}
-	if err := writeRecord(connection, sealer, kindOffer, offer); err != nil {
+	if err := link.send(kindOffer, encoded); err != nil {
 		return friendlyRelayError(fmt.Errorf("send file offer: %w", err))
 	}
-	fmt.Fprintln(os.Stderr, "waiting for receiver to accept (up to 10m)")
-	kind, payload, err := readRecord(ctx, connection, opener, consentWait)
-	if err != nil {
-		if isTimeoutError(err) {
-			return errors.New("receiver did not accept within 10m: they may have closed the link, run `cdx send` again")
+
+	answered := false
+	candidates := 0
+	handleSignal := func(payload []byte) {
+		path := link.direct.Load()
+		var signal directSignal
+		if path == nil || json.Unmarshal(payload, &signal) != nil {
+			return
 		}
-		return err
+		if signal.Candidate != nil {
+			if answered && candidates < maxRemoteCandidates {
+				candidates++
+				_ = path.addCandidate(*signal.Candidate)
+			}
+			return
+		}
+		if answered {
+			return
+		}
+		answered = true
+		if err := path.acceptAnswer(signal.SDP); err != nil {
+			return
+		}
+		go func() {
+			select {
+			case <-path.opened:
+				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+			case <-path.lost:
+			}
+		}()
 	}
-	if kind != kindAccept || len(payload) != 0 {
-		return errors.New("receiver sent an invalid acceptance")
+
+	fmt.Fprintln(os.Stderr, "waiting for receiver to accept (up to 10m)")
+	for {
+		kind, payload, err := link.next(ctx, consentWait)
+		if err != nil {
+			if isTimeoutError(err) {
+				return errors.New("receiver did not accept within 10m: they may have closed the link, run `cdx send` again")
+			}
+			return err
+		}
+		if kind == kindSignal {
+			handleSignal(payload)
+			continue
+		}
+		if kind != kindAccept || len(payload) != 0 {
+			return errors.New("receiver sent an invalid acceptance")
+		}
+		break
 	}
 	fmt.Fprintln(os.Stderr, "receiver accepted — sending file")
 	hooks.report(phaseSending, 0)
@@ -458,57 +526,64 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 		fmt.Fprintf(os.Stderr, "\rsent %s / %s (%.1f%%)", formatShortBytes(acknowledged), formatShortBytes(total), percent)
 	}
 
-	// Full-duplex pipeline: one reader goroutine owns the socket read side
-	// and streams records into a channel while the send loop only writes.
-	// The in-flight window adapts to the path (8-24 MiB, see window.go), and
-	// the sender only blocks when it is genuinely full.
-	incoming := make(chan inboundRecord, 64)
-	readerDone := make(chan struct{})
-	go func() {
-		defer close(readerDone)
-		for {
-			kind, payload, err := readRecord(ctx, connection, opener, transferIdle)
-			select {
-			case incoming <- inboundRecord{kind: kind, payload: payload, err: err}:
-			case <-ctx.Done():
-				return
-			}
-			if err != nil || kind == kindComplete {
-				return
-			}
-		}
-	}()
-
-	// Every inbound record goes through one state machine; the send loop
-	// only chooses what to wait for.
+	// The link's reader goroutine buffers inbound records while this loop
+	// writes. Every inbound record goes through one state machine; the send
+	// loop only chooses what to wait for. The in-flight window adapts to the
+	// path (8-24 MiB, see window.go).
 	progress := &senderProgress{}
 	window := newAdaptiveWindow()
+	handle := func(kind messageKind, payload []byte) error {
+		if kind == kindSignal {
+			handleSignal(payload)
+			return nil
+		}
+		if err := progress.handle(kind, payload); err != nil {
+			return err
+		}
+		if kind == kindAck {
+			window.acked(progress.acknowledged, time.Now())
+			link.acknowledged(progress.acknowledged)
+		}
+		reportProgress(progress.acknowledged, ready.Size)
+		hooks.report(phaseSending, progress.acknowledged)
+		return nil
+	}
+	linkError := func(err error) error {
+		if isTimeoutError(err) {
+			if progress.ended {
+				return errors.New("receiver did not verify within 90s: they may have disconnected")
+			}
+			return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
+		}
+		return err
+	}
 	await := func(done func() bool) error {
-		for !done() {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case msg := <-incoming:
-				if msg.err != nil {
-					if isTimeoutError(msg.err) {
-						if progress.ended {
-							return errors.New("receiver did not verify within 90s: they may have disconnected")
-						}
-						return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
-					}
-					return msg.err
+		for {
+			// Take everything already received before deciding to wait, so
+			// acks reach the window estimate on time.
+			for {
+				kind, payload, ok, err := link.poll()
+				if err != nil {
+					return linkError(err)
 				}
-				if err := progress.handle(msg.kind, msg.payload); err != nil {
+				if !ok {
+					break
+				}
+				if err := handle(kind, payload); err != nil {
 					return err
 				}
-				if msg.kind == kindAck {
-					window.acked(progress.acknowledged, time.Now())
-				}
-				reportProgress(progress.acknowledged, ready.Size)
-				hooks.report(phaseSending, progress.acknowledged)
+			}
+			if done() {
+				return nil
+			}
+			kind, payload, err := link.next(ctx, transferIdle)
+			if err != nil {
+				return linkError(err)
+			}
+			if err := handle(kind, payload); err != nil {
+				return err
 			}
 		}
-		return nil
 	}
 	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
 	finishLine := func() {
@@ -519,9 +594,9 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 
 	buffer := make([]byte, chunkSize)
 	for {
-		count, readErr := file.Read(buffer)
+		count, readErr := io.ReadFull(file, buffer)
 		if count > 0 {
-			if err := writeRecord(connection, sealer, kindChunk, buffer[:count]); err != nil {
+			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
 				finishLine()
 				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
 			}
@@ -533,7 +608,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 				return err
 			}
 		}
-		if readErr == io.EOF {
+		if readErr == io.EOF || readErr == io.ErrUnexpectedEOF {
 			break
 		}
 		if readErr != nil {
@@ -545,7 +620,7 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 		finishLine()
 		return errors.New("file changed while it was being sent")
 	}
-	if err := writeRecord(connection, sealer, kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
+	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
 		return friendlyRelayError(fmt.Errorf("finish transfer: %w", err))
 	}
@@ -558,16 +633,9 @@ func transfer(ctx context.Context, connection *websocket.Conn, file io.Reader, r
 	if !terminal && ready.Size >= 1024*1024 {
 		fmt.Fprintf(os.Stderr, "sent %s\n", formatBytes(progress.sent))
 	}
-	<-readerDone
-	closeGracefully(connection, closeWait)
+	link.finish(false)
 	fmt.Fprintln(os.Stderr, "receiver verified the file")
 	return nil
-}
-
-type inboundRecord struct {
-	kind    messageKind
-	payload []byte
-	err     error
 }
 
 // senderProgress is the sender's view of the receiver: the bytes it has
@@ -606,44 +674,6 @@ func (p *senderProgress) handle(kind messageKind, payload []byte) error {
 	default:
 		return errors.New("receiver sent an invalid acknowledgement")
 	}
-}
-
-func writeRecord(connection *websocket.Conn, sealer *recordSealer, kind messageKind, payload []byte) error {
-	record, err := sealer.seal(kind, payload)
-	if err != nil {
-		return err
-	}
-	if err := connection.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
-		return err
-	}
-	return connection.WriteMessage(websocket.BinaryMessage, record)
-}
-
-func readRecord(ctx context.Context, connection *websocket.Conn, opener *recordOpener, timeout time.Duration) (messageKind, []byte, error) {
-	if err := ctx.Err(); err != nil {
-		return 0, nil, err
-	}
-	if err := connection.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		return 0, nil, err
-	}
-	messageType, data, err := connection.ReadMessage()
-	if err != nil {
-		if ctx.Err() != nil {
-			return 0, nil, ctx.Err()
-		}
-		return 0, nil, friendlyRelayError(fmt.Errorf("receive from CD: %w", err))
-	}
-	if messageType == websocket.TextMessage {
-		var value relayEvent
-		if json.Unmarshal(data, &value) == nil && value.Type == "peer-left" {
-			return 0, nil, errors.New("receiver disconnected (they closed the tab or lost network)")
-		}
-		return 0, nil, errors.New("CD relay sent unexpected text (transfer aborted)")
-	}
-	if messageType != websocket.BinaryMessage {
-		return 0, nil, errors.New("CD relay sent an invalid frame")
-	}
-	return opener.open(data)
 }
 
 func encodeCounts(chunks uint32, bytes uint64) []byte {
