@@ -92,7 +92,8 @@ async function verifyStartup(browser, baseUrl) {
     assert.equal(await page.locator('#app-state').textContent(), 'loading');
     release();
     await page.locator('.workbench:not([inert])').waitFor();
-    assert.equal(await page.locator('#app-state').textContent(), 'idle');
+    // Startup ends idle, then flips to ready once signaling opens; either is fine.
+    assert.match(await page.locator('#app-state').getAttribute('data-state'), /^(idle|ready)$/);
     console.log('verified controls wait for app startup on a slow connection');
   } finally {
     release();

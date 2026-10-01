@@ -569,7 +569,7 @@ const Sender = (() => {
     conn.on('close', () => {
       if (peer !== activePeer || connection !== conn) return;
       if (!transferFinished && !transferCancelled) {
-        failSend('Connection vanished mid-send.');
+        failSend('Lost the connection while sending. Try again.');
       }
     });
   }
@@ -790,7 +790,7 @@ const Sender = (() => {
     els.senderProgress.classList.add('hidden');
     els.senderComplete.classList.add('hidden');
     els.senderStatus.textContent = 'Waiting for receiver...';
-    els.senderCompleteMessage.textContent = 'Sent. Nice.';
+    els.senderCompleteMessage.textContent = 'Sent';
     resetProgress(els.senderProgress);
   }
 
@@ -846,7 +846,7 @@ const Receiver = (() => {
     const short = isShortCode(rawCode);
     const code = short ? cleanShortCode(rawCode) : codeFromUrl(rawCode, window.location.href);
     if (!short && !isValidCode(code)) {
-      els.scannerStatus.textContent = 'Paste the sender’s code or their link.';
+      els.scannerStatus.textContent = 'That isn’t a code. Codes are 5 digits, or paste the sender’s link.';
       els.codeInput.setAttribute('aria-invalid', 'true');
       els.codeInput.focus();
       return;
@@ -890,7 +890,7 @@ const Receiver = (() => {
     }
     if (connectionGeneration !== transferGeneration || transferCancelled) return;
     if (response.status === 404) {
-      showError('Bad code, or the sender wandered off.');
+      showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
       return;
     }
     if (!response.ok) {
@@ -901,7 +901,7 @@ const Receiver = (() => {
     try {
       capability = parseCapability(await response.json());
     } catch {
-      showError('Bad code, or the sender wandered off.');
+      showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
       return;
     }
     window.location.href = shareUrlFromCapability(window.location.origin, capability.transferId, capability.key);
@@ -942,7 +942,7 @@ const Receiver = (() => {
       // Signaling is only needed to connect; losing it mid-transfer is harmless.
       if (connection?.open && isTemporarySignalingError(err)) return;
       if (err.type === 'peer-unavailable') {
-        showError('Bad code, or the sender wandered off.');
+        showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
         return;
       }
       if (isTemporarySignalingError(err) && !connection?.open && signalingRetries < SIGNALING_RETRY_LIMIT) {
@@ -1007,12 +1007,12 @@ const Receiver = (() => {
 
     transport.on('error', () => {
       if (transferCancelled) return;
-      lose('Connection vanished. Try again.');
+      lose('Lost the connection to the sender. Try again.');
     });
 
     transport.on('close', () => {
       if (connection === transport && totalBytesReceived >= (manifest?.totalSize ?? Infinity)) return;
-      lose('Connection vanished unexpectedly.');
+      lose('Lost the connection to the sender. Try again.');
     });
   }
 
@@ -1486,7 +1486,7 @@ const Receiver = (() => {
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.add('hidden');
     els.receiverError.classList.add('hidden');
-    els.receiverCompleteMessage.textContent = 'All here. Nice.';
+    els.receiverCompleteMessage.textContent = 'Saved';
     els.codeInput.value = '';
     resetProgress(els.receiverProgress);
     setState('idle');
@@ -1579,7 +1579,7 @@ async function stopScanner() {
   els.qrReader.classList.add('hidden');
   els.scanQrBtn.classList.remove('hidden');
   els.stopScanBtn.classList.add('hidden');
-  els.scannerStatus.textContent = "Paste the sender's code or link, or scan their QR code.";
+  els.scannerStatus.textContent = "Use your camera to scan the sender's QR code.";
   els.scanQrBtn.disabled = true;
   scannerCleanup = scannerCleanup.then(async () => {
     try { await pendingStart; } catch { /* Camera permission can be denied. */ }

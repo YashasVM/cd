@@ -285,6 +285,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .file-subtext { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 
 .share-grid { display: grid; grid-template-columns: minmax(0, 1fr) 168px; gap: 12px; }
+.code-block { display: flex; flex-direction: column; justify-content: center; }
 .code-block, .qr-block {
   min-width: 0;
   padding: 16px;
@@ -294,14 +295,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .code-block #share-code {
   display: block;
-  margin-top: 10px;
+  margin-top: 6px;
   color: var(--accent);
-  font: 25px/1.35 var(--mono);
-  letter-spacing: .025em;
+  font: 600 clamp(34px, 4vw, 44px)/1.15 var(--mono);
+  letter-spacing: .12em;
   overflow-wrap: anywhere;
   user-select: all;
 }
-.code-help { max-width: 220px; margin: 14px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.code-help { max-width: 300px; margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .qr-block { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--ink); }
 .qr-block .panel-kicker { align-self: stretch; }
 #share-qr { display: block; width: min(100%, 132px) !important; height: auto !important; aspect-ratio: 1; image-rendering: pixelated; }
@@ -315,7 +316,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.input-section { margin-top: 0; padding: 22px 0 5px; border: 0; }
+.input-section { margin-top: 0; padding: 26px 0 4px; border: 0; }
+.section-title { margin: 0 0 5px; font-size: 21px; font-weight: 550; line-height: 1.25; letter-spacing: -.02em; }
+.section-subtitle { max-width: 420px; margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .code-input-wrapper { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 #code-input {
   width: 100%;
@@ -326,22 +330,21 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   border-radius: 5px;
   background: var(--ink);
   color: var(--text);
-  font: 17px/1.3 var(--mono);
-  letter-spacing: .015em;
+  font: 20px/1.3 var(--mono);
+  letter-spacing: .1em;
 }
-#code-input::placeholder { color: var(--faint); }
+#code-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(229, 138, 87, .15); }
+#code-input::placeholder { color: rgba(162, 143, 121, .45); }
 #code-input[aria-invalid="true"] { border-color: #ff8a62; }
-.scanner-panel { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px; margin-top: 16px; }
+.scanner-panel { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 12px; margin-top: 14px; }
 .scanner-status { min-width: 0; margin: 0; color: var(--muted); font-size: 13px; }
 .qr-reader { grid-column: 1 / -1; width: min(100%, 360px); aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
 .qr-reader video { width: 100% !important; height: auto !important; object-fit: cover; }
 
-.connecting-section { text-align: center; }
-.connecting-section p { margin: 10px 0 18px; color: var(--muted); }
 .spinner {
-  width: 28px;
-  height: 28px;
-  margin: 2px auto 0;
+  display: block;
+  width: 22px;
+  height: 22px;
   border: 2px solid var(--line);
   border-top-color: var(--accent);
   border-radius: 50%;
@@ -349,13 +352,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .progress-topline { display: flex; align-items: center; gap: 12px; }
-.progress-mode { flex: 1; font-size: 17px; font-weight: 550; }
-.progress-percent { color: var(--accent); font: 15px var(--mono); }
+.progress-topline { align-items: baseline; }
+.progress-mode { flex: 1; color: var(--faint); font: 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.progress-percent { order: -1; color: var(--text); font: 600 32px/1 var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .cancel-btn { min-height: 44px; padding: 7px 11px; font: 12px var(--mono); }
 .progress-bar {
   position: relative;
-  height: 10px;
-  margin: 26px 0 18px;
+  height: 8px;
+  margin: 16px 0 14px;
   border: 1px solid var(--line);
   border-radius: 99px;
   background: var(--ink);
@@ -384,10 +388,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .progress-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .progress-stats span { display: grid; min-width: 0; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
 .progress-stats b { color: var(--faint); font: 10px var(--mono); text-transform: uppercase; }
-.progress-stats em { min-width: 0; overflow: hidden; color: var(--text); font: 12px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
-.result-section { text-align: center; }
-.result-mark { display: inline-grid; place-items: center; width: 52px; height: 42px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); font: 14px var(--mono); }
-.complete-section {
+.progress-stats em { min-width: 0; font-variant-numeric: tabular-nums; overflow: hidden; color: var(--text); font: 12px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.result-mark { display: inline-grid; place-items: center; width: 52px; height: 52px; border: 1px solid rgba(229, 138, 87, .4); border-radius: 6px; color: var(--accent); }
+.result-section, .connecting-section {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   align-content: center;
@@ -396,12 +399,6 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   min-height: 210px;
   padding: 26px 0 4px;
   text-align: left;
-}
-.complete-section .result-mark {
-  width: 52px;
-  height: 52px;
-  border: 1px solid rgba(229, 138, 87, .4);
-  border-radius: 6px;
 }
 .result-copy { min-width: 0; }
 .result-title {
@@ -419,15 +416,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   from { opacity: 0; transform: scale(.7); }
   to { opacity: 1; transform: scale(1); }
 }
-.result-section.error .result-mark { border-color: #ff5d2a; background: #5a160b; color: #ff8a62; }
-.result-section p { margin: 14px 0 18px; color: var(--muted); }
-.complete-section .result-title { margin: 0; }
-.result-section .result-detail { margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
-.result-section.complete-section .result-mark { color: #7fd18b; border-color: rgba(127, 209, 139, .4); }
+.result-section.error .result-mark { border-color: rgba(255, 93, 42, .5); background: rgba(90, 22, 11, .6); color: #ff8a62; }
+.result-detail { margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
+.complete-section .result-mark { color: #7fd18b; border-color: rgba(127, 209, 139, .4); }
 .redownload-list .secondary-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The terminal hint only helps someone who hasn't picked files yet. */
-#sender-view:has(#drop-zone.hidden) > .terminal-hint { display: none; }
-.result-section .error-message { color: #ff8a62; }
+.result-section .error-message { color: #ffb08f; font: 14px/1.5 Inter, system-ui, sans-serif; }
 .redownload-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .redownload-list a {
   max-width: 100%;
@@ -483,11 +476,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 
 @media (max-width: 480px) {
-  .shell { width: 100%; padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+  .shell { justify-content: flex-start; width: 100%; padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
   .brand-rail { padding: 0 4px; }
   .brand-name h1, .brand-lockup h1 { font-size: 39px; }
-  .brand-intro { font-size: 20px; }
-  .workbench { margin-top: 26px; padding: 0 18px 20px; }
+  .brand-intro { margin: 10px 0 0; font-size: 18px; }
+  /* On a phone the transfer card is the point: keep the header to a few lines. */
+  .brand-note { display: none; }
+  .state-board { margin-top: 12px; }
+  .workbench { margin-top: 20px; padding: 0 18px 20px; }
   .mode-selector { margin: 0 -18px 6px; padding: 0 8px; }
   .mode-btn { min-height: 48px; }
   .view.active { min-height: 270px; }
@@ -496,25 +492,28 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
   .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; margin-top: 4px; }
-  .complete-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
-  .complete-section .result-mark { width: 44px; height: 44px; }
+  .result-section, .connecting-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
+  .result-mark { width: 44px; height: 44px; }
   .result-title { font-size: 18px; }
   .result-actions { align-items: stretch; flex-direction: column; }
   .result-actions .primary-btn { width: 100%; }
   .redownload-list { flex-direction: column; align-items: stretch; width: 100%; }
   .redownload-list a { width: 100%; text-align: center; }
   .primary-btn, .secondary-btn { min-height: 48px; }
-  .file-info, .share-panel, .progress-section, .result-section, .input-section, .connecting-section { padding: 18px 0 0; }
-  .input-section { padding: 20px 0 5px; }
+  .input-section { padding: 22px 0 4px; }
+  .section-title { font-size: 18px; }
+  .section-subtitle { font-size: 13px; }
+  .progress-percent { font-size: 26px; }
   .file-header { display: grid; gap: 4px; }
   .share-grid { grid-template-columns: 1fr; }
   .qr-block { padding: 14px; }
-  #share-qr { width: min(100%, 184px) !important; }
+  #share-qr { width: min(100%, 148px) !important; }
+  .code-block #share-code { font-size: 38px; }
   .share-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .code-input-wrapper { grid-template-columns: 1fr; }
   .scanner-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .scanner-panel button { grid-column: 1 / -1; width: 100%; }
-  .scanner-status { grid-column: 1 / -1; grid-row: 1; }
+  .scanner-status { grid-column: 1 / -1; grid-row: 2; }
   .progress-mode { font-size: 15px; }
   .cancel-btn { min-height: 48px; }
   .progress-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

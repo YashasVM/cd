@@ -67,7 +67,7 @@
           </div>
 
           <div id="sender-file-info" class="file-info hidden">
-            <span class="panel-kicker">payload</span>
+            <span class="panel-kicker">sending</span>
             <div class="file-header">
               <span class="file-name"></span>
               <span class="file-size"></span>
@@ -98,7 +98,7 @@
 
           <div id="sender-progress" class="progress-section hidden">
             <div class="progress-topline">
-              <span class="progress-mode">uploading</span>
+              <span class="progress-mode">sending</span>
               <strong class="progress-percent">0%</strong>
               <button id="sender-cancel-btn" class="cancel-btn" type="button">Cancel</button>
             </div>
@@ -122,19 +122,19 @@
               </div>
             </div>
           </div>
-
-          <p class="code-help terminal-hint">Sending to a terminal? <a href="/send">Share one file for <code>cdx receive</code></a>.</p>
         </section>
 
         <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
           <div id="receiver-input-section" class="input-section">
-            <label for="code-input">Enter the share code</label>
+            <h2 class="section-title">Receive files</h2>
+            <p class="section-subtitle">Type the code from the other device, paste their link, or scan their QR code.</p>
+            <label for="code-input" class="visually-hidden">Share code</label>
             <div class="code-input-wrapper">
               <input
                 id="code-input"
                 type="text"
                 maxlength="512"
-                placeholder="5-digit code, word code, or link" aria-describedby="scanner-status"
+                placeholder="48291" aria-describedby="scanner-status"
                 autocomplete="off"
                 autocapitalize="none"
                 autocorrect="off"
@@ -148,19 +148,24 @@
             <div class="scanner-panel">
               <button id="scan-qr-btn" class="secondary-btn" type="button">Scan code</button>
               <button id="stop-scan-btn" class="secondary-btn hidden" type="button">Stop scan</button>
-              <p id="scanner-status" class="scanner-status" role="status">Paste the sender's code or link, or scan their QR code.</p>
+              <p id="scanner-status" class="scanner-status" role="status">Use your camera to scan the sender's QR code.</p>
               <div id="qr-reader" class="qr-reader hidden"></div>
             </div>
           </div>
 
           <div id="receiver-connecting" class="connecting-section hidden">
-            <div class="spinner" aria-hidden="true"></div>
-            <p>Finding the sender...</p>
-            <button id="receiver-connecting-cancel-btn" class="secondary-btn" type="button">Cancel</button>
+            <span class="result-mark" aria-hidden="true"><span class="spinner"></span></span>
+            <div class="result-copy">
+              <p class="result-title">Finding the sender…</p>
+              <p class="result-detail">This usually takes a second or two.</p>
+              <div class="result-actions">
+                <button id="receiver-connecting-cancel-btn" class="secondary-btn" type="button">Cancel</button>
+              </div>
+            </div>
           </div>
 
           <div id="receiver-file-info" class="file-info hidden">
-            <span class="panel-kicker">incoming stuff</span>
+            <span class="panel-kicker">incoming</span>
             <div class="file-header">
               <span class="file-name"></span>
               <span class="file-size"></span>
@@ -170,7 +175,7 @@
 
           <div id="receiver-progress" class="progress-section hidden">
             <div class="progress-topline">
-              <span class="progress-mode">downloading</span>
+              <span class="progress-mode">receiving</span>
               <strong class="progress-percent">0%</strong>
               <button id="receiver-cancel-btn" class="cancel-btn" type="button">Cancel</button>
             </div>
@@ -197,8 +202,13 @@
 
           <div id="receiver-error" class="result-section error hidden" role="alert">
             <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>
-            <p class="error-message"></p>
-            <button id="retry-btn" class="primary-btn" type="button">Try again</button>
+            <div class="result-copy">
+              <p class="result-title">That didn’t work</p>
+              <p class="error-message result-detail"></p>
+              <div class="result-actions">
+                <button id="retry-btn" class="primary-btn" type="button">Try again</button>
+              </div>
+            </div>
           </div>
         </section>
       </section>
