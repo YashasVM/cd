@@ -208,7 +208,7 @@ messages as JSON strings, file bytes as ArrayBuffers of up to 256 KiB (capped
 by the connection's SCTP `maxMessageSize`). The sender keeps at most `window`
 unacknowledged bytes in flight: 16 MiB from desktop receivers, 4 MiB from
 phones, 3 MiB when no window was announced. The receiver's pending-input
-cap grows to match. Peers that ignore the metadata (the Android app, cached
+cap grows to match. Peers that ignore the metadata (cached
 old pages) keep using the PeerJS channel, and the receiver commits to
 whichever channel delivers the first message.
 

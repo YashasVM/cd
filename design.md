@@ -59,7 +59,7 @@ WebKit, where large blob downloads crash real devices.
 ### 6. Small surface, flat code
 
 One narrow release contract: one regular file from `cd` to one browser.
-Browser-to-browser WebRTC and Android are separate clients, not dependencies.
+Browser-to-browser WebRTC is a separate client, not a dependency.
 Modules stay flat; no package splits that add reader work without improving
 the contract. Same-origin throughout — no second domain, no extra service.
 

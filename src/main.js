@@ -96,7 +96,7 @@ const CONNECTION_TIMEOUT_MS = 15000;
 const TRANSFER_ACK_TIMEOUT_MS = 30000;
 const MIN_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
 // Unacknowledged bytes a sender keeps in flight when the receiver did not
-// announce its own window (old pages, the Android app).
+// announce its own window (old cached pages).
 const DEFAULT_SEND_WINDOW_BYTES = 3 * 1024 * 1024;
 const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
 const SIGNALING_RETRY_LIMIT = 3;
@@ -888,7 +888,7 @@ const Receiver = (() => {
       const capability = generateTunnelCapability();
       const tunnel = openRelayTunnel({ capability, role: 'creator', connect: (url) => new WebSocket(url) });
       // `raw: 1` offers the raw data channel; senders that don't know it
-      // (the Android app, old pages) use the PeerJS channel as before.
+      // (old cached pages) use the PeerJS channel as before.
       const directConnection = activePeer.connect(peerIdFor(code), {
         reliable: true,
         serialization: 'binary',

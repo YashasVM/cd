@@ -50,7 +50,7 @@ try {
   await transferOnce(browser, work, baseUrl, sourcePath, source, 'relay-fallback');
   console.log('verified relay fallback: exact bytes when the direct data channel cannot connect');
   await transferOnce(browser, work, baseUrl, sourcePath, source, 'legacy-framing');
-  console.log('verified PeerJS framing when the sender does not know the raw channel (Android, old pages)');
+  console.log('verified PeerJS framing when the sender does not know the raw channel (old cached pages)');
   await transferBatch(browser, work, baseUrl);
   console.log('verified P2P batch: five exact downloads, including an empty file');
   await transferSlowReceiver(browser, work, baseUrl);
@@ -139,7 +139,7 @@ async function transferOnce(browser, work, baseUrl, sourcePath, source, mode) {
     let senderAttempts = 0;
     let receiverAttempts = 0;
     if (mode === 'legacy-framing') {
-      // Hide the receiver's raw-channel offer from the sender, as an Android
+      // Hide the receiver's raw-channel offer from the sender, as an old cached page
       // or old sender would ignore it.
       await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
         const server = socket.connectToServer();

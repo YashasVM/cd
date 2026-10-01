@@ -13,7 +13,7 @@ import { buildCLI, childExit, cliEnv, collect, findChromium, firstLine, startWor
 //   p2p     browser -> browser throughput over the WebRTC data channel
 //   tunnel  browser -> browser throughput when P2P falls back to the relay
 //   legacy  browser -> browser P2P over PeerJS binary framing (what the
-//           Android app and old pages get), for comparison with p2p
+//           old cached pages get), for comparison with p2p
 // Local by default (loopback: measures CPU and protocol overhead, not the
 // network). CD_VERIFY_URL=https://cd.yash0.in measures production.
 // CD_BENCH_MIB sets the payload (default 64), CD_BENCH_RUNS the code runs
@@ -121,7 +121,7 @@ async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
     const sender = await context.newPage();
     const receiver = await context.newPage();
     if (mode === 'legacy') {
-      // Hide the raw-channel offer from the sender, as Android and old pages
+      // Hide the raw-channel offer from the sender, as old cached pages
       // ignore it: the transfer then uses PeerJS binary framing.
       await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
         const server = socket.connectToServer();

@@ -24,7 +24,7 @@
         ]
       },
       "ratelimits": [
-        // Keep CLI relay attempts strict, but allow repeated browser/Android
+        // Keep CLI relay attempts strict, but allow repeated browser
         // signaling from a household or other shared public IP.
         {
           "name": "CONNECTION_RATE_LIMITER",

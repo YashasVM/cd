@@ -5,7 +5,7 @@
 // same peer connection and exchange the P2P messages directly: JSON strings
 // for control messages and ArrayBuffers for file bytes, up to 256 KiB each.
 // The receiver announces support in the PeerJS connect metadata; senders that
-// don't (the Android app, cached old pages) keep using the PeerJS channel.
+// don't (cached old pages) keep using the PeerJS channel.
 //
 // The wrapper mimics the slice of the PeerJS DataConnection API the P2P
 // sender and receiver use, like the relay tunnel does.

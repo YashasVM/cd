@@ -11,11 +11,6 @@ skills-lock.json
 public/install.sh
 public/install.ps1
 
-# Android (local SDK path + generated outputs)
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
 *.iml
 .idea/
 
