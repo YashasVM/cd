@@ -55,7 +55,7 @@ func welcomed() bool {
 }
 
 func runWelcome(argv []string) int {
-	w := welcome{out: os.Stdout, speed: time.Millisecond}
+	w := welcome{out: os.Stdout, speed: 400 * time.Microsecond}
 	for _, argument := range argv {
 		switch argument {
 		case "--fast":
