@@ -8,6 +8,18 @@ const agentSend = /^\/send\/?$/.test(window.location.pathname);
 // relay codes by redirecting to the share page).
 const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
+// Lead with the installer for the visitor's OS; the other one stays as the alternative.
+if (/Win/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)) {
+  const main = document.querySelector('#install-copy code');
+  const alt = document.querySelector('.install-alt code');
+  const altOs = document.querySelector('.install-alt-os');
+  if (main && alt && altOs) {
+    [main.textContent, alt.textContent] = [alt.textContent, main.textContent];
+    altOs.textContent = 'macOS / Linux';
+    document.querySelector('.install-prompt').textContent = '>';
+  }
+}
+
 document.getElementById('install-toggle')?.addEventListener('click', (event) => {
   const toggle = event.currentTarget;
   const panel = document.getElementById('install-panel');
