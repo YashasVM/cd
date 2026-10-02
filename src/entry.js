@@ -15,13 +15,44 @@ document.getElementById('install-copy')?.addEventListener('click', async (event)
     await navigator.clipboard.writeText(button.querySelector('code').textContent);
     hint.textContent = 'copied';
   } catch {
-    hint.textContent = 'select & copy';
+    hint.textContent = 'select it';
   }
-  setTimeout(() => { hint.textContent = 'copy'; }, 1600);
+  clearTimeout(button.resetHint);
+  button.resetHint = setTimeout(() => { hint.textContent = 'copy'; }, 1600);
 });
+
+// Cycle the tagline's endpoints one word at a time so every pairing shows:
+// browser-to-browser → browser-to-terminal → terminal-to-terminal → terminal-to-browser.
+function cycleRoute() {
+  const words = document.querySelectorAll('.route .swap');
+  if (words.length !== 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const swap = (el, text) => {
+    el.style.width = `${el.offsetWidth}px`;
+    el.classList.remove('in');
+    el.classList.add('out');
+    el.addEventListener('animationend', () => {
+      el.textContent = text;
+      el.style.width = 'auto';
+      const target = el.offsetWidth;
+      el.style.width = `${el.dataset.width}px`;
+      el.offsetWidth; // commit the old width so the change transitions
+      el.style.width = `${target}px`;
+      el.dataset.width = target;
+      el.classList.replace('out', 'in');
+    }, { once: true });
+  };
+  words.forEach((el) => { el.dataset.width = el.offsetWidth; });
+  let step = 0;
+  setInterval(() => {
+    const el = words[(step + 1) % 2];
+    swap(el, el.textContent === 'browser' ? 'terminal' : 'browser');
+    step++;
+  }, 2600);
+}
 
 app.then(() => {
   startAmbientDots();
+  cycleRoute();
   const workbench = document.querySelector('.workbench');
   workbench?.removeAttribute('inert');
   workbench?.removeAttribute('aria-busy');
