@@ -8,6 +8,18 @@ const agentSend = /^\/send\/?$/.test(window.location.pathname);
 // relay codes by redirecting to the share page).
 const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
+document.getElementById('install-copy')?.addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  const hint = button.querySelector('.install-hint');
+  try {
+    await navigator.clipboard.writeText(button.querySelector('code').textContent);
+    hint.textContent = 'copied';
+  } catch {
+    hint.textContent = 'select & copy';
+  }
+  setTimeout(() => { hint.textContent = 'copy'; }, 1600);
+});
+
 app.then(() => {
   startAmbientDots();
   const workbench = document.querySelector('.workbench');
