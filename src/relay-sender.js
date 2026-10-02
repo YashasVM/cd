@@ -13,16 +13,13 @@ import {
   receiverAdmission
 } from './agent-protocol.js';
 import { isShortCode } from './agent-code.js';
+import { fileSource, rechunk } from './zip-bundle.js';
 
-// Relay sender engine shared by the standalone `/send` page. Picks one
-// file, mints a numeric share code plus a share link, and streams it with
-// the same encrypted records `cdx send` uses, so `cdx receive <code>` (or
-// another browser on the share page) can take it.
-//
-// `els` must provide the same named nodes the `/send` page uses:
-// fileInput, pickBtn, fileLine, shareBox, shareCode, shareLink,
-// receiveCommand, copyCodeBtn, copyLinkBtn, copyCmdBtn, progress,
-// progressBar, progressFill, progressCopy, status, cancelBtn, againBtn.
+// Browser relay sender: mints a numeric share code plus a share link and
+// streams one byte source with the same encrypted records `cdx send` uses,
+// so `cdx receive <code>` or any browser Receive box can take it.
+// startRelaySend is the engine (used by the main page); mountRelaySender
+// wires it to the standalone `/send` page.
 
 const CHUNK_SIZE = 256 * 1024;
 const SEND_WINDOW_BYTES = 8 * 1024 * 1024;
@@ -68,12 +65,19 @@ function formatSize(bytes) {
   return `${(value / 1024 ** 3).toFixed(2)} GB`;
 }
 
-export function mountRelaySender(els, hooks = {}) {
-  const reportState = hooks.onState || (() => {});
+export class RelaySendError extends Error {}
+
+// startRelaySend sends source ({ name, type, size, stream() }) and reports
+// through hooks: onShare({ code, url }), onState(state), onStatus(text),
+// onProgress(done, total). It resolves when the receiver verified every
+// byte and rejects with the reason otherwise. cancel() stops it.
+export function startRelaySend(source, hooks = {}) {
+  const onShare = hooks.onShare || (() => {});
+  const onState = hooks.onState || (() => {});
+  const onStatus = hooks.onStatus || (() => {});
+  const onProgress = hooks.onProgress || (() => {});
   let socket = null;
   let cancelled = false;
-  let shareUrl = '';
-  let shareCode = '';
 
   // Single persistent pump: every socket message is buffered exactly once and
   // handed to waiters in arrival order. Attaching a fresh message listener per
@@ -81,45 +85,26 @@ export function mountRelaySender(els, hooks = {}) {
   // being sealed or sent, which stalls multi-megabyte transfers.
   const incoming = [];
   const waiters = [];
-  let pumpAttached = null;
+  let closedError = null;
 
-  function setStatus(text) {
-    els.status.textContent = text;
-  }
-
-  function paintProgress(sent, total) {
-    const percent = total === 0n ? 100 : Math.min(Number(sent * 1000n / total) / 10, 100);
-    els.progress.hidden = false;
-    els.progressFill.style.transform = `scaleX(${percent / 100})`;
-    els.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
-    els.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(sent)} / ${formatSize(total)}`;
-  }
-
-  function fail(message) {
-    if (cancelled) return;
-    cancelled = true;
-    reportState('failed');
-    try { socket?.close(4400, 'sender failed'); } catch { /* Best effort. */ }
-    setStatus(message);
-    els.cancelBtn.hidden = true;
-    els.againBtn.hidden = false;
-  }
-
-  function ensurePump() {
-    if (pumpAttached) return;
-    pumpAttached = socket;
+  function attachPump() {
     socket.addEventListener('message', (event) => {
       const waiter = waiters.shift();
       if (waiter) waiter(event);
       else incoming.push(event);
     });
+    socket.addEventListener('close', (event) => {
+      closedError = new RelaySendError(event.code === 4408
+        ? 'The code expired before anyone used it. Send again for a fresh code.'
+        : 'Lost the connection to CD. Check your network and try again.');
+      for (const waiter of waiters.splice(0)) waiter(null);
+    });
   }
 
-  function pump(_label, timeoutMs, handle, timeoutMessage) {
-    ensurePump();
+  function pump(timeoutMs, handle, timeoutMessage) {
     return new Promise((resolve, reject) => {
       if (cancelled) {
-        reject(new Error('Transfer canceled.'));
+        reject(new RelaySendError('Transfer canceled.'));
         return;
       }
       let settled = false;
@@ -128,9 +113,20 @@ export function mountRelaySender(els, hooks = {}) {
         settled = true;
         const index = waiters.indexOf(entry);
         if (index !== -1) waiters.splice(index, 1);
-        reject(new Error(timeoutMessage));
+        reject(new RelaySendError(timeoutMessage));
       }, timeoutMs);
+      const finish = (error, result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (error) reject(error);
+        else resolve(result);
+      };
       const entry = (event) => {
+        if (event === null) {
+          finish(cancelled ? new RelaySendError('Transfer canceled.') : closedError);
+          return;
+        }
         void Promise.resolve()
           .then(() => handle(event))
           .then((result) => {
@@ -139,50 +135,43 @@ export function mountRelaySender(els, hooks = {}) {
               if (!settled) waiters.push(entry);
               return;
             }
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            resolve(result);
+            finish(null, result);
           })
-          .catch((error) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            reject(error);
-          });
+          .catch((error) => finish(error));
       };
       if (incoming.length > 0) entry(incoming.shift());
+      else if (closedError) entry(null);
       else waiters.push(entry);
     });
   }
 
-  function waitForText(type, timeoutMs) {
-    return pump('text', timeoutMs, (event) => {
+  function waitForText(type, timeoutMs, timeoutMessage) {
+    return pump(timeoutMs, (event) => {
       if (typeof event.data !== 'string') return null;
       let value;
       try { value = JSON.parse(event.data); } catch { return null; }
       if (value?.protocol !== 'cd-transfer-v1') return null;
-      if (value.type === 'peer-left') throw new Error('The receiver left.');
+      if (value.type === 'peer-left') throw new RelaySendError('The receiver left.');
       return value.type === type ? value : null;
-    }, `Timed out waiting for ${type}.`);
+    }, timeoutMessage);
   }
 
-  function waitForRecord(opener, kinds, timeoutMs) {
-    return pump('record', timeoutMs, async (event) => {
+  function waitForRecord(opener, kinds, timeoutMs, timeoutMessage) {
+    return pump(timeoutMs, async (event) => {
       if (typeof event.data === 'string') {
         let value;
         try { value = JSON.parse(event.data); } catch { return null; }
-        if (value?.type === 'peer-left') throw new Error('The receiver left.');
+        if (value?.type === 'peer-left') throw new RelaySendError('The receiver left.');
         return null;
       }
       const { kind, plaintext } = await opener.open(event.data);
-      if (!kinds.includes(kind)) throw new Error('The receiver sent a message out of order.');
+      if (!kinds.includes(kind)) throw new RelaySendError('The receiver sent a message out of order.');
       return { kind, plaintext };
-    }, 'The receiver stopped responding.');
+    }, timeoutMessage);
   }
 
   function decodeCounts(value) {
-    if (value.byteLength !== 12) throw new Error('The receiver sent invalid progress.');
+    if (value.byteLength !== 12) throw new RelaySendError('The receiver sent invalid progress.');
     const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
     return { chunks: view.getUint32(0), bytes: BigInt(view.getBigUint64(4)) };
   }
@@ -195,138 +184,164 @@ export function mountRelaySender(els, hooks = {}) {
     return value;
   }
 
-  async function sendFile(file) {
-    cancelled = false;
-    // Fresh socket per send: drop any state from a previous transfer.
-    incoming.length = 0;
-    waiters.length = 0;
-    pumpAttached = null;
-    els.dropZone?.classList.add('hidden');
-    els.pickBtn.disabled = true;
-    els.cancelBtn.hidden = false;
-    els.againBtn.hidden = true;
-    els.fileLine.textContent = `${file.name} · ${formatSize(file.size)}`;
-    reportState('connecting');
+  const onPageHide = () => {
+    try { socket?.close(1000, 'sender left'); } catch { /* Best effort. */ }
+  };
 
+  async function run() {
+    onState('connecting');
+    onStatus('Getting a code...');
     const id = crypto.getRandomValues(new Uint8Array(16));
     const key = crypto.getRandomValues(new Uint8Array(32));
     const invitation = { id, key };
-    const [{ digest }] = await Promise.all([receiverAdmission(invitation)]);
+    const { digest } = await receiverAdmission(invitation);
     const encodedId = encodeBase64Url(id);
     const encodedKey = encodeBase64Url(key);
-    shareUrl = `${window.location.origin}/s/${encodedId}#v1.${encodedKey}`;
+    const shareUrl = `${window.location.origin}/s/${encodedId}#v1.${encodedKey}`;
 
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     socket = new WebSocket(`${scheme}://${window.location.host}/ws/v1/${encodedId}`);
     socket.binaryType = 'arraybuffer';
-
-    const opened = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Could not reach the CD relay. Check your connection and try again.')), ADMISSION_WAIT_MS);
-      socket.addEventListener('open', () => {
-        clearTimeout(timer);
-        resolve();
-      }, { once: true });
-      socket.addEventListener('error', () => {
-        clearTimeout(timer);
-        reject(new Error('Could not reach the CD relay. Check your connection and try again.'));
-      }, { once: true });
+    await new Promise((resolve, reject) => {
+      const unreachable = () => reject(new RelaySendError('Could not reach CD. Check your connection and try again.'));
+      const timer = setTimeout(unreachable, ADMISSION_WAIT_MS);
+      socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
+      socket.addEventListener('error', () => { clearTimeout(timer); unreachable(); }, { once: true });
     });
-    window.addEventListener('pagehide', () => {
-      try { socket?.close(1000, 'sender left'); } catch { /* Best effort. */ }
-    }, { once: true });
+    attachPump();
+    window.addEventListener('pagehide', onPageHide, { once: true });
+    if (cancelled) throw new RelaySendError('Transfer canceled.');
 
-    try {
-      await opened;
-      if (cancelled) return;
-      // shareKey asks the relay to claim the share code during the join.
-      socket.send(JSON.stringify({
-        type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
-        receiverTokenHash: encodeBase64Url(digest), shareKey: encodedKey
-      }));
-      const accepted = await waitForText('accepted', ADMISSION_WAIT_MS);
-      if (cancelled) return;
+    // shareKey asks the relay to claim the share code during the join.
+    socket.send(JSON.stringify({
+      type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
+      receiverTokenHash: encodeBase64Url(digest), shareKey: encodedKey
+    }));
+    const accepted = await waitForText('accepted', ADMISSION_WAIT_MS, 'CD did not answer. Check your connection and try again.');
+    // Relays that predate join-time codes: claim one separately.
+    const code = isShortCode(accepted.code) ? accepted.code : await claimShareCode(encodedId, encodedKey);
+    if (cancelled) throw new RelaySendError('Transfer canceled.');
+    onShare({ code, url: shareUrl });
+    onState('waiting');
+    onStatus('Waiting for the receiver. The code works for 15 minutes.');
+    await waitForText('peer-joined', PEER_WAIT_MS, 'Nobody used the code within 15 minutes. Send again for a fresh code.');
 
-      // Relays that predate join-time codes: claim one separately.
-      shareCode = isShortCode(accepted.code) ? accepted.code : await claimShareCode(encodedId, encodedKey);
-      if (cancelled) return;
+    const [sealer, opener] = await Promise.all([
+      createSealer(invitation, SENDER_DIRECTION),
+      createOpener(invitation, RECEIVER_DIRECTION)
+    ]);
+    const send = async (kind, payload = new Uint8Array()) => {
+      if (cancelled) throw new RelaySendError('Transfer canceled.');
+      socket.send(await sealer.seal(kind, payload));
+    };
 
-    els.shareBox.hidden = false;
-    els.shareCode.textContent = shareCode;
-    els.shareLink.textContent = shareUrl;
-    els.receiveCommand.textContent = `cdx receive ${shareCode}`;
-    setStatus('Waiting for the receiver (up to 15 minutes)...');
-    reportState('waiting');
-    await waitForText('peer-joined', PEER_WAIT_MS);
-    if (cancelled) return;
+    onState('connecting');
+    onStatus('Receiver connected. Waiting for them to accept...');
+    await send(KIND_OFFER, encoder.encode(JSON.stringify({
+      name: source.name,
+      mediaType: source.type || 'application/octet-stream',
+      size: String(source.size),
+      chunkSize: CHUNK_SIZE
+    })));
+    await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
 
-      const [sealer, opener] = await Promise.all([
-        createSealer(invitation, SENDER_DIRECTION),
-        createOpener(invitation, RECEIVER_DIRECTION)
-      ]);
-      const send = async (kind, payload = new Uint8Array()) => {
-        socket.send(await sealer.seal(kind, payload));
-      };
-
-      setStatus('Receiver connected — sending file offer...');
-    reportState('connecting');
-      await send(KIND_OFFER, encoder.encode(JSON.stringify({
-        name: file.name,
-        mediaType: file.type || 'application/octet-stream',
-        size: String(file.size),
-        chunkSize: CHUNK_SIZE
-      })));
-      await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS);
-      if (cancelled) return;
-
-      setStatus('Receiver accepted — sending file...');
-    reportState('transferring');
-      let sent = 0n;
-      let acknowledged = 0n;
-      let chunks = 0;
-      let offset = 0;
-      // Prefetch one chunk ahead: disk reads overlap with crypto + socket
-      // writes instead of serializing all three per 256 KiB.
-      let nextChunk = offset < file.size
-        ? file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size)).arrayBuffer()
-        : null;
-      while (offset < file.size) {
-        if (cancelled) return;
-        const chunk = new Uint8Array(await nextChunk);
-        offset += chunk.byteLength;
-        nextChunk = offset < file.size
-          ? file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size)).arrayBuffer()
-          : null;
-        await send(KIND_CHUNK, chunk);
-        sent += BigInt(chunk.byteLength);
-        chunks += 1;
-        paintProgress(sent, BigInt(file.size));
-        while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES) || sent === BigInt(file.size)) {
-          const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS);
-          const ack = decodeCounts(plaintext);
-          if (ack.chunks > chunks || ack.bytes < acknowledged || ack.bytes > sent) {
-            throw new Error('The receiver sent invalid progress.');
-          }
-          acknowledged = ack.bytes;
-          paintProgress(acknowledged > sent ? sent : acknowledged, BigInt(file.size));
-          if (acknowledged >= sent) break;
-        }
+    onState('transferring');
+    onStatus('Sending...');
+    const total = BigInt(source.size);
+    let sent = 0n;
+    let acknowledged = 0n;
+    let chunks = 0;
+    onProgress(0, source.size);
+    const awaitAck = async () => {
+      const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
+      const ack = decodeCounts(plaintext);
+      if (ack.chunks > chunks || ack.bytes < acknowledged || ack.bytes > sent) {
+        throw new RelaySendError('The receiver sent invalid progress.');
       }
-      if (sent !== BigInt(file.size)) throw new Error('The file changed while it was being sent.');
-      paintProgress(sent, BigInt(file.size));
-
-      await send(KIND_END, encodeCounts(chunks, sent));
-      const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS);
-      const done = decodeCounts(plaintext);
-      if (done.bytes !== sent || done.chunks !== chunks) throw new Error('The receiver did not verify the transfer.');
-    paintProgress(sent, BigInt(file.size));
-    setStatus('Receiver verified the file.');
-    reportState('complete');
-    els.cancelBtn.hidden = true;
-      els.againBtn.hidden = false;
-      socket.close(1000, 'complete');
-    } catch (error) {
-      if (!cancelled) fail(error instanceof Error ? error.message : 'The transfer failed.');
+      acknowledged = ack.bytes;
+      onProgress(Number(acknowledged), source.size);
+    };
+    for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
+      if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
+      await send(KIND_CHUNK, chunk);
+      sent += BigInt(chunk.byteLength);
+      chunks += 1;
+      while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES)) await awaitAck();
     }
+    if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
+    while (acknowledged < sent) await awaitAck();
+
+    await send(KIND_END, encodeCounts(chunks, sent));
+    const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');
+    const done = decodeCounts(plaintext);
+    if (done.bytes !== sent || done.chunks !== chunks) throw new RelaySendError('The receiver did not verify the transfer.');
+    onProgress(source.size, source.size);
+    onState('complete');
+    onStatus('The receiver has every byte.');
+    window.removeEventListener('pagehide', onPageHide);
+    socket.close(1000, 'complete');
+  }
+
+  const done = run().catch((error) => {
+    window.removeEventListener('pagehide', onPageHide);
+    try { socket?.close(cancelled ? 1000 : 4400, cancelled ? 'sender canceled' : 'sender failed'); } catch { /* Best effort. */ }
+    if (cancelled) throw new RelaySendError('Transfer canceled.');
+    throw error instanceof RelaySendError ? error : new RelaySendError('The transfer failed. Try again.');
+  });
+
+  return {
+    done,
+    cancel() {
+      if (cancelled) return;
+      cancelled = true;
+      try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
+      for (const waiter of waiters.splice(0)) waiter(null);
+    }
+  };
+}
+
+// mountRelaySender wires startRelaySend to the standalone `/send` page.
+// `els` provides: fileInput, pickBtn, fileLine, shareBox, shareCode,
+// shareLink, receiveCommand, copyCodeBtn, copyLinkBtn, copyCmdBtn, progress,
+// progressBar, progressFill, progressCopy, status, cancelBtn, againBtn.
+export function mountRelaySender(els) {
+  let active = null;
+  let shareUrl = '';
+  let shareCode = '';
+
+  function paintProgress(sent, total) {
+    const percent = total === 0 ? 100 : Math.min((sent / total) * 100, 100);
+    els.progress.hidden = false;
+    els.progressFill.style.transform = `scaleX(${percent / 100})`;
+    els.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
+    els.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(sent)} / ${formatSize(total)}`;
+  }
+
+  function sendFile(file) {
+    els.pickBtn.disabled = true;
+    els.cancelBtn.hidden = false;
+    els.againBtn.hidden = true;
+    els.fileLine.textContent = `${file.name} · ${formatSize(file.size)}`;
+    active = startRelaySend(fileSource(file, { chunkBytes: CHUNK_SIZE }), {
+      onShare({ code, url }) {
+        shareCode = code;
+        shareUrl = url;
+        els.shareBox.hidden = false;
+        els.shareCode.textContent = code;
+        els.shareLink.textContent = url;
+        els.receiveCommand.textContent = `cdx receive ${code}`;
+      },
+      onStatus(text) { els.status.textContent = text; },
+      onProgress: paintProgress
+    });
+    active.done.then(() => {
+      els.cancelBtn.hidden = true;
+      els.againBtn.hidden = false;
+    }, (error) => {
+      els.status.textContent = error.message;
+      els.cancelBtn.hidden = true;
+      els.againBtn.hidden = false;
+    });
   }
 
   async function copyText(text, button) {
@@ -339,36 +354,26 @@ export function mountRelaySender(els, hooks = {}) {
   els.pickBtn.addEventListener('click', () => els.fileInput.click());
   els.fileInput.addEventListener('change', () => {
     const file = els.fileInput.files?.[0];
-    if (file) void sendFile(file);
+    if (file) sendFile(file);
   });
   els.cancelBtn.addEventListener('click', () => {
-    cancelled = true;
-    try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
-    setStatus('Transfer canceled.');
-    reportState('idle');
+    active?.cancel();
     els.shareBox.hidden = true;
     els.progress.hidden = true;
-    els.dropZone?.classList.remove('hidden');
-    els.cancelBtn.hidden = true;
     els.pickBtn.disabled = false;
-    els.againBtn.hidden = false;
   });
   els.againBtn.addEventListener('click', () => {
     els.shareBox.hidden = true;
     els.progress.hidden = true;
-    els.dropZone?.classList.remove('hidden');
     els.fileInput.value = '';
     els.fileLine.textContent = 'No file chosen yet.';
     els.pickBtn.disabled = false;
     els.againBtn.hidden = true;
-    reportState('idle');
-    setStatus('');
+    els.status.textContent = '';
   });
   els.copyLinkBtn.addEventListener('click', () => void copyText(shareUrl, els.copyLinkBtn));
   els.copyCodeBtn.addEventListener('click', () => void copyText(shareCode, els.copyCodeBtn));
-  els.copyCmdBtn.addEventListener('click', () => {
-    void copyText(`cdx receive ${shareCode}`, els.copyCmdBtn);
-  });
+  els.copyCmdBtn.addEventListener('click', () => void copyText(`cdx receive ${shareCode}`, els.copyCmdBtn));
 
   return { sendFile };
 }

@@ -1,6 +1,9 @@
-import { cleanCode, codeFromUrl, generateCode, generateEphemeralId, isValidCode, peerIdFor, receiveLinkFor } from './p2p-code.js';
+import { cleanCode, codeFromUrl, generateEphemeralId, isValidCode, peerIdFor } from './p2p-code.js';
 import { cleanShortCode, codeLookupPath, isShortCode, parseCapability, shareUrlFromCapability } from './agent-code.js';
-import { MAX_P2P_FILES, MAX_P2P_FILE_BYTES, parseManifest } from './p2p-manifest.js';
+import { startRelaySend } from './relay-sender.js';
+import { createZipBundle, fileSource } from './zip-bundle.js';
+import { startQrScanner } from './qr-scanner.js';
+import { parseManifest } from './p2p-manifest.js';
 import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
 import { openRawChannel, parseTransferOffer, receiveWindowFor } from './raw-channel.js';
 import {
@@ -25,7 +28,6 @@ if ('serviceWorker' in navigator) {
 }
 
 let qrCodeModulePromise;
-let scannerModulePromise;
 let peerModulePromise;
 
 function loadQrCode() {
@@ -50,16 +52,6 @@ function loadPeer() {
   return peerModulePromise;
 }
 
-function loadScanner() {
-  scannerModulePromise ??= import('html5-qrcode')
-    .then((module) => module.Html5Qrcode || module.default?.Html5Qrcode)
-    .catch((error) => {
-      scannerModulePromise = undefined;
-      throw error;
-    });
-  return scannerModulePromise;
-}
-
 function warmUpOnIdle(task) {
   if ('requestIdleCallback' in window) {
     requestIdleCallback(task, { timeout: 5000 });
@@ -69,41 +61,18 @@ function warmUpOnIdle(task) {
 }
 
 // Fetch the QR renderer during idle so the share panel paints instantly after
-// file selection instead of stalling on a dynamic import. PeerJS is warmed
-// the same way: free to download off the critical path, ready when needed.
+// file selection instead of stalling on a dynamic import.
 warmUpOnIdle(() => {
   loadQrCode().catch(() => {
     // Retried on demand when files are selected.
   });
-  loadPeer().catch(() => {
-    // Retried on demand when a transfer starts.
-  });
 });
 
-// WebRTC SCTP fragments large messages natively (cheap, inside the
-// transport), while every application chunk pays JS event-loop,
-// serialization, and receiver storage-write overhead. 64 KiB chunks mean
-// ~4x fewer messages than PeerJS's ~16 KiB fragmentation size with no
-// protocol change: the receiver bounds total pending bytes, not chunk size.
-const TRANSFER_CHUNK_SIZE = 64 * 1024 - 128;
-// PeerJS starts queueing internally at 8 MB. Stay below that threshold so
-// backpressure remains controlled by this transfer loop instead of creating a
-// second, opaque queue inside the library.
-const MAX_BUFFERED_AMOUNT = 6 * 1024 * 1024;
-const BUFFER_LOW_AMOUNT = 2 * 1024 * 1024;
 const PROGRESS_UPDATE_INTERVAL = 120;
 const CONNECTION_TIMEOUT_MS = 15000;
-const TRANSFER_ACK_TIMEOUT_MS = 30000;
 const MIN_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
-// Unacknowledged bytes a sender keeps in flight when the receiver did not
-// announce its own window (old cached pages).
-const DEFAULT_SEND_WINDOW_BYTES = 3 * 1024 * 1024;
-const RECEIVER_PROGRESS_TIMEOUT_MS = 45_000;
 const SIGNALING_RETRY_LIMIT = 3;
 const SIGNALING_RETRY_DELAY_MS = 300;
-// How long the sender waits for the direct data channel before switching the
-// transfer to the relay tunnel. LAN and STUN-direct links open well within it.
-const P2P_FALLBACK_MS = 3000;
 
 function isTemporarySignalingError(error) {
   return ['network', 'socket-error', 'socket-closed', 'server-error'].includes(error?.type);
@@ -178,6 +147,11 @@ const els = {
   senderStatus: document.getElementById('sender-status'),
   senderProgress: document.getElementById('sender-progress'),
   senderCancelBtn: document.getElementById('sender-cancel-btn'),
+  senderError: document.getElementById('sender-error'),
+  senderErrorMessage: document.querySelector('#sender-error .error-message'),
+  senderRetryBtn: document.getElementById('sender-retry-btn'),
+  receiveCommand: document.getElementById('receive-command'),
+  copyCmdBtn: document.getElementById('copy-cmd-btn'),
   senderComplete: document.getElementById('sender-complete'),
   senderCompleteMessage: document.getElementById('sender-complete-message'),
   senderCompleteDetail: document.getElementById('sender-complete-detail'),
@@ -189,6 +163,8 @@ const els = {
   stopScanBtn: document.getElementById('stop-scan-btn'),
   scannerStatus: document.getElementById('scanner-status'),
   qrReader: document.getElementById('qr-reader'),
+  qrVideo: document.getElementById('qr-video'),
+  scannerLive: document.getElementById('scanner-live'),
   receiverConnecting: document.getElementById('receiver-connecting'),
   receiverConnectingCancelBtn: document.getElementById('receiver-connecting-cancel-btn'),
   receiverFileInfo: document.getElementById('receiver-file-info'),
@@ -333,403 +309,96 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
   return now;
 }
 
+// Browser sends go through the relay with the same protocol as `cdx send`,
+// so one numeric code works in any browser Receive box and in
+// `cdx receive`. Several files travel as one .zip.
 const Sender = (() => {
-  let peer = null;
-  let connection = null;
+  let active = null;
   let files = [];
-  let code = null;
-  let codeAttempts = 0;
-  const MAX_CODE_ATTEMPTS = 5;
-  let signalingRetries = 0;
-  let bytesSent = 0;
-  let bytesConfirmed = 0;
-  let sendWindow = DEFAULT_SEND_WINDOW_BYTES;
+  let share = null;
   let totalSize = 0;
-  let transferStartTime = null;
-  let transferFinished = false;
-  let transferCancelled = false;
-  let transferAckResolve = null;
-  let capacityWaitResolve = null;
+  let generation = 0;
+  let startedAt = 0;
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
     reset();
     files = selectedFiles.filter(Boolean);
     if (files.length === 0) return;
-
-    if (files.length > MAX_P2P_FILES) {
-      setFileInfo(els.senderFileInfo, `${files.length} files selected`, '', `Too many files — max is ${MAX_P2P_FILES}. Send in batches.`);
-      setState('failed');
-      return;
-    }
-    const oversize = files.find((f) => f.size > MAX_P2P_FILE_BYTES);
-    if (oversize) {
-      setFileInfo(els.senderFileInfo, oversize.name, formatSize(oversize.size), 'That file is over 5 GB — split it and try again.');
-      setState('failed');
-      return;
-    }
-
-    code = generateCode();
-    codeAttempts = 1;
-    signalingRetries = 0;
-    bytesSent = 0;
-    bytesConfirmed = 0;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
-    transferFinished = false;
-    transferCancelled = false;
 
-    renderSelectionSummary();
-    // Reserve-then-display: only paint code/QR after the Worker owns the ID
-    // (peer open). Prevents copying a code that dials an unowned ID.
-    els.senderCodeSection.classList.add('hidden');
-    void createPeer();
-    setState('connecting');
-    els.senderFileInfo.querySelector('.file-subtext').textContent = 'Getting a share code...';
+    let source;
+    try {
+      source = files.length === 1 ? fileSource(files[0]) : createZipBundle(files);
+    } catch {
+      setFileInfo(els.senderFileInfo, `${files.length} files selected`, formatSize(totalSize), 'Together these are over 4 GB. Send them in smaller batches.');
+      setState('failed');
+      return;
+    }
+    els.dropZone.classList.add('hidden');
+    renderSelectionSummary(source);
+
+    const current = ++generation;
+    active = startRelaySend(source, {
+      onShare(value) {
+        if (current !== generation) return;
+        share = value;
+        els.shareCode.textContent = value.code;
+        els.receiveCommand.textContent = `cdx receive ${value.code}`;
+        els.senderCodeSection.classList.remove('hidden');
+        void renderQr(value.url, current);
+      },
+      onState(state) {
+        if (current !== generation) return;
+        if (state === 'transferring' && !startedAt) {
+          startedAt = Date.now();
+          els.senderCodeSection.classList.add('hidden');
+          els.senderProgress.classList.remove('hidden');
+        }
+        if (state !== 'complete') setState(state);
+      },
+      onStatus(text) {
+        if (current === generation) els.senderStatus.textContent = text;
+      },
+      onProgress(done, total) {
+        if (current !== generation) return;
+        lastProgressUpdate.value = updateProgress(els.senderProgress, done, total, startedAt || Date.now(), done === total, lastProgressUpdate);
+      }
+    });
+    active.done.then(() => {
+      if (current === generation) showComplete();
+    }, (error) => {
+      if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message);
+    });
   }
 
-  function renderSelectionSummary() {
+  function renderSelectionSummary(source) {
     if (files.length === 1) {
-      setFileInfo(els.senderFileInfo, files[0].name, formatSize(files[0].size), 'Ready to send');
+      setFileInfo(els.senderFileInfo, files[0].name, formatSize(files[0].size), '');
       return;
     }
-
     const previewNames = files.slice(0, 3).map((item) => item.name).join(', ');
     const remaining = files.length - 3;
     const suffix = remaining > 0 ? ` + ${remaining} more` : '';
-    setFileInfo(els.senderFileInfo, `${files.length} files selected`, formatSize(totalSize), previewNames + suffix);
+    setFileInfo(els.senderFileInfo, `${files.length} files`, formatSize(totalSize), `${previewNames}${suffix} · arrives as ${source.name}`);
   }
 
-  function showCurrentFile(index) {
-    const currentFile = files[index];
-    setFileInfo(
-      els.senderFileInfo,
-      currentFile.name,
-      formatSize(currentFile.size),
-      `File ${index + 1} of ${files.length}`
-    );
-  }
-
-  async function renderQr() {
-    const renderingCode = code;
-    const QRCode = await loadQrCode();
-    if (code !== renderingCode) return;
-    els.shareQr.hidden = false;
-    await QRCode.toCanvas(els.shareQr, receiveLinkFor(renderingCode), {
+  async function renderQr(url, current) {
+    const QRCode = await loadQrCode().catch(() => null);
+    if (!QRCode || current !== generation) return;
+    // The QR holds the private link, so a phone camera opens the transfer
+    // directly without typing anything.
+    await QRCode.toCanvas(els.shareQr, url, {
       margin: 2,
       width: 220,
-      color: {
-        dark: '#0d0503',
-        light: '#e4d4b6'
-      }
-    });
-  }
-
-  async function createPeer() {
-    const creatingCode = code;
-    peer?.destroy();
-    const PeerCtor = await loadPeer().catch(() => null);
-    if (code !== creatingCode || transferCancelled) return;
-    if (!PeerCtor) {
-      els.senderFileInfo.querySelector('.file-subtext').textContent = 'Could not start sharing. Check your connection and try again.';
-      els.dropZone.classList.remove('hidden');
-      setState('failed');
-      return;
-    }
-    const activePeer = new PeerCtor(peerIdFor(creatingCode), peerOptions());
-    let retryScheduled = false;
-    peer = activePeer;
-    els.senderCodeSection.classList.add('hidden');
-
-    peer.on('open', () => {
-      if (peer !== activePeer || transferCancelled) return;
-      if (code !== creatingCode) return;
-      renderSelectionSummary();
-      els.shareCode.textContent = creatingCode;
-      void renderQr().catch(() => { els.shareQr.hidden = true; });
-      els.senderCodeSection.classList.remove('hidden');
-      els.dropZone.classList.add('hidden');
-      els.senderStatus.textContent = 'Waiting for receiver...';
-      setState('waiting');
-    });
-
-    peer.on('connection', (conn) => {
-      if (peer !== activePeer || transferCancelled) { conn.close(); return; }
-      if (connection?.open) {
-        conn.close();
-        return;
-      }
-      connection = conn;
-      els.senderStatus.textContent = 'Receiver found.';
-      setState('connecting');
-      attachConnection(conn, activePeer);
-      const offer = parseTransferOffer(conn.metadata);
-      sendWindow = offer.window ?? DEFAULT_SEND_WINDOW_BYTES;
-      if (offer.raw) {
-        // The receiver opened the raw channel too: send through it and keep
-        // the PeerJS channel only as the owner of the peer connection.
-        const raw = openRawChannel(conn);
-        connection = raw;
-        attachConnection(raw, activePeer);
-      }
-      const capability = parseTunnelCapability(conn.metadata);
-      if (capability) scheduleRelayFallback(connection, conn, capability, activePeer);
-    });
-
-    peer.on('error', (err) => {
-      if (peer !== activePeer || transferCancelled || retryScheduled) return;
-      // Signaling is only needed to connect; losing it mid-transfer is harmless.
-      if (connection?.open && isTemporarySignalingError(err)) return;
-      if (err.type === 'unavailable-id') {
-        if (codeAttempts >= MAX_CODE_ATTEMPTS) {
-          els.senderFileInfo.querySelector('.file-subtext').textContent = 'All share codes are busy right now. Wait a moment and try again.';
-          els.senderStatus.textContent = 'All share codes are busy right now. Wait a moment and try again.';
-          els.dropZone.classList.remove('hidden');
-          setState('failed');
-          return;
-        }
-        codeAttempts += 1;
-        code = generateCode();
-        const delay = 300 * codeAttempts;
-        retryScheduled = true;
-        setTimeout(() => { if (peer === activePeer && !transferCancelled) void createPeer(); }, delay);
-        return;
-      }
-      if (isTemporarySignalingError(err) && !connection && signalingRetries < SIGNALING_RETRY_LIMIT) {
-        signalingRetries += 1;
-        retryScheduled = true;
-        els.senderFileInfo.querySelector('.file-subtext').textContent = 'Reconnecting to share the code...';
-        setTimeout(() => {
-          if (peer === activePeer && code === creatingCode && !transferCancelled) void createPeer();
-        }, SIGNALING_RETRY_DELAY_MS * signalingRetries);
-        return;
-      }
-
-      els.senderStatus.textContent = 'Connection failed. Give it a refresh.';
-      els.senderFileInfo.querySelector('.file-subtext').textContent = 'Connection failed. Choose files to try again.';
-      els.dropZone.classList.remove('hidden');
-      els.senderCodeSection.classList.add('hidden');
-      setState('failed');
-    });
-  }
-
-  // attachConnection wires one transport (PeerJS data channel or relay
-  // tunnel) to the send flow. Handlers ignore a transport once `connection`
-  // has moved on, so a replaced data channel closing is not a failure.
-  function attachConnection(conn, activePeer) {
-    conn.on('open', () => {
-      if (peer !== activePeer || connection !== conn || transferCancelled) return;
-      void sendFiles().catch(() => failSend('Could not read or send a selected file.'));
-    });
-
-    conn.on('error', () => {
-      if (peer !== activePeer || connection !== conn) return;
-      failSend('Connection failed. Try again.');
-    });
-
-    conn.on('data', (data) => {
-      if (peer !== activePeer || connection !== conn || transferCancelled) return;
-      if (data?.type === 'progress') {
-        if (!Number.isSafeInteger(data.bytes) || data.bytes < bytesConfirmed || data.bytes > bytesSent) {
-          failSend('Receiver sent invalid progress.');
-          return;
-        }
-        bytesConfirmed = data.bytes;
-        capacityWaitResolve?.(true);
-        capacityWaitResolve = null;
-        lastProgressUpdate.value = updateProgress(
-          els.senderProgress,
-          bytesConfirmed,
-          totalSize,
-          transferStartTime,
-          false,
-          lastProgressUpdate
-        );
-        return;
-      }
-      if (data?.type === 'transfer-ack') {
-        if (bytesSent !== totalSize) return;
-        bytesConfirmed = totalSize;
-        lastProgressUpdate.value = updateProgress(
-          els.senderProgress,
-          bytesConfirmed,
-          totalSize,
-          transferStartTime,
-          true,
-          lastProgressUpdate
-        );
-        transferAckResolve?.(true);
-        transferAckResolve = null;
-        return;
-      }
-      if (data?.type === 'cancel') {
-        cancel('Receiver canceled the transfer.');
-      }
-    });
-
-    conn.on('close', () => {
-      if (peer !== activePeer || connection !== conn) return;
-      if (!transferFinished && !transferCancelled) {
-        failSend('Lost the connection while sending. Try again.');
-      }
-    });
-  }
-
-  // Browsers on CGNAT or mobile data often cannot open a direct data
-  // channel, and there is no TURN on the free plan. If the channel is not
-  // open soon after the receiver arrives, meet in the relay room the
-  // receiver already opened and send the same messages through it.
-  function scheduleRelayFallback(direct, conn, capability, activePeer) {
-    setTimeout(() => {
-      if (peer !== activePeer || connection !== direct || direct.open || transferCancelled) return;
-      const tunnel = openRelayTunnel({ capability, role: 'joiner', connect: (url) => new WebSocket(url) });
-      connection = tunnel;
-      try { conn.close(); } catch { /* The data channel never opened. */ }
-      els.senderStatus.textContent = 'No direct route. Sending through the relay...';
-      attachConnection(tunnel, activePeer);
-    }, P2P_FALLBACK_MS);
-  }
-
-  async function sendFiles() {
-    if (!connection || files.length === 0) return;
-    const activeConnection = connection;
-
-    els.senderCodeSection.classList.add('hidden');
-    els.senderProgress.classList.remove('hidden');
-    setState('transferring');
-
-    activeConnection.send({
-      type: 'manifest',
-      totalFiles: files.length,
-      totalSize,
-      files: files.map((item, index) => ({
-        index,
-        name: item.name,
-        size: item.size,
-        mimeType: item.type || 'application/octet-stream'
-      }))
-    });
-
-    transferStartTime = Date.now();
-    lastProgressUpdate.value = updateProgress(els.senderProgress, bytesSent, totalSize, transferStartTime, true, lastProgressUpdate);
-
-    for (let index = 0; index < files.length; index += 1) {
-      if (transferCancelled) return;
-      showCurrentFile(index);
-      els.senderStatus.textContent = `Sending ${index + 1} of ${files.length}…`;
-      activeConnection.send({ type: 'file-start', index });
-      if (!(await sendSingleFile(files[index], activeConnection))) return;
-      activeConnection.send({ type: 'file-complete', index });
-    }
-
-    const transferAck = waitForTransferAck();
-    activeConnection.send({ type: 'transfer-complete' });
-    if (!(await transferAck)) {
-      if (!transferCancelled) failSend('Receiver did not confirm the download.');
-      return;
-    }
-    if (transferCancelled) return;
-    transferFinished = true;
-    showComplete();
-  }
-
-  async function sendSingleFile(file, activeConnection) {
-    const chunkSize = activeConnection.maxChunkBytes ?? TRANSFER_CHUNK_SIZE;
-    let offset = 0;
-    let nextChunk = file.slice(0, Math.min(chunkSize, file.size)).arrayBuffer();
-
-    while (offset < file.size && !transferCancelled) {
-      // Start reading the next chunk before waiting for the data channel. On
-      // slower storage this keeps the channel supplied without growing the
-      // number of outstanding reads beyond one.
-      const value = await nextChunk;
-      offset += value.byteLength;
-      nextChunk = offset < file.size
-        ? file.slice(offset, Math.min(offset + chunkSize, file.size)).arrayBuffer()
-        : null;
-
-      if (!(await waitForReceiverCapacity(value.byteLength, activeConnection))) return false;
-      await waitForBuffer(activeConnection);
-      if (transferCancelled || connection !== activeConnection || !activeConnection.open) return false;
-      activeConnection.send(value);
-      bytesSent += value.byteLength;
-    }
-    return !transferCancelled && connection === activeConnection && activeConnection.open;
-  }
-
-  async function waitForReceiverCapacity(chunkBytes, activeConnection) {
-    while (!transferCancelled && activeConnection.open && connection === activeConnection &&
-        bytesSent - bytesConfirmed + chunkBytes > sendWindow) {
-      const advanced = await new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          capacityWaitResolve = null;
-          resolve(false);
-        }, RECEIVER_PROGRESS_TIMEOUT_MS);
-        capacityWaitResolve = (value) => {
-          clearTimeout(timeout);
-          resolve(value);
-        };
-      });
-      if (!advanced) {
-        if (!transferCancelled) failSend('Receiver stopped saving the file. Try again.');
-        return false;
-      }
-    }
-    return !transferCancelled && activeConnection.open && connection === activeConnection;
-  }
-
-  function waitForTransferAck() {
-    if (transferCancelled) return Promise.resolve(false);
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        transferAckResolve = null;
-        resolve(false);
-      }, TRANSFER_ACK_TIMEOUT_MS);
-      transferAckResolve = (confirmed) => {
-        clearTimeout(timeout);
-        resolve(confirmed);
-      };
-    });
-  }
-
-  function waitForBuffer(activeConnection) {
-    const dataChannel = activeConnection.dataChannel;
-    if (!dataChannel || dataChannel.bufferedAmount <= MAX_BUFFERED_AMOUNT) {
-      return Promise.resolve();
-    }
-
-    dataChannel.bufferedAmountLowThreshold = BUFFER_LOW_AMOUNT;
-
-    // Event-driven: waking 60x/sec on a polling interval burns CPU for the
-    // whole transfer. The coarse timeout is only a fallback for browsers
-    // that never fire bufferedamountlow.
-    return new Promise((resolve) => {
-      let settled = false;
-      let fallbackId = 0;
-
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        dataChannel.removeEventListener?.('bufferedamountlow', onBufferedLow);
-        clearTimeout(fallbackId);
-        resolve();
-      };
-
-      const onBufferedLow = () => {
-        if (transferCancelled || !activeConnection.open || dataChannel.bufferedAmount <= BUFFER_LOW_AMOUNT) {
-          finish();
-        } else {
-          clearTimeout(fallbackId);
-          fallbackId = setTimeout(onBufferedLow, 120);
-        }
-      };
-
-      dataChannel.addEventListener?.('bufferedamountlow', onBufferedLow);
-      fallbackId = setTimeout(onBufferedLow, 120);
+      color: { dark: '#0d0503', light: '#e4d4b6' }
     });
   }
 
   function showComplete() {
+    els.senderCodeSection.classList.add('hidden');
     els.senderProgress.classList.add('hidden');
+    els.senderFileInfo.classList.add('hidden');
     els.senderComplete.classList.remove('hidden');
     els.senderCompleteMessage.textContent = files.length === 1 ? 'Sent' : `Sent ${files.length} files`;
     els.senderCompleteDetail.textContent = files.length === 1
@@ -739,58 +408,35 @@ const Sender = (() => {
   }
 
   function failSend(message) {
-    if (transferCancelled || transferFinished) return;
-    transferCancelled = true;
-    capacityWaitResolve?.(false);
-    capacityWaitResolve = null;
-    transferAckResolve?.(false);
-    transferAckResolve = null;
-    els.senderStatus.textContent = message;
+    els.senderCodeSection.classList.add('hidden');
+    els.senderProgress.classList.add('hidden');
+    els.senderFileInfo.classList.add('hidden');
+    els.senderErrorMessage.textContent = message;
+    els.senderError.classList.remove('hidden');
     setState('failed');
-    try { connection?.close(); } catch { /* The channel may already be closed. */ }
   }
 
-  function cancel(message = 'Transfer canceled.') {
-    if (transferCancelled) return;
-    transferCancelled = true;
-    try {
-      connection?.send({ type: 'cancel' });
-    } catch {
-      // The connection may already be closing.
-    }
-    // reset() hides every panel and restores the default status text, so the
-    // reason (e.g. "Receiver canceled the transfer.") must be shown after it.
+  function cancel() {
     reset();
-    setFileInfo(els.senderFileInfo, 'Transfer canceled', '', message);
     setState('idle');
   }
 
   function reset() {
-    transferCancelled = true;
-    capacityWaitResolve?.(false);
-    capacityWaitResolve = null;
-    peer?.destroy();
-    peer = null;
-    connection = null;
+    generation += 1;
+    active?.cancel();
+    active = null;
     files = [];
-    code = null;
-    bytesSent = 0;
-    bytesConfirmed = 0;
-    sendWindow = DEFAULT_SEND_WINDOW_BYTES;
+    share = null;
     totalSize = 0;
-    transferStartTime = null;
-    transferFinished = false;
-    transferAckResolve?.(false);
-    transferAckResolve = null;
+    startedAt = 0;
     lastProgressUpdate.value = 0;
-
     els.dropZone.classList.remove('hidden');
     els.senderFileInfo.classList.add('hidden');
     els.senderCodeSection.classList.add('hidden');
     els.senderProgress.classList.add('hidden');
     els.senderComplete.classList.add('hidden');
-    els.senderStatus.textContent = 'Waiting for receiver...';
-    els.senderCompleteMessage.textContent = 'Sent';
+    els.senderError.classList.add('hidden');
+    els.senderStatus.textContent = '';
     resetProgress(els.senderProgress);
   }
 
@@ -798,8 +444,9 @@ const Sender = (() => {
     init,
     reset,
     cancel,
-    copyCode: () => code && copyText(code, els.copyCodeBtn, 'Copied'),
-    copyLink: () => code && copyText(receiveLinkFor(code), els.copyLinkBtn, 'Copied')
+    copyCode: () => share && copyText(share.code, els.copyCodeBtn, 'Copied'),
+    copyLink: () => share && copyText(share.url, els.copyLinkBtn, 'Copied'),
+    copyCommand: () => share && copyText(`cdx receive ${share.code}`, els.copyCmdBtn, 'Copied')
   };
 })();
 
@@ -1510,83 +1157,56 @@ const Receiver = (() => {
   };
 })();
 
-let scanner = null;
+let stopCamera = null;
 let scannerGeneration = 0;
-let scannerStart = null;
-let scannerCleanup = Promise.resolve();
 
-async function releaseScanner(instance) {
-  if (!instance) return;
-  try {
-    if (instance.isScanning) await instance.stop();
-    await instance.clear();
-  } catch {
-    // A camera failure must not block manual receive.
-  } finally {
-    // Startup can fail after acquiring media but before isScanning becomes true.
-    for (const video of els.qrReader.querySelectorAll('video')) {
-      for (const track of video.srcObject?.getTracks?.() || []) track.stop();
-      video.srcObject = null;
-    }
-    els.qrReader.replaceChildren();
-  }
+function closeScannerView() {
+  stopCamera?.();
+  stopCamera = null;
+  els.qrReader.classList.add('hidden');
+  document.documentElement.classList.remove('scanning');
 }
 
 async function startScanner() {
   const generation = ++scannerGeneration;
-  let instance;
-  els.scannerStatus.textContent = 'Waking the camera...';
+  els.scannerLive.textContent = 'Starting the camera…';
   els.qrReader.classList.remove('hidden');
-  els.scanQrBtn.classList.add('hidden');
-  els.stopScanBtn.classList.remove('hidden');
-
+  document.documentElement.classList.add('scanning');
+  els.stopScanBtn.focus();
   try {
-    const Html5Qrcode = await loadScanner();
-    if (generation !== scannerGeneration) return;
-    instance = new Html5Qrcode('qr-reader');
-    scanner = instance;
-    scannerStart = instance.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: (width, height) => {
-        const size = Math.min(220, Math.floor(Math.min(width, height) * 0.8));
-        return { width: size, height: size };
-      } },
-      (decodedText) => {
-        if (generation !== scannerGeneration) return;
-        const code = codeFromUrl(decodedText);
-        if (isValidCode(code)) {
-          els.codeInput.value = code;
-          Receiver.connect(code);
-        }
+    const stop = await startQrScanner(els.qrVideo, (text) => {
+      if (generation !== scannerGeneration) return true;
+      const value = text.trim();
+      // Anything the Receive box accepts: a numeric code, a private /s/ link,
+      // or an older word-code link.
+      if (!isShortCode(value) && !agentShareUrlFromInput(value) && !isValidCode(codeFromUrl(value))) {
+        els.scannerLive.textContent = 'That QR code isn’t from CD. Point at the code on the sender’s screen.';
+        return false;
       }
-    );
-    await scannerStart;
+      scannerGeneration += 1;
+      closeScannerView();
+      if (navigator.vibrate) navigator.vibrate(40);
+      Receiver.connect(value);
+      return true;
+    });
+    if (generation !== scannerGeneration) {
+      stop();
+      return;
+    }
+    stopCamera = stop;
+    els.scannerLive.textContent = 'Point it at the QR code on the sender’s screen.';
+  } catch (error) {
     if (generation !== scannerGeneration) return;
-    els.scannerStatus.textContent = 'Point it at the code.';
-  } catch {
-    if (generation !== scannerGeneration) return;
-    await stopScanner();
-    els.scannerStatus.textContent = 'Camera unavailable. Paste the sender’s code or link instead.';
+    closeScannerView();
+    els.scannerStatus.textContent = error?.name === 'NotAllowedError'
+      ? 'Camera access was blocked. Allow it in your browser settings, or type the code.'
+      : 'No camera available. Type the code instead.';
   }
 }
 
-async function stopScanner() {
-  const generation = ++scannerGeneration;
-  const pendingStart = scannerStart;
-  scannerStart = null;
-  const instance = scanner;
-  scanner = null;
-  els.qrReader.classList.add('hidden');
-  els.scanQrBtn.classList.remove('hidden');
-  els.stopScanBtn.classList.add('hidden');
-  els.scannerStatus.textContent = "Use your camera to scan the sender's QR code.";
-  els.scanQrBtn.disabled = true;
-  scannerCleanup = scannerCleanup.then(async () => {
-    try { await pendingStart; } catch { /* Camera permission can be denied. */ }
-    await releaseScanner(instance);
-  });
-  await scannerCleanup;
-  if (generation === scannerGeneration) els.scanQrBtn.disabled = false;
+function stopScanner() {
+  scannerGeneration += 1;
+  closeScannerView();
 }
 
 function switchToSendMode() {
@@ -1663,6 +1283,12 @@ els.sendAnotherBtn.addEventListener('click', () => {
   setState('idle');
 });
 els.senderCancelBtn.addEventListener('click', () => Sender.cancel());
+els.senderRetryBtn.addEventListener('click', () => {
+  Sender.reset();
+  els.fileInput.value = '';
+  setState('idle');
+});
+els.copyCmdBtn.addEventListener('click', () => void Sender.copyCommand());
 
 els.connectBtn.addEventListener('click', () => Receiver.connect(els.codeInput.value));
 els.codeInput.addEventListener('keydown', (event) => {
@@ -1699,10 +1325,11 @@ els.codeInput.addEventListener('paste', (event) => {
   else if (isValidCode(els.codeInput.value)) Receiver.connect(els.codeInput.value);
 });
 
-els.scanQrBtn.addEventListener('pointerenter', () => void loadScanner().catch(() => {}), { once: true });
-els.scanQrBtn.addEventListener('focus', () => void loadScanner().catch(() => {}), { once: true });
 els.scanQrBtn.addEventListener('click', () => void startScanner());
-els.stopScanBtn.addEventListener('click', () => void stopScanner());
+els.stopScanBtn.addEventListener('click', () => stopScanner());
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !els.qrReader.classList.contains('hidden')) stopScanner();
+});
 els.receiveAnotherBtn.addEventListener('click', () => Receiver.reset());
 els.retryBtn.addEventListener('click', () => Receiver.reset());
 els.receiverCancelBtn.addEventListener('click', () => Receiver.cancel());

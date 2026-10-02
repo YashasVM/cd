@@ -107,7 +107,7 @@ try {
     assert.equal(receiverExit, 0, await receiverStderr);
     const received = await readFile(join(outDir, 'terminal check.bin'));
     assert.equal(sha(Buffer.from(received)), sha(Buffer.from(source)));
-    await page.locator('#status').filter({ hasText: 'Receiver verified the file.' }).waitFor();
+    await page.locator('#status').filter({ hasText: 'The receiver has every byte.' }).waitFor();
     console.log(`verified browser->terminal: ${received.byteLength} exact bytes`);
     await context.close();
   }
