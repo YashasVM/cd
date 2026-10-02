@@ -666,21 +666,22 @@ html.scanning, html.scanning body { overflow: hidden; }
   .shell { justify-content: flex-start; width: 100%; padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
   .brand-rail { padding: 0 4px; }
   .brand-name h1, .brand-lockup h1 { font-size: 39px; }
-  .brand-intro { margin: 10px 0 0; font-size: 18px; }
-  .install { margin-top: 12px; }
+  .brand-intro { margin: 8px 0 0; font-size: 20px; }
+  .install { margin-top: 16px; }
   /* On a phone the transfer card is the point: keep the header to a few lines. */
   .brand-note, .install-alt { display: none; }
   .state-board { margin-top: 12px; }
-  .workbench { margin-top: 20px; padding: 0 14px 16px; }
-  .mode-selector { width: 100%; margin: 14px 0 6px; }
+  .workbench { margin-top: 24px; padding: 0 12px 12px; border-radius: 14px; }
+  .mode-selector { width: 100%; margin: 12px 0 8px; }
   .mode-btn { min-height: 42px; }
-  .view.active { min-height: 330px; }
-  .drop-zone { min-height: 0; gap: 24px 16px; padding: 24px; }
-  .drop-mark { grid-row: 1; width: 48px; height: 48px; }
-  .drop-mark svg { width: 20px; height: 20px; }
+  .view.active { min-height: 272px; }
+  .drop-zone { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; gap: 16px; padding: 24px; }
+  .drop-mark { grid-column: 1; grid-row: 1; width: 44px; height: 44px; }
+  .drop-copy { grid-row: 2; }
+  .drop-mark svg { width: 18px; height: 18px; }
   .drop-zone h2 { font-size: 18px; }
-  .drop-zone p { font-size: 13px; }
-  .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; }
+  .drop-zone p { font-size: 14px; }
+  .drop-zone .primary-btn { grid-column: 1; grid-row: 3; justify-self: stretch; width: 100%; }
   .result-section, .connecting-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
   .result-mark { width: 44px; height: 44px; }
   .result-title { font-size: 18px; }
@@ -689,9 +690,9 @@ html.scanning, html.scanning body { overflow: hidden; }
   .redownload-list { flex-direction: column; align-items: stretch; width: 100%; }
   .redownload-list a { width: 100%; text-align: center; }
   .primary-btn, .secondary-btn { min-height: 48px; }
-  .input-section { padding: 18px 16px; }
+  .input-section { padding: 24px; }
   .section-title { font-size: 18px; }
-  .section-subtitle { font-size: 13px; }
+  .section-subtitle { margin-bottom: 16px; font-size: 14px; }
   .progress-percent { font-size: 26px; }
   .file-header { display: grid; gap: 4px; }
   .share-grid { grid-template-columns: 1fr; }
@@ -700,9 +701,9 @@ html.scanning, html.scanning body { overflow: hidden; }
   .code-block #share-code { font-size: 38px; }
   .share-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .code-input-wrapper { grid-template-columns: 1fr; }
-  .scanner-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .scanner-panel button { grid-column: 1 / -1; width: 100%; }
-  .scanner-status { grid-column: 1 / -1; grid-row: 2; }
+  .scanner-panel { justify-items: start; }
+  .scanner-panel button { width: auto; }
+
   .progress-mode { font-size: 15px; }
   .cancel-btn { min-height: 48px; }
   .progress-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
