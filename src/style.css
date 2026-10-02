@@ -91,6 +91,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   line-height: 1.2;
   letter-spacing: -.035em;
 }
+/* Endpoints cycle browser/terminal; the second swap is offset so every pairing shows. */
+.swap { display: inline-grid; color: var(--accent); }
+.swap > span { grid-area: 1 / 1; animation: swap-a 8s ease-in-out infinite; }
+.swap > span + span { opacity: 0; animation-name: swap-b; }
+.swap-late > span { animation-delay: -4s; animation-duration: 16s; }
+@keyframes swap-a { 0%, 42% { opacity: 1; } 50%, 92% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes swap-b { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } }
 .brand-note {
   width: fit-content;
   margin: 0;
