@@ -48,21 +48,22 @@ function cycleRoute() {
   const words = document.querySelectorAll('.route .swap');
   if (words.length !== 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const swap = (el, text) => {
-    el.style.width = `${el.offsetWidth}px`;
+    const start = el.getBoundingClientRect().width;
+    el.style.width = `${start}px`;
     el.classList.remove('in');
     el.classList.add('out');
     el.addEventListener('animationend', () => {
       el.textContent = text;
-      el.style.width = 'auto';
-      const target = el.offsetWidth;
-      el.style.width = `${el.dataset.width}px`;
+      el.style.width = '';
+      const target = el.getBoundingClientRect().width;
+      el.style.width = `${start}px`;
       el.offsetWidth; // commit the old width so the change transitions
       el.style.width = `${target}px`;
-      el.dataset.width = target;
       el.classList.replace('out', 'in');
+      // Drop the fixed width afterwards so later font or size changes can't leave a gap.
+      el.addEventListener('transitionend', () => { el.style.width = ''; }, { once: true });
     }, { once: true });
   };
-  words.forEach((el) => { el.dataset.width = el.offsetWidth; });
   let step = 0;
   setInterval(() => {
     const el = words[(step + 1) % 2];
