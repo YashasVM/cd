@@ -35,8 +35,15 @@ fi
 
 temporary_dir="$(mktemp -d)"
 trap 'rm -rf "$temporary_dir"' EXIT INT TERM
+if [ -n "${CD_LOCAL_BINARY:-}" ]; then
+  # Development only: install a locally built binary instead of a release.
+  cp "$CD_LOCAL_BINARY" "${temporary_dir}/${asset}"
+  sha256sum "${temporary_dir}/${asset}" 2>/dev/null | sed "s|${temporary_dir}/||" > "${temporary_dir}/checksums.txt" \
+    || shasum -a 256 "${temporary_dir}/${asset}" | sed "s|${temporary_dir}/||" > "${temporary_dir}/checksums.txt"
+else
 curl --fail --location --silent --show-error "${base_url}/${asset}" --output "${temporary_dir}/${asset}"
 curl --fail --location --silent --show-error "${base_url}/checksums.txt" --output "${temporary_dir}/checksums.txt"
+fi
 
 expected="$(awk -v file="$asset" '$2 == file { print $1 }' "${temporary_dir}/checksums.txt")"
 [ -n "$expected" ] || { echo "cdx: release checksum is missing" >&2; exit 1; }
@@ -71,3 +78,11 @@ case ":${PATH}:" in
     echo "add ${install_dir} to PATH, then run: cdx send <file>" >&2
     ;;
 esac
+
+# Run the welcome tour (it offers agent setup). `curl | sh` leaves stdin as
+# the script, so use the terminal; skip quietly when there is none (CI, Docker)
+# or CD_AGENT_SETUP=0.
+if [ "${CD_AGENT_SETUP:-ask}" != "0" ] && "$install_target" welcome --help >/dev/null 2>&1 \
+  && { : </dev/tty; } 2>/dev/null; then
+  "$install_target" welcome </dev/tty || true
+fi

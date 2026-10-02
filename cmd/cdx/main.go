@@ -80,6 +80,8 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
 	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
+	fmt.Fprintln(output, "  welcome            replay the getting-started tour")
+	fmt.Fprintln(output, "  agent setup        teach your AI coding agents to share files with cdx")
 	fmt.Fprintln(output, "  help [send|receive] show help")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
@@ -347,7 +349,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "status", "wait", "help", "version"}
+	candidates := []string{"send", "receive", "status", "wait", "agent", "welcome", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -398,7 +400,12 @@ func runSend(request sendRequest) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
+	card := !request.jsonOutput && isTerminal(os.Stdout)
 	err := sendFile(ctx, request.files, request.linkMode, sendHooks{ready: func(value readyOutput) error {
+		if card {
+			writeReadyCard(os.Stdout, value)
+			return nil
+		}
 		return writeReady(os.Stdout, value, request.jsonOutput)
 	}})
 	if err != nil {
@@ -444,6 +451,9 @@ func runReceive(request receiveRequest) int {
 
 func run(argv []string) int {
 	if len(argv) == 0 {
+		if isTerminal(os.Stdin) && isTerminal(os.Stdout) && !welcomed() {
+			return runWelcome(nil)
+		}
 		usage(os.Stderr)
 		return 2
 	}
@@ -486,6 +496,10 @@ func run(argv []string) int {
 		return runStatus(argv[1:])
 	case "wait":
 		return runWait(argv[1:])
+	case "agent":
+		return runAgent(argv[1:])
+	case "welcome":
+		return runWelcome(argv[1:])
 	case holderCommand:
 		return runHolder(argv[1:])
 	default:
