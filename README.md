@@ -50,6 +50,11 @@ which never reaches the server. Details are in [SECURITY.md](SECURITY.md) and th
 
 Agents should follow [AGENTS.md](AGENTS.md) and the [file-sharing skill](skills/cd-file-sharing/SKILL.md).
 
+To teach the AI coding agents on your machine to share files with cdx, run `cdx agent setup` (the
+installer offers it too). It asks per agent: Claude Code and `~/.agents/skills` get the skill; Codex,
+Gemini CLI and opencode get a short note in their global instructions file. `cdx agent remove` undoes it.
+Or install just the skill with `npx skills add YashasVM/cd`.
+
 ## Architecture
 
 ```text

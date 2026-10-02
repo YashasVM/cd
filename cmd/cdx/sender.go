@@ -323,15 +323,19 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			return err
 		}
 	}
-	fmt.Fprintf(os.Stderr, "sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+	if !fancyReady {
+		fmt.Fprintf(os.Stderr, "sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+	}
 	if ready.Size > 256*1024*1024 {
 		fmt.Fprintln(os.Stderr, "note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
 	}
-	fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
-	if ready.Code != "" {
-		fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
-	} else {
-		fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+	if !fancyReady {
+		fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
+		if ready.Code != "" {
+			fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
+		} else {
+			fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+		}
 	}
 	sealer, err := newSealer(invitation, senderDirection)
 	if err != nil {
