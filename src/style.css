@@ -158,6 +158,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .install-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-height: 0; overflow: hidden; }
 .install-body > :first-child { margin-top: 10px; }
 .install-cmd {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -188,6 +190,23 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   transition: background-color .2s;
 }
 .install-cmd:hover .install-hint { background: rgba(229, 138, 87, .2); }
+/* Copy confirmation: a green sweep crosses the box and the hint pops into a check. */
+.install-cmd.copied { border-color: rgba(74, 222, 128, .6); animation: copied-glow 1.2s ease-out; }
+.install-cmd::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(74, 222, 128, .28) 50%, transparent 80%);
+  transform: translateX(-100%);
+  pointer-events: none;
+  content: "";
+}
+.install-cmd.copied::after { animation: copied-sweep .7s cubic-bezier(.4, 0, .2, 1); }
+.install-cmd.copied .install-hint { background: rgba(74, 222, 128, .16); color: #4ade80; animation: copied-pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+.install-cmd.copied .install-hint::before { content: "✓ "; }
+.install-cmd.copied .install-prompt { color: #4ade80; }
+@keyframes copied-sweep { to { transform: translateX(100%); } }
+@keyframes copied-pop { 0% { transform: scale(.7); } 100% { transform: scale(1); } }
+@keyframes copied-glow { 0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, .45); } 100% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); } }
 .install-alt { overflow: hidden; color: var(--faint); font: 11px/1.4 var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .install-alt code { margin-left: 4px; color: var(--muted); }
 .state-board[hidden] { display: none; }
@@ -304,7 +323,6 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
   flex: 1;
   gap: 10px;
@@ -314,7 +332,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   border: 1.5px dashed rgba(229, 138, 87, .28);
   border-radius: 12px;
   background: rgba(7, 3, 2, .28);
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   cursor: pointer;
   transition: border-color .25s, background-color .25s, box-shadow .25s;
 }
@@ -352,7 +371,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   line-height: 1.25;
   letter-spacing: -.02em;
 }
-.drop-zone p { max-width: 320px; margin: 0 auto; color: var(--muted); font-size: 14px; }
+.drop-zone p { max-width: 320px; margin: 0; color: var(--muted); font-size: 14px; }
 .drop-zone .primary-btn { margin-top: 4px; padding-inline: 22px; }
 
 .primary-btn, .secondary-btn, .cancel-btn {
@@ -451,9 +470,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.input-section { display: flex; flex: 1; flex-direction: column; justify-content: center; align-items: stretch; text-align: center; margin-top: 4px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 12px; background: rgba(7, 3, 2, .28); }
+.input-section { display: flex; flex: 1; flex-direction: column; justify-content: center; align-items: stretch; text-align: left; margin-top: 4px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 12px; background: rgba(7, 3, 2, .28); }
 .section-title { margin: 0 0 5px; font-size: 21px; font-weight: 550; line-height: 1.25; letter-spacing: -.02em; }
-.section-subtitle { max-width: 420px; margin: 0 auto 16px; color: var(--muted); font-size: 14px; }
+.section-subtitle { max-width: 420px; margin: 0 0 16px; color: var(--muted); font-size: 14px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .code-input-wrapper { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 #code-input {
@@ -470,11 +489,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   transition: border-color .2s, box-shadow .2s;
 }
 #code-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(229, 138, 87, .15); }
-#code-input { text-align: center; }
 #code-input::placeholder { color: rgba(162, 143, 121, .45); font-size: 16px; letter-spacing: .04em; }
 #code-input[aria-invalid="true"] { border-color: #ff8a62; }
-.scanner-panel { display: grid; justify-items: center; gap: 8px; margin-top: 12px; }
-.scanner-panel .secondary-btn { min-height: 0; padding: 6px 12px; border-color: transparent; background: none; color: var(--muted); font-weight: 500; }
+.scanner-panel { display: grid; justify-items: start; gap: 8px; margin-top: 12px; }
+.scanner-panel .secondary-btn { min-height: 0; padding: 6px 0; border-color: transparent; background: none; color: var(--muted); font-weight: 500; }
 .scanner-status:empty { display: none; }
 .scanner-status { min-width: 0; margin: 0; color: var(--muted); font-size: 13px; }
 /* The scanner takes the whole viewport (dvh tracks mobile browser bars), so

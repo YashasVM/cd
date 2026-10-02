@@ -32,14 +32,21 @@ document.getElementById('install-toggle')?.addEventListener('click', (event) => 
 document.getElementById('install-copy')?.addEventListener('click', async (event) => {
   const button = event.currentTarget;
   const hint = button.querySelector('.install-hint');
+  let copied = true;
   try {
     await navigator.clipboard.writeText(button.querySelector('code').textContent);
-    hint.textContent = 'copied';
   } catch {
-    hint.textContent = 'select it';
+    copied = false;
   }
+  hint.textContent = copied ? 'copied' : 'select it';
+  button.classList.remove('copied');
+  button.offsetWidth; // restart the animation on repeat clicks
+  if (copied) button.classList.add('copied');
   clearTimeout(button.resetHint);
-  button.resetHint = setTimeout(() => { hint.textContent = 'copy'; }, 1600);
+  button.resetHint = setTimeout(() => {
+    hint.textContent = 'copy';
+    button.classList.remove('copied');
+  }, 1800);
 });
 
 // Cycle the tagline's endpoints one word at a time so every pairing shows:
