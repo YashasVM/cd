@@ -30,23 +30,6 @@ document.getElementById('install-copy')?.addEventListener('click', async (event)
   button.resetHint = setTimeout(() => { hint.textContent = 'copy'; }, 1600);
 });
 
-const route = document.querySelector('.route');
-const copyFromRoute = async () => {
-  const hint = route.querySelector('.route-tip-hint');
-  try {
-    await navigator.clipboard.writeText(route.querySelector('.route-tip code').textContent);
-    hint.textContent = 'copied — paste it in your terminal';
-  } catch {
-    hint.textContent = 'select it to copy';
-  }
-  clearTimeout(route.resetHint);
-  route.resetHint = setTimeout(() => { hint.textContent = 'click to copy'; }, 2000);
-};
-route?.addEventListener('click', copyFromRoute);
-route?.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); copyFromRoute(); }
-});
-
 // Cycle the tagline's endpoints one word at a time so every pairing shows:
 // browser-to-browser → browser-to-terminal → terminal-to-terminal → terminal-to-browser.
 function cycleRoute() {

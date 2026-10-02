@@ -91,43 +91,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   line-height: 1.2;
   letter-spacing: -.035em;
 }
-.route {
-  position: relative;
-  white-space: nowrap;
-  cursor: copy;
-  outline: none;
-  text-decoration: underline dotted rgba(229, 138, 87, 0);
-  text-underline-offset: .18em;
-  text-decoration-thickness: 2px;
-  transition: text-decoration-color .3s;
-}
-.route:hover, .route:focus-visible { text-decoration-color: rgba(229, 138, 87, .45); }
-/* Easter egg: hovering the endpoints reveals the cdx install command. */
-.route-tip {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 12px);
-  left: 0;
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid rgba(229, 138, 87, .35);
-  border-radius: 8px;
-  background: rgba(22, 9, 7, .96);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .45);
-  color: var(--text);
-  font: 12px/1.3 var(--mono);
-  letter-spacing: 0;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-6px) scale(.98);
-  transform-origin: top left;
-  transition: opacity .25s ease, transform .35s cubic-bezier(.2, .8, .2, 1);
-}
-.route:hover .route-tip, .route:focus-visible .route-tip { opacity: 1; transform: none; }
-.route-tip-label { color: var(--accent); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
-.route-tip-hint { color: var(--faint); font-size: 10px; }
+.route { white-space: nowrap; }
 .swap {
   display: inline-block;
   color: var(--accent);
@@ -156,24 +120,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--muted);
+  color: var(--faint);
   font: 11px/1.3 var(--mono);
   letter-spacing: .02em;
   cursor: pointer;
   transition: color .2s;
 }
-.install-toggle:hover, .install-toggle:focus-visible, .install-toggle[aria-expanded="true"] { color: var(--text); outline: none; }
+.install-toggle:hover, .install-toggle:focus-visible, .install-toggle[aria-expanded="true"] { color: var(--muted); outline: none; }
 .install-toggle code { color: inherit; }
-.install-dot {
-  width: 6px;
-  height: 6px;
-  margin-right: 2px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(229, 138, 87, .5);
-  animation: install-pulse 2.4s ease-out infinite;
-}
-@keyframes install-pulse { 70%, 100% { box-shadow: 0 0 0 6px rgba(229, 138, 87, 0); } }
 .install-chevron {
   width: 5px;
   height: 5px;
@@ -684,9 +638,4 @@ html.scanning, html.scanning body { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
-
-@media (hover: none) {
-  .route { cursor: auto; }
-  .route-tip { display: none; }
 }
