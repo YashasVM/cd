@@ -81,6 +81,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
 	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
 	fmt.Fprintln(output, "  help [send|receive] show help")
+	fmt.Fprintln(output, "  update             update cdx to the latest release")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for receive:")
@@ -347,7 +348,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "status", "wait", "help", "version"}
+	candidates := []string{"send", "receive", "status", "wait", "update", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -482,6 +483,8 @@ func run(argv []string) int {
 			return receiveFailure(strings.TrimSpace(err.Error()))
 		}
 		return runReceive(request)
+	case "update", "--update", "upgrade":
+		return runUpdate(argv[1:])
 	case "status":
 		return runStatus(argv[1:])
 	case "wait":
