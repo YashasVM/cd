@@ -115,13 +115,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .install-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: fit-content;
   padding: 0;
   border: 0;
   background: none;
   color: var(--faint);
-  font: 11px/1.3 var(--mono);
+  font: 14px/1.3 var(--mono);
   letter-spacing: .02em;
   cursor: pointer;
   transition: color .2s;
@@ -129,8 +129,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .install-toggle:hover, .install-toggle:focus-visible, .install-toggle[aria-expanded="true"] { color: var(--muted); outline: none; }
 .install-toggle code { color: inherit; }
 .install-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   margin-right: 2px;
   border-radius: 50%;
   background: #4ade80;
@@ -139,8 +139,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 @keyframes install-pulse { 70%, 100% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); } }
 .install-chevron {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   margin-left: 2px;
   border-right: 1px solid currentColor;
   border-bottom: 1px solid currentColor;
@@ -190,6 +190,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .install-cmd:hover .install-hint { background: rgba(229, 138, 87, .2); }
 .install-alt { overflow: hidden; color: var(--faint); font: 11px/1.4 var(--mono); text-overflow: ellipsis; white-space: nowrap; }
 .install-alt code { margin-left: 4px; color: var(--muted); }
+.state-board[hidden] { display: none; }
 .state-board {
   display: flex;
   align-items: center;
