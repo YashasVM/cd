@@ -593,11 +593,15 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
 	finishLine := bar.finish
 
-	buffer := make([]byte, chunkSize)
+	chunks := newReadAhead(file, chunkSize)
+	defer chunks.close()
 	for {
-		count, readErr := io.ReadFull(file, buffer)
+		chunk := <-chunks.chunks
+		count, readErr := len(chunk.data), chunk.err
 		if count > 0 {
-			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
+			err := link.sendReleasable(kindChunk, chunk.data, progress.sent+uint64(count))
+			chunks.recycle(chunk.data)
+			if err != nil {
 				finishLine()
 				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
 			}
@@ -609,7 +613,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 				return err
 			}
 		}
-		if readErr == io.EOF || readErr == io.ErrUnexpectedEOF {
+		if readErr == io.EOF {
 			break
 		}
 		if readErr != nil {

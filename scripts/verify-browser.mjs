@@ -79,7 +79,7 @@ try {
     await page.locator('#offer:not([hidden])').waitFor();
     await page.locator('#accept').click();
     try {
-      await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor({ timeout: 60_000 });
+      await page.locator('#status').filter({ hasText: 'File verified — downloading automatically.' }).waitFor({ timeout: 60_000 });
     } catch (error) {
       throw new Error(`browser receive stalled: receiver status "${await page.locator('#status').textContent()}"; sender status "${await senderStatus()}"`, { cause: error });
     }

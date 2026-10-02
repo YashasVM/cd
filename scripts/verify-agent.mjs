@@ -100,7 +100,7 @@ try {
     type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: encodeBase64Url(token)
   }, 4409);
   await page.locator('#accept').click();
-  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  await page.locator('#status').filter({ hasText: 'File verified — downloading automatically.' }).waitFor();
   const downloadEvent = page.waitForEvent('download');
   await page.locator('#download').click();
   const download = await downloadEvent;
@@ -143,7 +143,7 @@ async function verifyFolderBundle(context) {
   await page.locator('#offer:not([hidden])').waitFor();
   assert.equal(await page.locator('#file-name').textContent(), 'bundle folder-and-1-more.zip');
   await page.locator('#accept').click();
-  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  await page.locator('#status').filter({ hasText: 'File verified — downloading automatically.' }).waitFor();
   const downloadEvent = page.waitForEvent('download');
   await page.locator('#download').click();
   const bundlePath = join(work, 'received-bundle.zip');

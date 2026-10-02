@@ -227,6 +227,7 @@ async function receive() {
   let retained = [];
   let switched = false;
   let sendChain = Promise.resolve();
+  let decryptChain = Promise.resolve();
 
   // Sealing is async and sequence-numbered, so sends run on one chain.
   function send(kind, payload = new Uint8Array()) {
@@ -264,8 +265,16 @@ async function receive() {
       pendingBytes -= size;
       return;
     }
+    // Decryption runs ahead on its own chain (in sequence order), so record
+    // N+1 decrypts while record N is still being written to disk.
+    const opened = ordered.map((record) => {
+      if (typeof record === 'string') return Promise.resolve(record);
+      decryptChain = decryptChain.then(() => opener.open(record));
+      return decryptChain;
+    });
+    for (const result of opened) result.catch(() => {});
     queue = queue.then(async () => {
-      for (const record of ordered) await processMessage(record);
+      for (const result of opened) await processMessage(await result);
     }).finally(() => { pendingBytes -= size; });
     queue.catch((error) => fail(error, socket, sink));
   }
@@ -299,7 +308,7 @@ async function receive() {
       if (value.type === 'accepted') elements.status.textContent = 'Connected. Waiting for file details...';
       return;
     }
-    const { kind, plaintext } = await opener.open(data);
+    const { kind, plaintext } = data;
     if (state === 'connecting' && kind === KIND_OFFER) {
       offer = parseOffer(plaintext);
       state = 'offered';
@@ -338,16 +347,26 @@ async function receive() {
       if (sink.kind === 'download') {
         elements.download.href = result.url;
         elements.download.download = offer.name;
-        elements.download.textContent = `Download ${offer.name}`;
         elements.download.hidden = false;
-        elements.status.textContent = 'File verified and ready to download.';
+        elements.download.textContent = 'Download again';
+        elements.status.textContent = 'File verified — downloading automatically.';
         let revoked = false;
         const revoke = () => {
           if (revoked) return;
           revoked = true;
           result.revoke();
         };
-        elements.download.addEventListener('click', () => setTimeout(revoke, 60_000), { once: true });
+        // Save without a second click; the link stays as a fallback if the
+        // browser blocks the automatic download. Revoking too early aborts
+        // large downloads still flushing to disk, so the URL lives 10 minutes.
+        const auto = document.createElement('a');
+        auto.href = result.url;
+        auto.download = offer.name;
+        auto.hidden = true;
+        document.body.append(auto);
+        auto.click();
+        auto.remove();
+        setTimeout(revoke, 10 * 60 * 1000);
         window.addEventListener('pagehide', revoke, { once: true });
       } else elements.status.textContent = 'File verified and saved.';
       socket.close(1000, 'complete');

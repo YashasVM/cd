@@ -14,6 +14,7 @@ import {
 } from './agent-protocol.js';
 import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
+import { createAdaptiveWindow } from './send-window.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -22,7 +23,6 @@ import { fileSource, rechunk } from './zip-bundle.js';
 // wires it to the standalone `/send` page.
 
 const CHUNK_SIZE = 256 * 1024;
-const SEND_WINDOW_BYTES = 8 * 1024 * 1024;
 const ADMISSION_WAIT_MS = 10_000;
 const PEER_WAIT_MS = 15 * 60_000;
 const CONSENT_WAIT_MS = 10 * 60_000;
@@ -252,6 +252,8 @@ export function startRelaySend(source, hooks = {}) {
     let acknowledged = 0n;
     let chunks = 0;
     onProgress(0, source.size);
+    // The in-flight window adapts to the path (8-24 MiB, see send-window.js).
+    const sendWindow = createAdaptiveWindow();
     const awaitAck = async () => {
       const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
       const ack = decodeCounts(plaintext);
@@ -259,6 +261,7 @@ export function startRelaySend(source, hooks = {}) {
         throw new RelaySendError('The receiver sent invalid progress.');
       }
       acknowledged = ack.bytes;
+      sendWindow.acked(Number(acknowledged), performance.now());
       onProgress(Number(acknowledged), source.size);
     };
     for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
@@ -266,7 +269,8 @@ export function startRelaySend(source, hooks = {}) {
       await send(KIND_CHUNK, chunk);
       sent += BigInt(chunk.byteLength);
       chunks += 1;
-      while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES)) await awaitAck();
+      sendWindow.sent(Number(sent), performance.now());
+      while (sent - acknowledged >= BigInt(sendWindow.size)) await awaitAck();
     }
     if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
     while (acknowledged < sent) await awaitAck();
