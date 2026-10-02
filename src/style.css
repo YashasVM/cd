@@ -363,6 +363,18 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 }
 .drop-zone.drag-over .drop-mark svg { animation: nudge-up .9s ease-in-out infinite; }
 @keyframes nudge-up { 50% { transform: translateY(-3px); } }
+/* Dragging files over any part of the page outlines the whole viewport. */
+body.dragging-files::after {
+  content: "";
+  position: fixed;
+  inset: 8px;
+  z-index: 100;
+  border: 1.5px solid var(--accent);
+  border-radius: 16px;
+  background: rgba(229, 138, 87, .05);
+  box-shadow: 0 0 0 4px rgba(229, 138, 87, .1), 0 0 80px -12px rgba(229, 138, 87, .35) inset;
+  pointer-events: none;
+}
 .drop-copy { grid-column: 1; grid-row: 1; min-width: 0; }
 .drop-mark { grid-column: 2; grid-row: 1 / span 2; }
 .drop-mark svg { width: 22px; height: 22px; }

@@ -581,7 +581,7 @@ export default {
       }
       const codeLookup = /^\/api\/codes\/(\d{4,5})$/.exec(url.pathname);
       if (codeLookup && request.method === 'GET') {
-        return serveCodes(request, env, codeLookup[1]);
+        return serveCodes(request, env, codeLookup[1], url.hostname === 'cd.yash0.in');
       }
       return new Response('not found', { status: 404 });
     }
@@ -592,14 +592,19 @@ export default {
 // Short-code directory requests share the relay's per-IP rate limit, which
 // also bounds code guessing to a trickle. Current senders get their code in
 // the relay join instead; POST /api/codes remains for older clients.
-async function serveCodes(request: Request, env: Env, code: string | null): Promise<Response> {
+async function serveCodes(request: Request, env: Env, code: string | null, legacyFallback = false): Promise<Response> {
   try {
     const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
     const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
     if (!success) return new Response('connection rate limit reached', { status: 429 });
     if (code !== null) {
       const capability = await codeShard(env, code).lookup(code);
-      if (!capability) return new Response('code unavailable', { status: 404 });
+      if (!capability) {
+        const legacy = legacyFallback ? await lookupLegacyCode(code) : null;
+        if (!legacy) return new Response('code unavailable', { status: 404 });
+        logEvent('code_resolved_legacy', { code });
+        return Response.json({ ...legacy, origin: LEGACY_ORIGIN });
+      }
       logEvent('code_resolved', { code });
       return Response.json(capability);
     }
@@ -617,5 +622,24 @@ async function serveCodes(request: Request, env: Env, code: string | null): Prom
   } catch (error) {
     console.error(JSON.stringify({ event: 'code_directory_failed', error: error instanceof Error ? error.message : 'unknown' }));
     return new Response('share codes temporarily unavailable', { status: 503 });
+  }
+}
+
+// cdx v0.1.0 (still the latest published release) registers its codes on
+// the old cdx.yash0.in Worker, so a code typed on cd.yash0.in would miss.
+// Resolve misses there too; the receiver then opens that host's share page,
+// where the sender's relay room lives.
+const LEGACY_ORIGIN = 'https://cdx.yash0.in';
+
+async function lookupLegacyCode(code: string): Promise<{ transferId: string; key: string } | null> {
+  try {
+    const response = await fetch(`${LEGACY_ORIGIN}/api/codes/${code}`, { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return null;
+    const body: unknown = await response.json();
+    if (!body || typeof body !== 'object' || !('transferId' in body) || !('key' in body)
+      || !isTransferId(body.transferId) || !isMasterKey(body.key)) return null;
+    return { transferId: body.transferId, key: body.key };
+  } catch {
+    return null;
   }
 }
