@@ -551,7 +551,7 @@ const Receiver = (() => {
       showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
       return;
     }
-    window.location.href = shareUrlFromCapability(window.location.origin, capability.transferId, capability.key);
+    window.location.href = shareUrlFromCapability(capability.origin ?? window.location.origin, capability.transferId, capability.key);
   }
 
   async function establishPeer(connectionGeneration, code, signalingRetries = 0) {
@@ -1264,17 +1264,6 @@ els.selectFileBtn.addEventListener('click', (event) => {
 els.dropZone.addEventListener('click', () => els.fileInput.click());
 els.fileInput.addEventListener('change', (event) => Sender.init(Array.from(event.target.files)));
 
-els.dropZone.addEventListener('dragover', (event) => {
-  event.preventDefault();
-  els.dropZone.classList.add('drag-over');
-});
-els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('drag-over'));
-els.dropZone.addEventListener('drop', (event) => {
-  event.preventDefault();
-  els.dropZone.classList.remove('drag-over');
-  Sender.init(Array.from(event.dataTransfer.files));
-});
-
 els.copyCodeBtn.addEventListener('click', () => void Sender.copyCode());
 els.copyLinkBtn.addEventListener('click', () => void Sender.copyLink());
 els.sendAnotherBtn.addEventListener('click', () => {
@@ -1342,8 +1331,46 @@ window.addEventListener('paste', (event) => {
   if (files.length > 0) Sender.init(files);
 });
 
-window.addEventListener('dragover', (event) => event.preventDefault());
-window.addEventListener('drop', (event) => event.preventDefault());
+// Files dropped anywhere on the page start a send, not just on the drop
+// zone. Only while nothing else is in flight; elsewhere drops are swallowed
+// so the browser doesn't navigate away to the file.
+function acceptsFileDrop(event) {
+  if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return false;
+  if (els.appState.dataset.state !== 'idle') return false;
+  return els.senderView.classList.contains('active')
+    ? !els.dropZone.classList.contains('hidden')
+    : !els.receiverInputSection.classList.contains('hidden');
+}
+
+let dragDepth = 0;
+function setDragging(on) {
+  document.body.classList.toggle('dragging-files', on);
+  els.dropZone.classList.toggle('drag-over', on);
+}
+window.addEventListener('dragenter', (event) => {
+  if (!acceptsFileDrop(event)) return;
+  dragDepth++;
+  setDragging(true);
+});
+window.addEventListener('dragleave', () => {
+  if (dragDepth === 0) return;
+  dragDepth--;
+  if (dragDepth === 0) setDragging(false);
+});
+window.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = acceptsFileDrop(event) ? 'copy' : 'none';
+});
+window.addEventListener('drop', (event) => {
+  event.preventDefault();
+  dragDepth = 0;
+  setDragging(false);
+  if (!acceptsFileDrop(event)) return;
+  const files = Array.from(event.dataTransfer.files);
+  if (files.length === 0) return;
+  switchToSendMode();
+  Sender.init(files);
+});
 
 const initialCode = codeFromUrl(window.location.href, window.location.href);
 if (isValidCode(initialCode)) {

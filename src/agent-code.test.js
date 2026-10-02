@@ -42,6 +42,13 @@ describe('short share codes', () => {
     assert.throws(() => parseCapability(null), /invalid/);
   });
 
+  it('keeps only the legacy host as a lookup origin', () => {
+    const id = 'A'.repeat(22);
+    const key = 'B'.repeat(43);
+    assert.deepEqual(parseCapability({ transferId: id, key, origin: 'https://cdx.yash0.in' }), { transferId: id, key, origin: 'https://cdx.yash0.in' });
+    assert.deepEqual(parseCapability({ transferId: id, key, origin: 'https://evil.example' }), { transferId: id, key });
+  });
+
   it('cleans pasted codes', () => {
     assert.equal(cleanShortCode('  48291\n'), '48291');
   });

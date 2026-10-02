@@ -29,11 +29,15 @@ export function shareUrlFromCapability(origin, transferId, key) {
   return `${base}/s/${transferId}#v1.${key}`;
 }
 
+// Codes from cdx v0.1.0 live on the old host; the directory says so with an
+// `origin`, and only this one is trusted so a lookup can't redirect anywhere.
+export const LEGACY_ORIGIN = 'https://cdx.yash0.in';
+
 export function parseCapability(body) {
   if (!body || typeof body !== 'object') throw new Error('invalid share capability');
   const { transferId, key } = body;
   if (!TRANSFER_ID_PATTERN.test(transferId) || !MASTER_KEY_PATTERN.test(key)) {
     throw new Error('invalid share capability');
   }
-  return { transferId, key };
+  return body.origin === LEGACY_ORIGIN ? { transferId, key, origin: LEGACY_ORIGIN } : { transferId, key };
 }
