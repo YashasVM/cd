@@ -8,6 +8,15 @@ const agentSend = /^\/send\/?$/.test(window.location.pathname);
 // relay codes by redirecting to the share page).
 const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
+document.getElementById('install-toggle')?.addEventListener('click', (event) => {
+  const toggle = event.currentTarget;
+  const panel = document.getElementById('install-panel');
+  const open = toggle.getAttribute('aria-expanded') !== 'true';
+  toggle.setAttribute('aria-expanded', String(open));
+  panel.classList.toggle('open', open);
+  panel.inert = !open;
+});
+
 document.getElementById('install-copy')?.addEventListener('click', async (event) => {
   const button = event.currentTarget;
   const hint = button.querySelector('.install-hint');

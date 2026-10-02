@@ -40,13 +40,19 @@
           </p>
           <p class="brand-note">no cloud detour</p>
           <div class="install">
-            <span class="install-label">Install <code>cdx</code> for terminals &amp; agents</span>
+            <button id="install-toggle" class="install-toggle" type="button" aria-expanded="false" aria-controls="install-panel">
+              Get <code>cdx</code> for terminals &amp; agents<span class="install-chevron" aria-hidden="true"></span>
+            </button>
+            <div id="install-panel" class="install-panel" inert>
+            <div class="install-body">
             <button id="install-copy" class="install-cmd" type="button" aria-label="Copy install command">
               <span class="install-prompt" aria-hidden="true">$</span>
               <code>curl -fsSL https://cd.yash0.in/install.sh | sh</code>
               <span class="install-hint">copy</span>
             </button>
             <span class="install-alt">Windows <code>irm https://cd.yash0.in/install.ps1 | iex</code></span>
+            </div>
+            </div>
           </div>
         </div>
 
