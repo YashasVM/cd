@@ -119,36 +119,45 @@ func runUpdate(args []string) int {
 		return 2
 	}
 	fail := func(err error) int {
-		fmt.Fprintln(os.Stderr, "cdx: update failed:", underlyingReason(err))
+		updateStep(false, "Update failed: "+underlyingReason(err))
 		return 1
 	}
-	tag, err := latestTag()
+	var tag string
+	err := withSpinner("Checking GitHub for updates", func() (err error) {
+		tag, err = latestTag()
+		return err
+	})
 	if err != nil {
-		return fail(err)
+		return fail(errors.New("could not reach GitHub; check your connection and try again"))
 	}
+	updateStep(true, "Checked "+strings.TrimPrefix(releaseBase, "https://")+dim("  latest is "+tag))
 	if version == tag {
-		fmt.Fprintf(os.Stderr, "cdx %s is already the latest version\n", tag)
+		updateStep(true, "You're up to date"+dim("  cdx "+tag+" is the newest version, no update available"))
 		return 0
 	}
 	asset := updateAsset()
 	base := releaseBase + "/download/" + tag + "/"
-	fmt.Fprintf(os.Stderr, "updating cdx %s -> %s\n", version, tag)
-	checksums, err := download(base+"checksums.txt", 1<<20)
+	var checksums, data []byte
+	err = withSpinner("Downloading cdx "+tag, func() (err error) {
+		if checksums, err = download(base+"checksums.txt", 1<<20); err != nil {
+			return err
+		}
+		data, err = download(base+asset, maxBinaryBytes)
+		return err
+	})
 	if err != nil {
 		return fail(err)
 	}
+	updateStep(true, "Downloaded cdx "+tag+dim("  "+formatShortBytes(uint64(len(data)))))
 	want, ok := checksumFor(checksums, asset)
 	if !ok {
 		return fail(fmt.Errorf("release %s has no %s", tag, asset))
-	}
-	data, err := download(base+asset, maxBinaryBytes)
-	if err != nil {
-		return fail(err)
 	}
 	sum := sha256.Sum256(data)
 	if hex.EncodeToString(sum[:]) != want {
 		return fail(errors.New("checksum mismatch; nothing was changed"))
 	}
+	updateStep(true, "Verified checksum")
 	target, err := os.Executable()
 	if err == nil {
 		target, err = filepath.EvalSymlinks(target)
@@ -159,6 +168,36 @@ func runUpdate(args []string) int {
 	if err := replaceExecutable(target, data); err != nil {
 		return fail(fmt.Errorf("replace %s: %w (try re-running the installer)", target, err))
 	}
-	fmt.Fprintf(os.Stderr, "updated %s to %s\n", target, tag)
+	updateStep(true, "Updated cdx "+version+" → "+bold(tag)+dim("  "+target))
 	return 0
+}
+
+// updateStep prints one finished step of `cdx update`.
+func updateStep(ok bool, text string) {
+	mark := green("✓")
+	if !ok {
+		mark = sgr("38;5;203", "✗")
+	}
+	fmt.Fprintf(os.Stderr, "\r  %s %s\x1b[K\n", mark, text)
+}
+
+// withSpinner runs work while a spinner labels it, when stderr is a terminal.
+func withSpinner(label string, work func() error) error {
+	if !isTerminal(os.Stderr) {
+		return work()
+	}
+	done := make(chan error, 1)
+	go func() { done <- work() }()
+	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	ticker := time.NewTicker(80 * time.Millisecond)
+	defer ticker.Stop()
+	for frame := 0; ; frame++ {
+		fmt.Fprintf(os.Stderr, "\r  %s %s…\x1b[K", accent(frames[frame%len(frames)]), label)
+		select {
+		case err := <-done:
+			fmt.Fprint(os.Stderr, "\r\x1b[K")
+			return err
+		case <-ticker.C:
+		}
+	}
 }
