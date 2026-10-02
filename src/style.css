@@ -222,7 +222,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .workbench {
   position: relative;
   min-width: 0;
-  padding: 0 24px 24px;
+  padding: 0 16px 16px;
   border: 1px solid rgba(228, 212, 182, .1);
   border-radius: 16px;
   background:
@@ -242,7 +242,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: min(260px, 100%);
-  margin: 20px auto 8px;
+  margin: 16px auto 10px;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -283,7 +283,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 210px;
+  /* Send and Receive share one height so switching tabs swaps content, not the card size. */
+  min-height: 262px;
   animation: reveal .36s cubic-bezier(.2, .8, .2, 1) both;
 }
 @keyframes reveal {
@@ -297,10 +298,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  min-height: 250px;
-  margin-top: 12px;
-  padding: 30px 22px;
+  flex: 1;
+  gap: 10px;
+  min-height: 0;
+  margin-top: 4px;
+  padding: 20px;
   border: 1.5px dashed rgba(229, 138, 87, .28);
   border-radius: 12px;
   background: rgba(7, 3, 2, .28);
@@ -318,8 +320,8 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .drop-mark {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   border: 1px solid rgba(229, 138, 87, .4);
   border-radius: 50%;
   background: radial-gradient(circle at 50% 30%, rgba(229, 138, 87, .22), rgba(229, 138, 87, .05));
@@ -441,9 +443,9 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.input-section { margin-top: 12px; padding: 26px 22px 24px; border: 1px solid var(--line); border-radius: 12px; background: rgba(7, 3, 2, .28); }
+.input-section { display: flex; flex: 1; flex-direction: column; justify-content: center; margin-top: 4px; padding: 20px 22px; border: 1px solid var(--line); border-radius: 12px; background: rgba(7, 3, 2, .28); }
 .section-title { margin: 0 0 5px; font-size: 21px; font-weight: 550; line-height: 1.25; letter-spacing: -.02em; }
-.section-subtitle { max-width: 420px; margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.section-subtitle { max-width: 420px; margin: 0 0 14px; color: var(--muted); font-size: 14px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .code-input-wrapper { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
 #code-input {
@@ -641,13 +643,12 @@ html.scanning, html.scanning body { overflow: hidden; }
   .workbench { margin-top: 20px; padding: 0 14px 16px; }
   .mode-selector { width: 100%; margin: 14px 0 6px; }
   .mode-btn { min-height: 42px; }
-  .view.active { min-height: 270px; }
+  .view.active { min-height: 330px; }
   .drop-zone { min-height: 0; gap: 12px; padding: 24px 16px; }
   .drop-mark { width: 44px; height: 44px; font-size: 25px; }
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
   .drop-zone .primary-btn { width: 100%; margin-top: 4px; }
-  .input-section { padding: 20px 16px; }
   .result-section, .connecting-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
   .result-mark { width: 44px; height: 44px; }
   .result-title { font-size: 18px; }
@@ -656,7 +657,7 @@ html.scanning, html.scanning body { overflow: hidden; }
   .redownload-list { flex-direction: column; align-items: stretch; width: 100%; }
   .redownload-list a { width: 100%; text-align: center; }
   .primary-btn, .secondary-btn { min-height: 48px; }
-  .input-section { padding: 22px 0 4px; }
+  .input-section { padding: 18px 16px; }
   .section-title { font-size: 18px; }
   .section-subtitle { font-size: 13px; }
   .progress-percent { font-size: 26px; }
