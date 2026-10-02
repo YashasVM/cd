@@ -324,12 +324,12 @@ button:focus-visible, input:focus-visible, a:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto;
-  gap: 10px 24px;
+  gap: 24px 32px;
   align-content: center;
   flex: 1;
   min-height: 0;
   margin-top: 4px;
-  padding: 24px 28px;
+  padding: 32px;
   border: 1.5px dashed rgba(229, 138, 87, .28);
   border-radius: 12px;
   background: rgba(7, 3, 2, .28);
@@ -348,34 +348,33 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .drop-mark {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 56px;
+  height: 56px;
   border: 1px solid rgba(229, 138, 87, .4);
   border-radius: 50%;
   background: radial-gradient(circle at 50% 30%, rgba(229, 138, 87, .22), rgba(229, 138, 87, .05));
   color: var(--accent);
-  box-shadow: 0 0 0 6px rgba(229, 138, 87, .05);
   transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, border-color .35s;
 }
 .drop-zone:hover .drop-mark, .drop-zone.drag-over .drop-mark {
   border-color: var(--accent);
-  box-shadow: 0 0 0 10px rgba(229, 138, 87, .07), 0 10px 30px -8px rgba(229, 138, 87, .5);
+  box-shadow: 0 8px 24px -8px rgba(229, 138, 87, .5);
   transform: translateY(-3px);
 }
 .drop-zone.drag-over .drop-mark svg { animation: nudge-up .9s ease-in-out infinite; }
 @keyframes nudge-up { 50% { transform: translateY(-3px); } }
 .drop-copy { grid-column: 1; grid-row: 1; min-width: 0; }
 .drop-mark { grid-column: 2; grid-row: 1 / span 2; }
-.drop-mark svg { width: 30px; height: 30px; }
+.drop-mark svg { width: 22px; height: 22px; }
 .drop-zone h2 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 21px;
   font-weight: 550;
   line-height: 1.25;
   letter-spacing: -.02em;
 }
 .drop-zone p { max-width: 320px; margin: 0; color: var(--muted); font-size: 14px; }
-.drop-zone .primary-btn { grid-column: 1; grid-row: 2; justify-self: start; margin-top: 4px; padding-inline: 22px; }
+.drop-zone .primary-btn { grid-column: 1; grid-row: 2; justify-self: start; padding-inline: 24px; }
 
 .primary-btn, .secondary-btn, .cancel-btn {
   display: inline-flex;
@@ -676,12 +675,12 @@ html.scanning, html.scanning body { overflow: hidden; }
   .mode-selector { width: 100%; margin: 14px 0 6px; }
   .mode-btn { min-height: 42px; }
   .view.active { min-height: 330px; }
-  .drop-zone { min-height: 0; gap: 12px; padding: 24px 16px; }
-  .drop-mark { width: 58px; height: 58px; }
-  .drop-mark svg { width: 24px; height: 24px; }
+  .drop-zone { min-height: 0; gap: 24px 16px; padding: 24px; }
+  .drop-mark { grid-row: 1; width: 48px; height: 48px; }
+  .drop-mark svg { width: 20px; height: 20px; }
   .drop-zone h2 { font-size: 18px; }
   .drop-zone p { font-size: 13px; }
-  .drop-zone .primary-btn { width: 100%; margin-top: 4px; }
+  .drop-zone .primary-btn { grid-column: 1 / -1; width: 100%; }
   .result-section, .connecting-section { min-height: 0; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 23px 0 4px; }
   .result-mark { width: 44px; height: 44px; }
   .result-title { font-size: 18px; }
