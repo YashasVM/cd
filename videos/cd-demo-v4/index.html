@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="stylesheet" href="site.css" />
+    <style>
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500 550; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "JBMono"; src: url("fonts/jbmono.ttf") format("truetype"); }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0d0503; }
+      #root { width: 100%; height: 100%; position: relative; overflow: hidden; font-family: "Inter", sans-serif; color: #e4d4b6; }
+      #shake, #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+
+      /* desktop */
+      .wallpaper { position: absolute; inset: 0;
+        background:
+          radial-gradient(1200px 800px at 18% 110%, rgba(229,138,87,.5), transparent 60%),
+          radial-gradient(900px 700px at 95% -10%, rgba(107,47,28,.9), transparent 65%),
+          linear-gradient(160deg, #1d0b06 0%, #0d0503 55%, #140704 100%); }
+      .menubar { position: absolute; left: 0; top: 0; width: 1920px; height: 34px; background: rgba(20,8,5,.6);
+        border-bottom: 1px solid rgba(228,212,182,.08); display: flex; align-items: center; padding: 0 22px; gap: 26px; font-size: 15px; font-weight: 500; }
+      .menubar .apple { width: 15px; height: 15px; border-radius: 50%; background: #e4d4b6; }
+      .menubar b { font-weight: 700; }
+      .menubar .right { margin-left: auto; opacity: .9; }
+
+      /* macOS window */
+      .stage3d { position: absolute; inset: 0; perspective: 1800px; }
+      .win { position: absolute; width: 860px; height: 640px; border-radius: 14px; overflow: hidden; background: #0d0503;
+        border: 1px solid rgba(228,212,182,.16); box-shadow: 0 50px 100px rgba(0,0,0,.6), 0 0 0 .5px rgba(0,0,0,.8); }
+      .bar { height: 52px; display: flex; align-items: center; padding: 0 18px; gap: 9px; background: #1e0d09;
+        border-bottom: 1px solid rgba(228,212,182,.1); position: relative; }
+      .dot { width: 13px; height: 13px; border-radius: 50%; }
+      .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+      .url { position: absolute; left: 200px; right: 200px; top: 11px; height: 30px; border-radius: 8px; background: #0f0604;
+        display: flex; align-items: center; justify-content: center; font-size: 14px; color: #b3a38c; gap: 8px; }
+      .lock { width: 9px; height: 11px; border-radius: 2px; background: #b3a38c; }
+      .wtitle { position: absolute; left: 0; right: 0; text-align: center; font-size: 14px; color: #a28f79; font-weight: 500; }
+      .vp { position: absolute; left: 0; top: 52px; width: 860px; height: 588px; overflow: hidden; }
+      .vp .site { transform: scale(0.671875); transform-origin: 0 0; }
+      .site .qr-block img { display: block; width: 132px; height: 132px; image-rendering: pixelated; border-radius: 2px; }
+      .dragov { position: absolute; inset: 8px; z-index: 100; border: 1.5px solid #e58a57; border-radius: 16px; background: rgba(229,138,87,.05);
+        box-shadow: 0 0 0 4px rgba(229,138,87,.1), 0 0 80px -12px rgba(229,138,87,.35) inset; opacity: 0; }
+
+      /* terminal */
+      .term { background: rgba(12,5,3,.97); }
+      .tbody { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; padding: 22px 26px; font-family: "JBMono", monospace;
+        font-size: 16.5px; line-height: 1.55; color: #e4d4b6; white-space: pre; }
+      .tl { height: 25.6px; }
+      .t-p { color: #e58a57; } .t-d { color: #8a7866; } .t-a { color: #e58a57; } .t-b { font-weight: 700; } .t-c { color: #e4d4b6; background: #2a1510; }
+      .t-g { color: #7fd18b; }
+
+      /* desktop file + cursor */
+      .file { position: absolute; width: 140px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .doc { width: 84px; height: 104px; border-radius: 6px; position: relative; background: linear-gradient(160deg, #f4e6cc, #d9c3a0); box-shadow: 0 10px 24px rgba(0,0,0,.5); }
+      .doc::after { content: ""; position: absolute; right: 0; top: 0; width: 24px; height: 24px; background: linear-gradient(225deg, #0d0503 50%, #bfa77f 50%); border-bottom-left-radius: 4px; }
+      .doc .ext { position: absolute; left: 10px; bottom: 12px; font-size: 13px; font-weight: 700; color: #fff; background: #e58a57; border-radius: 4px; padding: 2px 6px; }
+      .gx::before { content: "ZIP"; }
+      .fname { font-size: 14px; font-weight: 500; padding: 2px 8px; border-radius: 5px; text-align: center; }
+      #ghost { position: absolute; left: 0; top: 0; z-index: 49; opacity: 0; }
+      #cursor { position: absolute; left: 0; top: 0; width: 60px; height: 60px; z-index: 50; perspective: 400px; }
+      #cur3d { position: absolute; left: 0; top: 0; width: 60px; height: 60px; transform-style: preserve-3d; transform-origin: 8px 6px; }
+      #cur3d svg { position: absolute; left: 0; top: 0; }
+      #curShadow { filter: blur(5px); opacity: .55; }
+      .trail { position: absolute; left: 0; top: 0; width: 60px; height: 60px; opacity: 0; z-index: 47; }
+      .burst { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 46; }
+      .pt { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: #e58a57; opacity: 0; box-shadow: 0 0 12px rgba(229,138,87,.9); }
+      .ring { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; border: 3px solid #e58a57; opacity: 0; }
+      .pk { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 3px; background: #ffb48a; opacity: 0; box-shadow: 0 0 16px 4px rgba(229,138,87,.8); z-index: 45; }
+
+      /* type scenes */
+      .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .hero-wm { font-family: Georgia, serif; font-size: 230px; letter-spacing: -.055em; line-height: 1; }
+      .hero-wm .stop { color: #e58a57; }
+      .hero-tg { font-family: "JBMono", monospace; font-size: 26px; color: #a28f79; margin-top: 14px; letter-spacing: .04em; }
+      .hero-line { font-size: 60px; font-weight: 500; letter-spacing: -.035em; margin-top: 44px; line-height: 1.2; }
+      .hero-line .sw { display: inline-block; color: #e58a57; }
+      .word { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 190px; font-weight: 700; letter-spacing: -7px; opacity: 0; }
+      .word.o { color: #e58a57; }
+      #flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(255,190,140,.9), rgba(229,138,87,0) 60%); opacity: 0; z-index: 60; }
+      .feats { display: flex; gap: 36px; perspective: 1400px; }
+      .feat { width: 470px; height: 300px; border-radius: 16px; padding: 40px; text-align: left;
+        border: 1px solid rgba(228,212,182,.1);
+        background: radial-gradient(120% 80% at 50% -10%, rgba(229,138,87,.09), transparent 60%), linear-gradient(180deg, rgba(30,13,9,.92), rgba(20,8,6,.92));
+        box-shadow: 0 1px 0 rgba(255,220,190,.06) inset, 0 30px 80px -30px rgba(0,0,0,.7); }
+      .feat .ic { width: 60px; height: 60px; border-radius: 50%; border: 1px solid rgba(229,138,87,.4); color: #e58a57;
+        background: radial-gradient(circle at 50% 30%, rgba(229,138,87,.22), rgba(229,138,87,.05)); display: flex; align-items: center; justify-content: center; }
+      .feat h3 { font-size: 34px; font-weight: 600; letter-spacing: -.8px; margin-top: 34px; }
+      .feat p { font-size: 20px; color: #b3a38c; margin-top: 12px; line-height: 1.45; }
+      .s5install { white-space: nowrap; margin-top: 44px; display: flex; gap: 16px; align-items: center; font-family: "JBMono", monospace; font-size: 26px;
+        background: rgba(22,9,7,.8); border: 1px solid rgba(228,212,182,.15); border-radius: 10px; padding: 18px 30px; }
+      .s5install b { color: #e58a57; font-weight: 400; }
+      .site-url { font-size: 60px; font-weight: 500; letter-spacing: -.035em; margin-top: 26px; }
+      .ovl { position: absolute; inset: 0; pointer-events: none; z-index: 55; }
+      .chip { position: absolute; left: 0; right: 0; top: 56px; display: flex; justify-content: center; }
+      .chip span { font-family: "JBMono", monospace; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: #e58a57;
+        border: 1px solid rgba(229,138,87,.4); border-radius: 30px; padding: 8px 18px; background: rgba(13,5,3,.75); }
+      .pill { position: absolute; left: 0; right: 0; top: 930px; display: flex; justify-content: center; }
+      .pill > div { display: flex; gap: 14px; font-size: 44px; font-weight: 600; letter-spacing: -1.2px; background: rgba(13,5,3,.85);
+        border: 1px solid rgba(228,212,182,.15); border-radius: 60px; padding: 14px 38px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+      .pill .w { display: inline-block; } .pill .o { color: #e58a57; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="45" data-width="1920" data-height="1080">
+     <div id="shake">
+      <div id="cam">
+      <div id="desk" class="clip" data-start="0" data-duration="45" data-track-index="0" style="position:absolute;inset:0">
+        <div id="wall" class="wallpaper"></div>
+        <div class="menubar"><div class="apple"></div><b>cd.</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span class="right">Sat 3 Oct&nbsp;&nbsp;9:41 AM</span></div>
+      </div>
+
+      <!-- S1: intro -->
+      <div id="s1" class="clip" data-start="0" data-duration="5" data-track-index="1" style="position:absolute;inset:0">
+        <div class="word" id="w1">Send.</div>
+        <div class="word" id="w2">Any file.</div>
+        <div class="word o" id="w3">Anywhere.</div>
+        <div class="center" id="s1c">
+          <div id="s1wm" class="hero-wm">cd<span class="stop">.</span></div>
+          <div id="s1tg" class="hero-tg">/di·rect/</div>
+          <div id="s1line" class="hero-line">Direct <span class="sw" id="sw1">browser</span>-to-<span class="sw" id="sw2">browser</span> file transfer.</div>
+        </div>
+      </div>
+
+      <!-- S2: browser -> browser -->
+      <div id="s2" class="clip" data-start="5" data-duration="15.5" data-track-index="2" style="position:absolute;inset:0">
+        <div class="stage3d">
+          <div id="wL" class="win" style="left:60px;top:170px">
+            <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+            <div class="vp" data-page="send"></div>
+          </div>
+          <div id="wR" class="win" style="left:1000px;top:170px">
+            <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+            <div class="vp" data-page="receive"></div>
+          </div>
+        </div>
+        <div id="file1" class="file" style="left:890px;top:850px">
+          <div class="doc"><span class="ext">ZIP</span></div>
+          <div class="fname">diwali-photos.zip</div>
+        </div>
+      </div>
+
+      <!-- S3: terminal -> browser -->
+      <div id="s3" class="clip" data-start="20.5" data-duration="15.5" data-track-index="3" style="position:absolute;inset:0">
+        <div class="stage3d">
+          <div id="wT" class="win term" style="left:60px;top:170px">
+            <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><div class="wtitle">yash — zsh — 80×24</div></div>
+            <div class="tbody" id="tbody"></div>
+          </div>
+          <div id="wR2" class="win" style="left:1000px;top:170px">
+            <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div><div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+            <div class="vp" data-page="receive"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S4: features -->
+      <div id="s4" class="clip" data-start="36" data-duration="5" data-track-index="4" style="position:absolute;inset:0">
+        <div class="center">
+          <div class="feats">
+            <div class="feat" id="f1"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><h3>End-to-end encrypted</h3><p>The key lives in the link. The relay never sees your bytes.</p></div>
+            <div class="feat" id="f2"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div><h3>Never stored</h3><p>A pipe, not a bucket. No accounts, no uploads, no cloud detour.</p></div>
+            <div class="feat" id="f3"><div class="ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l4 4-4 4M12 17h7"/></svg></div><h3>Browser or terminal</h3><p>Send from either side. Receive on anything with a screen.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- S5: outro -->
+      <div id="s5" class="clip" data-start="41" data-duration="4" data-track-index="5" style="position:absolute;inset:0">
+        <div class="center">
+          <div id="s5wm" class="hero-wm" style="font-size:180px">cd<span class="stop">.</span></div>
+          <div id="s5site" class="site-url">cd.yash0.in</div>
+          <div id="s5inst" class="s5install"><b>$</b><span id="s5cmd"></span></div>
+        </div>
+      </div>
+
+      <div id="ghost" class="clip" data-start="5" data-duration="5" data-track-index="7">
+        <div class="file" style="position:relative;opacity:.9"><div class="doc"><span class="ext gx"></span></div></div>
+      </div>
+      <div id="fx" class="clip" data-start="5" data-duration="31" data-track-index="6" style="position:absolute;inset:0;pointer-events:none"></div>
+      <div id="cursorClip" class="clip" data-start="5" data-duration="31" data-track-index="8" style="position:absolute;inset:0;pointer-events:none">
+        <div id="tr2" class="trail"><svg width="60" height="60" viewBox="0 0 34 34"><path d="M5 3 L5 27 L11 21.5 L15 31 L19.5 29 L15.6 19.8 L23.5 19.8 Z" fill="#e58a57"/></svg></div>
+        <div id="tr1" class="trail"><svg width="60" height="60" viewBox="0 0 34 34"><path d="M5 3 L5 27 L11 21.5 L15 31 L19.5 29 L15.6 19.8 L23.5 19.8 Z" fill="#ffb48a"/></svg></div>
+        <div id="cursor">
+          <div id="cur3d">
+            <svg id="curShadow" width="60" height="60" viewBox="0 0 34 34" style="left:5px;top:7px"><path d="M5 3 L5 27 L11 21.5 L15 31 L19.5 29 L15.6 19.8 L23.5 19.8 Z" fill="#000"/></svg>
+            <svg id="arrow" width="60" height="60" viewBox="0 0 34 34">
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#efe6da"/><stop offset="1" stop-color="#b9ab98"/></linearGradient>
+                <linearGradient id="cs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1a14"/><stop offset="1" stop-color="#000"/></linearGradient>
+              </defs>
+              <path d="M6.2 4.6 L6.2 28.6 L12.2 23.1 L16.2 32.6 L20.7 30.6 L16.8 21.4 L24.7 21.4 Z" fill="#3a2418"/>
+              <path d="M5 3 L5 27 L11 21.5 L15 31 L19.5 29 L15.6 19.8 L23.5 19.8 Z" fill="url(#cg)" stroke="url(#cs)" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M6.6 6.5 L6.6 13 L11 10" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".9"/>
+            </svg>
+            <svg id="grab" width="60" height="60" viewBox="0 0 34 34" style="opacity:0"><path d="M9 14 C9 11 13 11 13 14 L13 11 C13 8 17 8 17 11 L17 10.5 C17 7.5 21 7.5 21 10.5 L21 12 C21 9.5 25 9.5 25 12.5 L25 21 C25 27 21 30 16 30 C12 30 10 28 8 24 L5.5 19 C4.5 17 7 15.5 8.5 17 L9 18 Z" fill="url(#cg)" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+      </div>
+     </div>
+
+      <div id="ov2" class="clip ovl" data-start="5" data-duration="15.5" data-track-index="9">
+        <div id="s2chip" class="chip"><span>browser → browser</span></div>
+        <div id="cap2" class="pill"><div><span class="w">Drop</span><span class="w">it.</span><span class="w">Share</span><span class="w">five</span><span class="w">digits.</span><span class="w o">Done.</span></div></div>
+      </div>
+      <div id="ov3" class="clip ovl" data-start="20.5" data-duration="15.5" data-track-index="9">
+        <div id="s3chip" class="chip"><span>terminal → browser</span></div>
+        <div id="cap3" class="pill"><div><span class="w">One</span><span class="w">command.</span><span class="w o">Any</span><span class="w o">browser.</span></div></div>
+      </div>
+      <div id="flash"></div>
+
+      <!-- voiceover only (Kokoro af_heart); no music or sfx -->
+      <audio id="vo-v1" class="clip" data-start="0.9" data-duration="3.84" data-track-index="10" data-volume="1" src=".media/audio/vo/v1.wav"></audio>
+      <audio id="vo-v2" class="clip" data-start="6.0" data-duration="3.328" data-track-index="10" data-volume="1" src=".media/audio/vo/v2.wav"></audio>
+      <audio id="vo-v3" class="clip" data-start="10.3" data-duration="2.731" data-track-index="10" data-volume="1" src=".media/audio/vo/v3.wav"></audio>
+      <audio id="vo-v4" class="clip" data-start="13.9" data-duration="7.253" data-track-index="10" data-volume="1" src=".media/audio/vo/v4.wav"></audio>
+      <audio id="vo-v5" class="clip" data-start="21.3" data-duration="4.117" data-track-index="10" data-volume="1" src=".media/audio/vo/v5.wav"></audio>
+      <audio id="vo-v6" class="clip" data-start="25.6" data-duration="6.272" data-track-index="10" data-volume="1" src=".media/audio/vo/v6.wav"></audio>
+      <audio id="vo-v7" class="clip" data-start="36.6" data-duration="2.112" data-track-index="10" data-volume="1" src=".media/audio/vo/v7.wav"></audio>
+      <audio id="vo-v8" class="clip" data-start="41.3" data-duration="3.136" data-track-index="10" data-volume="1" src=".media/audio/vo/v8.wav"></audio>
+    </div>
+
+    <script>
+      const ICON_SEND = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+      const ICON_RECV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
+      const ICON_UP = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6.5 9.5L12 4l5.5 5.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>';
+      const ICON_OK = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+      // The real cd.yash0.in markup (index.html), with the transfer states the app moves through.
+      function progress(mode) {
+        return `<div class="progress-section hidden" data-k="prog">
+          <div class="progress-topline"><span class="progress-mode">${mode}</span><strong class="progress-percent" data-k="pct">0%</strong><button class="cancel-btn" type="button">Cancel</button></div>
+          <div class="progress-bar"><div class="progress-fill" data-k="fill"></div></div>
+          <div class="progress-stats"><span><b>speed</b><em data-k="spd">–</em></span><span><b>moved</b><em data-k="moved">–</em></span><span><b>left</b><em data-k="left">–</em></span></div>
+        </div>`;
+      }
+      function page(kind) {
+        const send = kind === "send";
+        return `<div class="site"><div class="dots"></div>
+        <main class="shell">
+          <section class="brand-rail">
+            <div class="brand-lockup">
+              <div class="brand-name"><h1>cd.</h1><p class="tagline">/di·rect/</p></div>
+              <p class="brand-intro">Direct <span class="route"><span class="swap">browser</span>-to-<span class="swap">browser</span></span><br />file transfer.</p>
+              <div class="install"><button class="install-toggle" type="button"><span class="install-dot"></span>Get the <code>cdx</code> CLI<span class="install-chevron"></span></button></div>
+            </div>
+          </section>
+          <section class="workbench">
+            <div class="mode-selector">
+              <button id="send-mode-btn" class="mode-btn${send ? " active" : ""}" type="button">${ICON_SEND}Send</button>
+              <button id="receive-mode-btn" class="mode-btn${send ? "" : " active"}" type="button">${ICON_RECV}Receive</button>
+            </div>
+            ${send ? `
+            <section class="view active">
+              <div class="drop-zone" data-k="drop">
+                <span class="drop-mark">${ICON_UP}</span>
+                <div class="drop-copy"><h2>Send files</h2><p>Drop them here, or pick from your device.</p></div>
+                <button class="primary-btn" type="button">Choose files</button>
+              </div>
+              <div class="file-info hidden" data-k="info"><span class="panel-kicker">sending</span>
+                <div class="file-header"><span class="file-name">diwali-photos.zip</span><span class="file-size">84.2 MB</span></div><span class="file-subtext"></span></div>
+              <div class="share-panel hidden" data-k="share">
+                <div class="share-grid">
+                  <div class="code-block" data-k="codeblock"><span class="panel-kicker">share this code</span>
+                    <strong id="share-code" data-k="code">48291</strong>
+                    <p class="code-help">On the other device, open <strong>cd.yash0.in</strong> → Receive and type it. In a terminal:</p>
+                    <code class="receive-command">cdx receive 48291</code></div>
+                  <div class="qr-block" data-k="qr"><span class="panel-kicker">or scan it</span><img src="qr.svg" alt="" /></div>
+                </div>
+                <p class="status">Waiting for the receiver…</p>
+              </div>
+              ${progress("sending")}
+              <div class="result-section complete-section hidden" data-k="done"><span class="result-mark">${ICON_OK}</span>
+                <div class="result-copy"><p class="result-title">Sent</p><p class="result-detail">diwali-photos.zip · 84.2 MB</p>
+                <div class="result-actions"><button class="primary-btn" type="button">Send more files</button></div></div></div>
+            </section>` : `
+            <section class="view active">
+              <div class="input-section" data-k="input">
+                <h2 class="section-title">Receive files</h2>
+                <p class="section-subtitle">Enter the 5-digit code or scan the QR.</p>
+                <div class="code-input-wrapper"><input id="code-input" data-k="field" type="text" placeholder="Enter code" /><button class="primary-btn" data-k="connect" type="button">Connect</button></div>
+                <div class="scanner-panel"><button class="secondary-btn" type="button">Scan QR</button></div>
+              </div>
+              <div class="connecting-section hidden" data-k="finding"><span class="result-mark"><span class="spinner" data-k="spin"></span></span>
+                <div class="result-copy"><p class="result-title">Finding the sender…</p><p class="result-detail">This usually takes a second or two.</p></div></div>
+              <div class="file-info hidden" data-k="info"><span class="panel-kicker">incoming</span>
+                <div class="file-header"><span class="file-name" data-k="fname">diwali-photos.zip</span><span class="file-size" data-k="fsize">84.2 MB</span></div><span class="file-subtext">Getting ready</span></div>
+              ${progress("receiving")}
+              <div class="result-section complete-section hidden" data-k="done"><span class="result-mark">${ICON_OK}</span>
+                <div class="result-copy"><p class="result-title">Saved</p><p class="result-detail" data-k="detail">diwali-photos.zip · 84.2 MB</p>
+                <div class="result-actions"><button class="primary-btn" type="button">Receive another</button></div></div></div>
+            </section>`}
+          </section>
+        </main>
+        <footer class="watermark wm-v"></footer>
+        <div class="dragov" data-k="dragov"></div></div>`;
+      }
+      document.querySelectorAll(".vp").forEach((vp) => { vp.innerHTML = page(vp.dataset.page); });
+      const k = (win, key) => document.getElementById(win).querySelector("[data-k='" + key + "']");
+      // the terminal-sourced receive shows the terminal's file
+      k("wR2", "fname").textContent = "demo-reel.mov"; k("wR2", "fsize").textContent = "248.6 MB";
+      k("wR2", "detail").textContent = "demo-reel.mov · 248.6 MB";
+
+      // The real `cdx send` share card (cmd/cdx/style.go) and progress line (progress.go).
+      const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const seg = (cls, s) => `<span class="${cls}">${esc(s)}</span>`;
+      function boxLine(parts) { // parts: [cls, text][]
+        const plain = parts.map((p) => p[1]).join("");
+        return seg("t-d", "  │") + "   " + parts.map((p) => seg(p[0], p[1])).join("") + " ".repeat(44 - plain.length) + "   " + seg("t-d", "│");
+      }
+      const TLINES = [
+        `<span class="t-p">~/videos ❯ </span><span data-t="cmd"></span><span class="t-c" data-t="caret"> </span>`,
+        "",
+        seg("t-d", "  ╭" + "─".repeat(50) + "╮"),
+        boxLine([]),
+        boxLine([["t-d", "SHARE CODE"], ["", "            "], ["t-a t-b", "7 3 0 1 5"]]),
+        boxLine([]),
+        boxLine([["t-b", "demo-reel.mov"], ["t-d", "  ·  248.6 MiB"]]),
+        boxLine([]),
+        boxLine([["t-d", "open "], ["", "cd.yash0.in"], ["t-d", " and type the code"]]),
+        boxLine([["t-d", "or run "], ["t-a", "cdx receive 73015"]]),
+        boxLine([]),
+        seg("t-d", "  ╰" + "─".repeat(50) + "╯"),
+        "",
+        `  <span class="t-a" data-t="dot">●</span> ` + seg("t-d", "waiting for the receiver · expires in 15m · Ctrl-C to cancel"),
+        "",
+        `<span data-t="bar"></span>`,
+        seg("t-g", "receiver verified the file"),
+        `<span class="t-p">~/videos ❯ </span>`,
+      ];
+      document.getElementById("tbody").innerHTML = TLINES.map((h, i) => `<div class="tl" data-l="${i}">${h}</div>`).join("");
+      const tline = (i) => document.getElementById("tbody").children[i];
+
+      // ---- measure real layout (stage coordinates) before any tween touches transforms ----
+      const rootEl = document.getElementById("root");
+      function C(el, fx, fy) {
+        const r = el.getBoundingClientRect(), rr = rootEl.getBoundingClientRect(), s = rr.width / 1920;
+        return { x: (r.left - rr.left + r.width * (fx ?? 0.5)) / s, y: (r.top - rr.top + r.height * (fy ?? 0.5)) / s };
+      }
+      function withShown(els, fn) { // measure a later state, then restore
+        const saved = els.map(([el, cls]) => [el, el.className]);
+        els.forEach(([el, cls]) => { el.className = cls; });
+        const out = fn(); saved.forEach(([el, c]) => { el.className = c; }); return out;
+      }
+      const P = {
+        drop: C(k("wL", "drop")),
+        field: C(k("wR", "field"), 0.35),
+        connect: C(k("wR", "connect")),
+        field2: C(k("wR2", "field"), 0.35),
+        connect2: C(k("wR2", "connect")),
+        cmd: C(tline(0), 0.3),
+        card: C(tline(6), 0.35),
+      };
+      Object.assign(P, withShown([[k("wL", "drop"), "drop-zone hidden"], [k("wL", "info"), "file-info"], [k("wL", "share"), "share-panel"]],
+        () => ({ code: C(k("wL", "codeblock")), share: C(k("wL", "share")) })));
+      Object.assign(P, withShown([[k("wL", "drop"), "drop-zone hidden"], [k("wL", "info"), "file-info"], [k("wL", "prog"), "progress-section"],
+        [k("wR", "input"), "input-section hidden"], [k("wR", "info"), "file-info"], [k("wR", "prog"), "progress-section"]],
+        () => ({ barL: C(k("wL", "fill"), 1), barR: C(k("wR", "fill"), 0) })));
+      Object.assign(P, withShown([[k("wR2", "input"), "input-section hidden"], [k("wR2", "info"), "file-info"], [k("wR2", "prog"), "progress-section"]],
+        () => ({ barR2: C(k("wR2", "fill"), 0) })));
+      P.barT = C(tline(15), 0.05);
+
+      // ---------------------------------------------------------------
+      const tl = gsap.timeline({ paused: true });
+      const E = "expo.out", IO = "expo.inOut";
+      const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+      const $ = (s) => document.querySelector(s);
+
+      function typeText(el, str, at, dur, prop) {
+        prop = prop || "textContent";
+        tl.fromTo({ n: 0 }, { n: 0 }, { n: str.length, duration: dur, ease: "none",
+          onUpdate() { el[prop] = str.slice(0, Math.round(this.targets()[0].n)); } }, at);
+      }
+      function counter(at, dur, ease, fn) {
+        tl.fromTo({ v: 0 }, { v: 0 }, { v: 1, duration: dur, ease: ease || "power2.inOut", onUpdate() { fn(this.targets()[0].v); } }, at);
+      }
+      // reveal a site section the way the app does (class swap + its 7px "reveal" rise)
+      function show(el, cls, at) {
+        tl.set(el, { attr: { class: cls } }, at);
+        tl.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: E, immediateRender: false }, at);
+      }
+      function hide(el, cls, at) { tl.set(el, { attr: { class: cls } }, at); }
+
+      function camXY(x, y, s) {
+        const hw = 960 / s, hh = 540 / s;
+        x = clamp(x, hw, 1920 - hw); y = clamp(y, hh, 1080 - hh);
+        return { x: 960 - x * s, y: 540 - y * s, scale: s };
+      }
+      function cam(p, s, at, dur, ease) { tl.to("#cam", { ...camXY(p.x, p.y, s), duration: dur, ease: ease || IO }, at); }
+      function camSet(p, s, at) { tl.set("#cam", camXY(p.x, p.y, s), at); }
+      const MID = { x: 960, y: 540 };
+      function shake(at, a) {
+        tl.to("#shake", { keyframes: [
+          { x: -a, y: a * 0.6, duration: 0.05 }, { x: a * 0.8, y: -a * 0.7, duration: 0.05 },
+          { x: -a * 0.4, y: a * 0.3, duration: 0.06 }, { x: 0, y: 0, duration: 0.08 } ] }, at);
+      }
+
+      const cur = "#cursor";
+      let pos = { x: 1500, y: 1000 };
+      function move(p, at, dur) {
+        const dx = p.x - pos.x, dy = p.y - pos.y; pos = { x: p.x, y: p.y };
+        tl.to(cur, { x: p.x, y: p.y, duration: dur, ease: IO }, at);
+        tl.to("#tr1", { x: p.x, y: p.y, duration: dur, ease: IO }, at + 0.045);
+        tl.to("#tr2", { x: p.x, y: p.y, duration: dur, ease: IO }, at + 0.09);
+        tl.fromTo("#tr1", { opacity: 0 }, { opacity: 0.45, duration: dur * 0.5, yoyo: true, repeat: 1, ease: "sine.inOut", immediateRender: false }, at);
+        tl.fromTo("#tr2", { opacity: 0 }, { opacity: 0.25, duration: dur * 0.5, yoyo: true, repeat: 1, ease: "sine.inOut", immediateRender: false }, at);
+        tl.to("#cur3d", { rotationY: clamp(dx * 0.06, -40, 40), rotationX: clamp(-dy * 0.06, -35, 35),
+          rotationZ: clamp(dx * 0.02, -16, 16), scale: 1.18, duration: dur * 0.45, ease: "power2.out" }, at);
+        tl.to("#cur3d", { rotationY: 0, rotationX: 0, rotationZ: 0, scale: 1, duration: 0.8, ease: "elastic.out(1,0.4)" }, at + dur * 0.7);
+      }
+      function place(p, at) { pos = { x: p.x, y: p.y }; tl.set([cur, "#tr1", "#tr2"], { x: p.x, y: p.y }, at); }
+
+      const fx = $("#fx");
+      function burst(p, at, n) {
+        const b = document.createElement("div"); b.className = "burst"; b.style.left = p.x + "px"; b.style.top = p.y + "px";
+        const ring = document.createElement("div"); ring.className = "ring"; b.appendChild(ring); fx.appendChild(b);
+        tl.fromTo(ring, { scale: 0.2, opacity: 1 }, { scale: 2.4, opacity: 0, duration: 0.7, ease: E, immediateRender: false }, at);
+        for (let i = 0; i < n; i++) {
+          const d = document.createElement("div"); d.className = "pt"; b.appendChild(d);
+          const ang = (i / n) * Math.PI * 2 + (i % 2) * 0.2, dist = 110 + (i % 3) * 45;
+          tl.fromTo(d, { x: 0, y: 0, opacity: 1, scale: 1.2 }, { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, opacity: 0, scale: 0.2, duration: 0.8, ease: E, immediateRender: false }, at);
+        }
+      }
+      function packets(at, dur, from, to) {
+        const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 80 };
+        const cycles = Math.floor(dur / 0.6);
+        for (let i = 0; i < 5; i++) {
+          const p = document.createElement("div"); p.className = "pk"; fx.appendChild(p);
+          const off = (i - 2) * 10;
+          for (let c = 0; c < cycles; c++) {
+            const t = at + c * 0.6 + i * 0.11;
+            tl.fromTo(p, { x: from.x, y: from.y + off, opacity: 0, scale: 0.5 }, { x: mid.x, y: mid.y + off, opacity: 1, scale: 1.1, duration: 0.28, ease: "sine.out", immediateRender: false }, t);
+            tl.fromTo(p, { x: mid.x, y: mid.y + off, opacity: 1, scale: 1.1 }, { x: to.x, y: to.y + off, opacity: 0, scale: 0.5, duration: 0.28, ease: "sine.in", immediateRender: false }, t + 0.28);
+          }
+        }
+      }
+      function click(p, at) {
+        tl.to(cur, { scale: 0.78, duration: 0.07, yoyo: true, repeat: 1, transformOrigin: "9px 5px" }, at);
+        burst(p, at, 10);
+      }
+      function pill(sel, at, out) {
+        tl.fromTo(sel + " .w", { y: 50, opacity: 0, rotationX: -70 }, { y: 0, opacity: 1, rotationX: 0, duration: 0.55, ease: "back.out(2.2)", stagger: 0.06 }, at);
+        tl.fromTo(sel + " > div", { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: E }, at);
+        tl.to(sel, { opacity: 0, y: 30, duration: 0.35, ease: "power2.in" }, out);
+      }
+      // the app's progress panel: percent with one decimal, EMA-ish speed, moved, ETA
+      function appProgress(win, total, at, dur, mbps) {
+        const pct = k(win, "pct"), fill = k(win, "fill"), spd = k(win, "spd"), moved = k(win, "moved"), left = k(win, "left");
+        tl.fromTo(fill, { scaleX: 0 }, { scaleX: 1, duration: dur, ease: "power2.inOut", immediateRender: false }, at);
+        counter(at, dur, "power2.inOut", (v) => {
+          pct.textContent = (v * 100).toFixed(1) + "%";
+          moved.textContent = `${(total * v).toFixed(1)} MB / ${total.toFixed(1)} MB`;
+          spd.textContent = v > 0 ? `${(mbps * Math.min(1, v * 6)).toFixed(1)} MB/s` : "–";
+          left.textContent = v >= 1 || v <= 0 ? "–" : `0:0${Math.max(1, Math.ceil(dur * (1 - v)))}`;
+        });
+      }
+
+      // ---- initial states ----
+      tl.set("#cam", { transformOrigin: "0 0", x: 0, y: 0, scale: 1 }, 0);
+      place(pos, 0);
+
+      // ================= S1 =================
+      [["#w1", 0.15], ["#w2", 0.75], ["#w3", 1.35]].forEach(([s, t]) => {
+        tl.fromTo(s, { opacity: 0, scale: 2.4, filter: "blur(24px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.35, ease: E }, t);
+        tl.to(s, { opacity: 0, scale: 0.7, filter: "blur(10px)", duration: 0.18, ease: "power2.in" }, t + 0.42);
+      });
+      tl.fromTo("#flash", { opacity: 0 }, { opacity: 0.8, duration: 0.08 }, 1.93);
+      tl.to("#flash", { opacity: 0, duration: 0.6, ease: "power2.out" }, 2.01);
+      tl.fromTo("#s1wm", { opacity: 0, scale: 2.6 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, 1.95);
+      tl.fromTo("#s1wm .stop", { opacity: 0, y: -120 }, { opacity: 1, y: 0, duration: 0.55, ease: "bounce.out" }, 2.35);
+      shake(2.05, 12);
+      tl.fromTo("#s1tg", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 2.5);
+      tl.fromTo("#s1line", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: "back.out(1.8)" }, 2.75);
+      // the site's own word swap: browser-to-browser -> terminal-to-browser
+      tl.to("#sw1", { opacity: 0, y: -24, filter: "blur(4px)", duration: 0.3, ease: "power2.in" }, 3.6);
+      tl.set("#sw1", { textContent: "terminal" }, 3.9);
+      tl.fromTo("#sw1", { opacity: 0, y: 24, filter: "blur(4px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.45, ease: E, immediateRender: false }, 3.9);
+      cam(MID, 1.08, 2.0, 2.4, "sine.inOut");
+      tl.to("#s1c", { opacity: 0, scale: 2.6, filter: "blur(16px)", duration: 0.55, ease: "power3.in" }, 4.4);
+
+      // ================= S2: browser -> browser =================
+      camSet(MID, 1.3, 4.99);
+      cam(MID, 1.0, 5.0, 1.1, E);
+      tl.fromTo("#wL", { opacity: 0, x: -520, rotationY: 45, scale: 0.85 }, { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 1.1, ease: E }, 5.0);
+      tl.fromTo("#wR", { opacity: 0, x: 520, rotationY: -45, scale: 0.85 }, { opacity: 1, x: 0, rotationY: 0, scale: 1, duration: 1.1, ease: E }, 5.08);
+      tl.fromTo("#s2chip", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(2)" }, 5.4);
+      tl.fromTo("#file1", { opacity: 0, y: 80, scale: 0.4, rotation: -20 }, { opacity: 1, y: 0, scale: 1, rotation: 0, duration: 0.7, ease: "back.out(2)" }, 5.6);
+      tl.set("#cap2 .w", { opacity: 0 }, 5);
+
+      const FILE = { x: 960, y: 905 };
+      tl.fromTo(cur, { opacity: 0 }, { opacity: 1, duration: 0.25 }, 5.8);
+      move(FILE, 5.9, 1.2);
+      cam({ x: 960, y: 860 }, 1.75, 5.9, 1.2);
+      tl.to("#file1 .fname", { backgroundColor: "rgba(229,138,87,.9)", color: "#1b0d09", duration: 0.12 }, 7.1);
+      tl.to("#file1 .doc", { scale: 1.12, duration: 0.25, ease: "back.out(3)" }, 7.1);
+      tl.set("#arrow", { opacity: 0 }, 7.2); tl.set("#grab", { opacity: 1 }, 7.2);
+      tl.fromTo("#ghost", { x: FILE.x - 70, y: FILE.y - 55, opacity: 0, scale: 1, rotation: 0 }, { opacity: 1, scale: 1.15, duration: 0.15 }, 7.22);
+      tl.to("#file1", { opacity: 0.3, duration: 0.2 }, 7.22);
+      // drag across into the page: the whole page outlines, then the drop zone lights up (real drag-over states)
+      move(P.drop, 7.35, 1.4);
+      tl.to("#ghost", { x: P.drop.x - 70, y: P.drop.y - 55, duration: 1.4, ease: IO }, 7.42);
+      tl.to("#ghost", { rotation: -14, duration: 0.6, ease: "power2.out" }, 7.42);
+      tl.to("#ghost", { rotation: 0, duration: 0.6, ease: "elastic.out(1,0.4)" }, 8.4);
+      cam(P.drop, 1.5, 7.35, 1.45);
+      tl.to(k("wL", "dragov"), { opacity: 1, duration: 0.2 }, 7.9);
+      tl.set(k("wL", "drop"), { attr: { class: "drop-zone drag-over" } }, 8.3);
+      tl.fromTo(k("wL", "drop") .querySelector(".drop-mark"), { y: 0 }, { y: -6, duration: 0.3, yoyo: true, repeat: 1, ease: "sine.inOut" }, 8.3);
+      // drop
+      tl.to("#ghost", { scale: 0.2, opacity: 0, rotation: 30, duration: 0.25, ease: "power3.in" }, 8.9);
+      tl.set("#grab", { opacity: 0 }, 8.9); tl.set("#arrow", { opacity: 1 }, 8.9);
+      tl.to(k("wL", "dragov"), { opacity: 0, duration: 0.2 }, 8.9);
+      burst(P.drop, 9.0, 16);
+      shake(9.0, 7);
+      tl.to("#file1", { opacity: 0, duration: 0.2 }, 8.9);
+      hide(k("wL", "drop"), "drop-zone hidden", 9.05);
+      show(k("wL", "info"), "file-info", 9.05);
+      show(k("wL", "share"), "share-panel", 9.2);
+      tl.fromTo(k("wL", "code"), { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2.2)", transformOrigin: "0% 50%", immediateRender: false }, 9.3);
+      tl.fromTo(k("wL", "qr"), { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(2)", immediateRender: false }, 9.4);
+      cam(P.code, 1.8, 9.15, 0.8);
+      pill("#cap2", 9.7, 19.3);
+
+      // receiver types the code and connects
+      move(P.field, 10.4, 0.9);
+      cam(P.field, 1.85, 10.4, 0.9);
+      click(P.field, 11.35);
+      tl.to(k("wR", "field"), { borderColor: "#e58a57", boxShadow: "0 0 0 3px rgba(229,138,87,.15)", duration: 0.15 }, 11.4);
+      typeText(k("wR", "field"), "48291", 11.6, 1.1, "value");
+      cam(P.field, 2.05, 11.6, 1.2, "sine.inOut");
+      move(P.connect, 12.85, 0.55);
+      cam({ x: (P.field.x + P.connect.x) / 2, y: P.connect.y }, 1.85, 12.85, 0.55);
+      click(P.connect, 13.45);
+      tl.to(k("wR", "connect"), { scale: 0.96, duration: 0.07, yoyo: true, repeat: 1 }, 13.45);
+      hide(k("wR", "input"), "input-section hidden", 13.6);
+      show(k("wR", "finding"), "connecting-section", 13.6);
+      tl.fromTo(k("wR", "spin"), { rotation: 0 }, { rotation: 360, duration: 0.6, ease: "none", repeat: 0, immediateRender: false }, 13.6);
+      move({ x: 1760, y: 840 }, 13.8, 0.8);
+      cam(MID, 1.0, 13.75, 0.9);
+
+      // transfer: sender swaps its share panel for progress, receiver shows incoming
+      hide(k("wR", "finding"), "connecting-section hidden", 14.15);
+      show(k("wR", "info"), "file-info", 14.15);
+      show(k("wR", "prog"), "progress-section", 14.2);
+      hide(k("wL", "share"), "share-panel hidden", 14.15);
+      show(k("wL", "prog"), "progress-section", 14.2);
+      appProgress("wL", 84.2, 14.4, 2.8, 31.4);
+      appProgress("wR", 84.2, 14.4, 2.8, 31.4);
+      packets(14.4, 2.9, P.barL, P.barR);
+      cam({ x: 960, y: 560 }, 1.1, 14.6, 2.6, "sine.inOut");
+      ["wL", "wR"].forEach((w, i) => {
+        hide(k(w, "info"), "file-info hidden", 17.3);
+        hide(k(w, "prog"), "progress-section hidden", 17.3);
+        show(k(w, "done"), "result-section complete-section", 17.3 + i * 0.05);
+        tl.fromTo(k(w, "done").querySelector(".result-mark"), { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(3)", immediateRender: false }, 17.35 + i * 0.05);
+      });
+      shake(17.3, 6);
+      cam(MID, 1.0, 17.3, 0.7, "back.out(1.5)");
+      tl.to("#wL", { x: -700, rotationY: -50, opacity: 0, duration: 0.65, ease: "power3.in" }, 19.85);
+      tl.to("#wR", { x: 700, rotationY: 50, opacity: 0, duration: 0.65, ease: "power3.in" }, 19.85);
+      tl.to("#s2chip", { opacity: 0, y: -30, duration: 0.3 }, 19.8);
+      cam(MID, 1.35, 19.85, 0.65, "power3.in");
+      tl.to(cur, { opacity: 0, duration: 0.25 }, 19.8);
+
+      // ================= S3: terminal -> browser =================
+      camSet(MID, 1.35, 20.49);
+      cam(MID, 1.0, 20.5, 0.9, E);
+      tl.fromTo("#wT", { opacity: 0, y: 500, rotationX: 50, scale: 0.85 }, { opacity: 1, y: 0, rotationX: 0, scale: 1, duration: 1.0, ease: E }, 20.5);
+      tl.fromTo("#wR2", { opacity: 0, y: 500, rotationX: 50, scale: 0.85 }, { opacity: 1, y: 0, rotationX: 0, scale: 1, duration: 1.0, ease: E }, 20.6);
+      tl.fromTo("#s3chip", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(2)" }, 20.8);
+      tl.set("#cap3 .w", { opacity: 0 }, 20.5);
+      for (let i = 1; i < TLINES.length; i++) tl.set(tline(i), { opacity: 0 }, 20.5);
+      cam(P.cmd, 1.9, 21.1, 0.9);
+      typeText($('[data-t="cmd"]'), "cdx send demo-reel.mov", 21.2, 1.4);
+      tl.set($('[data-t="caret"]'), { opacity: 0 }, 22.8);
+      // share card draws in line by line
+      for (let i = 2; i <= 13; i++) tl.fromTo(tline(i), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.25, ease: E, immediateRender: false }, 22.95 + (i - 2) * 0.045);
+      cam(P.card, 1.65, 22.9, 0.7);
+      tl.fromTo($('[data-t="dot"]'), { opacity: 1 }, { opacity: 0.3, duration: 0.4, yoyo: true, repeat: 3, ease: "sine.inOut", immediateRender: false }, 23.6);
+      pill("#cap3", 23.8, 34.9);
+
+      place({ x: 1760, y: 960 }, 24.0);
+      tl.to(cur, { opacity: 1, duration: 0.2 }, 24.2);
+      move(P.field2, 24.3, 0.95);
+      cam(P.field2, 1.85, 24.3, 0.95);
+      click(P.field2, 25.3);
+      tl.to(k("wR2", "field"), { borderColor: "#e58a57", boxShadow: "0 0 0 3px rgba(229,138,87,.15)", duration: 0.15 }, 25.35);
+      typeText(k("wR2", "field"), "73015", 25.55, 1.05, "value");
+      cam(P.field2, 2.05, 25.55, 1.1, "sine.inOut");
+      move(P.connect2, 26.75, 0.5);
+      cam({ x: (P.field2.x + P.connect2.x) / 2, y: P.connect2.y }, 1.85, 26.75, 0.5);
+      click(P.connect2, 27.3);
+      tl.to(k("wR2", "connect"), { scale: 0.96, duration: 0.07, yoyo: true, repeat: 1 }, 27.3);
+      hide(k("wR2", "input"), "input-section hidden", 27.45);
+      show(k("wR2", "finding"), "connecting-section", 27.45);
+      move({ x: 1770, y: 850 }, 27.6, 0.8);
+      cam(MID, 1.0, 27.6, 0.9);
+
+      hide(k("wR2", "finding"), "connecting-section hidden", 27.95);
+      show(k("wR2", "info"), "file-info", 27.95);
+      show(k("wR2", "prog"), "progress-section", 28.0);
+      tl.to(tline(13), { opacity: 0.35, duration: 0.2 }, 27.9);
+      tl.fromTo(tline(15), { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, 28.0);
+      const tbar = $('[data-t="bar"]');
+      counter(28.2, 3.3, "power2.inOut", (v) => {
+        const f = Math.floor(v * 24), mib = 248.6 * v;
+        let line = `sending [${"█".repeat(f)}${"░".repeat(24 - f)}] ${String(Math.floor(v * 100)).padStart(3)}%  ${mib.toFixed(1)} MiB / 248.6 MiB`;
+        line += v >= 1 ? "  73.1 MiB/s  in 0:03" : v > 0 ? `  ${(74.2 * Math.min(1, v * 6)).toFixed(1)} MiB/s  ETA 0:0${Math.max(1, Math.ceil(3.3 * (1 - v)))}` : "";
+        tbar.textContent = line;
+      });
+      appProgress("wR2", 248.6, 28.2, 3.3, 77.8);
+      packets(28.2, 3.4, P.barT, P.barR2);
+      cam({ x: 960, y: 560 }, 1.1, 28.4, 3.0, "sine.inOut");
+      hide(k("wR2", "info"), "file-info hidden", 31.6);
+      hide(k("wR2", "prog"), "progress-section hidden", 31.6);
+      show(k("wR2", "done"), "result-section complete-section", 31.6);
+      tl.fromTo(k("wR2", "done").querySelector(".result-mark"), { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(3)", immediateRender: false }, 31.65);
+      tl.fromTo(tline(16), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.3, ease: E, immediateRender: false }, 31.6);
+      tl.fromTo(tline(17), { opacity: 0 }, { opacity: 1, duration: 0.2, immediateRender: false }, 31.9);
+      shake(31.6, 6);
+      cam(MID, 1.0, 31.6, 0.7, "back.out(1.5)");
+      tl.to("#wT", { y: -700, rotationX: -40, opacity: 0, duration: 0.65, ease: "power3.in" }, 35.3);
+      tl.to("#wR2", { y: -700, rotationX: -40, opacity: 0, duration: 0.65, ease: "power3.in" }, 35.36);
+      tl.to("#s3chip", { opacity: 0, y: -30, duration: 0.3 }, 35.3);
+      tl.to(cur, { opacity: 0, duration: 0.25 }, 35.3);
+
+      // ================= S4 =================
+      camSet(MID, 1.2, 35.99);
+      cam(MID, 1.0, 36.0, 4.4, E);
+      tl.fromTo("#f1, #f2, #f3", { opacity: 0, rotationY: -90, y: 80, z: -300 }, { opacity: 1, rotationY: 0, y: 0, z: 0, duration: 0.9, ease: "back.out(1.4)", stagger: 0.14 }, 36.1);
+      tl.fromTo("#f1 .ic, #f2 .ic, #f3 .ic", { scale: 0, rotation: -120 }, { scale: 1, rotation: 0, duration: 0.6, ease: "back.out(3)", stagger: 0.14 }, 36.5);
+      tl.to("#f2", { y: -18, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: 1 }, 37.2);
+      tl.to("#f1, #f3", { y: 12, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: 1 }, 37.2);
+      tl.to("#f1, #f2, #f3", { opacity: 0, scale: 0.8, rotationY: 60, duration: 0.45, ease: "power3.in", stagger: 0.06 }, 40.4);
+
+      // ================= S5 =================
+      tl.fromTo("#flash", { opacity: 0 }, { opacity: 0.6, duration: 0.08, immediateRender: false }, 40.98);
+      tl.to("#flash", { opacity: 0, duration: 0.6, ease: "power2.out" }, 41.06);
+      tl.fromTo("#s5wm", { opacity: 0, scale: 2.6 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, 41.0);
+      tl.fromTo("#s5wm .stop", { opacity: 0, y: -110 }, { opacity: 1, y: 0, duration: 0.55, ease: "bounce.out" }, 41.4);
+      shake(41.1, 8);
+      tl.fromTo("#s5site", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(2)" }, 41.45);
+      tl.fromTo("#s5inst", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 41.75);
+      typeText($("#s5cmd"), "curl -fsSL https://cd.yash0.in/install.sh | sh", 41.95, 1.4);
+      cam(MID, 1.06, 41.0, 4.0, "sine.out");
+
+      tl.fromTo("#wall", { scale: 1.06 }, { scale: 1, duration: 45, ease: "none" }, 0);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
