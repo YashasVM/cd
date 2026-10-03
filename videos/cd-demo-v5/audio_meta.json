@@ -1,0 +1,114 @@
+{
+  "tts_provider": "heygen",
+  "voice_id": "5f9c155f4108437f970c308c95b06e11",
+  "bgm": null,
+  "bgm_pending": false,
+  "bgm_provider": null,
+  "bgm_pid": null,
+  "bgm_log": null,
+  "bgm_mode": null,
+  "bgm_target_duration_s": null,
+  "bgm_seed_duration_s": null,
+  "bgm_loop_count": null,
+  "voices": [
+    {
+      "id": "l6",
+      "path": "assets/voice/l6.wav",
+      "duration_s": 6.348,
+      "words": [
+        {
+          "id": "w0",
+          "text": "Punch",
+          "start": 0.299,
+          "end": 0.512
+        },
+        {
+          "id": "w1",
+          "text": "it",
+          "start": 0.597,
+          "end": 0.64
+        },
+        {
+          "id": "w2",
+          "text": "into",
+          "start": 0.683,
+          "end": 0.725
+        },
+        {
+          "id": "w3",
+          "text": "any",
+          "start": 0.811,
+          "end": 0.896
+        },
+        {
+          "id": "w4",
+          "text": "browser,",
+          "start": 1.024,
+          "end": 1.515
+        },
+        {
+          "id": "w5",
+          "text": "hit",
+          "start": 1.664,
+          "end": 1.8347
+        },
+        {
+          "id": "w6",
+          "text": "Connect,",
+          "start": 1.877,
+          "end": 2.325
+        },
+        {
+          "id": "w7",
+          "text": "and",
+          "start": 2.517,
+          "end": 2.6027
+        },
+        {
+          "id": "w8",
+          "text": "watch",
+          "start": 2.645,
+          "end": 2.816
+        },
+        {
+          "id": "w9",
+          "text": "it",
+          "start": 2.859,
+          "end": 2.944
+        },
+        {
+          "id": "w10",
+          "text": "fly.",
+          "start": 2.987,
+          "end": 3.584
+        },
+        {
+          "id": "w11",
+          "text": "Done.",
+          "start": 3.968,
+          "end": 4.395
+        },
+        {
+          "id": "w12",
+          "text": "Every",
+          "start": 4.651,
+          "end": 4.864
+        },
+        {
+          "id": "w13",
+          "text": "byte,",
+          "start": 4.992,
+          "end": 5.376
+        },
+        {
+          "id": "w14",
+          "text": "verified.",
+          "start": 5.589,
+          "end": 6.112879818594104
+        }
+      ]
+    }
+  ],
+  "sfx": [],
+  "total_duration_s": 6.348
+}

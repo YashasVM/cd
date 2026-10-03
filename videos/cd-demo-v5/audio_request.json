@@ -1,0 +1,41 @@
+{
+  "provider": "heygen",
+  "voice": "5f9c155f4108437f970c308c95b06e11",
+  "lines": [
+    {
+      "id": "l1",
+      "text": "Meet CD. The fastest way to move a file."
+    },
+    {
+      "id": "l2",
+      "text": "Just drag it in, drop it, and you get five digits."
+    },
+    {
+      "id": "l3",
+      "text": "On the other device, type the code, and hit Connect."
+    },
+    {
+      "id": "l4",
+      "text": "Boom. It streams straight across, end-to-end encrypted. Nothing uploaded, nothing stored."
+    },
+    {
+      "id": "l5",
+      "text": "Living in the terminal? Run C D X send. Same code."
+    },
+    {
+      "id": "l6",
+      "text": "Punch it into any browser, hit Connect, and watch it fly. Done. Every byte, verified."
+    },
+    {
+      "id": "l7",
+      "text": "No accounts. No cloud detour."
+    },
+    {
+      "id": "l8",
+      "text": "CD. Try it now, at CD dot yash zero dot in."
+    }
+  ],
+  "bgm": {
+    "mode": "none"
+  }
+}
