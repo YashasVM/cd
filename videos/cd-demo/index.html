@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("fonts/inter-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "JBMono"; src: url("fonts/jbmono.ttf") format("truetype"); }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0d0503; }
+      #root { width: 100%; height: 100%; position: relative; overflow: hidden;
+        font-family: "Inter", sans-serif; color: #e4d4b6; }
+
+      /* ---------- desktop ---------- */
+      .wallpaper { position: absolute; inset: 0;
+        background:
+          radial-gradient(1200px 800px at 18% 110%, rgba(229,138,87,.55), transparent 60%),
+          radial-gradient(900px 700px at 95% -10%, rgba(107,47,28,.9), transparent 65%),
+          radial-gradient(700px 500px at 60% 55%, rgba(229,138,87,.12), transparent 70%),
+          linear-gradient(160deg, #1d0b06 0%, #0d0503 55%, #140704 100%); }
+      .menubar { position: absolute; left: 0; top: 0; width: 1920px; height: 34px;
+        background: rgba(20,8,5,.55); backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(228,212,182,.08);
+        display: flex; align-items: center; padding: 0 22px; gap: 26px; font-size: 15px; font-weight: 500; }
+      .menubar .apple { width: 15px; height: 15px; border-radius: 50%; background: #e4d4b6; }
+      .menubar b { font-weight: 700; }
+      .menubar .right { margin-left: auto; color: #e4d4b6; opacity: .9; }
+
+      /* ---------- mac window ---------- */
+      .win { position: absolute; width: 780px; height: 640px; border-radius: 14px; overflow: hidden;
+        background: #180a07; border: 1px solid rgba(228,212,182,.14);
+        box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 0 .5px rgba(0,0,0,.8); }
+      .bar { height: 52px; display: flex; align-items: center; padding: 0 18px; gap: 9px;
+        background: #1e0d09; border-bottom: 1px solid rgba(228,212,182,.1); position: relative; }
+      .dot { width: 13px; height: 13px; border-radius: 50%; }
+      .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+      .url { position: absolute; left: 190px; right: 190px; top: 11px; height: 30px; border-radius: 8px;
+        background: #0f0604; display: flex; align-items: center; justify-content: center;
+        font-size: 14px; color: #b3a38c; gap: 8px; }
+      .lock { width: 9px; height: 11px; border-radius: 2px; background: #b3a38c; }
+      .wtitle { position: absolute; left: 0; right: 0; text-align: center; font-size: 14px; color: #a28f79; font-weight: 500; }
+
+      .app { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; padding: 26px 40px; }
+      .brand { display: flex; align-items: baseline; gap: 12px; }
+      .brand .wm { font-family: Georgia, serif; font-size: 34px; letter-spacing: -1px; color: #e4d4b6; }
+      .brand .tg { font-family: "JBMono", monospace; font-size: 13px; color: #a28f79; }
+      .tabs { display: flex; gap: 0; margin-top: 18px; border-bottom: 1px solid rgba(228,212,182,.15); }
+      .tab { padding: 10px 22px; font-size: 15px; color: #a28f79; font-weight: 500; border-bottom: 2px solid transparent; }
+      .tab.on { color: #e4d4b6; border-bottom-color: #e58a57; }
+      .kick { font-family: "JBMono", monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #a28f79; }
+
+      .drop { position: absolute; left: 40px; right: 40px; top: 150px; height: 300px; border-radius: 12px;
+        border: 1.5px dashed rgba(228,212,182,.25); background: #1b0d09;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+      .drop .plus { width: 54px; height: 54px; border-radius: 50%; border: 1.5px solid rgba(229,138,87,.6);
+        color: #e58a57; font-size: 30px; display: flex; align-items: center; justify-content: center; }
+      .drop strong { font-size: 22px; font-weight: 600; }
+      .drop p { font-size: 15px; color: #b3a38c; }
+      .drop-hl { position: absolute; inset: -1px; border-radius: 12px; border: 2px solid #e58a57;
+        background: rgba(229,138,87,.08); opacity: 0; }
+
+      .card { position: absolute; left: 40px; right: 40px; border-radius: 12px; background: #160907;
+        border: 1px solid rgba(228,212,182,.12); padding: 18px 22px; }
+      .fhead { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; }
+      .fhead strong { font-size: 19px; font-weight: 600; }
+      .fhead em { font-style: normal; font-family: "JBMono", monospace; font-size: 15px; color: #b3a38c; }
+      .sub { font-size: 13px; color: #a28f79; margin-top: 4px; }
+      .code { display: inline-block; font-family: "JBMono", monospace; font-size: 54px; color: #e58a57; letter-spacing: .12em; margin-top: 6px; }
+      .qr { position: absolute; right: 22px; top: 18px; width: 92px; height: 92px; border-radius: 8px; background: #070707;
+        background-image:
+          linear-gradient(90deg, #e4d4b6 0 18%, transparent 18% 36%, #e4d4b6 36% 46%, transparent 46% 64%, #e4d4b6 64% 70%, transparent 70%),
+          linear-gradient(#070707 0 20%, transparent 20% 40%, #070707 40% 55%, transparent 55% 78%, #070707 78%);
+        background-blend-mode: multiply; border: 8px solid #070707; }
+      .status { font-size: 14px; color: #b3a38c; margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+      .pulse { width: 8px; height: 8px; border-radius: 50%; background: #e58a57; }
+
+      .prog { position: absolute; left: 40px; right: 40px; }
+      .prow { display: flex; justify-content: space-between; font-family: "JBMono", monospace; font-size: 14px; color: #b3a38c; margin-bottom: 10px; }
+      .prow .pct { color: #e4d4b6; }
+      .track { height: 10px; border-radius: 6px; background: #0f0604; overflow: hidden; border: 1px solid rgba(228,212,182,.08); }
+      .fill { width: 100%; height: 100%; border-radius: 6px; transform-origin: 0 50%;
+        background: linear-gradient(90deg, #6b2f1c, #e58a57); box-shadow: 0 0 18px rgba(229,138,87,.6); }
+      .done { position: absolute; left: 40px; right: 40px; display: flex; align-items: center; gap: 14px;
+        font-size: 18px; font-weight: 600; }
+      .check { width: 34px; height: 34px; border-radius: 50%; background: #e58a57; color: #1b0d09;
+        display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+      .done span.m { font-family: "JBMono", monospace; font-size: 14px; color: #b3a38c; font-weight: 400; }
+
+      .input { position: absolute; left: 40px; top: 160px; width: 470px; height: 76px; border-radius: 10px;
+        background: #070707; border: 1.5px solid rgba(228,212,182,.15);
+        font-family: "JBMono", monospace; font-size: 40px; letter-spacing: .3em; color: #e58a57;
+        display: flex; align-items: center; padding-left: 24px; }
+      .input .ph { color: #7a6450; position: absolute; left: 24px; }
+      .caret { width: 3px; height: 40px; background: #e58a57; margin-left: 2px; }
+      .btn { position: absolute; left: 530px; top: 160px; width: 210px; height: 76px; border-radius: 10px;
+        background: #e58a57; color: #1b0d09; font-size: 20px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; }
+
+      /* ---------- terminal ---------- */
+      .term { background: rgba(14,6,4,.96); }
+      .tbody { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; padding: 28px 30px;
+        font-family: "JBMono", monospace; font-size: 20px; line-height: 1.7; color: #e4d4b6; }
+      .tbody .p { color: #e58a57; }
+      .tbody .dim { color: #a28f79; }
+      .tbody .acc { color: #e58a57; }
+      .tbody .ok { color: #28c840; }
+      .tline { white-space: pre; height: 34px; }
+
+      /* ---------- file icon + cursor ---------- */
+      .file { position: absolute; width: 130px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .doc { width: 84px; height: 104px; border-radius: 6px; position: relative;
+        background: linear-gradient(160deg, #f4e6cc, #d9c3a0); box-shadow: 0 10px 24px rgba(0,0,0,.5); }
+      .doc::after { content: ""; position: absolute; right: 0; top: 0; width: 24px; height: 24px;
+        background: linear-gradient(225deg, #0d0503 50%, #bfa77f 50%); border-bottom-left-radius: 4px; }
+      .doc .ext { position: absolute; left: 10px; bottom: 12px; font-size: 13px; font-weight: 700; color: #fff;
+        background: #e58a57; border-radius: 4px; padding: 2px 6px; }
+      .fname { font-size: 14px; font-weight: 500; padding: 2px 8px; border-radius: 5px; background: rgba(229,138,87,.0); text-align: center; }
+      #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; z-index: 50; }
+      #cursor svg { position: absolute; left: 0; top: 0; filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
+      #ghost { position: absolute; left: 0; top: 0; z-index: 49; opacity: 0; }
+      .ripple { position: absolute; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #e58a57; opacity: 0; z-index: 48; }
+
+      /* ---------- type scenes ---------- */
+      .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .hero-wm { font-family: Georgia, serif; font-size: 220px; letter-spacing: -8px; line-height: 1; }
+      .hero-tg { font-family: "JBMono", monospace; font-size: 26px; color: #a28f79; margin-top: 10px; }
+      .hero-line { font-size: 58px; font-weight: 600; letter-spacing: -1.5px; margin-top: 46px; }
+      .hero-line i { font-style: normal; color: #e58a57; }
+      .caption { position: absolute; left: 0; right: 0; top: 860px; text-align: center; font-size: 42px; font-weight: 600; letter-spacing: -1px; }
+      .caption i { font-style: normal; color: #e58a57; }
+      .chip { position: absolute; left: 0; right: 0; top: 98px; display: flex; justify-content: center; }
+      .chip span { font-family: "JBMono", monospace; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; color: #e58a57;
+        border: 1px solid rgba(229,138,87,.4); border-radius: 30px; padding: 8px 18px; background: rgba(13,5,3,.6); }
+      .feats { display: flex; gap: 36px; }
+      .feat { width: 470px; height: 300px; border-radius: 18px; background: rgba(24,10,7,.85);
+        border: 1px solid rgba(228,212,182,.14); padding: 40px; text-align: left; box-shadow: 0 30px 70px rgba(0,0,0,.45); }
+      .feat .ic { width: 64px; height: 64px; border-radius: 16px; background: rgba(229,138,87,.14); color: #e58a57;
+        display: flex; align-items: center; justify-content: center; font-size: 30px; font-family: "JBMono", monospace; }
+      .feat h3 { font-size: 34px; font-weight: 600; letter-spacing: -.8px; margin-top: 34px; }
+      .feat p { font-size: 20px; color: #b3a38c; margin-top: 12px; line-height: 1.45; }
+      .install { margin-top: 44px; font-family: "JBMono", monospace; font-size: 26px; color: #e4d4b6;
+        background: #070707; border: 1px solid rgba(228,212,182,.15); border-radius: 12px; padding: 20px 34px; }
+      .install b { color: #e58a57; font-weight: 400; }
+      .site { font-size: 64px; font-weight: 600; letter-spacing: -2px; margin-top: 30px; }
+      .site i { font-style: normal; color: #e58a57; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="45" data-width="1920" data-height="1080">
+      <!-- persistent desktop -->
+      <div id="desk" class="clip" data-start="0" data-duration="45" data-track-index="0" style="position:absolute;inset:0">
+        <div id="wall" class="wallpaper"></div>
+        <div id="menubar" class="menubar">
+          <div class="apple"></div><b>cd</b><span>File</span><span>Edit</span><span>View</span><span>Window</span>
+          <span class="right">Sat 3 Oct&nbsp;&nbsp;9:41 AM</span>
+        </div>
+      </div>
+
+      <!-- ============ S1: title 0-5 ============ -->
+      <div id="s1" class="clip" data-start="0" data-duration="5" data-track-index="1" style="position:absolute;inset:0">
+        <div class="center">
+          <div id="s1wm" class="hero-wm">cd</div>
+          <div id="s1tg" class="hero-tg">/di·rect/ — no cloud detour</div>
+          <div id="s1line" class="hero-line">Send any file. <i>Straight across.</i></div>
+        </div>
+      </div>
+
+      <!-- ============ S2: browser -> browser 5-20.5 ============ -->
+      <div id="s2" class="clip" data-start="5" data-duration="15.5" data-track-index="2" style="position:absolute;inset:0">
+        <div id="s2chip" class="chip"><span>browser → browser</span></div>
+
+        <div id="wL" class="win" style="left:130px;top:170px">
+          <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+          <div class="app">
+            <div class="brand"><span class="wm">cd</span><span class="tg">/di·rect/</span></div>
+            <div class="tabs"><div class="tab on">Send</div><div class="tab">Receive</div></div>
+          </div>
+          <div id="Ldrop" class="drop" style="top:200px">
+            <div class="drop-hl" id="Ldrophl"></div>
+            <div class="plus">+</div><strong>Send files</strong><p>Drop files here or choose them below.</p>
+          </div>
+          <div id="Lcard" class="card" style="top:200px;opacity:0">
+            <div class="kick">payload</div>
+            <div class="fhead"><strong>diwali-photos.zip</strong><em>84.2 MB</em></div>
+            <div class="sub">3 files · encrypted in your browser</div>
+          </div>
+          <div id="Lshare" class="card" style="top:330px;height:150px;opacity:0">
+            <div class="kick">share this code</div>
+            <div class="code">48291</div>
+            <div class="qr"></div>
+          </div>
+          <div id="Lstatus" class="status" style="position:absolute;left:44px;top:500px;opacity:0"><div class="pulse" id="Lpulse"></div>Waiting for receiver…</div>
+          <div id="Lprog" class="prog" style="top:540px;opacity:0">
+            <div class="prow"><span>sending · <span id="Lspd">0</span> MB/s</span><span class="pct" id="Lpct">0%</span></div>
+            <div class="track"><div class="fill" id="Lfill"></div></div>
+          </div>
+          <div id="Ldone" class="done" style="top:530px;opacity:0"><div class="check">✓</div>Delivered<span class="m">receiver verified every byte</span></div>
+        </div>
+
+        <div id="wR" class="win" style="left:1010px;top:170px">
+          <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+          <div class="app">
+            <div class="brand"><span class="wm">cd</span><span class="tg">/di·rect/</span></div>
+            <div class="tabs"><div class="tab">Send</div><div class="tab on">Receive</div></div>
+          </div>
+          <div class="kick" style="position:absolute;left:42px;top:200px">enter code</div>
+          <div class="input" style="top:228px"><span class="ph" id="Rph">•••••</span><span id="Rcode"></span><div class="caret" id="Rcaret"></div></div>
+          <div class="btn" id="Rbtn" style="top:228px">Receive</div>
+          <div id="Rcard" class="card" style="top:340px;opacity:0">
+            <div class="kick">incoming</div>
+            <div class="fhead"><strong>diwali-photos.zip</strong><em>84.2 MB</em></div>
+            <div class="sub">end-to-end encrypted · direct</div>
+          </div>
+          <div id="Rprog" class="prog" style="top:480px;opacity:0">
+            <div class="prow"><span><span id="Rmb">0.0</span> / 84.2 MB</span><span class="pct" id="Rpct">0%</span></div>
+            <div class="track"><div class="fill" id="Rfill"></div></div>
+          </div>
+          <div id="Rdone" class="done" style="top:540px;opacity:0"><div class="check">✓</div>Saved to Downloads<span class="m">in 2.8s</span></div>
+        </div>
+
+        <div id="file1" class="file" style="left:895px;top:850px">
+          <div class="doc"><span class="ext">ZIP</span></div>
+          <div class="fname">diwali-photos.zip</div>
+        </div>
+        <div id="s2cap" class="caption">Drop it. Share five digits. <i>Done.</i></div>
+      </div>
+
+      <!-- ============ S3: terminal -> browser 20.5-36 ============ -->
+      <div id="s3" class="clip" data-start="20.5" data-duration="15.5" data-track-index="3" style="position:absolute;inset:0">
+        <div id="s3chip" class="chip"><span>terminal → browser</span></div>
+        <div id="wT" class="win term" style="left:130px;top:170px">
+          <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <div class="wtitle">yash — zsh — 80×24</div></div>
+          <div class="tbody">
+            <div class="tline"><span class="p">~/videos ❯ </span><span id="Tcmd"></span><span id="Tcaret" style="background:#e4d4b6">&nbsp;</span></div>
+            <div class="tline dim" id="T1" style="opacity:0">demo-reel.mov · 248.6 MB · encrypting locally</div>
+            <div class="tline" id="T2" style="opacity:0">code  <span class="acc" style="font-size:30px;letter-spacing:.1em">73015</span></div>
+            <div class="tline dim" id="T3" style="opacity:0">waiting for receiver…</div>
+            <div class="tline" id="T4" style="opacity:0"><span id="Tbar" class="acc"></span> <span id="Tpct">0</span>%</div>
+            <div class="tline dim" id="T5" style="opacity:0"><span id="Tmb">0.0</span> MB · <span id="Tspd">0</span> MB/s</div>
+            <div class="tline ok" id="T6" style="opacity:0">✓ receiver verified every byte</div>
+            <div class="tline" id="T7" style="opacity:0"><span class="p">~/videos ❯ </span></div>
+          </div>
+        </div>
+
+        <div id="wR2" class="win" style="left:1010px;top:170px">
+          <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <div class="url"><div class="lock"></div>cd.yash0.in</div></div>
+          <div class="app">
+            <div class="brand"><span class="wm">cd</span><span class="tg">/di·rect/</span></div>
+            <div class="tabs"><div class="tab">Send</div><div class="tab on">Receive</div></div>
+          </div>
+          <div class="kick" style="position:absolute;left:42px;top:200px">enter code</div>
+          <div class="input" style="top:228px"><span class="ph" id="R2ph">•••••</span><span id="R2code"></span><div class="caret" id="R2caret"></div></div>
+          <div class="btn" id="R2btn" style="top:228px">Receive</div>
+          <div id="R2card" class="card" style="top:340px;opacity:0">
+            <div class="kick">incoming · from terminal</div>
+            <div class="fhead"><strong>demo-reel.mov</strong><em>248.6 MB</em></div>
+            <div class="sub">end-to-end encrypted · direct</div>
+          </div>
+          <div id="R2prog" class="prog" style="top:480px;opacity:0">
+            <div class="prow"><span><span id="R2mb">0.0</span> / 248.6 MB</span><span class="pct" id="R2pct">0%</span></div>
+            <div class="track"><div class="fill" id="R2fill"></div></div>
+          </div>
+          <div id="R2done" class="done" style="top:540px;opacity:0"><div class="check">✓</div>Saved to Downloads<span class="m">in 3.4s</span></div>
+        </div>
+        <div id="s3cap" class="caption">One command. <i>Any browser on the other end.</i></div>
+      </div>
+
+      <!-- ============ S4: features 36-41 ============ -->
+      <div id="s4" class="clip" data-start="36" data-duration="5" data-track-index="4" style="position:absolute;inset:0">
+        <div class="center">
+          <div class="feats">
+            <div class="feat" id="f1"><div class="ic">⌁</div><h3>End-to-end encrypted</h3><p>The key lives in the link. The relay never sees your bytes.</p></div>
+            <div class="feat" id="f2"><div class="ic">∅</div><h3>Never stored</h3><p>A pipe, not a bucket. No accounts, no uploads, no cloud.</p></div>
+            <div class="feat" id="f3"><div class="ic">❯_</div><h3>Browser or terminal</h3><p>Send from either side. Receive on anything with a screen.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ S5: outro 41-45 ============ -->
+      <div id="s5" class="clip" data-start="41" data-duration="4" data-track-index="5" style="position:absolute;inset:0">
+        <div class="center">
+          <div id="s5wm" class="hero-wm" style="font-size:170px">cd</div>
+          <div id="s5site" class="site">cd.yash0.in</div>
+          <div id="s5inst" class="install"><b>$</b> curl -fsSL cd.yash0.in/install.sh | sh</div>
+        </div>
+      </div>
+
+      <!-- cursor + drag ghost (global) -->
+      <div id="ghost" class="clip" data-start="5" data-duration="5" data-track-index="7">
+        <div class="file" style="position:relative;opacity:.85"><div class="doc"><span class="ext">ZIP</span></div></div>
+      </div>
+      <div id="rip" class="ripple"></div>
+      <div id="cursorClip" class="clip" data-start="5" data-duration="31" data-track-index="8" style="position:absolute;inset:0;pointer-events:none">
+        <div id="cursor">
+          <svg id="arrow" width="34" height="34" viewBox="0 0 34 34"><path d="M5 3 L5 27 L11 21.5 L15 31 L19.5 29 L15.6 19.8 L23.5 19.8 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
+          <svg id="grab" width="34" height="34" viewBox="0 0 34 34" style="opacity:0"><path d="M9 14 C9 11 13 11 13 14 L13 11 C13 8 17 8 17 11 L17 10.5 C17 7.5 21 7.5 21 10.5 L21 12 C21 9.5 25 9.5 25 12.5 L25 21 C25 27 21 30 16 30 C12 30 10 28 8 24 L5.5 19 C4.5 17 7 15.5 8.5 17 L9 18 Z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <!-- audio -->
+      <audio id="bgm" class="clip" data-start="0" data-duration="45" data-track-index="10" data-volume="0.55" src=".media/audio/bgm/pad.mp3"></audio>
+      <audio id="sx-whoosh1" class="clip" data-start="5.0" data-duration="0.4" data-track-index="11" data-volume="0.5" src=".media/audio/sfx/sfx_002.mp3"></audio>
+      <audio id="sx-grab" class="clip" data-start="7.2" data-duration="0.4" data-track-index="12" data-volume="0.8" src=".media/audio/sfx/sfx_001.mp3"></audio>
+      <audio id="sx-drop" class="clip" data-start="8.9" data-duration="0.4" data-track-index="11" data-volume="0.8" src=".media/audio/sfx/sfx_001.mp3"></audio>
+      <audio id="sx-type1" class="clip" data-start="11.6" data-duration="1.4" data-track-index="13" data-volume="0.6" src=".media/audio/sfx/sfx_004.mp3"></audio>
+      <audio id="sx-click1" class="clip" data-start="13.5" data-duration="0.4" data-track-index="12" data-volume="0.8" src=".media/audio/sfx/sfx_001.mp3"></audio>
+      <audio id="sx-done1" class="clip" data-start="17.2" data-duration="2.5" data-track-index="14" data-volume="0.6" src=".media/audio/sfx/sfx_003.mp3"></audio>
+      <audio id="sx-whoosh2" class="clip" data-start="20.5" data-duration="0.4" data-track-index="11" data-volume="0.5" src=".media/audio/sfx/sfx_002.mp3"></audio>
+      <audio id="sx-type2" class="clip" data-start="21.2" data-duration="1.5" data-track-index="13" data-volume="0.6" src=".media/audio/sfx/sfx_004.mp3"></audio>
+      <audio id="sx-type3" class="clip" data-start="25.6" data-duration="1.2" data-track-index="13" data-volume="0.6" src=".media/audio/sfx/sfx_004.mp3"></audio>
+      <audio id="sx-click2" class="clip" data-start="27.3" data-duration="0.4" data-track-index="12" data-volume="0.8" src=".media/audio/sfx/sfx_001.mp3"></audio>
+      <audio id="sx-done2" class="clip" data-start="31.6" data-duration="2.5" data-track-index="14" data-volume="0.6" src=".media/audio/sfx/sfx_003.mp3"></audio>
+      <audio id="sx-whoosh3" class="clip" data-start="36.0" data-duration="0.4" data-track-index="11" data-volume="0.5" src=".media/audio/sfx/sfx_002.mp3"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const E = "power3.out", IO = "power2.inOut";
+
+      // helpers — all driven from tween progress, so seek-safe
+      function typeText(sel, str, at, dur) {
+        const el = document.querySelector(sel);
+        tl.fromTo({ n: 0 }, { n: 0 }, { n: str.length, duration: dur, ease: "none",
+          onUpdate() { el.textContent = str.slice(0, Math.round(this.targets()[0].n)); } }, at);
+      }
+      function count(sel, to, at, dur, dec, ease) {
+        const el = document.querySelector(sel);
+        tl.fromTo({ v: 0 }, { v: 0 }, { v: to, duration: dur, ease: ease || "power1.inOut",
+          onUpdate() { el.textContent = this.targets()[0].v.toFixed(dec); } }, at);
+      }
+      function asciiBar(sel, at, dur) {
+        const el = document.querySelector(sel);
+        tl.fromTo({ v: 0 }, { v: 0 }, { v: 1, duration: dur, ease: "power1.inOut",
+          onUpdate() { const k = Math.round(this.targets()[0].v * 28); el.textContent = "█".repeat(k) + "░".repeat(28 - k); } }, at);
+      }
+      const cur = "#cursor";
+      function move(x, y, at, dur) { tl.to(cur, { x, y, duration: dur, ease: IO }, at); }
+      function click(x, y, at) {
+        tl.fromTo(cur, { scale: 1 }, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1, transformOrigin: "5px 3px" }, at);
+        tl.fromTo("#rip", { x: x - 22, y: y - 22, scale: 0.3, opacity: 0.9 }, { scale: 1.6, opacity: 0, duration: 0.5, ease: "power2.out" }, at);
+      }
+
+      // initial states
+      tl.set("#rip", { opacity: 0 }, 0);
+      tl.set("#Lfill, #Rfill, #R2fill", { scaleX: 0 }, 0);
+      document.querySelector("#Tbar").textContent = "░".repeat(28);
+
+      // ---------- S1 title ----------
+      tl.fromTo("#s1wm", { opacity: 0, y: 40, filter: "blur(12px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 1.1, ease: E }, 0.2);
+      tl.fromTo("#s1tg", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 0.7);
+      tl.fromTo("#s1line", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 1.3);
+      tl.to("#s1 .center", { opacity: 0, scale: 0.96, filter: "blur(8px)", duration: 0.6, ease: "power2.in" }, 4.35);
+
+      // ---------- S2 browser -> browser (absolute times) ----------
+      tl.fromTo("#wL", { opacity: 0, y: 60, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 5.0);
+      tl.fromTo("#wR", { opacity: 0, y: 60, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 5.15);
+      tl.fromTo("#s2chip", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 5.3);
+      tl.fromTo("#file1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 5.6);
+      tl.fromTo("#s2cap", { opacity: 0 }, { opacity: 0 }, 5);
+
+      // cursor enters, grabs file
+      tl.fromTo(cur, { x: 1500, y: 1000, opacity: 0 }, { opacity: 1, duration: 0.3 }, 5.8);
+      move(950, 900, 5.9, 1.2);
+      tl.to("#file1 .fname", { backgroundColor: "rgba(229,138,87,.85)", color: "#1b0d09", duration: 0.15 }, 7.1);
+      tl.to("#file1 .doc", { boxShadow: "0 0 0 4px rgba(229,138,87,.5), 0 10px 24px rgba(0,0,0,.5)", duration: 0.15 }, 7.1);
+      tl.set("#arrow", { opacity: 0 }, 7.2); tl.set("#grab", { opacity: 1 }, 7.2);
+      // ghost follows the cursor (offset so the doc sits under the hand)
+      tl.fromTo("#ghost", { x: 918, y: 856, opacity: 0, scale: 1 }, { opacity: 1, scale: 1.08, duration: 0.2 }, 7.25);
+      tl.to("#file1", { opacity: 0.35, duration: 0.2 }, 7.25);
+      move(520, 470, 7.35, 1.4);
+      tl.to("#ghost", { x: 488, y: 426, duration: 1.4, ease: IO }, 7.35);
+      tl.to("#ghost", { rotation: -6, duration: 0.7, ease: "sine.out", yoyo: true, repeat: 1 }, 7.35);
+      tl.to("#Ldrophl", { opacity: 1, duration: 0.25 }, 8.3);
+      tl.to("#Ldrop", { scale: 1.02, duration: 0.25, ease: E }, 8.3);
+      // drop
+      tl.to("#ghost", { scale: 0.4, opacity: 0, duration: 0.3, ease: "power2.in" }, 8.9);
+      tl.set("#grab", { opacity: 0 }, 8.9); tl.set("#arrow", { opacity: 1 }, 8.9);
+      tl.to("#file1", { opacity: 0, duration: 0.3 }, 8.9);
+      tl.to("#Ldrop", { opacity: 0, scale: 0.97, duration: 0.3 }, 9.0);
+      tl.fromTo("#Lcard", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 9.2);
+      tl.fromTo("#Lshare", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 9.4);
+      tl.fromTo("#Lshare .code", { scale: 1.25, opacity: 0, transformOrigin: "0% 50%" }, { scale: 1, opacity: 1, duration: 0.7, ease: E }, 9.5);
+      tl.fromTo("#Lstatus", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 9.8);
+      tl.fromTo("#Lpulse", { opacity: 1 }, { opacity: 0.25, duration: 0.5, yoyo: true, repeat: 5, ease: "sine.inOut" }, 9.9);
+      tl.to("#s2cap", { opacity: 1, duration: 0.6 }, 9.6);
+
+      // receiver types the code
+      move(1300, 418, 10.4, 1.0);
+      click(1300, 418, 11.4);
+      tl.to("#wR .input", { borderColor: "#e58a57", duration: 0.2 }, 11.45);
+      tl.set("#Rph", { opacity: 0 }, 11.6);
+      typeText("#Rcode", "48291", 11.6, 1.2);
+      tl.fromTo("#Rcaret", { opacity: 1 }, { opacity: 0, duration: 0.3, yoyo: true, repeat: 3, ease: "steps(1)" }, 12.8);
+      move(1655, 418, 12.9, 0.6);
+      click(1655, 418, 13.5);
+      tl.to("#Rbtn", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 13.5);
+      tl.set("#Rcaret", { opacity: 0 }, 13.55);
+      move(1700, 760, 13.8, 0.8);
+
+      // transfer
+      tl.fromTo("#Rcard", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, 13.7);
+      tl.to("#Lstatus", { opacity: 0, duration: 0.25 }, 13.8);
+      tl.fromTo("#Lprog", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 13.9);
+      tl.fromTo("#Rprog", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 13.9);
+      tl.to("#Lfill, #Rfill", { scaleX: 1, duration: 2.8, ease: "power1.inOut" }, 14.2);
+      count("#Lpct", 100, 14.2, 2.8, 0); count("#Rpct", 100, 14.2, 2.8, 0);
+      count("#Rmb", 84.2, 14.2, 2.8, 1);
+      count("#Lspd", 31.4, 14.2, 0.8, 1, "power2.out");
+      tl.to("#Lprog", { opacity: 0, duration: 0.3 }, 17.2);
+      tl.to("#Rprog .prow", { opacity: 0, duration: 0.3 }, 17.2);
+      tl.fromTo("#Ldone", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 17.3);
+      tl.fromTo("#Rdone", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 17.4);
+      tl.to("#s2cap", { opacity: 0, duration: 0.4 }, 19.4);
+      tl.to("#wL, #wR, #s2chip", { opacity: 0, y: -30, scale: 0.97, filter: "blur(6px)", duration: 0.6, ease: "power2.in", stagger: 0.05 }, 19.8);
+      tl.to(cur, { opacity: 0, duration: 0.3 }, 19.8);
+
+      // ---------- S3 terminal -> browser ----------
+      tl.fromTo("#wT", { opacity: 0, y: 60, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 20.5);
+      tl.fromTo("#wR2", { opacity: 0, y: 60, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 20.65);
+      tl.fromTo("#s3chip", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 20.8);
+      tl.fromTo("#s3cap", { opacity: 0 }, { opacity: 0 }, 20.5);
+      typeText("#Tcmd", "cdx send ./demo-reel.mov", 21.2, 1.5);
+      tl.set("#Tcaret", { opacity: 0 }, 22.9);
+      tl.fromTo("#T1", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 23.0);
+      tl.fromTo("#T2", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.4, ease: E }, 23.4);
+      tl.fromTo("#T3", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 23.7);
+      tl.fromTo("#T3", { opacity: 1 }, { opacity: 0.45, duration: 0.5, yoyo: true, repeat: 3, ease: "sine.inOut", immediateRender: false }, 24.0);
+      tl.to("#s3cap", { opacity: 1, duration: 0.6 }, 23.8);
+
+      tl.to(cur, { opacity: 1, duration: 0.3 }, 24.2);
+      tl.set(cur, { x: 1650, y: 900 }, 24.0);
+      move(1300, 418, 24.3, 1.0);
+      click(1300, 418, 25.35);
+      tl.to("#wR2 .input", { borderColor: "#e58a57", duration: 0.2 }, 25.4);
+      tl.set("#R2ph", { opacity: 0 }, 25.6);
+      typeText("#R2code", "73015", 25.6, 1.1);
+      tl.fromTo("#R2caret", { opacity: 1 }, { opacity: 0, duration: 0.3, yoyo: true, repeat: 1, ease: "steps(1)" }, 26.7);
+      move(1655, 418, 26.7, 0.55);
+      click(1655, 418, 27.3);
+      tl.to("#R2btn", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 27.3);
+      tl.set("#R2caret", { opacity: 0 }, 27.35);
+      move(1720, 780, 27.6, 0.8);
+
+      tl.fromTo("#R2card", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, 27.5);
+      tl.to("#T3", { opacity: 0.0, duration: 0.2 }, 27.6);
+      tl.fromTo("#T4", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 27.7);
+      tl.fromTo("#T5", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 27.8);
+      tl.fromTo("#R2prog", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 27.7);
+      asciiBar("#Tbar", 28.0, 3.4);
+      tl.to("#R2fill", { scaleX: 1, duration: 3.4, ease: "power1.inOut" }, 28.0);
+      count("#Tpct", 100, 28.0, 3.4, 0); count("#R2pct", 100, 28.0, 3.4, 0);
+      count("#Tmb", 248.6, 28.0, 3.4, 1); count("#R2mb", 248.6, 28.0, 3.4, 1);
+      count("#Tspd", 74.2, 28.0, 0.9, 1, "power2.out");
+      tl.to("#R2prog .prow", { opacity: 0, duration: 0.3 }, 31.5);
+      tl.fromTo("#R2done", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 31.6);
+      tl.fromTo("#T6", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.4, ease: E }, 31.6);
+      tl.fromTo("#T7", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 32.0);
+      tl.to("#s3cap", { opacity: 0, duration: 0.4 }, 34.9);
+      tl.to("#wT, #wR2, #s3chip", { opacity: 0, y: -30, scale: 0.97, filter: "blur(6px)", duration: 0.6, ease: "power2.in", stagger: 0.05 }, 35.3);
+      tl.to(cur, { opacity: 0, duration: 0.3 }, 35.3);
+
+      // ---------- S4 features ----------
+      tl.fromTo("#f1, #f2, #f3", { opacity: 0, y: 50, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: E, stagger: 0.15 }, 36.1);
+      tl.to("#f1, #f2, #f3", { opacity: 0, y: -24, filter: "blur(6px)", duration: 0.5, ease: "power2.in", stagger: 0.05 }, 40.4);
+
+      // ---------- S5 outro ----------
+      tl.fromTo("#s5wm", { opacity: 0, y: 30, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.9, ease: E }, 41.1);
+      tl.fromTo("#s5site", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 41.5);
+      tl.fromTo("#s5inst", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 41.8);
+
+      // slow wallpaper drift for depth
+      tl.fromTo("#wall", { scale: 1.06 }, { scale: 1, duration: 45, ease: "none" }, 0);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
