@@ -93,16 +93,16 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);
   await page.goto(link);
-  await page.locator('#offer:not([hidden])').waitFor();
+  await page.locator('[data-relay="offer"]:not([hidden])').waitFor();
   await assertVisibleBrand(page);
-  assert.equal(await page.locator('#file-name').textContent(), 'résumé final.bin');
+  assert.equal(await page.locator('[data-relay="file-name"]').textContent(), 'résumé final.bin');
   await expectClose(relayUrl, {
     type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: encodeBase64Url(token)
   }, 4409);
-  await page.locator('#accept').click();
-  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  await page.locator('[data-relay="accept"]').click();
+  await page.locator('[data-relay="status"]').filter({ hasText: 'File verified and ready to download.' }).waitFor();
   const downloadEvent = page.waitForEvent('download');
-  await page.locator('#download').click();
+  await page.locator('[data-relay="download"]').click();
   const download = await downloadEvent;
   const receivedPath = join(work, await download.suggestedFilename());
   await download.saveAs(receivedPath);
@@ -125,8 +125,8 @@ try {
   await rm(work, { recursive: true, force: true });
 }
 
-// A folder plus a file go out detached as one streamed zip; the browser
-// share page receives it like any other file.
+// A folder plus a file go out detached as one streamed zip; pasting the link
+// into the home page's Receive box receives it in place, without leaving.
 async function verifyFolderBundle(context) {
   const folder = join(work, 'bundle folder');
   await mkdir(join(folder, 'nested'), { recursive: true });
@@ -139,18 +139,21 @@ async function verifyFolderBundle(context) {
   const bundleLink = await firstLine(bundleSender.stdout);
   assert.equal(await new Promise((resolve) => bundleSender.once('exit', resolve)), 0, 'detached bundle send did not exit 0');
   const page = await context.newPage();
-  await page.goto(bundleLink);
-  await page.locator('#offer:not([hidden])').waitFor();
-  assert.equal(await page.locator('#file-name').textContent(), 'bundle folder-and-1-more.zip');
-  await page.locator('#accept').click();
-  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  await page.goto(publicBase);
+  await page.locator('#receive-mode-btn').click();
+  await page.locator('#code-input').fill(bundleLink);
+  await page.locator('#receiver-relay [data-relay="offer"]:not([hidden])').waitFor();
+  assert.equal(await page.locator('[data-relay="file-name"]').textContent(), 'bundle folder-and-1-more.zip');
+  await page.locator('[data-relay="accept"]').click();
+  await page.locator('[data-relay="status"]').filter({ hasText: 'File verified and ready to download.' }).waitFor();
   const downloadEvent = page.waitForEvent('download');
-  await page.locator('#download').click();
+  await page.locator('[data-relay="download"]').click();
   const bundlePath = join(work, 'received-bundle.zip');
   await (await downloadEvent).saveAs(bundlePath);
   const bundle = await readFile(bundlePath);
   assert.deepEqual([...bundle.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04], 'bundle is not a zip');
   assert.ok(bundle.includes(Buffer.from('bundle folder/nested/a.bin')), 'bundle is missing the nested file');
+  assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
   await page.close();
   console.log(`verified a ${bundle.byteLength}-byte folder bundle into the browser`);
 }

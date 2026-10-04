@@ -5,8 +5,8 @@ const agentSend = /^\/send\/?$/.test(window.location.pathname);
 
 // Single app: `/s/*` renders the relay receiver, `/send` the relay sender,
 // everything else the browser-to-browser P2P UI (which also resolves numeric
-// relay codes by redirecting to the share page).
-const app = agentShare ? import('./share.js') : agentSend ? import('./agent-send.js') : import('./main.js');
+// relay codes and links inline in its Receive tab).
+const app = agentShare ? import('./share-page.js') : agentSend ? import('./agent-send.js') : import('./main.js');
 
 // Lead with the installer for the visitor's OS; the other one stays as the alternative.
 if (/Win/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)) {

@@ -121,6 +121,8 @@ function agentShareUrlFromInput(value) {
     if (bare) return `${window.location.origin}/s/${bare[1]}#v1.${bare[2]}`;
     try {
       const url = new URL(candidate, window.location.href);
+      // Only web links: `javascript:/s/...` would otherwise pass the path check.
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
       const path = AGENT_LINK_PATH.exec(url.pathname);
       const key = AGENT_LINK_KEY.exec(url.hash.slice(1));
       if (path && key) return url.toString();
@@ -175,7 +177,10 @@ const els = {
   receiverCompleteDetail: document.getElementById('receiver-complete-detail'),
   receiverError: document.getElementById('receiver-error'),
   retryBtn: document.getElementById('retry-btn'),
-  receiveAnotherBtn: document.getElementById('receive-another-btn')
+  receiveAnotherBtn: document.getElementById('receive-another-btn'),
+  receiverRelay: document.getElementById('receiver-relay'),
+  receiverRelayPanel: document.getElementById('receiver-relay-panel'),
+  relayDoneBtn: document.getElementById('relay-done-btn')
 };
 
 const STATE_LABELS = {
@@ -487,7 +492,7 @@ const Receiver = (() => {
   function connect(rawCode) {
     const agentUrl = agentShareUrlFromInput(rawCode);
     if (agentUrl) {
-      window.location.href = agentUrl;
+      openRelay(agentUrl);
       return;
     }
     const short = isShortCode(rawCode);
@@ -524,7 +529,7 @@ const Receiver = (() => {
   }
 
   // Short numeric codes resolve through the relay directory to a transfer,
-  // then hand off to the private share page. Works for codes from `cdx send`
+  // then open the relay receiver inline. Works for codes from `cdx send`
   // and the browser terminal-send page alike.
   async function connectShortCode(connectionGeneration, code) {
     let response;
@@ -551,7 +556,48 @@ const Receiver = (() => {
       showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
       return;
     }
-    window.location.href = shareUrlFromCapability(capability.origin ?? window.location.origin, capability.transferId, capability.key);
+    openRelay(shareUrlFromCapability(capability.origin ?? window.location.origin, capability.transferId, capability.key));
+  }
+
+  // Relay transfers (links and numeric codes) run inline in this tab. The
+  // relay socket is same-origin, so links to another host still navigate.
+  let stopRelay = null;
+  let relayGeneration = 0;
+
+  async function openRelay(url) {
+    const target = new URL(url, window.location.href);
+    if (target.origin !== window.location.origin) {
+      if (target.protocol === 'https:' || target.protocol === 'http:') window.location.href = target.href;
+      else showError('That isn’t a CD link.');
+      return;
+    }
+    void stopScanner();
+    clearTimeout(timeoutId);
+    const generation = ++relayGeneration;
+    els.codeInput.value = '';
+    els.codeInput.removeAttribute('aria-invalid');
+    els.receiverInputSection.classList.add('hidden');
+    els.receiverConnecting.classList.remove('hidden');
+    let mountRelayReceiver;
+    try {
+      ({ mountRelayReceiver } = await import('./share.js'));
+    } catch {
+      if (generation === relayGeneration) showError('Could not load the receiver. Check your connection and try again.');
+      return;
+    }
+    if (generation !== relayGeneration) return;
+    els.receiverConnecting.classList.add('hidden');
+    els.receiverRelay.classList.remove('hidden');
+    setState('idle');
+    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url);
+  }
+
+  function closeRelay() {
+    relayGeneration++;
+    stopRelay?.();
+    stopRelay = null;
+    els.receiverRelay.classList.add('hidden');
+    els.receiverRelayPanel.replaceChildren();
   }
 
   async function establishPeer(connectionGeneration, code, signalingRetries = 0) {
@@ -1056,6 +1102,7 @@ const Receiver = (() => {
     stopStallWatch();
     els.receiverConnecting.classList.add('hidden');
     els.receiverInputSection.classList.add('hidden');
+    els.receiverRelay.classList.add('hidden');
     els.receiverFileInfo.classList.add('hidden');
     els.receiverProgress.classList.add('hidden');
     els.receiverComplete.classList.add('hidden');
@@ -1126,6 +1173,7 @@ const Receiver = (() => {
   }
 
   function reset() {
+    closeRelay();
     resetConnectionOnly();
     els.receiverInputSection.classList.remove('hidden');
     els.receiverConnecting.classList.add('hidden');
@@ -1152,6 +1200,7 @@ const Receiver = (() => {
 
   return {
     connect,
+    openRelay,
     reset,
     cancel
   };
@@ -1285,11 +1334,11 @@ els.codeInput.addEventListener('keydown', (event) => {
 });
 els.codeInput.addEventListener('input', (event) => {
   const raw = event.target.value;
-  // Agent links (from `cdx send`) navigate to their share page instead of
+  // Agent links (from `cdx send`) open the relay receiver instead of
   // being cleaned into a P2P code. Check before mangling the pasted text.
   const agentUrl = agentShareUrlFromInput(raw);
   if (agentUrl) {
-    window.location.href = agentUrl;
+    Receiver.openRelay(agentUrl);
     return;
   }
   // Pasting a full link via autofill/drag doesn't fire a paste event, so
@@ -1304,7 +1353,7 @@ els.codeInput.addEventListener('paste', (event) => {
   const text = (event.clipboardData || window.clipboardData).getData('text');
   const agentUrl = agentShareUrlFromInput(text);
   if (agentUrl) {
-    window.location.href = agentUrl;
+    Receiver.openRelay(agentUrl);
     return;
   }
   els.codeInput.value = codeFromUrl(text);
@@ -1320,6 +1369,7 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !els.qrReader.classList.contains('hidden')) stopScanner();
 });
 els.receiveAnotherBtn.addEventListener('click', () => Receiver.reset());
+els.relayDoneBtn.addEventListener('click', () => Receiver.reset());
 els.retryBtn.addEventListener('click', () => Receiver.reset());
 els.receiverCancelBtn.addEventListener('click', () => Receiver.cancel());
 els.receiverConnectingCancelBtn.addEventListener('click', () => Receiver.reset());
