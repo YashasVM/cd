@@ -121,6 +121,8 @@ function agentShareUrlFromInput(value) {
     if (bare) return `${window.location.origin}/s/${bare[1]}#v1.${bare[2]}`;
     try {
       const url = new URL(candidate, window.location.href);
+      // Only web links: `javascript:/s/...` would otherwise pass the path check.
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
       const path = AGENT_LINK_PATH.exec(url.pathname);
       const key = AGENT_LINK_KEY.exec(url.hash.slice(1));
       if (path && key) return url.toString();
@@ -563,8 +565,10 @@ const Receiver = (() => {
   let relayGeneration = 0;
 
   async function openRelay(url) {
-    if (new URL(url, window.location.href).origin !== window.location.origin) {
-      window.location.href = url;
+    const target = new URL(url, window.location.href);
+    if (target.origin !== window.location.origin) {
+      if (target.protocol === 'https:' || target.protocol === 'http:') window.location.href = target.href;
+      else showError('That isn’t a CD link.');
       return;
     }
     void stopScanner();
