@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 )
@@ -30,6 +31,7 @@ type progressBar struct {
 	sampled   uint64
 	rate      float64 // bytes per second
 	drawn     bool
+	colored   bool
 	// jsonLines writes one {"progress":…} object per line instead of a bar,
 	// for agents that read stderr from a pipe.
 	jsonLines bool
@@ -50,7 +52,9 @@ type progressLine struct {
 
 func newProgressBar(out io.Writer, label string, total uint64) *progressBar {
 	now := time.Now()
-	return &progressBar{out: out, label: label, total: total, started: now, sampledAt: now}
+	file, ok := out.(*os.File)
+	colored := ok && isTerminal(file) && colorEnabled
+	return &progressBar{out: out, label: label, total: total, started: now, sampledAt: now, colored: colored}
 }
 
 // update redraws the line at most every progressInterval, and always for
@@ -100,8 +104,19 @@ func (p *progressBar) line(done uint64, now time.Time) string {
 	}
 	fraction := float64(done) / float64(p.total)
 	filled := int(fraction * progressBarWidth)
-	bar := strings.Repeat("█", filled) + strings.Repeat("░", progressBarWidth-filled)
-	line := fmt.Sprintf("%s [%s] %3d%%  %s / %s", p.label, bar, int(fraction*100), formatShortBytes(done), formatShortBytes(p.total))
+	complete := strings.Repeat("█", filled)
+	remaining := strings.Repeat("░", progressBarWidth-filled)
+	percent := fmt.Sprintf("%3d%%", int(fraction*100))
+	label := p.label
+	counts := fmt.Sprintf("%s / %s", formatShortBytes(done), formatShortBytes(p.total))
+	if p.colored {
+		complete = accent(complete)
+		remaining = sgr("38;2;107;47;28", remaining)
+		percent = accent(percent)
+		label = sgr("38;2;228;212;182", label)
+		counts = sgr("38;2;179;163;140", counts)
+	}
+	line := fmt.Sprintf("%s [%s%s] %s  %s", label, complete, remaining, percent, counts)
 	if done == p.total {
 		elapsed := now.Sub(p.started)
 		if seconds := elapsed.Seconds(); seconds > 0 {

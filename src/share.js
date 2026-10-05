@@ -80,7 +80,7 @@ function decodeCounts(value) {
 // Renders the relay receiver into `container` and starts receiving the
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
-export function mountRelayReceiver(container, shareUrl) {
+export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
   container.classList.add('share-panel');
   container.innerHTML = PANEL_HTML;
   const pick = (name) => container.querySelector(`[data-relay="${name}"]`);
@@ -102,13 +102,18 @@ export function mountRelayReceiver(container, shareUrl) {
   let stop = () => { stopped = true; failureShown = true; };
 
   async function createSink(offer) {
-    return createDownloadSink({ name: offer.name, size: offer.size, mediaType: offer.mediaType });
+    return createDownloadSink({ name: offer.name, size: offer.size, mediaType: offer.mediaType, preferDownload: autoReceive });
   }
 
   function waitForAcceptance(offer) {
     elements.fileName.textContent = offer.name;
     elements.fileSize.textContent = formatSize(offer.size);
     elements.offer.hidden = false;
+    if (autoReceive) {
+      elements.accept.hidden = true;
+      elements.status.textContent = 'Preparing your download...';
+      return createSink(offer);
+    }
     elements.status.textContent = 'Ready when you are. The file stays with the sender until you accept.';
     return new Promise((resolve, reject) => {
       elements.accept.addEventListener('click', async () => {
@@ -339,6 +344,10 @@ export function mountRelayReceiver(container, shareUrl) {
           };
           elements.download.addEventListener('click', () => setTimeout(revoke, 60_000), { once: true });
           window.addEventListener('pagehide', revoke, { once: true });
+          if (autoReceive) {
+            elements.download.click();
+            elements.status.textContent = 'File verified. Download started; use the download link if your browser blocked it.';
+          }
         } else elements.status.textContent = 'File verified and saved.';
         socket.close(1000, 'complete');
         return;

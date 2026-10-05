@@ -211,8 +211,9 @@ function assertBlobSize(size) {
 
 // Single-file receiver entry point (share.js): routes to the best tier
 // and throws a readable error when the browser cannot take the size.
-export async function createSink({ name, size, mediaType }) {
+export async function createSink({ name, size, mediaType, preferDownload = false }) {
   const capabilities = detectCapabilities();
+  if (preferDownload) capabilities.filePicker = false;
   const tier = selectSinkTier(capabilities, size, navigator.userAgent);
   if (tier === 'file-picker') {
     try {

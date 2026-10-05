@@ -22,7 +22,7 @@ func sgr(code, text string) string {
 
 func bold(text string) string    { return sgr("1", text) }
 func dim(text string) string     { return sgr("2", text) }
-func accent(text string) string  { return sgr("38;5;141", text) }
+func accent(text string) string  { return sgr("38;2;229;138;87", text) }
 func green(text string) string   { return sgr("38;5;114", text) }
 func cmdText(text string) string { return sgr("38;5;223", text) }
 
