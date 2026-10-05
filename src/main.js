@@ -589,7 +589,7 @@ const Receiver = (() => {
     els.receiverConnecting.classList.add('hidden');
     els.receiverRelay.classList.remove('hidden');
     setState('idle');
-    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url);
+    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url, { autoReceive: true });
   }
 
   function closeRelay() {
@@ -1328,11 +1328,20 @@ els.senderRetryBtn.addEventListener('click', () => {
 });
 els.copyCmdBtn.addEventListener('click', () => void Sender.copyCommand());
 
-els.connectBtn.addEventListener('click', () => Receiver.connect(els.codeInput.value));
+let autoConnectTimer = null;
+
+function connectEnteredCode() {
+  clearTimeout(autoConnectTimer);
+  els.codeInput.blur();
+  Receiver.connect(els.codeInput.value);
+}
+
+els.connectBtn.addEventListener('click', connectEnteredCode);
 els.codeInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') Receiver.connect(els.codeInput.value);
+  if (event.key === 'Enter') connectEnteredCode();
 });
 els.codeInput.addEventListener('input', (event) => {
+  clearTimeout(autoConnectTimer);
   const raw = event.target.value;
   // Agent links (from `cdx send`) open the relay receiver instead of
   // being cleaned into a P2P code. Check before mangling the pasted text.
@@ -1346,9 +1355,16 @@ els.codeInput.addEventListener('input', (event) => {
   event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
   els.codeInput.removeAttribute('aria-invalid');
   // Five digits is the longest numeric code, so nothing else is coming.
-  if (/^\d{5}$/.test(event.target.value.trim())) Receiver.connect(event.target.value);
+  if (/^\d{5}$/.test(event.target.value.trim())) connectEnteredCode();
+  else if (/^\d{4}$/.test(event.target.value.trim())) {
+    autoConnectTimer = setTimeout(() => {
+      if (!els.receiverInputSection.classList.contains('hidden') &&
+          els.receiveModeBtn.getAttribute('aria-selected') === 'true') connectEnteredCode();
+    }, 800);
+  }
 });
 els.codeInput.addEventListener('paste', (event) => {
+  clearTimeout(autoConnectTimer);
   event.preventDefault();
   const text = (event.clipboardData || window.clipboardData).getData('text');
   const agentUrl = agentShareUrlFromInput(text);

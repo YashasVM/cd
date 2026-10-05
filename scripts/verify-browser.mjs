@@ -67,24 +67,23 @@ try {
   let senderStatus = async () => '';
   async function receiveInBrowser(receiverBrowser, open) {
     const context = await receiverBrowser.newContext({ acceptDownloads: true });
-    // Headless Chromium has no save dialog: use the in-memory download path.
-    await context.addInitScript(() => { delete window.showSaveFilePicker; });
+    await context.addInitScript(() => {
+      window.showSaveFilePicker = () => { throw new Error('Automatic receive must not open a save dialog'); };
+    });
     const page = await context.newPage();
     page.setDefaultTimeout(30_000);
     await page.goto(publicBase);
     await page.locator('.workbench:not([inert])').waitFor();
     await page.locator('#receive-mode-btn').click();
+    assert.equal(await page.locator('#code-input').getAttribute('inputmode'), 'numeric');
+    const downloadEvent = page.waitForEvent('download', { timeout: 60_000 });
     await open(page);
-    await page.locator('#receiver-relay [data-relay="offer"]:not([hidden])').waitFor();
-    await page.locator('[data-relay="accept"]').click();
+    let download;
     try {
-      await page.locator('[data-relay="status"]').filter({ hasText: 'File verified and ready to download.' }).waitFor({ timeout: 60_000 });
+      download = await downloadEvent;
     } catch (error) {
       throw new Error(`browser receive stalled: receiver status "${await page.locator('[data-relay="status"]').textContent()}"; sender status "${await senderStatus()}"`, { cause: error });
     }
-    const downloadEvent = page.waitForEvent('download');
-    await page.locator('[data-relay="download"]').click();
-    const download = await downloadEvent;
     const path = join(work, `browser-${Date.now()}-${download.suggestedFilename()}`);
     await download.saveAs(path);
     assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
