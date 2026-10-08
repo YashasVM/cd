@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createSink, createStageSink, createOPFSSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
+import { createSink, createStageSink, createOPFSSink, createBlobSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
 
 const SAFARI_MAC =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
@@ -46,20 +46,16 @@ describe('tier selection', () => {
     }
   });
 
-  it('refuses over-limit blobs on WebKit only, with an exact 256 MiB boundary', () => {
+  it('caps every Blob fallback at 256 MiB while preserving the exact boundary', () => {
     const caps = { filePicker: false, opfs: false };
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT, SAFARI_IOS), 'blob');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, SAFARI_IOS), 'too-large');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, SAFARI_MAC), 'too-large');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, CHROME_IOS), 'too-large');
-  });
-
-  it('leaves blobs uncapped off WebKit', () => {
-    const caps = { filePicker: false, opfs: false };
     const huge = 10n * 1024n * 1024n * 1024n;
-    assert.equal(selectSinkTier(caps, huge, CHROME_ANDROID), 'blob');
-    assert.equal(selectSinkTier(caps, huge, CHROME_DESKTOP), 'blob');
-    assert.equal(selectSinkTier(caps, huge, FIREFOX_DESKTOP), 'blob');
+    for (const ua of [CHROME_ANDROID, CHROME_DESKTOP, FIREFOX_DESKTOP]) {
+      assert.equal(selectSinkTier(caps, huge, ua), 'too-large');
+    }
   });
 
   it('accepts plain numbers as well as bigints for sizes', () => {
@@ -98,6 +94,21 @@ describe('download sink lifecycle', () => {
       const offer = { name: 'large.bin', size: WEBKIT_BLOB_LIMIT + 1n, mediaType: 'application/octet-stream' };
       await assert.rejects(createSink(offer), { message: DOWNLOAD_TOO_LARGE });
       await assert.rejects(createStageSink(offer), { message: DOWNLOAD_TOO_LARGE });
+    });
+  });
+
+  it('caps declared no-OPFS fallback offers and enforces the actual cumulative write limit', async (t) => {
+    await withBrowser(t, {}, async () => {
+      await assert.rejects(createSink({ name: 'large.bin', size: WEBKIT_BLOB_LIMIT + 1n }), { message: DOWNLOAD_TOO_LARGE });
+      const sink = await createStageSink({ name: 'unknown.bin', maxBytes: 4 });
+      await sink.write(Uint8Array.of(1, 2, 3));
+      await assert.rejects(sink.write(Uint8Array.of(4, 5)), { message: DOWNLOAD_TOO_LARGE });
+      const staged = await sink.toFile();
+      assert.deepEqual([...new Uint8Array(await staged.file.arrayBuffer())], [1, 2, 3]);
+      const direct = createBlobSink({ name: 'unknown.bin', maxBytes: 4 });
+      await direct.write(Uint8Array.of(1, 2, 3));
+      await assert.rejects(direct.write(Uint8Array.of(4, 5)), { message: DOWNLOAD_TOO_LARGE });
+      await direct.abort();
     });
   });
 
