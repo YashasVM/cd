@@ -193,6 +193,9 @@ func pruneStates(dir string, now time.Time) {
 
 func holderArgs(request sendRequest, absolutePaths []string) []string {
 	args := []string{holderCommand, "--json"}
+	if request.progress {
+		args = append(args, "--progress")
+	}
 	if request.linkMode {
 		args = append(args, "--link")
 	}
@@ -277,7 +280,9 @@ func runDetachedSend(request sendRequest) int {
 				_ = holder.Wait()
 				return fail(err)
 			}
-			fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			if request.progress || (!request.jsonOutput && isTerminal(os.Stderr)) {
+				fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			}
 			_ = holder.Process.Release()
 			return 0
 		}
@@ -313,6 +318,8 @@ func runHolder(args []string) int {
 		fmt.Fprintln(os.Stderr, strings.TrimSpace(err.Error()))
 		return 2
 	}
+	progressRequested = request.progress
+	jsonProgress = request.jsonOutput
 	dir := os.Getenv("CD_STATE_DIR")
 	if dir == "" {
 		fmt.Fprintln(os.Stderr, "cdx: missing transfer state directory")

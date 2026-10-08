@@ -185,6 +185,9 @@ func TestDetachedPreparationReturnsReadyAndReportsNestedErrors(t *testing.T) {
 		t.Fatalf("detached send: %v: %s", err, stderr.String())
 	}
 	t.Logf("10000-file tree plus file detached readiness: %s", time.Since(started))
+	if stderr.Len() != 0 {
+		t.Fatalf("captured detached send wrote progress without opt-in: %s", stderr.String())
+	}
 	var ready readyOutput
 	if err := json.Unmarshal(stdout.Bytes(), &ready); err != nil || ready.Code != "11111" || ready.Size == 0 {
 		t.Fatalf("ready = %s, %v", stdout.Bytes(), err)
@@ -208,6 +211,16 @@ func TestDetachedPreparationReturnsReadyAndReportsNestedErrors(t *testing.T) {
 		output, err := failure.CombinedOutput()
 		if err == nil || !strings.Contains(string(output), "UTF-8") || !strings.Contains(string(output), "bad-") {
 			t.Fatalf("nested failure = %v, %s", err, output)
+		}
+	}
+}
+
+func TestHolderArgsPreservesProgressOptIn(t *testing.T) {
+	for _, progress := range []bool{false, true} {
+		arguments := holderArgs(sendRequest{progress: progress}, []string{"/tmp/example"})
+		request, err := parseSendArgs(arguments[1:])
+		if err != nil || request.progress != progress || !request.jsonOutput {
+			t.Fatalf("holder args %q parsed as %#v, %v", arguments, request, err)
 		}
 	}
 }
