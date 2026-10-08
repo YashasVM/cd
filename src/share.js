@@ -84,6 +84,28 @@ function decodeCounts(value) {
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
 export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
+  if (/#v2\.[A-Za-z0-9_-]{43}$/.test(new URL(shareUrl, window.location.href).hash)) {
+    let active = null;
+    let stopped = false;
+    const cleanup = (async () => {
+      const { openResumeDatabase, createResumeKV, cleanExpiredResumeRecords, mountResumableReceiver } = await import('./resume-browser.js');
+      const db = await openResumeDatabase();
+      const checkpoints = createResumeKV(db, 'checkpoints');
+      const secrets = createResumeKV(db, 'secrets');
+      await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
+      if (stopped) return;
+      active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets });
+      active.done.catch(() => {});
+    })().catch((error) => {
+      container.classList.add('share-panel');
+      container.textContent = error.message || 'Could not open local resume storage.';
+    });
+    return () => {
+      stopped = true;
+      active?.stop();
+      void cleanup;
+    };
+  }
   container.classList.add('share-panel');
   container.innerHTML = PANEL_HTML;
   const pick = (name) => container.querySelector(`[data-relay="${name}"]`);
