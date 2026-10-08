@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -106,7 +107,10 @@ func TestStateRefusesIdentityChanges(t *testing.T) {
 }
 
 func TestStateRejectsInvalidAndInconsistentRecords(t *testing.T) {
-	for name, modify := range map[string]func(*transferState){"id": func(s *transferState) { s.TransferID = "../../escape" }, "filename": func(s *transferState) { s.Filename = "../escape" }, "windowsFilename": func(s *transferState) { s.Filename = `a\escape` }, "phase": func(s *transferState) { s.Phase = "unknown" }, "progress": func(s *transferState) { s.Acknowledged = 101 }, "verified": func(s *transferState) { s.Phase = phaseVerified }, "version": func(s *transferState) { s.Version = 2 }} {
+	for name, modify := range map[string]func(*transferState){"id": func(s *transferState) { s.TransferID = "../../escape" }, "filename": func(s *transferState) { s.Filename = "../escape" },
+		"controlFilename": func(s *transferState) { s.Filename = "escape\n.bin" },
+		"longFilename":    func(s *transferState) { s.Filename = strings.Repeat("x", 256) },
+		"retry":           func(s *transferState) { s.Retry = "retry_whatever" }, "windowsFilename": func(s *transferState) { s.Filename = `a\escape` }, "phase": func(s *transferState) { s.Phase = "unknown" }, "progress": func(s *transferState) { s.Acknowledged = 101 }, "verified": func(s *transferState) { s.Phase = phaseVerified }, "version": func(s *transferState) { s.Version = 2 }} {
 		t.Run(name, func(t *testing.T) {
 			state := identityFixture("aO6Ww6lyA10XmqHEgQYHyA", "12345")
 			modify(&state)
