@@ -20,8 +20,9 @@ The shell installers check release checksums. The CLI is named `cdx` because `cd
 ## Use
 
 ```bash
-cdx send ./report.pdf          # prints a code, e.g. 48291
+cdx send ./report.pdf          # shows a code and QR in a terminal
 cdx send ./shots ./notes.md    # several paths arrive as one .zip
+cdx send --json --qr ./receive-qr.png ./report.pdf # QR image for chat
 cdx send --link ./secret.zip   # private end-to-end encrypted link instead of a code
 cdx receive 48291              # save to the current directory
 cdx receive 48291 --out ~/Downloads
@@ -37,10 +38,11 @@ To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in
 | `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
 | `cdx update` | Update cdx to the latest release (checksum-verified) |
 | `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
+| `--qr <path>` | Save a QR PNG locally; JSON includes its absolute `qrPath`. The output path must not exist. |
 | `--wait` / `--detach` | Force foreground or background sending |
 
-**Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
-receiver verifies the file. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
+**Behavior:** in a terminal, `send` displays a share card with a scannable QR and waits until the
+receiver verifies the file. Captured stdout holds only the code (or JSON with `--json`), and progress goes to stderr. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
 the code is live. Codes expire after 15 minutes and admit one receiver.
 Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
 

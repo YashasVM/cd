@@ -39,6 +39,7 @@ type readyOutput struct {
 	Code     string `json:"code,omitempty"`
 	Filename string `json:"filename"`
 	Size     uint64 `json:"size"`
+	QRPath   string `json:"qrPath,omitempty"`
 }
 
 func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
@@ -63,12 +64,12 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Send files through CD at https://cd.yash0.in, or receive them.")
-	fmt.Fprintln(output, "Send prints one short share code to stdout. In a terminal it then waits")
+	fmt.Fprintln(output, "Send prints a share code and QR in a terminal, then waits")
 	fmt.Fprintln(output, "until the receiver verifies the file; otherwise (agents, scripts, pipes)")
 	fmt.Fprintln(output, "it hands the transfer to a background sender and exits 0 right away.")
 	fmt.Fprintln(output, "The code works in any browser Receive box and in `cdx receive`. Receive")
@@ -95,7 +96,8 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for send:")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -125,11 +127,12 @@ func usage(output io.Writer) {
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (sent as one .zip)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -162,6 +165,7 @@ func receiveUsage(output io.Writer) {
 type sendRequest struct {
 	jsonOutput bool
 	linkMode   bool
+	qrPath     string
 	detach     bool
 	wait       bool
 	files      []string
@@ -182,7 +186,8 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	var request sendRequest
 	var files []string
 	endOfFlags := false
-	for _, argument := range args {
+	for index := 0; index < len(args); index++ {
+		argument := args[index]
 		if !endOfFlags && argument == "--" {
 			endOfFlags = true
 			continue
@@ -202,6 +207,21 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		}
 		if !endOfFlags && argument == "--link" {
 			request.linkMode = true
+			continue
+		}
+		if !endOfFlags && (argument == "--qr" || strings.HasPrefix(argument, "--qr=")) {
+			value, found := strings.CutPrefix(argument, "--qr=")
+			if !found {
+				index++
+				if index >= len(args) || strings.HasPrefix(args[index], "--") {
+					return sendRequest{}, errors.New("cdx: --qr needs a PNG output path")
+				}
+				value = args[index]
+			}
+			if value == "" {
+				return sendRequest{}, errors.New("cdx: --qr needs a PNG output path")
+			}
+			request.qrPath = value
 			continue
 		}
 		if !endOfFlags && argument == "--detach" {
@@ -403,6 +423,9 @@ func runSend(request sendRequest) int {
 	defer stop()
 	card := !request.jsonOutput && isTerminal(os.Stdout)
 	err := sendFile(ctx, request.files, request.linkMode, sendHooks{ready: func(value readyOutput) error {
+		if err := saveReadyQR(&value, request.qrPath); err != nil {
+			return err
+		}
 		if card {
 			writeReadyCard(os.Stdout, value)
 			return nil

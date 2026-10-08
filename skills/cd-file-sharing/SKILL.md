@@ -8,20 +8,40 @@ description: Send a local file to the user (their phone, browser, or another mac
 Run:
 
 ```bash
-cdx send <path>...
+cdx send --json --qr /absolute/path/to/receive-qr.png <path>...
 ```
 
 Several paths or a folder arrive as one `.zip`.
 
-It prints one line to stdout, a short share code such as `48291`, and exits 0
-while a background sender keeps the transfer live. Reply to the user with that
-code: they type it at https://cd.yash0.in (or run `cdx receive <code>`). The
-code is valid for 15 minutes and admits one receiver. Done.
+Choose a fresh PNG path in an existing directory. It prints one JSON object
+with `code`, `url`, and the absolute `qrPath`, then exits 0 while a background
+sender keeps the transfer live. The PNG is generated locally; no QR service is
+needed. An existing output file is never overwritten.
+
+Reply with the receive link `https://cd.yash0.in/#<code>` and embed the PNG.
+In T3 Code and other chats that render local images, use an absolute-path
+Markdown image (use the actual `qrPath` returned by the command):
+
+```markdown
+[Receive report.pdf](https://cd.yash0.in/#48291)
+
+![Scan to receive report.pdf](/absolute/path/to/receive-qr.png)
+```
+
+When `CD_PUBLIC_URL` is set, use that origin instead of `https://cd.yash0.in`.
+Opening the link or scanning the QR starts receiving. Both refer to the same
+transfer: it is valid for 15 minutes and admits one receiver. Terminal users
+can run `cdx receive <code>` instead. Keep the PNG available for the chat to
+render it. If the chat cannot embed local images, reply with the link and code.
+
+For a link without an image, `cdx send <path>...` still prints only the code
+when stdout is captured. Interactive terminal sends display a QR automatically.
 
 Branches:
 
-- **Sensitive file**: run `cdx send --link <file>` and reply with the full URL
-  on stdout, fragment included. Links are end-to-end encrypted; codes rely on
+- **Sensitive file**: add `--link` to the command above and reply with `url`
+  from the JSON, fragment included, plus the QR image. The QR includes the same
+  private link. Links are end-to-end encrypted; codes rely on
   TLS and the live relay.
 - **User wants delivery confirmed**: run `cdx wait --timeout 10m --json <code>`
   after replying. Exit 0 means the receiver verified every byte; exit 1 means it

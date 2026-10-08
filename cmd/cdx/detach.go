@@ -192,12 +192,12 @@ func pruneStates(dir string, now time.Time) {
 }
 
 func holderArgs(request sendRequest, absolutePaths []string) []string {
-	args := []string{holderCommand}
+	args := []string{holderCommand, "--json"}
 	if request.linkMode {
 		args = append(args, "--link")
 	}
-	if request.jsonOutput {
-		args = append(args, "--json")
+	if request.qrPath != "" {
+		args = append(args, "--qr", request.qrPath)
 	}
 	return append(append(args, "--"), absolutePaths...)
 }
@@ -264,7 +264,19 @@ func runDetachedSend(request sendRequest) int {
 	select {
 	case value := <-line:
 		if strings.HasSuffix(value, "\n") {
-			fmt.Fprint(os.Stdout, value)
+			var ready readyOutput
+			if err := json.Unmarshal([]byte(value), &ready); err != nil {
+				_ = holder.Process.Kill()
+				_ = holder.Wait()
+				return fail(fmt.Errorf("read background sender: %w", err))
+			}
+			if !request.jsonOutput && isTerminal(os.Stdout) {
+				writeReadyCard(os.Stdout, ready)
+			} else if err := writeReady(os.Stdout, ready, request.jsonOutput); err != nil {
+				_ = holder.Process.Kill()
+				_ = holder.Wait()
+				return fail(err)
+			}
 			fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
 			_ = holder.Process.Release()
 			return 0
@@ -323,6 +335,9 @@ func runHolder(args []string) int {
 	pipe := os.Stdout
 	err = sendFile(ctx, request.files, request.linkMode, sendHooks{
 		ready: func(value readyOutput) error {
+			if err := saveReadyQR(&value, request.qrPath); err != nil {
+				return err
+			}
 			state.Code = value.Code
 			state.TransferID = transferIDFromURL(value.URL)
 			state.Filename = value.Filename

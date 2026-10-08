@@ -1438,8 +1438,16 @@ window.addEventListener('drop', (event) => {
   Sender.init(files);
 });
 
+// A share link from `cdx send` carries its numeric code in the fragment
+// (https://cd.yash0.in/#48291), so opening it starts the receive.
+const initialShortCode = cleanShortCode(window.location.hash.slice(1));
 const initialCode = codeFromUrl(window.location.href, window.location.href);
-if (isValidCode(initialCode)) {
+if (isShortCode(initialShortCode)) {
+  history.replaceState(null, '', window.location.pathname);
+  switchToReceiveMode();
+  els.codeInput.value = initialShortCode;
+  Receiver.connect(initialShortCode);
+} else if (isValidCode(initialCode)) {
   history.replaceState(null, '', window.location.pathname);
   switchToReceiveMode();
   els.codeInput.value = initialCode;

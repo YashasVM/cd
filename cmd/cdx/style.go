@@ -91,14 +91,15 @@ func writeReadyCard(output io.Writer, value readyOutput) {
 	size := formatShortBytes(value.Size)
 	fmt.Fprintln(output)
 	if value.Code != "" {
-		site := hyperlink(publicSite(), strings.TrimPrefix(publicSite(), "https://"))
+		link := codeLink(value.Code)
+		site := hyperlink(link, strings.TrimPrefix(link, "https://"))
 		box(output, 44, []string{
 			"",
 			dim("SHARE CODE") + "            " + bold(accent(spacedCode(value.Code))),
 			"",
 			bold(shortName(value.Filename, 28)) + dim("  ·  "+size),
 			"",
-			dim("open ") + site + dim(" and type the code"),
+			dim("open ") + site,
 			dim("or run ") + cmdText("cdx receive "+value.Code),
 			"",
 		})
@@ -111,7 +112,12 @@ func writeReadyCard(output io.Writer, value readyOutput) {
 		fmt.Fprintln(output, "  "+dim("open it in a browser, or run ")+cmdText("cdx receive '<link>'"))
 	}
 	fmt.Fprintln(output)
-	fmt.Fprintln(output, "  "+accent("●")+" "+dim("waiting for the receiver · expires in 15m · Ctrl-C to cancel"))
+	writeTerminalQR(output, value)
+	fmt.Fprintln(output)
+	if value.QRPath != "" {
+		fmt.Fprintln(output, "  QR saved to "+value.QRPath)
+	}
+	fmt.Fprintln(output, "  "+accent("●")+" "+dim("expires in 15m · one receiver"))
 	fmt.Fprintln(output)
 	fancyReady = true
 }
@@ -121,6 +127,11 @@ func publicSite() string {
 		return strings.TrimRight(value, "/")
 	}
 	return "https://cd.yash0.in"
+}
+
+// codeLink is the browser link that opens straight into receiving code.
+func codeLink(code string) string {
+	return publicSite() + "/#" + code
 }
 
 // shortName keeps long filenames from breaking the card frame.
