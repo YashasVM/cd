@@ -1,0 +1,9 @@
+{
+  "protocol": "cd-transfer-v2",
+  "invitation": { "rootId": "AAECAwQFBgcICQoLDA0ODw", "masterKey": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8" },
+  "sessionNonce": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY",
+  "receiverNonce": "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA",
+  "plaintext": "resume fixture record",
+  "kind": 1,
+  "record": "Q0QCAQAAAAAAAAAVJ9gxiC9d1xA7yIYnMidrMXULlgHJj3KSdus9ix5xCyRERCtIGQ"
+}
