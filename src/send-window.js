@@ -11,7 +11,7 @@ function count(value, label) {
 
 // Cumulative ACKs measure delivered bytes. The controller owns accounting,
 // while the transport owns cancellation, idle deadlines, and native buffers.
-export function createSendWindow({ minBytes = MiB, maxBytes = 12 * MiB, initialBytes = 4 * MiB } = {}) {
+export function createSendWindow({ minBytes = MiB, maxBytes = 12 * MiB, initialBytes = 4 * MiB, initialOffset = 0n } = {}) {
   for (const value of [minBytes, maxBytes, initialBytes]) {
     if (!Number.isSafeInteger(value) || value <= 0) throw new RangeError('window bounds must be positive safe integers');
   }
@@ -19,12 +19,12 @@ export function createSendWindow({ minBytes = MiB, maxBytes = 12 * MiB, initialB
     throw new RangeError('window bounds must satisfy min <= initial <= max <= 24 MiB');
   }
   let size = initialBytes;
-  let sent = 0n;
-  let acknowledged = 0n;
+  let sent = count(initialOffset, 'initial offset');
+  let acknowledged = sent;
   let minRTT = 0;
   let lastTime = -Infinity;
   let markTime = null;
-  let markBytes = 0n;
+  let markBytes = sent;
   const samples = [];
 
   function time(at) {
