@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -82,5 +83,16 @@ func TestDialRelayRejectsPermanentHTTPWithoutRetry(t *testing.T) {
 	_, err := dialRelay(context.Background(), "ws"+strings.TrimPrefix(server.URL, "http"))
 	if err == nil || calls != 1 || failureGuidance(err) != retryNever {
 		t.Fatalf("calls=%d err=%v", calls, err)
+	}
+}
+
+func TestSetupDoesNotRetryPermanentDNS(t *testing.T) {
+	attempts := 0
+	err := retrySetupWith(context.Background(), func() error {
+		attempts++
+		return &net.DNSError{IsNotFound: true, Err: "opaque", Name: "missing.invalid"}
+	}, func(int) time.Duration { return 0 })
+	if err == nil || attempts != 1 {
+		t.Fatalf("attempts=%d err=%v", attempts, err)
 	}
 }
