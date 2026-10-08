@@ -1,4 +1,4 @@
-import { summarize } from './bench-metrics.mjs';
+import { summarize, browserTransportProbe } from './bench-metrics.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
@@ -158,46 +158,10 @@ function round(value) {
 async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
   const context = await browser.newContext({ acceptDownloads: true });
   try {
-    await context.addInitScript((forceRelay) => {
-      window.__benchTransport = { rawBytes: 0, legacyBytes: 0, relayBytes: 0 };
-      const size = (data) => typeof data === 'string' ? 0 : data.byteLength ?? data.size ?? 0;
-      const nativeChannelSend = RTCDataChannel.prototype.send;
-      RTCDataChannel.prototype.send = function(data) {
-        window.__benchTransport[this.label === 'cd-raw' ? 'rawBytes' : 'legacyBytes'] += size(data);
-        return nativeChannelSend.call(this, data);
-      };
-      const nativeSocketSend = WebSocket.prototype.send;
-      WebSocket.prototype.send = function(data) {
-        if (new URL(this.url).pathname.startsWith('/ws/v1/')) window.__benchTransport.relayBytes += size(data);
-        return nativeSocketSend.call(this, data);
-      };
-      delete window.showSaveFilePicker;
-      if (forceRelay) {
-        const NativePeerConnection = window.RTCPeerConnection;
-        window.RTCPeerConnection = function RTCPeerConnection(config = {}) {
-          return new NativePeerConnection({ ...config, iceTransportPolicy: 'relay' });
-        };
-        window.RTCPeerConnection.prototype = NativePeerConnection.prototype;
-      }
-    }, mode === 'tunnel');
+    await context.addInitScript(browserTransportProbe, { blockDirect: mode === 'tunnel' });
     const sender = await context.newPage();
     const receiver = await context.newPage();
-    if (mode === 'legacy') {
-      // Hide the raw-channel offer from the sender, as old cached pages
-      // ignore it: the transfer then uses PeerJS binary framing.
-      await sender.routeWebSocket(/\/peerjs\/peerjs/, (socket) => {
-        const server = socket.connectToServer();
-        socket.onMessage((message) => server.send(message));
-        server.onMessage((message) => {
-          const value = JSON.parse(message);
-          if (value.type === 'OFFER' && value.payload?.metadata) {
-            delete value.payload.metadata.raw;
-            delete value.payload.metadata.window;
-          }
-          socket.send(JSON.stringify(value));
-        });
-      });
-    }
+    if (mode === 'legacy') throw new Error('legacy PeerJS transport is unsupported; use encrypted p2p or tunnel');
     if (cpuThrottle > 1) {
       const session = await context.newCDPSession(receiver);
       await session.send('Emulation.setCPUThrottlingRate', { rate: cpuThrottle });
@@ -230,11 +194,12 @@ async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
     await download.saveAs(savedPath);
     assert.equal(sha(await readFile(savedPath)), sha(payload), `${mode} bytes differ`);
     const measured = await sender.evaluate(() => window.__benchTransport);
-    const expected = mode === 'p2p' ? 'rawBytes' : mode === 'legacy' ? 'legacyBytes' : 'relayBytes';
-    assert.ok(measured[expected] >= payload.length, `${mode}: requested transport unavailable; expected payload on ${expected}, observed ${JSON.stringify(measured)}. Use CD_BENCH_ONLY=tunnel for the current browser relay baseline.`);
-    if (mode === 'tunnel') assert.equal(measured.rawBytes + measured.legacyBytes, 0, 'forced tunnel sent data directly');
-    if (mode === 'legacy') assert.equal(measured.rawBytes, 0, 'legacy benchmark used raw framing');
-    return { mib, readinessMs: round(readinessMs), seconds: Math.round(seconds * 10000) / 10000, mibPerSecond: round(mib / seconds), transport: mode, transportBytes: measured, outputBytes: null };
+    if (mode === 'p2p') assert.ok(measured.directPayloadBytes >= Math.min(payload.length, 1024 * 1024), `p2p encrypted direct payload unavailable: ${JSON.stringify(measured)}`);
+    if (mode === 'tunnel') {
+      assert.equal(measured.directBytes, 0, 'forced tunnel sent data directly');
+      assert.ok(measured.relayPayloadBytes >= payload.length, 'forced relay payload accounting missing');
+    }
+    return { mib, readinessMs: round(readinessMs), seconds: Math.round(seconds * 10000) / 10000, mibPerSecond: round(mib / seconds), transport: mode === 'p2p' ? 'encrypted-direct' : 'encrypted-relay', transportBytes: measured, outputBytes: null };
   } finally {
     await context.close();
   }

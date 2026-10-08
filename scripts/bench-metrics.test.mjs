@@ -49,3 +49,40 @@ test('readiness timeout and early EOF remain actionable', async () => {
   ended.end('diagnostic');
   await assert.rejects(ready, /sender ended before printing a line: diagnostic/);
 });
+
+test('browser evidence counts complete encrypted payloads after successful negotiated sends', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const { browserTransportProbe } = await import('./bench-metrics.mjs');
+  const result = runInNewContext(`
+    class RTCDataChannel {
+      constructor(label) { this.label = label; this.bufferedAmount = 123; }
+      send() { if (this.fail) throw new Error('closed'); }
+    }
+    class WebSocket {
+      constructor() { this.url = 'ws://localhost/ws/v1/transfer'; this.bufferedAmount = 456; }
+      send() {}
+    }
+    const window = {};
+    (${browserTransportProbe.toString()})();
+    const chunk = new Uint8Array(12 + 17 + 16);
+    chunk.set([0x43, 0x44, 1, 2]);
+    new DataView(chunk.buffer).setUint32(8, 17);
+    const channel = new RTCDataChannel('cd-direct');
+    channel.send(chunk.subarray(0, 7));
+    if (window.__benchTransport.directPayloadBytes !== 0) throw new Error('partial frame counted');
+    channel.send(chunk.subarray(7));
+    channel.fail = true;
+    try { channel.send(chunk); } catch {}
+    new RTCDataChannel('cd-raw').send(chunk);
+    new WebSocket().send(chunk);
+    window.__benchTransport;
+  `, { URL });
+  assert.equal(result.directPayloadBytes, 17);
+  assert.equal(result.directBytes, 45);
+  assert.equal(result.successfulDirectPieces, 2);
+  assert.equal(result.relayPayloadBytes, 17);
+  assert.equal(result.legacyBytes, 45);
+  assert.equal(result.maxDirectBufferedBytes, 123);
+  assert.equal(result.maxRelayBufferedBytes, 456);
+  assert.equal(result.routes.join(','), 'direct,relay');
+});
