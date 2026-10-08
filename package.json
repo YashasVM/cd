@@ -18,7 +18,9 @@
     "deploy:dry": "npm run build && wrangler deploy --dry-run",
     "verify:browser": "npm run build && node scripts/verify-browser.mjs",
     "skill:generate": "node scripts/generate-sharing-skill.mjs",
-    "skill:check": "node scripts/generate-sharing-skill.mjs --check"
+    "skill:check": "node scripts/generate-sharing-skill.mjs --check",
+    "verify:retries": "npm run build && node scripts/verify-retries.mjs",
+    "verify:transports": "npm run build && node scripts/verify-transports.mjs"
   },
   "dependencies": {
     "jsqr": "1.4.0",
