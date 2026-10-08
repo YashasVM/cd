@@ -154,3 +154,72 @@ func TestBundleFailsWhenAFileChangesMidSend(t *testing.T) {
 		t.Fatalf("changed file error = %v", err)
 	}
 }
+
+func TestValidateSourcePathsPreservesNamedInputErrors(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "a", "same.txt"), []byte("one"))
+	writeTestFile(t, filepath.Join(root, "b", "same.txt"), []byte("two"))
+	for _, paths := range [][]string{
+		nil, {"-"}, {""}, {filepath.Join(root, "missing")},
+		{filepath.Join(root, "a", "same.txt"), filepath.Join(root, "b", "same.txt")},
+	} {
+		if err := validateSourcePaths(paths); err == nil {
+			t.Fatalf("accepted %q", paths)
+		}
+	}
+	if err := validateSourcePaths([]string{filepath.Join(root, "a"), filepath.Join(root, "b", "same.txt")}); err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" {
+		link := filepath.Join(root, "linked.txt")
+		if err := os.Symlink(filepath.Join(root, "a", "same.txt"), link); err != nil {
+			t.Fatal(err)
+		}
+		if err := validateSourcePaths([]string{link}); err != nil {
+			t.Fatalf("file symlink no longer accepted: %v", err)
+		}
+	}
+}
+
+func TestValidateSourcePathsLeavesNestedValidationToHolder(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("invalid UTF-8 paths are a Unix fixture")
+	}
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "invalid-\xff"), []byte("content"))
+	if err := validateSourcePaths([]string{root}); err != nil {
+		t.Fatalf("parent walked nested paths: %v", err)
+	}
+	if _, err := prepareSource([]string{root}); err == nil || !strings.Contains(err.Error(), "UTF-8") {
+		t.Fatalf("holder lost nested error: %v", err)
+	}
+}
+
+func TestValidateSourcePathsRejectsUnreadableInputs(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission fixture")
+	}
+	root := t.TempDir()
+	file := filepath.Join(root, "unreadable")
+	writeTestFile(t, file, []byte("secret"))
+	if err := os.Chmod(file, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(file, 0600) })
+	// Privileged test runners can read mode-000 files; don't claim coverage there.
+	if probe, err := os.Open(file); err == nil {
+		_ = probe.Close()
+		t.Skip("runner bypasses read permissions")
+	}
+	if err := validateSourcePaths([]string{file}); err == nil || !strings.Contains(err.Error(), "permissions") {
+		t.Fatalf("unreadable error = %v", err)
+	}
+	folder := filepath.Join(root, "folder")
+	if err := os.Mkdir(folder, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(folder, 0700) })
+	if err := validateSourcePaths([]string{folder}); err == nil || !strings.Contains(err.Error(), "permissions") {
+		t.Fatalf("unreadable folder error = %v", err)
+	}
+}
