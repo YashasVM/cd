@@ -49,6 +49,46 @@ func prepareSource(paths []string) (shareSource, error) {
 	return prepareBundle(paths)
 }
 
+// validateSourcePaths checks the named inputs without walking their contents.
+// The detached holder performs the full walk and ZIP sizing exactly once.
+func validateSourcePaths(paths []string) error {
+	if len(paths) == 0 {
+		return errors.New("missing file to send")
+	}
+	topLevel := make(map[string]string, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if path == "-" || path == "" || err != nil || !info.IsDir() {
+			if _, err := prepareFile(path); err != nil {
+				return err
+			}
+		} else {
+			folder, err := os.Open(path)
+			if err != nil {
+				return fmt.Errorf("cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+			_, err = folder.Readdirnames(1)
+			_ = folder.Close()
+			if err != nil && !errors.Is(err, io.EOF) {
+				return fmt.Errorf("cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+		}
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		base := filepath.Base(absolute)
+		if !utf8.ValidString(base) {
+			return fmt.Errorf("cannot share %q: its name is not valid UTF-8", path)
+		}
+		if previous, ok := topLevel[base]; ok {
+			return fmt.Errorf("%q and %q would both be named %q in the bundle: rename one or send its folder", previous, path, base)
+		}
+		topLevel[base] = path
+	}
+	return nil
+}
+
 func prepareFile(path string) (shareSource, error) {
 	file, info, err := openSharedFile(path)
 	if err != nil {

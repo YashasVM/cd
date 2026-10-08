@@ -193,6 +193,9 @@ func pruneStates(dir string, now time.Time) {
 
 func holderArgs(request sendRequest, absolutePaths []string) []string {
 	args := []string{holderCommand, "--json"}
+	if request.progress {
+		args = append(args, "--progress")
+	}
 	if request.linkMode {
 		args = append(args, "--link")
 	}
@@ -203,14 +206,14 @@ func holderArgs(request sendRequest, absolutePaths []string) []string {
 }
 
 // runDetachedSend starts the background holder and returns once it has
-// printed the code. Input problems are reported here, before any process
-// starts, with the same messages as a foreground send.
+// printed the code. Named inputs are validated before starting the holder;
+// the holder alone walks folders and reports problems within their contents.
 func runDetachedSend(request sendRequest) int {
 	fail := func(err error) int {
 		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
 		return 1
 	}
-	if _, err := prepareSource(request.files); err != nil {
+	if err := validateSourcePaths(request.files); err != nil {
 		return fail(err)
 	}
 	if _, _, err := endpointBase(); err != nil {
@@ -277,7 +280,9 @@ func runDetachedSend(request sendRequest) int {
 				_ = holder.Wait()
 				return fail(err)
 			}
-			fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			if request.progress || (!request.jsonOutput && isTerminal(os.Stderr)) {
+				fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			}
 			_ = holder.Process.Release()
 			return 0
 		}
@@ -286,7 +291,7 @@ func runDetachedSend(request sendRequest) int {
 	case <-time.After(readyWait):
 		_ = holder.Process.Kill()
 		_ = holder.Wait()
-		return fail(errors.New("CD relay did not answer within 30s: check your network and try again"))
+		return fail(errors.New("background sender was not ready within 30s: folder preparation or relay setup took too long; try fewer files or check your network"))
 	}
 	reason := holderFailure(logPath)
 	_ = os.Remove(logPath)
@@ -313,6 +318,8 @@ func runHolder(args []string) int {
 		fmt.Fprintln(os.Stderr, strings.TrimSpace(err.Error()))
 		return 2
 	}
+	progressRequested = request.progress
+	jsonProgress = request.jsonOutput
 	dir := os.Getenv("CD_STATE_DIR")
 	if dir == "" {
 		fmt.Fprintln(os.Stderr, "cdx: missing transfer state directory")

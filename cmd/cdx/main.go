@@ -14,9 +14,9 @@ import (
 
 var version = "dev"
 
-// jsonProgress is set by --json: when stderr is not a terminal, progress is
-// written there as JSON lines instead of a bar.
+// JSON results stay quiet unless progress is explicitly requested.
 var jsonProgress bool
+var progressRequested bool
 
 func displayVersion(buildVersion string, info *debug.BuildInfo) string {
 	if buildVersion != "" && buildVersion != "dev" {
@@ -64,8 +64,8 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
-	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Send files through CD at https://cd.yash0.in, or receive them.")
@@ -90,6 +90,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "options for receive:")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show help for receive")
@@ -97,6 +98,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "options for send:")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
@@ -122,16 +124,18 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "With --json, a failure also prints {\"version\",\"error\":{\"kind\",\"message\"}} to")
 	fmt.Fprintln(output, "stdout. kind is one of: canceled, invalid_code, not_found, expired, claimed,")
 	fmt.Fprintln(output, "exists, busy, stalled, disconnected, network, local_file, protocol, failed.")
-	fmt.Fprintln(output, "When stderr is not a terminal, --json also writes progress there as")
+	fmt.Fprintln(output, "Progress is automatic in human terminals; scripts and --json are quiet.")
+	fmt.Fprintln(output, "Use --progress to opt in; --json --progress writes stderr as")
 	fmt.Fprintln(output, "{\"progress\":{\"phase\",\"done\",\"total\",\"bytesPerSecond\",\"etaSeconds\"}} lines.")
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (sent as one .zip)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
@@ -146,12 +150,13 @@ func sendUsage(output io.Writer) {
 }
 
 func receiveUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
 	fmt.Fprintln(output, "                   (a full share link works too)")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show this help")
@@ -164,6 +169,7 @@ func receiveUsage(output io.Writer) {
 // sendRequest is the parsed form of send arguments.
 type sendRequest struct {
 	jsonOutput bool
+	progress   bool
 	linkMode   bool
 	qrPath     string
 	detach     bool
@@ -176,6 +182,7 @@ type sendRequest struct {
 // receiveRequest is the parsed form of receive arguments.
 type receiveRequest struct {
 	jsonOutput bool
+	progress   bool
 	force      bool
 	out        string
 	code       string
@@ -200,6 +207,10 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		}
 		if !endOfFlags && (argument == "--version" || argument == "-v") {
 			return sendRequest{version: true}, nil
+		}
+		if !endOfFlags && argument == "--progress" {
+			request.progress = true
+			continue
 		}
 		if !endOfFlags && argument == "--json" {
 			request.jsonOutput = true
@@ -279,6 +290,11 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 		}
 		if !endOfFlags && (argument == "--help" || argument == "-h") {
 			return receiveRequest{help: true}, nil
+		}
+		if !endOfFlags && argument == "--progress" {
+			request.progress = true
+			index++
+			continue
 		}
 		if !endOfFlags && argument == "--json" {
 			request.jsonOutput = true
@@ -416,6 +432,7 @@ func runSend(request sendRequest) int {
 		return 0
 	}
 	jsonProgress = request.jsonOutput
+	progressRequested = request.progress
 	if shouldDetach(request, isTerminal(os.Stdout)) {
 		return runDetachedSend(request)
 	}
@@ -461,6 +478,7 @@ func runReceive(request receiveRequest) int {
 		return 0
 	}
 	jsonProgress = request.jsonOutput
+	progressRequested = request.progress
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
 	err := receiveFile(ctx, request.code, request.out, request.force, func(value receiveResult) error {

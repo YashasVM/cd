@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -147,5 +153,74 @@ func TestHolderFailureReturnsTheLastErrorLine(t *testing.T) {
 	}
 	if got := holderFailure(path); got != "cdx: CD relay did not answer" {
 		t.Fatalf("holderFailure = %q", got)
+	}
+}
+
+func TestDetachedPreparationReturnsReadyAndReportsNestedErrors(t *testing.T) {
+	binary := filepath.Join(t.TempDir(), "cdx")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", binary, ".")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build: %v: %s", err, output)
+	}
+	newFakeRelay(t, "11111")
+	stateDirectory := t.TempDir()
+	t.Setenv("CD_STATE_DIR", stateDirectory)
+	root := t.TempDir()
+	folder := filepath.Join(root, "tree")
+	for i := 0; i < 10000; i++ {
+		writeTestFile(t, filepath.Join(folder, fmt.Sprintf("dir-%03d", i/100), fmt.Sprintf("file-%05d", i)), make([]byte, 4096))
+	}
+	extra := filepath.Join(root, "extra.txt")
+	writeTestFile(t, extra, []byte("extra"))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "send", "--json", folder, extra)
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
+	started := time.Now()
+	if err := command.Run(); err != nil {
+		t.Fatalf("detached send: %v: %s", err, stderr.String())
+	}
+	t.Logf("10000-file tree plus file detached readiness: %s", time.Since(started))
+	if stderr.Len() != 0 {
+		t.Fatalf("captured detached send wrote progress without opt-in: %s", stderr.String())
+	}
+	var ready readyOutput
+	if err := json.Unmarshal(stdout.Bytes(), &ready); err != nil || ready.Code != "11111" || ready.Size == 0 {
+		t.Fatalf("ready = %s, %v", stdout.Bytes(), err)
+	}
+	state, err := readState(stateDirectory, ready.Code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	process, err := os.FindProcess(state.PID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = process.Kill() })
+	if !processAlive(state.PID) {
+		t.Fatal("holder stopped when parent returned")
+	}
+	if runtime.GOOS != "windows" {
+		invalid := filepath.Join(root, "invalid-tree")
+		writeTestFile(t, filepath.Join(invalid, "bad-\xff"), []byte("content"))
+		failure := exec.CommandContext(ctx, binary, "send", invalid)
+		output, err := failure.CombinedOutput()
+		if err == nil || !strings.Contains(string(output), "UTF-8") || !strings.Contains(string(output), "bad-") {
+			t.Fatalf("nested failure = %v, %s", err, output)
+		}
+	}
+}
+
+func TestHolderArgsPreservesProgressOptIn(t *testing.T) {
+	for _, progress := range []bool{false, true} {
+		arguments := holderArgs(sendRequest{progress: progress}, []string{"/tmp/example"})
+		request, err := parseSendArgs(arguments[1:])
+		if err != nil || request.progress != progress || !request.jsonOutput {
+			t.Fatalf("holder args %q parsed as %#v, %v", arguments, request, err)
+		}
 	}
 }
