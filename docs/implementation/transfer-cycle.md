@@ -115,3 +115,19 @@ records. Relay starts immediately while direct setup happens; gathering bound
 16MiB/128records, merger16MiB/256records, assembler~1MiB+64KiB. Receiver
 queue32MiB/512 records; ACK replay128KiB/128 records. Opt-in test observer
 reports counts only, without payload or capabilities.
+
+### Wave 3 gate passed
+
+All transport/window/staging-bound changes integrated.68JS tests,Go,
+typecheck,existingbrowser/agentverification anddeploydryrun passed.
+8/8matrix cases verified64MiB exactly: directall3orientations, blocked
+all3orientations,relay->directupgrade,slowreceiver. NativeDCmax4,181,104B;
+relay4,063,924B;retained4,194,752B;inflight5,767,168B;22timingsamples;
+sampledJSheap96,568,847B. All below explicitcaps. Blobfallback also bounded
+256MiB even without OPFS. Loopbackdirect15.74MiB/s vsrelay27.81MiB/s:
+workingdirect verified, no unsupported speed-improvement claim.
+
+Wave4architecture agreed inADR0001 andissue15 before implementationsplit.
+Sendersecret distinct fromreceiver capability; both peers contributefresh
+nonces/proofs;checkpointMAC exact canonical fields;durableverifiedprefix;
+24hretention;no v1sequence resets. MoreLuna workers added peruser request.
