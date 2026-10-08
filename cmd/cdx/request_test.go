@@ -88,9 +88,7 @@ func TestRequestJournalRejectsMismatchedIdentityAndIsPrivate(t *testing.T) {
 		t.Fatal(info.Mode())
 	}
 	t.Setenv("CD_REQUEST_JOURNAL", path)
-	if err := recordRequestHolder(); err != nil {
-		t.Fatal(err)
-	}
+
 	ready := readyOutput{Version: 1, TransferID: base64.RawURLEncoding.EncodeToString(secret[:16]), URL: "https://cd.yash0.in/s/" + base64.RawURLEncoding.EncodeToString(secret[:16]) + "#v1." + base64.RawURLEncoding.EncodeToString(secret[16:])}
 	if err := recordRequestReady(ready); err != nil {
 		t.Fatal(err)
