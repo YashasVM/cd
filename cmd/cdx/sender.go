@@ -382,23 +382,23 @@ func friendlyRelayError(err error) error {
 	}
 	switch closeError.Code {
 	case 4400:
-		return NewFailure(failureProtocol, "CD relay rejected the transfer (invalid request): update cdx and try a fresh link", retryNever)
+		return NewFailure(failureProtocol, "CD relay rejected the transfer (invalid request): update cdx and try a fresh link", retryNever, err)
 	case 4401:
-		return NewFailure(failureProtocol, "CD relay rejected the receiver (link key mismatch): send a fresh link", retryNever)
+		return NewFailure(failureProtocol, "CD relay rejected the receiver (link key mismatch): send a fresh link", retryNever, err)
 	case 4403:
-		return NewFailure(failureProtocol, "CD relay rejected a transfer frame (protocol mismatch): update cdx and try again", retryNever)
+		return NewFailure(failureProtocol, "CD relay rejected a transfer frame (protocol mismatch): update cdx and try again", retryNever, err)
 	case 4404:
-		return NewFailure(failureDisconnected, "the other side is no longer available (they may have closed the link)", retryNewTransfer)
+		return NewFailure(failureDisconnected, "the other side is no longer available (they may have closed the link)", retryNewTransfer, err)
 	case 4406:
-		return NewFailure(failureProtocol, "CD relay rejected the protocol version: update cdx and try again", retryNever)
+		return NewFailure(failureProtocol, "CD relay rejected the protocol version: update cdx and try again", retryNever, err)
 	case 4408:
-		return NewFailure(failureExpired, "this CD link has expired: run `cdx send` again for a fresh link", retryNewTransfer)
+		return NewFailure(failureExpired, "this CD link has expired: run `cdx send` again for a fresh link", retryNewTransfer, err)
 	case 4409:
-		return NewFailure(failureClaimed, "this link is already claimed or expired (one receiver per link): run `cdx send` again", retryNever)
+		return NewFailure(failureClaimed, "this link is already claimed or expired (one receiver per link): run `cdx send` again", retryNever, err)
 	case 4429:
-		return NewFailure(failureStalled, "the transfer is too slow for the relay (backpressure): try again on a faster network", retryNewTransfer)
+		return NewFailure(failureStalled, "the transfer is too slow for the relay (backpressure): try again on a faster network", retryNewTransfer, err)
 	default:
-		return err
+		return NewFailure(failureDisconnected, "CD relay disconnected: try a fresh transfer", retryNewTransfer, err)
 	}
 }
 
