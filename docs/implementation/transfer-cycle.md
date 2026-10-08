@@ -81,3 +81,21 @@ Foreground readiness 20.89 ms / 40.93 MiB/s. Forced relay directBytes=0,
 26.36 MiB/s. Browser forced relay 6.75 MiB/s, 2,097,541 relay wire bytes.
 These single-run local measurements are smoke evidence; repeatable three-run
 worker baselines are in `docs/measurements/wave1-benchmarks.md`.
+
+## Wave 2 gate passed
+
+Canonical ID histories and compatible numeric-code lookup are integrated.
+Typed failure kinds carry never/same_request/new_transfer retry guidance;
+setup retries cap at three attempts within a20-second dial budget.
+Request-ID deduplication uses OS locks, private durable reservations, complete
+input fingerprints, holder revalidation, streamed digest checks before END,
+and ready persistence before output. Reused/expired aliases fall back to the
+original capability URL, verified against the current code directory.
+
+All7 live retry scenarios passed, including4 simultaneous requests/one holder,
+lost command response followed by exact1000-file archive verification,
+changed-source rejection without publication, stale holder and cancellation.
+Go full and race tests,50 JS tests,typecheck,existing agent/browser
+verification and deploy dry-run pass. Concurrency readiness31.627–78.178ms;
+lost-response replay221.052ms for65,536,000 archive source bytes.
+Per-worker details and reproduction are in docs/measurements/wave2-*.md.
