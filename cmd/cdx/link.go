@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"math"
 	"os"
 	"sync"
@@ -109,7 +107,7 @@ func (link *recordLink) readRelay() {
 	for {
 		messageType, data, err := link.connection.ReadMessage()
 		if err != nil {
-			link.deliver(linkItem{err: friendlyRelayError(fmt.Errorf("receive from CD: %w", err))})
+			link.deliver(linkItem{err: friendlyRelayError(failuref(failureProtocol, retryNever, "receive from CD: %w", err))})
 			return
 		}
 		if messageType == websocket.TextMessage {
@@ -123,11 +121,11 @@ func (link *recordLink) readRelay() {
 					return
 				}
 			}
-			link.deliver(linkItem{err: errors.New("CD relay sent unexpected text (transfer aborted)")})
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "CD relay sent unexpected text (transfer aborted)", retryNever)})
 			return
 		}
 		if messageType != websocket.BinaryMessage {
-			link.deliver(linkItem{err: errors.New("CD relay sent an invalid frame")})
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "CD relay sent an invalid frame", retryNever)})
 			return
 		}
 		link.deliver(linkItem{record: data})
@@ -158,7 +156,7 @@ func (link *recordLink) directRecord(record []byte) {
 }
 
 func (link *recordLink) directLost(err error) {
-	link.deliver(linkItem{err: fmt.Errorf("%w (direct connection)", err), direct: true})
+	link.deliver(linkItem{err: failuref(failureProtocol, retryNever, "%w (direct connection)", err), direct: true})
 }
 
 // send seals and writes one record that stays needed until the transfer
@@ -295,7 +293,7 @@ func (link *recordLink) accept(item linkItem) error {
 		link.directUsed.Store(true)
 	}
 	if len(item.record) < headerBytes {
-		return errors.New("the peer sent an invalid record")
+		return NewFailure(failureProtocol, "the peer sent an invalid record", retryNever)
 	}
 	sequence := binary.BigEndian.Uint32(item.record[4:8])
 	if sequence < link.expected || link.pending[sequence] != nil {
@@ -304,7 +302,7 @@ func (link *recordLink) accept(item linkItem) error {
 		return nil
 	}
 	if len(link.pending) >= maxPendingRecords {
-		return errors.New("the peer sent too many records out of order")
+		return NewFailure(failureProtocol, "the peer sent too many records out of order", retryNever)
 	}
 	link.pending[sequence] = item.record
 	return nil
