@@ -104,3 +104,60 @@ func TestRequestJournalRejectsMismatchedIdentityAndIsPrivate(t *testing.T) {
 		t.Fatal("accepted mismatched reservation")
 	}
 }
+
+func TestRequestHolderRejectsSourceChangedAfterReservation(t *testing.T) {
+	t.Setenv("CD_RELAY_URL", "ws://127.0.0.1:9999/ws/v1")
+	t.Setenv("CD_PUBLIC_URL", "http://127.0.0.1:9999")
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.bin")
+	os.WriteFile(source, []byte("first"), 0600)
+	request := sendRequest{files: []string{source}}
+	fingerprint, digest, err := requestMaterial(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret := make([]byte, invitationBytes)
+	journal := requestJournal{Version: 1, Fingerprint: fingerprint, PayloadHash: digest, Invitation: base64.RawURLEncoding.EncodeToString(secret), StartedAt: time.Now()}
+	path := filepath.Join(dir, "request.json")
+	writeRequestJournal(path, journal)
+	t.Setenv("CD_REQUEST_JOURNAL", path)
+	if err := recordRequestHolder(request); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyRequestPayload(digest); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(source, []byte("other"), 0600)
+	if err := recordRequestHolder(request); classifyFailure(err) != "request_conflict" {
+		t.Fatalf("accepted changed source: %v", err)
+	}
+	if err := verifyRequestPayload("different"); classifyFailure(err) != "request_conflict" {
+		t.Fatalf("accepted different sent bytes: %v", err)
+	}
+}
+
+func TestRequestFingerprintSeparatesRelativeQRDirectories(t *testing.T) {
+	t.Setenv("CD_RELAY_URL", "ws://127.0.0.1:9999/ws/v1")
+	t.Setenv("CD_PUBLIC_URL", "http://127.0.0.1:9999")
+	dir := t.TempDir()
+	source := filepath.Join(dir, "a.txt")
+	os.WriteFile(source, []byte("same"), 0600)
+	firstDir := filepath.Join(dir, "first")
+	secondDir := filepath.Join(dir, "second")
+	os.Mkdir(firstDir, 0700)
+	os.Mkdir(secondDir, 0700)
+	request := sendRequest{files: []string{source}, qrPath: "code.png"}
+	t.Chdir(firstDir)
+	first, err := requestFingerprint(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(secondDir)
+	second, err := requestFingerprint(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second {
+		t.Fatal("different QR destinations reused request identity")
+	}
+}

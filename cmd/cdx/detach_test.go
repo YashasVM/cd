@@ -67,7 +67,7 @@ func TestStateKeyFromInputAcceptsCodesIDsAndLinks(t *testing.T) {
 
 func TestStateRoundTripAndLinkModeKey(t *testing.T) {
 	dir := t.TempDir()
-	coded := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", Phase: phaseWaiting, PID: os.Getpid()}
+	coded := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if err := writeState(dir, coded); err != nil {
 		t.Fatal(err)
 	}
@@ -75,14 +75,14 @@ func TestStateRoundTripAndLinkModeKey(t *testing.T) {
 	if err != nil || read.Filename != "a.bin" || read.UpdatedAt.IsZero() {
 		t.Fatalf("readState = %#v, %v", read, err)
 	}
-	linked := transferState{Version: 1, TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Phase: phaseWaiting}
+	linked := transferState{Version: 1, TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Filename: "b.bin", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if err := writeState(dir, linked); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "bO6Ww6lyA10XmqHEgQYHyA.json")); err != nil {
 		t.Fatalf("link-mode state is not keyed by transfer ID: %v", err)
 	}
-	info, err := os.Stat(filepath.Join(dir, "48291.json"))
+	info, err := os.Stat(filepath.Join(dir, coded.TransferID+".json"))
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("state file mode = %v, %v", info.Mode().Perm(), err)
 	}
@@ -99,7 +99,7 @@ func deadPID(t *testing.T) int {
 
 func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 	dir := t.TempDir()
-	state := transferState{Version: 1, Code: "48291", Phase: phaseSending, PID: deadPID(t)}
+	state := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", StartedAt: time.Now().UTC(), Phase: phaseSending, PID: deadPID(t)}
 	if err := writeState(dir, state); err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 	if got := effectiveState(dir, stale); got.Phase != phaseVerified {
 		t.Fatalf("finished holder state = %#v", got)
 	}
-	live := transferState{Code: "1234", Phase: phaseWaiting, PID: os.Getpid()}
+	live := transferState{Code: "1234", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if got := effectiveState(dir, live); got.Phase != phaseWaiting {
 		t.Fatalf("live holder state = %#v", got)
 	}
@@ -125,8 +125,8 @@ func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 func TestPruneStatesKeepsRecentTransfers(t *testing.T) {
 	dir := t.TempDir()
 	for _, state := range []transferState{
-		{Code: "1111", Phase: phaseVerified},
-		{Code: "2222", Phase: phaseSending},
+		{Version: 1, Code: "1111", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", PID: os.Getpid(), StartedAt: time.Now().UTC(), Phase: phaseVerified},
+		{Version: 1, Code: "2222", TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Filename: "b.bin", PID: os.Getpid(), StartedAt: time.Now().UTC(), Phase: phaseSending},
 	} {
 		if err := writeState(dir, state); err != nil {
 			t.Fatal(err)

@@ -9,7 +9,7 @@ node --test scripts/bench-metrics.test.mjs
 CD_BENCH_ONLY=code,foreground,relay,tunnel CD_BENCH_MIB=2 CD_BENCH_RUNS=3 node scripts/bench.mjs > baseline.json
 ```
 
-Use 64 MiB and five runs for a throughput baseline, allowing the relay's connection rate limit to recover between invocations. Do not run other verification or benchmark jobs concurrently. `CD_VERIFY_URL` selects an existing deployment; omit it for loopback Wrangler. Browser runs require Chromium (`CHROMIUM_PATH` can select it). `CD_BENCH_CPU_THROTTLE=4` slows only browser receivers.
+Use 64 MiB and five runs of one mode at a time for a throughput baseline, allowing the relay's connection rate limit to recover between invocations. The default three runs of four modes stay below the 30-admission/minute CLI relay limit when run alone. Do not run other verification or benchmark jobs concurrently. `CD_VERIFY_URL` selects an existing deployment; omit it for loopback Wrangler. Browser runs require Chromium (`CHROMIUM_PATH` can select it). `CD_BENCH_CPU_THROTTLE=4` slows only browser receivers.
 
 The script emits one JSON result to stdout, with individual trials, completion rate, successful medians, payload size, target and machine metadata. Any failed requested mode exits nonzero. Payloads are random incompressible bytes, reused within an invocation. Every successful trial checks SHA-256 after receiving the complete file. Failed trials remain in the denominator and never contribute to throughput medians. Startup of the local Worker and CLI compilation are outside measurements.
 
@@ -33,5 +33,7 @@ Measured on 2026-10-08 with a 2 MiB payload against local Wrangler, before the q
 | browser `tunnel` | 1/1 | 69.71 ms | — | 8.72 MiB/s | — |
 
 All CLI sender reports showed 2,097,541 encrypted bytes sent on relay and zero direct bytes; receiver reports showed 148 relay bytes and zero direct bytes. Each detached holder was alive after parent exit. Detached holder logs were 455 bytes each. The browser relay sent 2,097,541 binary bytes and zero raw or legacy bytes. P2P and legacy probes each failed with completion rate 0/1 and those same observed relay bytes, proving the prior labels were invalid for the current UI.
+
+A later run concurrent with a CLI verifier completed all nine CLI trials and two of three browser relay trials; one browser sender timed out becoming ready. The script retained that failure (2/3 completion, nonzero exit). This loaded run should not be used for performance comparisons.
 
 Verification: four benchmark helper tests pass (failure-aware medians, exact output-byte accounting on both streams, fragmented readiness lines with listener cleanup, actionable timeout/EOF). Build succeeds. The coordinator runs repository checks and reruns this contract after integrating the wave.
