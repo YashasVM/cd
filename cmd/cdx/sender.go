@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"mime"
 	"net"
@@ -585,10 +588,17 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
 	finishLine := bar.finish
 
+	var payloadHash hash.Hash
+	if os.Getenv("CD_REQUEST_JOURNAL") != "" {
+		payloadHash = sha256.New()
+	}
 	buffer := make([]byte, chunkSize)
 	for {
 		count, readErr := io.ReadFull(file, buffer)
 		if count > 0 {
+			if payloadHash != nil {
+				payloadHash.Write(buffer[:count])
+			}
 			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
 				finishLine()
 				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
@@ -612,6 +622,12 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	if progress.sent != ready.Size {
 		finishLine()
 		return NewFailure(failureLocal, "file changed while it was being sent", retryNever)
+	}
+	if payloadHash != nil {
+		if err := verifyRequestPayload(hex.EncodeToString(payloadHash.Sum(nil))); err != nil {
+			finishLine()
+			return err
+		}
 	}
 	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
