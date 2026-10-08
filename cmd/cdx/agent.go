@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-// agentSkill is skills/cd-file-sharing/SKILL.md; TestAgentSkillMatchesRepository
-// keeps the embedded copy in sync.
+// agentSkill is generated from skills/cd-file-sharing/source.md.
+// Run node scripts/generate-sharing-skill.mjs after editing the source.
 //
 //go:embed agentskill/SKILL.md
 var agentSkill string

@@ -187,7 +187,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "code accepted — connecting to sender")
+		transferInfo("code accepted — connecting to sender")
 	} else {
 		invitation, err = parseInvitationInput(code)
 		if err != nil {
@@ -241,7 +241,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "connected — waiting for sender's file offer")
+	transferInfo("connected — waiting for sender's file offer")
 	link := newRecordLink(connection, sealer, opener, errors.New("sender disconnected (they closed the tab or lost network)"))
 	defer link.close()
 	link.start()
@@ -263,7 +263,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
+	transferInfo("receiving %s (%s)\n", offer.Name, formatBytes(size))
 
 	stagingFile, err := os.OpenFile(staging, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
@@ -290,9 +290,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 
 	terminal := isTerminal(os.Stderr)
 	bar := newProgressBar(os.Stderr, "receiving", size)
-	bar.jsonLines = jsonProgress && !terminal
+	bar.jsonLines = jsonProgress
+	bar.plainLines = !terminal
 	reportProgress := func(received uint64) {
-		if terminal || bar.jsonLines {
+		if transferProgressEnabled(terminal, jsonProgress, progressRequested) {
 			bar.update(received)
 		}
 	}
@@ -359,7 +360,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if abs == "" {
 				abs = final
 			}
-			fmt.Fprintf(os.Stderr, "received %s (%s) — saved to %s\n", offer.Name, formatBytes(size), abs)
+			transferInfo("received %s (%s) — saved to %s\n", offer.Name, formatBytes(size), abs)
 			succeeded = true
 			if onReceived != nil {
 				return onReceived(receiveResult{Version: 1, Filename: offer.Name, Size: size, Path: abs})
@@ -447,7 +448,7 @@ func answerDirectPath(link *recordLink, offerSDP string) {
 	mutex.Unlock()
 	select {
 	case <-path.opened:
-		fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+		transferInfo("switched to a direct connection (%s)\n", path.route())
 	case <-path.lost:
 	}
 }

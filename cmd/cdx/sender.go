@@ -324,17 +324,17 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		}
 	}
 	if !fancyReady {
-		fmt.Fprintf(os.Stderr, "sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+		transferInfo("sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
 	}
 	if ready.Size > 256*1024*1024 {
-		fmt.Fprintln(os.Stderr, "note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
+		transferInfo("note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
 	}
 	if !fancyReady {
-		fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
+		transferInfo("waiting for receiver (up to 15m; Ctrl-C to cancel)")
 		if ready.Code != "" {
-			fmt.Fprintf(os.Stderr, "browsers: open %s  ·  terminals: cdx receive %s\n", codeLink(ready.Code), ready.Code)
+			transferInfo("browsers: open %s  ·  terminals: cdx receive %s\n", codeLink(ready.Code), ready.Code)
 		} else {
-			fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+			transferInfo("terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 		}
 	}
 	sealer, err := newSealer(invitation, senderDirection)
@@ -365,7 +365,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "receiver connected — sending file offer")
+	transferInfo("receiver connected — sending file offer")
 	hooks.report(phaseConnected, 0)
 	reader, err := source.open()
 	if err != nil {
@@ -494,13 +494,13 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		go func() {
 			select {
 			case <-path.opened:
-				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+				transferInfo("switched to a direct connection (%s)\n", path.route())
 			case <-path.lost:
 			}
 		}()
 	}
 
-	fmt.Fprintln(os.Stderr, "waiting for receiver to accept (up to 10m)")
+	transferInfo("waiting for receiver to accept (up to 10m)")
 	for {
 		kind, payload, err := link.next(ctx, consentWait)
 		if err != nil {
@@ -518,14 +518,15 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		}
 		break
 	}
-	fmt.Fprintln(os.Stderr, "receiver accepted — sending file")
+	transferInfo("receiver accepted — sending file")
 	hooks.report(phaseSending, 0)
 
 	terminal := isTerminal(os.Stderr)
 	bar := newProgressBar(os.Stderr, "sending", ready.Size)
-	bar.jsonLines = jsonProgress && !terminal
+	bar.jsonLines = jsonProgress
+	bar.plainLines = !terminal
 	reportProgress := func(acknowledged uint64) {
-		if terminal || bar.jsonLines {
+		if transferProgressEnabled(terminal, jsonProgress, progressRequested) {
 			bar.update(acknowledged)
 		}
 	}
@@ -632,10 +633,10 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return err
 	}
 	if !terminal && ready.Size >= 1024*1024 {
-		fmt.Fprintf(os.Stderr, "sent %s\n", formatBytes(progress.sent))
+		transferInfo("sent %s\n", formatBytes(progress.sent))
 	}
 	link.finish(false)
-	fmt.Fprintln(os.Stderr, "receiver verified the file")
+	transferInfo("receiver verified the file")
 	return nil
 }
 
