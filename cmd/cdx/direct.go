@@ -249,10 +249,23 @@ func (path *directPath) route() string {
 		return "direct"
 	}
 	address := net.ParseIP(pair.Remote.Address)
-	if address != nil && (address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast()) {
+	if address != nil && (address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() || isInterfaceAddress(address)) {
 		return "same network"
 	}
 	return "direct internet path"
+}
+
+func isInterfaceAddress(address net.IP) bool {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return false
+	}
+	for _, candidate := range addresses {
+		if network, ok := candidate.(*net.IPNet); ok && network.IP.Equal(address) {
+			return true
+		}
+	}
+	return false
 }
 
 func (path *directPath) close() {
