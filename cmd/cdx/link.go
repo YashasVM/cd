@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,7 +38,10 @@ type recordLink struct {
 	direct atomic.Pointer[directPath]
 	// directUsed is set once a record crossed the direct path in either
 	// direction; from then on losing it is fatal and losing the relay is not.
-	directUsed atomic.Bool
+	directUsed  atomic.Bool
+	relayBytes  atomic.Uint64
+	directBytes atomic.Uint64
+	reportOnce  sync.Once
 	// retained holds records sent on the relay while a direct path may
 	// still open (guarded by writeMu). When it opens they are sent again on
 	// it, so the transfer never waits for a slow relay to drain; the peer
@@ -183,10 +187,15 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 				if err := path.send(earlier.record); err != nil {
 					return err
 				}
+				link.directBytes.Add(uint64(len(earlier.record)))
 			}
 			link.retained = nil
 		}
-		return path.send(record)
+		if err := path.send(record); err != nil {
+			return err
+		}
+		link.directBytes.Add(uint64(len(record)))
+		return nil
 	}
 	if path != nil && !link.switched && !path.isLost() {
 		link.retained = append(link.retained, retainedRecord{record: record, release: release})
@@ -196,7 +205,11 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 	if err := link.connection.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
 		return err
 	}
-	return link.connection.WriteMessage(websocket.BinaryMessage, record)
+	if err := link.connection.WriteMessage(websocket.BinaryMessage, record); err != nil {
+		return err
+	}
+	link.relayBytes.Add(uint64(len(record)))
+	return nil
 }
 
 // acknowledged drops retained records the peer has confirmed.
@@ -300,6 +313,7 @@ func (link *recordLink) accept(item linkItem) error {
 // close stops the link and the direct path after a failure; the caller's
 // deferred Close drops the WebSocket.
 func (link *recordLink) close() {
+	defer link.reportTransport()
 	link.stopOnce.Do(func() { close(link.stop) })
 	if path := link.direct.Load(); path != nil {
 		path.close()
@@ -311,6 +325,7 @@ func (link *recordLink) close() {
 // on it is delivered); both sides then do the WebSocket close handshake,
 // whose reply arrives only after the relay processed every earlier frame.
 func (link *recordLink) finish(waitForPeer bool) {
+	defer link.reportTransport()
 	link.stopOnce.Do(func() { close(link.stop) })
 	deadline := time.Now().Add(closeWait)
 	if path := link.direct.Load(); path != nil {
@@ -330,4 +345,21 @@ func (link *recordLink) finish(waitForPeer bool) {
 	case <-link.readerDone:
 	case <-time.After(time.Until(deadline) + 100*time.Millisecond):
 	}
+}
+
+func (link *recordLink) reportTransport() {
+	link.reportOnce.Do(func() {
+		if os.Getenv("CD_TRANSPORT_REPORT") != "1" {
+			return
+		}
+		transport := "relay"
+		if link.directBytes.Load() > 0 {
+			transport = "direct"
+		}
+		_ = json.NewEncoder(os.Stderr).Encode(struct {
+			Transport   string `json:"transport"`
+			RelayBytes  uint64 `json:"relayBytes"`
+			DirectBytes uint64 `json:"directBytes"`
+		}{transport, link.relayBytes.Load(), link.directBytes.Load()})
+	})
 }
