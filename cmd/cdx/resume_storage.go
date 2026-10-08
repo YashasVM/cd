@@ -120,6 +120,9 @@ func resumeLoadCapability(id string) (resumeCapability, invitation, []byte, erro
 		return cap, invite, nil, err
 	}
 	if err = resumeReadJSON(path, &cap); err != nil {
+		if os.IsNotExist(err) {
+			err = NewFailure(failureNotFound, "local resume capability is unavailable or expired; start a new --resumable transfer", retryNewTransfer, err)
+		}
 		return cap, invite, nil, err
 	}
 	master, err := resumeDecode(cap.Master, 32)
@@ -234,10 +237,12 @@ func resumeCleanupCapabilities(now time.Time) {
 		return
 	}
 	dir = filepath.Join(dir, "resume")
-	entries, err := os.ReadDir(dir)
+	directory, err := os.Open(dir)
 	if err != nil {
 		return
 	}
+	defer directory.Close()
+	entries, _ := directory.ReadDir(128)
 	checked := 0
 	for _, entry := range entries {
 		if checked >= 128 {

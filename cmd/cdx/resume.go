@@ -39,12 +39,14 @@ type resumeEvent struct {
 	SenderNonceProof   string `json:"senderNonceProof"`
 	ReceiverNonceProof string `json:"receiverNonceProof"`
 	NonceProof         string `json:"nonceProof"`
+	ExpiresAt          int64  `json:"expiresAt"`
 }
 type resumeSession struct {
 	socket                     *websocket.Conn
 	seal                       *resumeRecordSealer
 	open                       *resumeRecordOpener
 	senderNonce, receiverNonce string
+	expiresAt                  int64
 }
 
 func resumeRandom() ([]byte, error) {
@@ -105,6 +107,7 @@ func resumeConnect(ctx context.Context, invite invitation, role string, senderTo
 	socket.SetReadDeadline(time.Now().Add(15 * time.Minute))
 	var paired resumeEvent
 	admitted := false
+	expiresAt := int64(0)
 	for {
 		kind, data, err := socket.ReadMessage()
 		if err != nil {
@@ -126,6 +129,7 @@ func resumeConnect(ctx context.Context, invite invitation, role string, senderTo
 		}
 		if event.Type == "accepted" && !admitted {
 			admitted = true
+			expiresAt = event.ExpiresAt
 			if len(admission) > 0 {
 				if err = admission[0](); err != nil {
 					socket.Close()
@@ -186,7 +190,7 @@ func resumeConnect(ctx context.Context, invite invitation, role string, senderTo
 		socket.Close()
 		return nil, err
 	}
-	return &resumeSession{socket: socket, seal: sealer, open: opener, senderNonce: paired.SessionNonce, receiverNonce: paired.ReceiverNonce}, nil
+	return &resumeSession{socket: socket, seal: sealer, open: opener, senderNonce: paired.SessionNonce, receiverNonce: paired.ReceiverNonce, expiresAt: expiresAt}, nil
 }
 func (s *resumeSession) send(kind messageKind, payload []byte) error {
 	record, err := s.seal.seal(kind, payload)
@@ -352,6 +356,10 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 	stop := context.AfterFunc(ctx, func() { session.socket.Close() })
 	defer stop()
 	cap.Checkpoint.PriorSessionNonce = session.senderNonce
+	if session.expiresAt <= time.Now().UnixMilli() {
+		return resumeFailure("relay supplied invalid root expiry")
+	}
+	cap.Checkpoint.ExpiresAt = session.expiresAt
 	if err = signResumeCheckpoint(&cap.Checkpoint, senderToken); err != nil {
 		return err
 	}
@@ -491,6 +499,9 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	offer.SizeValue, err = strconv.ParseInt(offer.Size, 10, 64)
 	if err != nil || offer.SizeValue < 0 || offer.SizeValue > 1<<53-1 || offer.ChunkSize != chunkSize || len(offer.WholeSHA256) != 64 || offer.ExpiresAt <= time.Now().UnixMilli() || offer.ExpiresAt > time.Now().Add(24*time.Hour).UnixMilli() {
 		return resumeFailure("invalid resumable source identity or expiry")
+	}
+	if offer.ExpiresAt != session.expiresAt {
+		return resumeFailure("offered expiry does not match the fixed relay root expiry")
 	}
 	final, checkpointPath, err := resumeDest(offer.Name, request.out, invite.encodedID())
 	if err != nil {
