@@ -12,10 +12,9 @@ import { buildCLI, childExit, cliEnv, findChromium, firstLine, startWorker, stop
 //   code    command -> share code on stdout (the agent path, detached send)
 //   foreground foreground readiness, verified CLI -> CLI throughput
 //   relay   CLI -> CLI throughput through the relay room
-//   p2p     browser -> browser throughput over the WebRTC data channel
+//   p2p     browser -> browser encrypted records over negotiated WebRTC
 //   tunnel  browser -> browser throughput when P2P falls back to the relay
-//   legacy  browser -> browser P2P over PeerJS binary framing (what the
-//           old cached pages get), for comparison with p2p
+//   legacy  explicitly unsupported historical PeerJS mode (fails clearly)
 // Local by default (loopback: measures CPU and protocol overhead, not the
 // network). CD_VERIFY_URL=https://cd.yash0.in measures production.
 // CD_BENCH_MIB sets the payload (default 64), CD_BENCH_RUNS every mode's runs
