@@ -91,12 +91,12 @@ func TestRequestJournalRejectsMismatchedIdentityAndIsPrivate(t *testing.T) {
 	if err := recordRequestHolder(); err != nil {
 		t.Fatal(err)
 	}
-	ready := readyOutput{Version: 1, TransferID: base64.RawURLEncoding.EncodeToString(secret[:16]), URL: "private"}
+	ready := readyOutput{Version: 1, TransferID: base64.RawURLEncoding.EncodeToString(secret[:16]), URL: "https://cd.yash0.in/s/" + base64.RawURLEncoding.EncodeToString(secret[:16]) + "#v1." + base64.RawURLEncoding.EncodeToString(secret[16:])}
 	if err := recordRequestReady(ready); err != nil {
 		t.Fatal(err)
 	}
 	read, err := readRequestJournal(path)
-	if err != nil || read.PID != os.Getpid() || read.Ready.URL != "private" {
+	if err != nil || read.PID != os.Getpid() || read.Ready.URL != ready.URL {
 		t.Fatalf("%#v %v", read, err)
 	}
 	journal.Ready = &ready

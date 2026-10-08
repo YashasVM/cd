@@ -78,15 +78,21 @@ func readRequestJournal(path string) (requestJournal, error) {
 	if err = decoder.Decode(&journal); err != nil {
 		return journal, err
 	}
-	if journal.Version != 1 || len(journal.Fingerprint) != 64 || journal.StartedAt.IsZero() || journal.PID < 0 {
+	_, fingerprintErr := hex.DecodeString(journal.Fingerprint)
+	if journal.Version != 1 || fingerprintErr != nil || len(journal.Fingerprint) != 64 || journal.StartedAt.IsZero() || journal.PID < 0 {
 		return journal, errors.New("invalid request journal")
 	}
 	secret, err := base64.RawURLEncoding.DecodeString(journal.Invitation)
 	if err != nil || len(secret) != invitationBytes {
 		return journal, errors.New("invalid request reservation")
 	}
-	if journal.Ready != nil && (journal.Ready.TransferID != base64.RawURLEncoding.EncodeToString(secret[:16]) || journal.Ready.Version != 1) {
-		return journal, errors.New("request result disagrees with reservation")
+	if journal.Ready != nil {
+		expectedID := base64.RawURLEncoding.EncodeToString(secret[:16])
+		expectedKey := base64.RawURLEncoding.EncodeToString(secret[16:])
+		capability, err := parseInvitationURL(journal.Ready.URL)
+		if journal.Ready.TransferID != expectedID || journal.Ready.Version != 1 || err != nil || capability.encodedID() != expectedID || capability.encodedKey() != expectedKey {
+			return journal, errors.New("request result disagrees with reservation")
+		}
 	}
 	return journal, nil
 }
