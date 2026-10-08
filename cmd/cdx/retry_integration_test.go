@@ -64,16 +64,18 @@ func TestRequestRetryConcurrentProcessesShareOneHolder(t *testing.T) {
 		if result.err != nil {
 			t.Fatalf("request %d: %v: %s", i, result.err, result.diagnostic)
 		}
-		if result.ready.Code != "11111" || result.ready.URL != results[0].ready.URL {
+		if (result.ready.Code != "11111" && result.ready.Code != "") || result.ready.URL != results[0].ready.URL || result.ready.TransferID != results[0].ready.TransferID {
 			t.Fatalf("request %d created a different transfer: %#v", i, result.ready)
 		}
 	}
-	if len(states) != 1 || !processAlive(states[0].PID) {
+	if len(states) != 1 || !processAlive(states[0].PID) || states[0].TransferID != results[0].ready.TransferID {
 		t.Fatalf("expected one live holder, got %#v", states)
 	}
 	if len(relay.join) != 1 {
 		t.Fatalf("expected one relay admission, got %d", len(relay.join))
 	}
+	// The fake relay has no directory GET endpoint, so safe replay may clear
+	// the unverifiable code while retaining the original private capability.
 	t.Logf("4 concurrent requests: one transfer %s, one holder PID %d", states[0].TransferID, states[0].PID)
 
 	// Same-size replacement defeats metadata-only fingerprints.
