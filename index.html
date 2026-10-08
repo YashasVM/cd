@@ -82,6 +82,12 @@
             <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
           </div>
 
+          <div class="resume-options">
+            <label><input id="resumable-check" type="checkbox" /> Keep progress on this device so an interrupted send can resume</label>
+            <label for="resume-link-input">Resume a previous send</label>
+            <input id="resume-link-input" type="url" placeholder="Paste its private v2 link, then choose the same file" autocomplete="off" />
+          </div>
+
           <div id="sender-file-info" class="file-info hidden">
             <span class="panel-kicker">sending</span>
             <div class="file-header">
@@ -94,8 +100,9 @@
           <div id="sender-code-section" class="share-panel hidden">
             <div class="share-grid">
               <div class="code-block">
-                <span class="panel-kicker">share this code</span>
+                <span class="panel-kicker" id="share-code-kicker">share this code</span>
                 <strong id="share-code"></strong>
+                <a id="share-private-link" hidden></a>
                 <p class="code-help">On the other device, open <strong>cd.yash0.in</strong> → Receive and type it. In a terminal:</p>
                 <code id="receive-command" class="receive-command"></code>
               </div>
