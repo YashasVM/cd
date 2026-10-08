@@ -246,7 +246,11 @@ func runRequestSend(request sendRequest) int {
 		ready := *journal.Ready
 		if ready.Code != "" {
 			alias, aliasErr := readState(stateDirectory, ready.Code)
-			if aliasErr != nil || alias.TransferID != ready.TransferID {
+			_, publicBase, endpointErr := endpointBase()
+			lookupCtx, lookupCancel := context.WithTimeout(ctx, 3*time.Second)
+			current, lookupErr := lookupShareCode(lookupCtx, publicBase, ready.Code)
+			lookupCancel()
+			if aliasErr != nil || alias.TransferID != ready.TransferID || endpointErr != nil || lookupErr != nil || current.encodedID() != ready.TransferID {
 				ready.Code = ""
 			}
 		}
