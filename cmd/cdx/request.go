@@ -246,7 +246,11 @@ func runRequestSend(request sendRequest) int {
 		ready := *journal.Ready
 		if ready.Code != "" {
 			alias, aliasErr := readState(stateDirectory, ready.Code)
-			if aliasErr != nil || alias.TransferID != ready.TransferID {
+			_, publicBase, endpointErr := endpointBase()
+			lookupCtx, lookupCancel := context.WithTimeout(ctx, 3*time.Second)
+			current, lookupErr := lookupShareCode(lookupCtx, publicBase, ready.Code)
+			lookupCancel()
+			if aliasErr != nil || alias.TransferID != ready.TransferID || endpointErr != nil || lookupErr != nil || current.encodedID() != ready.TransferID || current.encodedKey() != base64.RawURLEncoding.EncodeToString(secretFromJournal(journal)) {
 				ready.Code = ""
 			}
 		}
@@ -300,4 +304,9 @@ func verifyRequestPayload(digest string) error {
 		return NewFailure("request_conflict", "source content changed after request reservation; transfer was not completed", retryNever)
 	}
 	return nil
+}
+
+func secretFromJournal(journal requestJournal) []byte {
+	secret, _ := base64.RawURLEncoding.DecodeString(journal.Invitation)
+	return secret[16:]
 }

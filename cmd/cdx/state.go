@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 )
 
 var stateWrites sync.Mutex
@@ -60,8 +59,11 @@ func validateState(state transferState) error {
 	if state.Code != "" && !stateCodePattern.MatchString(state.Code) {
 		return errors.New("invalid share code")
 	}
-	if state.Filename == "" || state.Filename == "." || state.Filename == ".." || !utf8.ValidString(state.Filename) || strings.ContainsAny(state.Filename, "/\\\x00") {
+	if name, err := safeFilename(state.Filename); err != nil || name != state.Filename {
 		return errors.New("invalid filename")
+	}
+	if state.Retry != "" && state.Retry != retryNever && state.Retry != retrySameRequest && state.Retry != retryNewTransfer {
+		return errors.New("invalid retry guidance")
 	}
 	if state.PID <= 0 || state.StartedAt.IsZero() || state.UpdatedAt.Before(state.StartedAt) {
 		return errors.New("invalid holder or timestamps")
