@@ -226,3 +226,39 @@ func resumeCheckOffer(checkpoint ResumeCheckpoint, offer resumeOffer) error {
 	}
 	return nil
 }
+
+// Bounded cleanup validates the sender MAC before deleting expired secrets.
+func resumeCleanupCapabilities(now time.Time) {
+	dir, err := stateDir()
+	if err != nil {
+		return
+	}
+	dir = filepath.Join(dir, "resume")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	checked := 0
+	for _, entry := range entries {
+		if checked >= 128 {
+			return
+		}
+		id, ok := strings.CutSuffix(entry.Name(), ".sender.json")
+		if !ok || !validTransferID(id) {
+			continue
+		}
+		checked++
+		path := filepath.Join(dir, entry.Name())
+		var cap resumeCapability
+		if resumeReadJSON(path, &cap) != nil || cap.Version != 2 || cap.Checkpoint.RootID != id || cap.Checkpoint.Role != "sender" || cap.Checkpoint.ExpiresAt > now.UnixMilli() {
+			continue
+		}
+		token, err := resumeDecode(cap.SenderToken, 32)
+		if err != nil {
+			continue
+		}
+		if verifyResumeCheckpoint(cap.Checkpoint, token, cap.Checkpoint.ExpiresAt-1) == nil {
+			_ = os.Remove(path)
+		}
+	}
+}

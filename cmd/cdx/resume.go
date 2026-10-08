@@ -258,6 +258,18 @@ func resumeVerifyEnd(data []byte, size uint64, digest string) error {
 	}
 	return nil
 }
+func resumeProgress(label string, total uint64, jsonOutput, requested bool) (func(uint64), func()) {
+	terminal := isTerminal(os.Stderr)
+	bar := newProgressBar(os.Stderr, label, total)
+	bar.jsonLines = jsonOutput
+	bar.plainLines = !terminal
+	return func(bytes uint64) {
+		if transferProgressEnabled(terminal, jsonOutput, requested) {
+			bar.update(bytes)
+		}
+	}, bar.finish
+}
+
 func runResumableSend(request sendRequest) int {
 	ctx, cancel := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer cancel()
@@ -272,6 +284,7 @@ func runResumableSend(request sendRequest) int {
 	return 0
 }
 func sendResumable(ctx context.Context, request sendRequest) error {
+	resumeCleanupCapabilities(time.Now())
 	source, err := prepareSource(request.files)
 	if err != nil {
 		return err
@@ -326,7 +339,12 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 	ready := readyOutput{Version: 2, Mode: "foreground", TransferID: invite.encodedID(), URL: public + "/s/" + invite.encodedID() + "#v2." + invite.encodedKey(), Filename: source.name, Size: source.size}
 	// Private capability exists before the link is exposed; v2 deliberately runs
 	// foreground, preserving the established v1 detached sender behavior.
-	session, err := resumeConnect(ctx, invite, "sender", senderToken, func() error { return writeReady(os.Stdout, ready, request.jsonOutput) })
+	session, err := resumeConnect(ctx, invite, "sender", senderToken, func() error {
+		if err := saveReadyQR(&ready, request.qrPath); err != nil {
+			return err
+		}
+		return writeReady(os.Stdout, ready, request.jsonOutput)
+	})
 	if err != nil {
 		return err
 	}
@@ -374,6 +392,9 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 		return resumeFailure("receiver retained prefix does not match the unchanged source")
 	}
 	sent := offset
+	report, finish := resumeProgress("sending", source.size, request.jsonOutput, request.progress)
+	defer finish()
+	report(offset)
 	buffer := make([]byte, chunkSize)
 	for sent < source.size {
 		remaining := source.size - sent
@@ -398,6 +419,7 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 		if kind != kindAck || parseErr != nil || ack != sent || chunks != resumeCounts(sent) {
 			return resumeFailure("receiver acknowledged unverified resume progress")
 		}
+		report(sent)
 	}
 	extra := make([]byte, 1)
 	if n, _ := reader.Read(extra); n != 0 || hex.EncodeToString(whole.Sum(nil)) != digest {
@@ -467,7 +489,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		return resumeFailure("invalid resumable file offer")
 	}
 	offer.SizeValue, err = strconv.ParseInt(offer.Size, 10, 64)
-	if err != nil || offer.SizeValue < 0 || offer.SizeValue > 1<<53-1 || offer.ChunkSize != chunkSize || len(offer.WholeSHA256) != 64 || offer.ExpiresAt <= time.Now().UnixMilli() {
+	if err != nil || offer.SizeValue < 0 || offer.SizeValue > 1<<53-1 || offer.ChunkSize != chunkSize || len(offer.WholeSHA256) != 64 || offer.ExpiresAt <= time.Now().UnixMilli() || offer.ExpiresAt > time.Now().Add(24*time.Hour).UnixMilli() {
 		return resumeFailure("invalid resumable source identity or expiry")
 	}
 	final, checkpointPath, err := resumeDest(offer.Name, request.out, invite.encodedID())
@@ -478,6 +500,12 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	err = resumeReadJSON(checkpointPath, &checkpoint)
 	var stage *os.File
 	if err == nil {
+		if checkpoint.ExpiresAt <= time.Now().UnixMilli() {
+			if verifyResumeCheckpoint(checkpoint, invite.key[:], checkpoint.ExpiresAt-1) == nil {
+				resumeRemove(checkpoint, checkpointPath)
+			}
+			return NewFailure(failureExpired, "resume checkpoint expired after 24 hours; start a new transfer", retryNewTransfer)
+		}
 		if err = verifyResumeCheckpoint(checkpoint, invite.key[:], time.Now().UnixMilli()); err != nil {
 			return err
 		}
@@ -513,6 +541,9 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		}
 	}()
 	resumedBytes := checkpoint.Offset
+	report, finish := resumeProgress("receiving", uint64(checkpoint.Size), request.jsonOutput, request.progress)
+	defer finish()
+	report(uint64(checkpoint.Offset))
 	checkpoint.PriorSessionNonce = session.senderNonce
 	whole := sha256.New()
 	if _, err = stage.Seek(0, io.SeekStart); err != nil {
@@ -558,6 +589,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 			if err = session.send(kindAck, encodeCounts(resumeCounts(uint64(checkpoint.Offset)), uint64(checkpoint.Offset))); err != nil {
 				return err
 			}
+			report(uint64(checkpoint.Offset))
 			continue
 		}
 		if kind != kindEnd || checkpoint.Offset != checkpoint.Size {
