@@ -319,6 +319,10 @@ export function startRelaySend(source, hooks = {}) {
         if (directUsed && !complete) failPump(new RelaySendError(error.message));
         else if (!complete) { direct?.close(); direct = null; retained.length = 0; retainedBytes = 0; }
       }
+    }).then((path) => {
+      if (cancelled || closedError || complete) { path.close(); return null; }
+      direct = path;
+      return path;
     }).catch(() => null) : Promise.resolve(null);
     await waitForText('peer-joined', PEER_WAIT_MS, 'Nobody used the code within 15 minutes. Send again for a fresh code.');
 
