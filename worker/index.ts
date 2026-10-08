@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import { ResumeRoomProtocol } from './resume-room';
 
 type Role = 'sender' | 'receiver';
 type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string } | { kind: 'peer'; role: Role };
@@ -123,15 +124,19 @@ function reject(socket: WebSocket, code: number, reason: string): void {
 
 export class TransferRoom extends DurableObject<Env> {
   private room: RoomState = { kind: 'empty' };
+  private resume: ResumeRoomProtocol;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.resume = new ResumeRoomProtocol(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? { kind: 'empty' };
     });
   }
 
   async fetch(request: Request): Promise<Response> {
+    const resumeRoot = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
+    if (resumeRoot) return this.resume.fetch(request, resumeRoot);
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
     if (this.ctx.getWebSockets().length >= 4) return new Response('room connection limit reached', { status: 429 });
     const pair = new WebSocketPair();
@@ -147,6 +152,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.message(socket, message); return; }
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
     if (this.isExpired()) {
@@ -182,6 +189,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket, code: number, reason: string): Promise<void> {
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.close(socket); return; }
     // Complete the close handshake. Clients wait for this reply to know every
     // frame they sent before it (such as COMPLETE) reached the room; without
     // it they sit out their close timeout.
@@ -199,6 +208,7 @@ export class TransferRoom extends DurableObject<Env> {
   async webSocketError(socket: WebSocket): Promise<void> { await this.webSocketClose(socket, 1011, 'socket error'); }
 
   async alarm(): Promise<void> {
+    await this.resume.alarm();
     const now = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
       const attachment: unknown = socket.deserializeAttachment();
@@ -525,7 +535,7 @@ export class CodeDirectory extends DurableObject<Env> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /api/codes),
+    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /ws/v2, /api/codes),
     // and share pages (/send, /s/*) so every terminal<->browser combination
     // works from one origin.
     // design.yash0.in serves the design-docs list site from /design/.
@@ -566,6 +576,19 @@ export default {
         return await env.TRANSFERS.getByName(match[1]).fetch(request);
       } catch (error) {
         console.error(JSON.stringify({ event: 'relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
+        return new Response('relay temporarily unavailable', { status: 503 });
+      }
+    }
+    const resumeMatch = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (resumeMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      try {
+        const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+        if (!success) return new Response('connection rate limit reached', { status: 429 });
+        return await env.TRANSFERS.getByName(`v2:${resumeMatch[1]}`).fetch(request);
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'resume_relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
         return new Response('relay temporarily unavailable', { status: 503 });
       }
     }
