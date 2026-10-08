@@ -41,6 +41,7 @@ type readyOutput struct {
 	Filename   string `json:"filename"`
 	Size       uint64 `json:"size"`
 	QRPath     string `json:"qrPath,omitempty"`
+	Mode       string `json:"mode,omitempty"`
 }
 
 func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
@@ -88,6 +89,10 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  update             update cdx to the latest release")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "resumable transfers (foreground, private links):")
+	fmt.Fprintln(output, "  send --resumable <paths> | send --resume <transferID> <paths>")
+	fmt.Fprintln(output, "  receive --resume <private #v2 link> --out <path>")
+	fmt.Fprintln(output, "  v2 uses durable checkpoints; status/wait apply to v1 background sends.")
 	fmt.Fprintln(output, "options for receive:")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
@@ -172,6 +177,8 @@ func receiveUsage(output io.Writer) {
 
 // sendRequest is the parsed form of send arguments.
 type sendRequest struct {
+	resumable  bool
+	resumeID   string
 	requestID  string
 	jsonOutput bool
 	progress   bool
@@ -186,6 +193,7 @@ type sendRequest struct {
 
 // receiveRequest is the parsed form of receive arguments.
 type receiveRequest struct {
+	resume     bool
 	jsonOutput bool
 	progress   bool
 	force      bool
@@ -212,6 +220,25 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		}
 		if !endOfFlags && (argument == "--version" || argument == "-v") {
 			return sendRequest{version: true}, nil
+		}
+		if !endOfFlags && argument == "--resumable" {
+			request.resumable = true
+			continue
+		}
+		if !endOfFlags && (argument == "--resume" || strings.HasPrefix(argument, "--resume=")) {
+			value, found := strings.CutPrefix(argument, "--resume=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --resume needs a transfer ID")
+				}
+				value = args[index]
+			}
+			if !validTransferID(value) {
+				return sendRequest{}, errors.New("cdx: --resume needs a valid transfer ID")
+			}
+			request.resumeID = value
+			continue
 		}
 		if !endOfFlags && argument == "--progress" {
 			request.progress = true
@@ -295,6 +322,14 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	if request.requestID != "" && request.wait {
 		return sendRequest{}, errors.New("cdx: --request-id requires a background send; remove --wait")
 	}
+	if request.resumable || request.resumeID != "" {
+		if request.resumable && request.resumeID != "" {
+			return sendRequest{}, errors.New("cdx: choose --resumable or --resume")
+		}
+		if request.detach || request.requestID != "" {
+			return sendRequest{}, errors.New("cdx: resumable transfers run in the foreground; remove --detach and --request-id")
+		}
+	}
 	request.files = files
 	return request, nil
 }
@@ -313,6 +348,11 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 		}
 		if !endOfFlags && (argument == "--help" || argument == "-h") {
 			return receiveRequest{help: true}, nil
+		}
+		if !endOfFlags && argument == "--resume" {
+			request.resume = true
+			index++
+			continue
 		}
 		if !endOfFlags && argument == "--progress" {
 			request.progress = true
@@ -454,6 +494,9 @@ func runSend(request sendRequest) int {
 		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	}
+	if request.resumable || request.resumeID != "" {
+		return runResumableSend(request)
+	}
 	if request.requestID != "" {
 		return runRequestSend(request)
 	}
@@ -502,6 +545,9 @@ func runReceive(request receiveRequest) int {
 	if request.help {
 		receiveUsage(os.Stdout)
 		return 0
+	}
+	if request.resume || strings.Contains(request.code, "#v2.") {
+		return runResumableReceive(request)
 	}
 	jsonProgress = request.jsonOutput
 	progressRequested = request.progress
