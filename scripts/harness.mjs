@@ -28,9 +28,15 @@ export async function startWorker(work) {
   const child = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
-  child.stdout.resume();
-  child.stderr.resume();
-  await waitForHealth(`${publicBase}/api/health`, child);
+  let diagnostics = '';
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.on('data', (chunk) => { diagnostics = (diagnostics + chunk.toString()).slice(-8192); });
+  }
+  try { await waitForHealth(`${publicBase}/api/health`, child); }
+  catch (error) {
+    await stopChild(child);
+    throw new Error(`${error.message}: ${diagnostics.trim()}`);
+  }
   return { publicBase, relayBase: publicBase.replace(/^http/, 'ws') + '/ws/v1', stop: () => stopChild(child) };
 }
 
@@ -69,7 +75,7 @@ export async function run(command, args, options) {
 }
 
 export function childExit(child, timeoutMilliseconds = 120_000) {
-  if (child.exitCode !== null) return Promise.resolve(child.exitCode);
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve(child.exitCode);
   return withTimeout(new Promise((resolve, reject) => {
     child.once('error', reject);
     child.once('exit', resolve);
@@ -99,16 +105,19 @@ export function collect(stream) {
 }
 
 export function firstLine(stream, timeoutMilliseconds = 10_000) {
+  let cleanup;
   return withTimeout(new Promise((resolve, reject) => {
     let output = '';
-    stream.setEncoding('utf8');
-    stream.on('data', (chunk) => {
-      output += chunk;
+    const data = (chunk) => {
+      output += chunk.toString();
       const newline = output.indexOf('\n');
-      if (newline !== -1) resolve(output.slice(0, newline).trim());
-    });
-    stream.on('end', () => reject(new Error(`sender ended before printing a line: ${output}`)));
-  }), timeoutMilliseconds, 'sender did not print a line');
+      if (newline !== -1) { cleanup(); resolve(output.slice(0, newline).trim()); }
+    };
+    const end = () => { cleanup(); reject(new Error(`sender ended before printing a line: ${output}`)); };
+    cleanup = () => { stream.removeListener('data', data); stream.removeListener('end', end); };
+    stream.on('data', data);
+    stream.once('end', end);
+  }), timeoutMilliseconds, 'sender did not print a line').finally(() => cleanup?.());
 }
 
 export function withTimeout(promise, timeoutMilliseconds, message) {
@@ -135,4 +144,20 @@ export async function findChromium() {
     } catch {}
   }
   throw new Error('Chromium was not found; set CHROMIUM_PATH');
+}
+
+// Observe both streams from spawn onward; byte counts use the wire Buffers,
+// not string length (UTF-8 diagnostics can contain multibyte characters).
+export function captureOutput(child) {
+  const result = { stdout: '', stderr: '', stdoutBytes: 0, stderrBytes: 0, bytes: 0 };
+  for (const name of ['stdout', 'stderr']) {
+    child[name].on('data', (chunk) => {
+      const bytes = Buffer.byteLength(chunk);
+      result[name] += chunk.toString();
+      result[`${name}Bytes`] += bytes;
+      result.bytes += bytes;
+    });
+  }
+  result.finished = new Promise((resolve) => child.once('close', resolve));
+  return result;
 }
