@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -48,6 +49,16 @@ func transientSetup(err error) bool {
 	var failure *Failure
 	if errors.As(err, &failure) {
 		return failure.Retry == retrySameRequest && (failure.Kind == failureNetwork || failure.Kind == failureBusy)
+	}
+	var dns *net.DNSError
+	if errors.As(err, &dns) && dns.IsNotFound {
+		return false
+	}
+	var certificate x509.CertificateInvalidError
+	var authority x509.UnknownAuthorityError
+	var hostname x509.HostnameError
+	if errors.As(err, &certificate) || errors.As(err, &authority) || errors.As(err, &hostname) {
+		return false
 	}
 	var network net.Error
 	return errors.As(err, &network) || errors.Is(err, context.DeadlineExceeded)
