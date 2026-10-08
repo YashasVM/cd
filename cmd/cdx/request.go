@@ -21,6 +21,7 @@ var requestIDPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 type requestJournal struct {
 	Version     int          `json:"version"`
 	Fingerprint string       `json:"fingerprint"`
+	PayloadHash string       `json:"payloadHash"`
 	Invitation  string       `json:"invitation"`
 	PID         int          `json:"pid,omitempty"`
 	Ready       *readyOutput `json:"ready,omitempty"`
@@ -78,20 +79,26 @@ func readRequestJournal(path string) (requestJournal, error) {
 	if err = decoder.Decode(&journal); err != nil {
 		return journal, err
 	}
-	if journal.Version != 1 || len(journal.Fingerprint) != 64 || journal.StartedAt.IsZero() || journal.PID < 0 {
+	_, fingerprintErr := hex.DecodeString(journal.Fingerprint)
+	if journal.Version != 1 || fingerprintErr != nil || len(journal.Fingerprint) != 64 || journal.StartedAt.IsZero() || journal.PID < 0 {
 		return journal, errors.New("invalid request journal")
 	}
 	secret, err := base64.RawURLEncoding.DecodeString(journal.Invitation)
 	if err != nil || len(secret) != invitationBytes {
 		return journal, errors.New("invalid request reservation")
 	}
-	if journal.Ready != nil && (journal.Ready.TransferID != base64.RawURLEncoding.EncodeToString(secret[:16]) || journal.Ready.Version != 1) {
-		return journal, errors.New("request result disagrees with reservation")
+	if journal.Ready != nil {
+		expectedID := base64.RawURLEncoding.EncodeToString(secret[:16])
+		expectedKey := base64.RawURLEncoding.EncodeToString(secret[16:])
+		capability, err := parseInvitationURL(journal.Ready.URL)
+		if journal.Ready.TransferID != expectedID || journal.Ready.Version != 1 || err != nil || capability.encodedID() != expectedID || capability.encodedKey() != expectedKey {
+			return journal, errors.New("request result disagrees with reservation")
+		}
 	}
 	return journal, nil
 }
 
-func recordRequestHolder() error {
+func recordRequestHolder(request sendRequest) error {
 	path := os.Getenv("CD_REQUEST_JOURNAL")
 	if path == "" {
 		return nil
@@ -99,6 +106,13 @@ func recordRequestHolder() error {
 	journal, err := readRequestJournal(path)
 	if err != nil {
 		return err
+	}
+	fingerprint, err := requestFingerprint(request)
+	if err != nil {
+		return err
+	}
+	if fingerprint != journal.Fingerprint {
+		return NewFailure("request_conflict", "source changed after the request was reserved", retryNever)
 	}
 	journal.PID = os.Getpid()
 	return writeRequestJournal(path, journal)
@@ -119,53 +133,68 @@ func recordRequestReady(ready readyOutput) error {
 }
 
 func requestFingerprint(request sendRequest) (string, error) {
+	fingerprint, _, err := requestMaterial(request)
+	return fingerprint, err
+}
+
+func requestMaterial(request sendRequest) (string, string, error) {
 	paths := make([]string, len(request.files))
 	for i, path := range request.files {
 		absolute, err := filepath.Abs(path)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		paths[i] = absolute
 	}
 	relay, public, err := endpointBase()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	source, err := prepareSource(paths)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	hash := sha256.New()
+	payloadHash := sha256.New()
+	qrPath := request.qrPath
+	if qrPath != "" {
+		qrPath, err = filepath.Abs(qrPath)
+		if err != nil {
+			return "", "", err
+		}
+	}
 	description := struct {
 		Paths                   []string
 		Link                    bool
 		QR, Relay, Public, Name string
 		Size                    uint64
-	}{paths, request.linkMode, request.qrPath, relay, public, source.name, source.size}
+	}{paths, request.linkMode, qrPath, relay, public, source.name, source.size}
 	if err = json.NewEncoder(hash).Encode(description); err != nil {
-		return "", err
+		return "", "", err
 	}
 	input, err := source.open()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	count, copyErr := io.Copy(hash, input)
+	count, copyErr := io.Copy(payloadHash, input)
 	closeErr := input.Close()
 	if copyErr != nil {
-		return "", copyErr
+		return "", "", copyErr
 	}
 	if closeErr != nil {
-		return "", closeErr
+		return "", "", closeErr
 	}
 	if uint64(count) != source.size {
-		return "", NewFailure(failureLocal, "source changed while fingerprinting the request", retryNever)
+		return "", "", NewFailure(failureLocal, "source changed while fingerprinting the request", retryNever)
 	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	digest := hex.EncodeToString(payloadHash.Sum(nil))
+	hash.Write([]byte(digest))
+	return hex.EncodeToString(hash.Sum(nil)), digest, nil
 }
 
 func runRequestSend(request sendRequest) int {
 	fail := func(err error) int { reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput); return 1 }
-	fingerprint, err := requestFingerprint(request)
+	fingerprint, payloadHash, err := requestMaterial(request)
 	if err != nil {
 		return fail(err)
 	}
@@ -208,9 +237,24 @@ func runRequestSend(request sendRequest) int {
 		}
 		state = effectiveState(stateDirectory, state)
 		if state.Phase == phaseFailed {
-			return fail(NewFailure(state.ErrorKind, state.Error, retryNewTransfer))
+			retry := state.Retry
+			if retry == "" {
+				retry = failureGuidance(NewFailure(state.ErrorKind, state.Error, ""))
+			}
+			return fail(NewFailure(state.ErrorKind, state.Error, retry))
 		}
-		if err = writeReady(os.Stdout, *journal.Ready, request.jsonOutput); err != nil {
+		ready := *journal.Ready
+		if ready.Code != "" {
+			alias, aliasErr := readState(stateDirectory, ready.Code)
+			_, publicBase, endpointErr := endpointBase()
+			lookupCtx, lookupCancel := context.WithTimeout(ctx, 3*time.Second)
+			current, lookupErr := lookupShareCode(lookupCtx, publicBase, ready.Code)
+			lookupCancel()
+			if aliasErr != nil || alias.TransferID != ready.TransferID || endpointErr != nil || lookupErr != nil || current.encodedID() != ready.TransferID || current.encodedKey() != base64.RawURLEncoding.EncodeToString(secretFromJournal(journal)) {
+				ready.Code = ""
+			}
+		}
+		if err = writeReady(os.Stdout, ready, request.jsonOutput); err != nil {
 			return fail(err)
 		}
 		return 0
@@ -223,7 +267,7 @@ func runRequestSend(request sendRequest) int {
 		return fail(err)
 	}
 	secret := append(append([]byte{}, value.id[:]...), value.key[:]...)
-	journal = requestJournal{Version: 1, Fingerprint: fingerprint, Invitation: base64.RawURLEncoding.EncodeToString(secret), StartedAt: time.Now().UTC()}
+	journal = requestJournal{Version: 1, Fingerprint: fingerprint, PayloadHash: payloadHash, Invitation: base64.RawURLEncoding.EncodeToString(secret), StartedAt: time.Now().UTC()}
 	if err = writeRequestJournal(path, journal); err != nil {
 		return fail(fmt.Errorf("record request reservation: %w", err))
 	}
@@ -245,4 +289,24 @@ func runRequestSend(request sendRequest) int {
 	os.Setenv("CD_REQUEST_JOURNAL", path)
 	os.Setenv("CD_REQUEST_INVITATION", journal.Invitation)
 	return runDetachedSend(request)
+}
+
+func verifyRequestPayload(digest string) error {
+	path := os.Getenv("CD_REQUEST_JOURNAL")
+	if path == "" {
+		return nil
+	}
+	journal, err := readRequestJournal(path)
+	if err != nil {
+		return err
+	}
+	if journal.PayloadHash != digest {
+		return NewFailure("request_conflict", "source content changed after request reservation; transfer was not completed", retryNever)
+	}
+	return nil
+}
+
+func secretFromJournal(journal requestJournal) []byte {
+	secret, _ := base64.RawURLEncoding.DecodeString(journal.Invitation)
+	return secret[16:]
 }

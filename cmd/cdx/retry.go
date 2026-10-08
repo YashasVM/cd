@@ -65,9 +65,11 @@ func transientSetup(err error) bool {
 }
 
 func dialRelay(ctx context.Context, endpoint string) (*websocket.Conn, error) {
+	setupCtx, cancelSetup := context.WithTimeout(ctx, 20*time.Second)
+	defer cancelSetup()
 	var connection *websocket.Conn
-	err := retrySetup(ctx, func() error {
-		dialCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	err := retrySetup(setupCtx, func() error {
+		dialCtx, cancel := context.WithTimeout(setupCtx, 10*time.Second)
 		defer cancel()
 		var response *http.Response
 		var err error
@@ -93,5 +95,8 @@ func dialRelay(ctx context.Context, endpoint string) (*websocket.Conn, error) {
 		}
 		return failuref(failureNetwork, retryNever, "connect to CD relay: %w", err)
 	})
+	if err != nil && ctx.Err() == nil && setupCtx.Err() != nil {
+		return nil, NewFailure(failureNetwork, "connect to CD relay setup timed out within 20s: check your network and try again", retrySameRequest, err)
+	}
 	return connection, err
 }

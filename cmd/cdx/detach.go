@@ -200,7 +200,7 @@ func runHolder(args []string) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	if err := recordRequestHolder(); err != nil {
+	if err := recordRequestHolder(request); err != nil {
 		recordHolderFailure(err)
 		fmt.Fprintln(os.Stderr, "cdx:", err)
 		return 1
