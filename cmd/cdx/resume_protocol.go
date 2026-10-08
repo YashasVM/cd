@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -59,6 +60,9 @@ type resumeRecordOpener struct {
 }
 
 func resumeAEAD(value invitation, sessionNonce, receiverNonce []byte, dir direction) (cipher.AEAD, error) {
+	if dir != senderDirection && dir != receiverDirection {
+		return nil, errors.New("invalid resume direction")
+	}
 	if len(sessionNonce) != 32 || len(receiverNonce) != 32 {
 		return nil, errors.New("resume nonces must be 32 bytes")
 	}
@@ -208,7 +212,7 @@ func (c ResumeCheckpoint) validate(now int64) error {
 		return errors.New("invalid checkpoint identity")
 	}
 	id, e := base64.RawURLEncoding.DecodeString(c.RootID)
-	if e != nil || len(id) != 16 {
+	if e != nil || len(id) != 16 || base64.RawURLEncoding.EncodeToString(id) != c.RootID {
 		return errors.New("invalid checkpoint rootId")
 	}
 	if c.Size < 0 || c.Size > 1<<53-1 || c.Offset < 0 || c.Offset > c.Size || c.ChunkSize != 256*1024 || c.Offset%c.ChunkSize != 0 && c.Offset != c.Size {
@@ -222,14 +226,34 @@ func (c ResumeCheckpoint) validate(now int64) error {
 			return errors.New("invalid checkpoint digest")
 		}
 	}
-	if c.ExpiresAt <= now || len(c.PriorSessionNonce) != 43 {
+	if c.ExpiresAt <= now || c.ExpiresAt > 1<<53-1 || len(c.PriorSessionNonce) != 43 {
 		return errors.New("expired or invalid checkpoint session")
+	}
+	nonce, e := base64.RawURLEncoding.DecodeString(c.PriorSessionNonce)
+	if e != nil || len(nonce) != 32 || base64.RawURLEncoding.EncodeToString(nonce) != c.PriorSessionNonce {
+		return errors.New("invalid checkpoint session nonce")
+	}
+	if c.Filename == "" || path.Base(c.Filename) != c.Filename || strings.ContainsAny(c.Filename, `/\\`) || c.Filename == "." || c.Filename == ".." {
+		return errors.New("invalid checkpoint filename")
+	}
+	if c.StagingID == "" || path.Base(c.StagingID) != c.StagingID || strings.ContainsAny(c.StagingID, `/\\`) || c.StagingID == "." || c.StagingID == ".." {
+		return errors.New("invalid checkpoint stagingId")
+	}
+	if c.Destination == "" || len(c.Destination) > 8192 || len(c.Filename) > 255 || len(c.StagingID) > 255 {
+		return errors.New("invalid checkpoint binding")
+	}
+	encoded, _ := json.Marshal(c)
+	if len(encoded) > 16*1024 {
+		return errors.New("checkpoint metadata is too large")
 	}
 	return nil
 }
 func signResumeCheckpoint(c *ResumeCheckpoint, secret []byte) error {
 	if c == nil {
 		return errors.New("nil checkpoint")
+	}
+	if len(secret) != 32 {
+		return errors.New("checkpoint secret must be 32 bytes")
 	}
 	c.Version = 2
 	key, e := checkpointKey(secret, c.RootID, c.Role)
@@ -242,6 +266,9 @@ func signResumeCheckpoint(c *ResumeCheckpoint, secret []byte) error {
 	return nil
 }
 func verifyResumeCheckpoint(c ResumeCheckpoint, secret []byte, now int64) error {
+	if len(secret) != 32 {
+		return errors.New("checkpoint secret must be 32 bytes")
+	}
 	if e := c.validate(now); e != nil {
 		return e
 	}
@@ -252,10 +279,8 @@ func verifyResumeCheckpoint(c ResumeCheckpoint, secret []byte, now int64) error 
 	m := hmac.New(sha256.New, key)
 	_, _ = m.Write(checkpointBytes(c))
 	got, e := base64.RawURLEncoding.DecodeString(c.MAC)
-	if e != nil || !hmac.Equal(got, m.Sum(nil)) {
+	if e != nil || len(got) != sha256.Size || base64.RawURLEncoding.EncodeToString(got) != c.MAC || !hmac.Equal(got, m.Sum(nil)) {
 		return errors.New("checkpoint authentication failed")
 	}
 	return nil
 }
-
-var _ = json.Valid
