@@ -19,12 +19,12 @@ import { buildCLI, childExit, cliEnv, findChromium, firstLine, startWorker, stop
 // Local by default (loopback: measures CPU and protocol overhead, not the
 // network). CD_VERIFY_URL=https://cd.yash0.in measures production.
 // CD_BENCH_MIB sets the payload (default 64), CD_BENCH_RUNS every mode's runs
-// (default 5), CD_BENCH_ONLY a comma list of the names above, and
+// (default 3), CD_BENCH_ONLY a comma list of the names above, and
 // CD_BENCH_CPU_THROTTLE slows the receiving page's CPU by that factor (4
 // approximates a phone).
 const cpuThrottle = Number(process.env.CD_BENCH_CPU_THROTTLE ?? 1);
 const mib = Number(process.env.CD_BENCH_MIB ?? 64);
-const codeRuns = Number(process.env.CD_BENCH_RUNS ?? 5);
+const codeRuns = Number(process.env.CD_BENCH_RUNS ?? 3);
 assert.ok(Number.isInteger(codeRuns) && codeRuns > 0, 'CD_BENCH_RUNS must be a positive integer');
 assert.ok(Number.isInteger(mib) && mib > 0, 'CD_BENCH_MIB must be a positive integer');
 assert.ok(Number.isFinite(cpuThrottle) && cpuThrottle >= 1, 'CD_BENCH_CPU_THROTTLE must be at least 1');
@@ -208,7 +208,11 @@ async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
     await sender.locator('.workbench:not([inert])').waitFor();
     const readyStarted = performance.now();
     await sender.locator('#file-input').setInputFiles(payloadPath);
-    await sender.locator('#sender-code-section:not(.hidden)').waitFor();
+    try { await sender.locator('#sender-code-section:not(.hidden)').waitFor(); }
+    catch (error) {
+      const status = await sender.locator('#sender-status').textContent().catch(() => 'page unavailable');
+      throw new Error(`browser sender did not become ready: ${status || error.message.split('\n')[0]}`);
+    }
     const readinessMs = performance.now() - readyStarted;
     const code = (await sender.locator('#share-code').textContent()).trim();
     await receiver.goto(baseUrl);
