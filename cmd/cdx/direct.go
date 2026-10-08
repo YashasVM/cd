@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"net"
 	"os"
@@ -110,7 +109,7 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 		})
 	}
 	channel.OnOpen(func() { path.openOnce.Do(func() { close(path.opened) }) })
-	channel.OnClose(func() { lose(errors.New("direct connection closed")) })
+	channel.OnClose(func() { lose(NewFailure(failureDisconnected, "direct connection closed", retryNewTransfer)) })
 	channel.SetBufferedAmountLowThreshold(directBufferLow)
 	channel.OnBufferedAmountLow(func() {
 		select {
@@ -131,7 +130,7 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 	})
 	connection.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
-			lose(errors.New("direct connection " + state.String()))
+			lose(NewFailure(failureDisconnected, "direct connection "+state.String(), retryNewTransfer))
 		}
 	})
 	return path, nil
@@ -159,7 +158,7 @@ func (path *directPath) createOffer() (string, error) {
 
 func (path *directPath) acceptAnswer(sdp string) error {
 	if len(sdp) == 0 || len(sdp) > maxSDPBytes {
-		return errors.New("invalid direct answer")
+		return NewFailure(failureProtocol, "invalid direct answer", retryNever)
 	}
 	return path.connection.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp})
 }
@@ -169,7 +168,7 @@ func (path *directPath) acceptAnswer(sdp string) error {
 // otherwise it waits for gathering and embeds them in the SDP.
 func (path *directPath) answerOffer(sdp string, onCandidate func(webrtc.ICECandidateInit)) (string, error) {
 	if len(sdp) == 0 || len(sdp) > maxSDPBytes {
-		return "", errors.New("invalid direct offer")
+		return "", NewFailure(failureProtocol, "invalid direct offer", retryNever)
 	}
 	if err := path.connection.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdp}); err != nil {
 		return "", err
@@ -196,7 +195,7 @@ func (path *directPath) answerOffer(sdp string, onCandidate func(webrtc.ICECandi
 
 func (path *directPath) addCandidate(candidate webrtc.ICECandidateInit) error {
 	if len(candidate.Candidate) > 1024 {
-		return errors.New("invalid direct candidate")
+		return NewFailure(failureProtocol, "invalid direct candidate", retryNever)
 	}
 	return path.connection.AddICECandidate(candidate)
 }
@@ -228,9 +227,9 @@ func (path *directPath) send(record []byte) error {
 		select {
 		case <-path.drained:
 		case <-path.lost:
-			return errors.New("direct connection lost")
+			return NewFailure(failureDisconnected, "direct connection lost", retryNewTransfer)
 		case <-time.After(transferIdle):
-			return errors.New("direct connection stalled")
+			return NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer)
 		}
 	}
 	for start := 0; start < len(record); start += directPieceSize {
@@ -284,11 +283,11 @@ func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
 	for len(assembler.buffer) >= headerBytes {
 		header := assembler.buffer[:headerBytes]
 		if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
-			return nil, errors.New("direct connection sent an invalid record")
+			return nil, NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever)
 		}
 		length := headerBytes + int(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
 		if length > maxRecordBytes {
-			return nil, errors.New("direct connection sent an oversized record")
+			return nil, NewFailure(failureProtocol, "direct connection sent an oversized record", retryNever)
 		}
 		if len(assembler.buffer) < length {
 			break
