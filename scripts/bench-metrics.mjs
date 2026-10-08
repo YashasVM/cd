@@ -11,3 +11,117 @@ export function summarize(trials) {
     outputBytes: median('outputBytes'), trials };
 }
 
+
+// Serialized into each browser context before app code runs. Counts only
+// successful sends and complete encrypted payload records, including records
+// split across negotiated data-channel pieces. It retains at most 12 header
+// bytes per transport, never a copy of file contents.
+export function browserTransportProbe(options = {}) {
+  const stats = window.__benchTransport = {
+    directBytes: 0, directPayloadBytes: 0, relayBytes: 0, relayPayloadBytes: 0,
+    directReceivedBytes: 0, directReceivedPayloadBytes: 0, relayReceivedBytes: 0, relayReceivedPayloadBytes: 0,
+    legacyBytes: 0, maxDirectBufferedBytes: 0, maxRelayBufferedBytes: 0,
+    firstPayloadRoute: null, routes: [], successfulDirectPieces: 0
+  };
+  stats.engineMaxima = {};
+  window.__CD_TRANSFER_TEST_OBSERVER__ = (snapshot) => {
+    for (const [key, value] of Object.entries(snapshot)) {
+      if (typeof value === 'number' && Number.isFinite(value)) stats.engineMaxima[key] = Math.max(stats.engineMaxima[key] ?? 0, value);
+    }
+    if (snapshot.window) for (const [key, value] of Object.entries(snapshot.window)) {
+      if (typeof value === 'number' && Number.isFinite(value)) stats.engineMaxima[`window_${key}`] = Math.max(stats.engineMaxima[`window_${key}`] ?? 0, value);
+    }
+  };
+  const streams = new WeakMap();
+  const inboundStreams = new WeakMap();
+  function countRecord(target, data, route, inbound = false) {
+    const parserStates = inbound ? inboundStreams : streams;
+    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
+      : ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : null;
+    if (!bytes) return;
+    let state = parserStates.get(target);
+    if (!state) { state = { header: [], remaining: 0, payload: 0 }; parserStates.set(target, state); }
+    let cursor = 0;
+    while (cursor < bytes.length) {
+      if (!state.remaining) {
+        while (state.header.length < 12 && cursor < bytes.length) state.header.push(bytes[cursor++]);
+        if (state.header.length < 12) break;
+        if (state.header[0] !== 0x43 || state.header[1] !== 0x44 || state.header[2] !== 1) throw new Error('transport probe observed unencrypted direct framing');
+        const length = new DataView(Uint8Array.from(state.header).buffer).getUint32(8);
+        if (length > 1024 * 1024) throw new Error('transport probe observed oversized record');
+        state.remaining = length + 16;
+        state.payload = state.header[3] === 2 || state.header[3] === 8 ? length : 0;
+        state.header = [];
+      }
+      const copied = Math.min(state.remaining, bytes.length - cursor);
+      state.remaining -= copied;
+      cursor += copied;
+      if (!state.remaining && state.payload) {
+        stats[`${route}PayloadBytes`] += state.payload;
+        stats.firstPayloadRoute ??= route;
+        if (stats.routes.at(-1) !== route) stats.routes.push(route);
+      }
+    }
+  }
+  const nativeChannelSend = RTCDataChannel.prototype.send;
+  RTCDataChannel.prototype.send = function(data) {
+    const result = nativeChannelSend.call(this, data);
+    const size = data.byteLength ?? data.size ?? 0;
+    if (this.label === 'cd-direct') {
+      stats.directBytes += size;
+      stats.successfulDirectPieces += 1;
+      stats.maxDirectBufferedBytes = Math.max(stats.maxDirectBufferedBytes, this.bufferedAmount);
+      countRecord(this, data, 'direct');
+    } else stats.legacyBytes += size;
+    return result;
+  };
+  const nativeSocketSend = WebSocket.prototype.send;
+  WebSocket.prototype.send = function(data) {
+    const result = nativeSocketSend.call(this, data);
+    if (typeof data !== 'string' && new URL(this.url).pathname.startsWith('/ws/v1/')) {
+      stats.relayBytes += data.byteLength ?? data.size ?? 0;
+      stats.maxRelayBufferedBytes = Math.max(stats.maxRelayBufferedBytes, this.bufferedAmount);
+      countRecord(this, data, 'relay');
+    }
+    return result;
+  };
+  if (globalThis.RTCPeerConnection) {
+    const nativeCreateChannel = RTCPeerConnection.prototype.createDataChannel;
+    RTCPeerConnection.prototype.createDataChannel = function(...args) {
+      const channel = nativeCreateChannel.apply(this, args);
+      if (channel.label === 'cd-direct') channel.addEventListener('message', (event) => {
+        stats.directReceivedBytes += event.data.byteLength ?? event.data.size ?? 0;
+        countRecord(channel, event.data, 'directReceived', true);
+      });
+      return channel;
+    };
+  }
+  const NativeSocket = WebSocket;
+  window.WebSocket = class extends NativeSocket {
+    constructor(...args) {
+      super(...args);
+      if (new URL(this.url).pathname.startsWith('/ws/v1/')) this.addEventListener('message', (event) => {
+        if (typeof event.data === 'string') return;
+        stats.relayReceivedBytes += event.data.byteLength ?? event.data.size ?? 0;
+        countRecord(this, event.data, 'relayReceived', true);
+      });
+    }
+  };
+  delete window.showSaveFilePicker;
+  if (options.blockDirect) {
+    window.RTCPeerConnection = function() { throw new Error('Direct connections blocked by verification'); };
+  } else if (options.directDelayMs) {
+    const nativeOffer = RTCPeerConnection.prototype.createOffer;
+    RTCPeerConnection.prototype.createOffer = async function(...args) {
+      await new Promise((resolve) => setTimeout(resolve, options.directDelayMs));
+      return nativeOffer.apply(this, args);
+    };
+  }
+  if (options.decryptDelayMs) {
+    const nativeDecrypt = SubtleCrypto.prototype.decrypt;
+    SubtleCrypto.prototype.decrypt = async function(...args) {
+      await new Promise((resolve) => setTimeout(resolve, options.decryptDelayMs));
+      return nativeDecrypt.apply(this, args);
+    };
+  }
+}
