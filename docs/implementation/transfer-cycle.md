@@ -56,3 +56,16 @@ retention and fresh session keys in issue #15 before assignments. Checkpoints
 must only claim durably written verified progress. Reconnect must authenticate
 both roles, verify the retained prefix and immutable source identity, and
 start a fresh encryption session before resetting record sequences.
+
+### Baseline verification (before worker merges)
+
+- JS unit tests: 46 passed. TypeScript and production build passed.
+- Go tests initially exposed existing local IPv6 route misclassification;
+  coordinator fix recognizes a peer address belonging to a local interface.
+  Full Go tests and ten repeated local trickle-ICE route tests then passed.
+- Agent verification: CLI direct switch, 1,573,512-byte folder bundle,
+  40 signaling registrations, and 1,572,937 exact source bytes passed.
+- Browser verification: 3,145,805 exact browser-to-browser bytes,
+  three-file browser-to-CLI ZIP integrity, and camera QR receive passed.
+- CLI loop: 20/20 detached sends and waits verified exact bytes.
+- Deploy dry-run passed; no deployment performed.
