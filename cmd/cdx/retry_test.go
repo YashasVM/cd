@@ -96,3 +96,16 @@ func TestSetupDoesNotRetryPermanentDNS(t *testing.T) {
 		t.Fatalf("attempts=%d err=%v", attempts, err)
 	}
 }
+
+func TestDialRelayHonorsCallerDeadlineAcrossSetup(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { calls.Add(1); <-r.Context().Done() }))
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	_, err := dialRelay(ctx, "ws"+strings.TrimPrefix(server.URL, "http"))
+	if !errors.Is(err, context.DeadlineExceeded) || calls.Load() != 1 || time.Since(started) > time.Second {
+		t.Fatalf("calls=%d elapsed=%s err=%v", calls.Load(), time.Since(started), err)
+	}
+}
