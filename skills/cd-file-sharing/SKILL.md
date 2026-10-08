@@ -1,58 +1,39 @@
 ---
 name: cd-file-sharing
-description: Send a local file to the user (their phone, browser, or another machine) with CD. Use when asked to send, share, or hand off a file with CD or cdx.
+description: Send a local file to the user with CD. Use when asked to send, share, or hand off a file with CD or cdx.
 ---
 
-# Send a file with CD
+# Share files
 
-Run:
+Run `cdx send <path>...` and reply with `https://cd.yash0.in/#<code>` using the
+printed code. Terminal recipients can run `cdx receive <code>`. Several paths
+or a folder arrive as one `.zip`. Captured sends return promptly while a
+background sender stays live. No account or stored server copy is needed;
+both devices must be online. A code lasts 15 minutes and admits one receiver.
 
-```bash
-cdx send --json --qr /absolute/path/to/receive-qr.png <path>...
-```
+For sensitive files, run `cdx send --link --json <path>...` and reply with the
+returned `url`, including its fragment. Private links are end-to-end encrypted;
+codes rely on TLS and the live relay. Use the `CD_PUBLIC_URL` origin when set.
 
-Several paths or a folder arrive as one `.zip`.
-
-Choose a fresh PNG path in an existing directory. It prints one JSON object
-with `code`, `url`, and the absolute `qrPath`, then exits 0 while a background
-sender keeps the transfer live. The PNG is generated locally; no QR service is
-needed. An existing output file is never overwritten.
-
-Reply with the receive link `https://cd.yash0.in/#<code>` and embed the PNG.
-In T3 Code and other chats that render local images, use an absolute-path
-Markdown image (use the actual `qrPath` returned by the command):
+For a QR image, add `--json --qr /absolute/fresh.png` (existing directory,
+unused filename). Reply with the returned `url` and embed the actual `qrPath`:
 
 ```markdown
-[Receive report.pdf](https://cd.yash0.in/#48291)
-
-![Scan to receive report.pdf](/absolute/path/to/receive-qr.png)
+[Receive file](https://cd.yash0.in/#48291)
+![Scan to receive](/absolute/fresh.png)
 ```
 
-When `CD_PUBLIC_URL` is set, use that origin instead of `https://cd.yash0.in`.
-Opening the link or scanning the QR starts receiving. Both refer to the same
-transfer: it is valid for 15 minutes and admits one receiver. Terminal users
-can run `cdx receive <code>` instead. Keep the PNG available for the chat to
-render it. If the chat cannot embed local images, reply with the link and code.
+Keep the PNG available for rendering. If local images cannot be embedded,
+reply with the link and code. JSON results are one compact stdout line;
+progress requires `--progress` and goes to stderr. `--wait` keeps a send in
+the foreground.
 
-For a link without an image, `cdx send <path>...` still prints only the code
-when stdout is captured. Interactive terminal sends display a QR automatically.
+If delivery confirmation is requested, run `cdx wait --timeout 10m --json <code>`.
+Exit 0 means verified delivery, 1 means failure (`errorKind` explains it), and
+3 means the timeout elapsed while the send remains live. On command failure,
+read the JSON `error.kind` and `error.message`; report actionable details.
+Do not claim delivery just because the send returned a code.
 
-Branches:
-
-- **Sensitive file**: add `--link` to the command above and reply with `url`
-  from the JSON, fragment included, plus the QR image. The QR includes the same
-  private link. Links are end-to-end encrypted; codes rely on
-  TLS and the live relay.
-- **User wants delivery confirmed**: run `cdx wait --timeout 10m --json <code>`
-  after replying. Exit 0 means the receiver verified every byte; exit 1 means it
-  failed (`errorKind` says why); exit 3 means nobody has finished yet and the
-  send is still live.
-- **A command fails**: with `--json`, stdout carries
-  `{"error":{"kind","message"}}`. Retry `expired`, `disconnected`, `stalled` and
-  `busy` with a fresh `cdx send`; report the others to the user.
-- **`cdx` is not on PATH**: inside the CD repository, run `make cdx` and use
-  `./bin/cdx`. Elsewhere, install it with
-  `curl -fsSL https://cd.yash0.in/install.sh | sh`.
-
-CD is self-contained: the `cdx` command is the whole integration, with its
-own live relay at cd.yash0.in and no stored copies.
+If cdx is unavailable, run `make cdx` in this repository and use `./bin/cdx`.
+Elsewhere install with `curl -fsSL https://cd.yash0.in/install.sh | sh`.
+See `cdx help send` for options.
