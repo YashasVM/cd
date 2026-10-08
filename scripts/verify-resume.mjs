@@ -63,6 +63,7 @@ async function interrupted(name, source, size) {
   await childExit(receiver.child, 10000);
   await childExit(sender.child, 10000);
   await sender.output.finished;
+  cp.value = JSON.parse(await readFile(cp.path, 'utf8'));
   return { root, sender, destination, directory, checkpoint: cp };
 }
 try {
@@ -80,6 +81,8 @@ try {
   assert.equal(resumed.ready.transferId, first.root);
   const received = await execute(['receive', '--resume', '--json', resumed.ready.url, '--out', first.destination], 30000);
   assert.equal(received.code, 0, received.stderr + received.stdout);
+  const result = JSON.parse(received.stdout.trim().split('\n').at(-1));
+  assert.equal(result.resumedBytes, first.checkpoint.value.offset);
   assert.equal(await childExit(resumed.child, 30000), 0, resumed.output.stderr);
   assert.equal(sha(await readFile(first.destination)), sha(payload));
   measurements.push({ scenario: 'cli-restart', passed: true, verifiedRetainedBytes: first.checkpoint.value.offset, exactBytes: payload.length, milliseconds: Math.round(performance.now() - started) });

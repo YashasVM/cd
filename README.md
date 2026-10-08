@@ -33,18 +33,39 @@ To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in
 
 | Command | What it does |
 | --- | --- |
-| `cdx status [code]` | List background sends |
+| `cdx status [transfer-ID or code]` | List background sends |
 | `cdx wait <code>` | Exit 0 once the receiver has verified every byte, or 1 if the transfer failed |
 | `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
 | `cdx update` | Update cdx to the latest release (checksum-verified) |
-| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
+| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and explicit retry guidance |
 | `--qr <path>` | Save a QR PNG locally; JSON includes its absolute `qrPath`. The output path must not exist. |
 | `--wait` / `--detach` | Force foreground or background sending |
 
 **Behavior:** in a terminal, `send` displays a share card with a scannable QR and waits until the
-receiver verifies the file. Captured stdout holds only the code (or JSON with `--json`), and progress goes to stderr. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
+receiver verifies the file. Captured stdout holds only the code (or compact JSON with `--json`). Progress is opt-in with `--progress` for captured output. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
 the code is live. Codes expire after 15 minutes and admit one receiver.
 Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
+
+For safe retries of a detached send, use `cdx send --request-id <unique-id> --json <path>`.
+Repeating the same request returns the original transfer; changing its input fails explicitly.
+Status history is stored by transfer ID, so reused codes do not overwrite earlier sends.
+
+To keep verified progress across interruptions, use the opt-in resume protocol:
+
+```bash
+cdx send --resumable --json ./report.pdf
+cdx send --resume <transfer-ID> --json ./report.pdf
+cdx receive --resume '<private-v2-link>' --out ./report.pdf
+```
+
+Resumable CLI sends stay in the foreground and use private links. Receiver checkpoints
+are kept beside the output; sender records live in the private CLI state directory.
+Reselect the same file and private link in the browser to resume a send; reopen the
+link in the same browser to resume a receive. Browser resume requires OPFS storage.
+Records expire after 24 hours. Resume verifies the source and retained prefix and uses
+fresh session keys. This first resumable protocol uses the relay; ordinary transfers
+retain direct WebRTC transport. Explicit browser cancellation discards saved progress;
+CLI receiver cancellation does too, while interrupting the sender retains its resume record.
 
 **Security:** a 5-digit code lets the relay hold the transfer key so the code is easy to type, so anyone who
 guesses a live code can receive the file. For sensitive files, use `--link`: the key stays in the URL fragment,
