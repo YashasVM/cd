@@ -55,7 +55,7 @@ func resumeRandom() ([]byte, error) {
 	return value, err
 }
 func resumeEncoded(bytes []byte) string { return base64.RawURLEncoding.EncodeToString(bytes) }
-func resumeConnect(ctx context.Context, invite invitation, role string, senderToken []byte, admission ...func() error) (*resumeSession, error) {
+func resumeConnect(ctx context.Context, invite invitation, role string, senderToken []byte, admission ...func(int64) error) (*resumeSession, error) {
 	relay, _, err := endpointBase()
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func resumeConnect(ctx context.Context, invite invitation, role string, senderTo
 			admitted = true
 			expiresAt = event.ExpiresAt
 			if len(admission) > 0 {
-				if err = admission[0](); err != nil {
+				if err = admission[0](event.ExpiresAt); err != nil {
 					socket.Close()
 					return nil, err
 				}
@@ -343,8 +343,25 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 	ready := readyOutput{Version: 2, Mode: "foreground", TransferID: invite.encodedID(), URL: public + "/s/" + invite.encodedID() + "#v2." + invite.encodedKey(), Filename: source.name, Size: source.size}
 	// Private capability exists before the link is exposed; v2 deliberately runs
 	// foreground, preserving the established v1 detached sender behavior.
-	session, err := resumeConnect(ctx, invite, "sender", senderToken, func() error {
-		if err := saveReadyQR(&ready, request.qrPath); err != nil {
+	session, err := resumeConnect(ctx, invite, "sender", senderToken, func(expiry int64) error {
+		if expiry <= time.Now().UnixMilli() {
+			return resumeFailure("relay supplied invalid root expiry")
+		}
+		if request.resumeID != "" && cap.Checkpoint.ExpiresAt != expiry {
+			return resumeFailure("saved root expiry differs from authenticated relay root")
+		}
+		cap.Checkpoint.ExpiresAt = expiry
+		if err := signResumeCheckpoint(&cap.Checkpoint, senderToken); err != nil {
+			return err
+		}
+		path, err := resumeCapabilityPath(invite.encodedID())
+		if err != nil {
+			return err
+		}
+		if err = resumeAtomicJSON(path, cap); err != nil {
+			return err
+		}
+		if err = saveReadyQR(&ready, request.qrPath); err != nil {
 			return err
 		}
 		return writeReady(os.Stdout, ready, request.jsonOutput)
@@ -356,7 +373,7 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 	stop := context.AfterFunc(ctx, func() { session.socket.Close() })
 	defer stop()
 	cap.Checkpoint.PriorSessionNonce = session.senderNonce
-	if session.expiresAt <= time.Now().UnixMilli() {
+	if session.expiresAt <= time.Now().UnixMilli() || session.expiresAt != cap.Checkpoint.ExpiresAt {
 		return resumeFailure("relay supplied invalid root expiry")
 	}
 	cap.Checkpoint.ExpiresAt = session.expiresAt
