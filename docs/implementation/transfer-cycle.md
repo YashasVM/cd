@@ -99,3 +99,19 @@ Go full and race tests,50 JS tests,typecheck,existing agent/browser
 verification and deploy dry-run pass. Concurrency readiness31.627–78.178ms;
 lost-response replay221.052ms for65,536,000 archive source bytes.
 Per-worker details and reproduction are in docs/measurements/wave2-*.md.
+
+## Wave 3 ownership and contracts
+
+A owns browser transport wiring (`relay-sender`, `direct-link`, `share`) and
+transport unit tests. B owns independent `send-window` module and tests.
+C owns benchmark route accounting and transport matrix verification scripts.
+Coordinator integrates all and runs existing gates.
+
+Window: default1MiB minimum,4MiB initial,12MiB maximum; cumulativeBigInt
+counts and up to64 timing samples, no payload retained. Whole-chunk admission
+precedes sending. Direct sender uses channelID1 and exact existing encrypted
+records. Relay starts immediately while direct setup happens; gathering bound
+250ms overlaps receiver wait. NativeDC/WS buffers cap4MiB, retainedciphertext
+16MiB/128records, merger16MiB/256records, assembler~1MiB+64KiB. Receiver
+queue32MiB/512 records; ACK replay128KiB/128 records. Opt-in test observer
+reports counts only, without payload or capabilities.
