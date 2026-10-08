@@ -20,7 +20,8 @@
     "skill:generate": "node scripts/generate-sharing-skill.mjs",
     "skill:check": "node scripts/generate-sharing-skill.mjs --check",
     "verify:retries": "npm run build && node scripts/verify-retries.mjs",
-    "verify:transports": "npm run build && node scripts/verify-transports.mjs"
+    "verify:transports": "npm run build && node scripts/verify-transports.mjs",
+    "verify:resume-auth": "npm run build && node scripts/verify-resume-auth.mjs"
   },
   "dependencies": {
     "jsqr": "1.4.0",
