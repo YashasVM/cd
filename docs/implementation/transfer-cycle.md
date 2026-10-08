@@ -69,3 +69,15 @@ start a fresh encryption session before resetting record sequences.
   three-file browser-to-CLI ZIP integrity, and camera QR receive passed.
 - CLI loop: 20/20 detached sends and waits verified exact bytes.
 - Deploy dry-run passed; no deployment performed.
+
+### Wave 1 gate passed
+
+All worker changes merged. JS tests 50/50, Go, typecheck, agent/browser
+verification and deploy dry-run pass. Integrated isolated 2 MiB benchmark:
+4/4 transfers completed with exact bytes. Detached readiness 46.55 ms,
+parent exit 48.13 ms, holder alive after exit; 41.06 MiB/s, 105 command
+output bytes (includes opt-in telemetry; 59 holder-log bytes separately).
+Foreground readiness 20.89 ms / 40.93 MiB/s. Forced relay directBytes=0,
+26.36 MiB/s. Browser forced relay 6.75 MiB/s, 2,097,541 relay wire bytes.
+These single-run local measurements are smoke evidence; repeatable three-run
+worker baselines are in `docs/measurements/wave1-benchmarks.md`.
