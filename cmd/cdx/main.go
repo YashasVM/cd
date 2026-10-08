@@ -34,12 +34,13 @@ func cdVersion() string {
 }
 
 type readyOutput struct {
-	Version  int    `json:"version"`
-	URL      string `json:"url"`
-	Code     string `json:"code,omitempty"`
-	Filename string `json:"filename"`
-	Size     uint64 `json:"size"`
-	QRPath   string `json:"qrPath,omitempty"`
+	Version    int    `json:"version"`
+	TransferID string `json:"transferId,omitempty"`
+	URL        string `json:"url"`
+	Code       string `json:"code,omitempty"`
+	Filename   string `json:"filename"`
+	Size       uint64 `json:"size"`
+	QRPath     string `json:"qrPath,omitempty"`
 }
 
 func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
@@ -100,6 +101,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -137,6 +139,7 @@ func sendUsage(output io.Writer) {
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -168,6 +171,7 @@ func receiveUsage(output io.Writer) {
 
 // sendRequest is the parsed form of send arguments.
 type sendRequest struct {
+	requestID  string
 	jsonOutput bool
 	progress   bool
 	linkMode   bool
@@ -214,6 +218,21 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		}
 		if !endOfFlags && argument == "--json" {
 			request.jsonOutput = true
+			continue
+		}
+		if !endOfFlags && (argument == "--request-id" || strings.HasPrefix(argument, "--request-id=")) {
+			value, found := strings.CutPrefix(argument, "--request-id=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --request-id needs an identifier")
+				}
+				value = args[index]
+			}
+			if !requestIDPattern.MatchString(value) {
+				return sendRequest{}, errors.New("cdx: --request-id needs 1-128 letters, digits, dots, underscores or hyphens")
+			}
+			request.requestID = value
 			continue
 		}
 		if !endOfFlags && argument == "--link" {
@@ -271,6 +290,9 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	}
 	if request.detach && request.wait {
 		return sendRequest{}, errors.New("cdx: --detach and --wait cannot be combined")
+	}
+	if request.requestID != "" && request.wait {
+		return sendRequest{}, errors.New("cdx: --request-id requires a background send; remove --wait")
 	}
 	request.files = files
 	return request, nil
@@ -430,6 +452,9 @@ func runSend(request sendRequest) int {
 	if request.version {
 		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
+	}
+	if request.requestID != "" {
+		return runRequestSend(request)
 	}
 	jsonProgress = request.jsonOutput
 	progressRequested = request.progress
