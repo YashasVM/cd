@@ -32,6 +32,8 @@ export function browserTransportProbe(options = {}) {
       if (typeof value === 'number' && Number.isFinite(value)) stats.engineMaxima[`window_${key}`] = Math.max(stats.engineMaxima[`window_${key}`] ?? 0, value);
     }
   };
+  stats.maxJSHeapBytes = globalThis.performance?.memory?.usedJSHeapSize ?? null;
+  const sampleHeap = () => { if (globalThis.performance?.memory) stats.maxJSHeapBytes = Math.max(stats.maxJSHeapBytes ?? 0, globalThis.performance.memory.usedJSHeapSize); };
   const streams = new WeakMap();
   const inboundStreams = new WeakMap();
   function countRecord(target, data, route, inbound = false) {
@@ -66,6 +68,7 @@ export function browserTransportProbe(options = {}) {
   const nativeChannelSend = RTCDataChannel.prototype.send;
   RTCDataChannel.prototype.send = function(data) {
     const result = nativeChannelSend.call(this, data);
+    sampleHeap();
     const size = data.byteLength ?? data.size ?? 0;
     if (this.label === 'cd-direct') {
       stats.directBytes += size;
@@ -78,6 +81,7 @@ export function browserTransportProbe(options = {}) {
   const nativeSocketSend = WebSocket.prototype.send;
   WebSocket.prototype.send = function(data) {
     const result = nativeSocketSend.call(this, data);
+    sampleHeap();
     if (typeof data !== 'string' && new URL(this.url).pathname.startsWith('/ws/v1/')) {
       stats.relayBytes += data.byteLength ?? data.size ?? 0;
       stats.maxRelayBufferedBytes = Math.max(stats.maxRelayBufferedBytes, this.bufferedAmount);
@@ -85,11 +89,21 @@ export function browserTransportProbe(options = {}) {
     }
     return result;
   };
+  stats.peerStates = [];
   if (globalThis.RTCPeerConnection) {
     const nativeCreateChannel = RTCPeerConnection.prototype.createDataChannel;
     RTCPeerConnection.prototype.createDataChannel = function(...args) {
       const channel = nativeCreateChannel.apply(this, args);
+      const peer = this;
+      const state = { label: channel.label, connection: peer.connectionState, ice: peer.iceConnectionState, channel: channel.readyState };
+      stats.peerStates.push(state);
+      const update = () => { state.connection = peer.connectionState; state.ice = peer.iceConnectionState; state.channel = channel.readyState; };
+      peer.addEventListener('connectionstatechange', update);
+      peer.addEventListener('iceconnectionstatechange', update);
+      channel.addEventListener('open', update);
+      channel.addEventListener('close', update);
       if (channel.label === 'cd-direct') channel.addEventListener('message', (event) => {
+        sampleHeap();
         stats.directReceivedBytes += event.data.byteLength ?? event.data.size ?? 0;
         countRecord(channel, event.data, 'directReceived', true);
       });
@@ -102,6 +116,7 @@ export function browserTransportProbe(options = {}) {
       super(...args);
       if (new URL(this.url).pathname.startsWith('/ws/v1/')) this.addEventListener('message', (event) => {
         if (typeof event.data === 'string') return;
+        sampleHeap();
         stats.relayReceivedBytes += event.data.byteLength ?? event.data.size ?? 0;
         countRecord(this, event.data, 'relayReceived', true);
       });
