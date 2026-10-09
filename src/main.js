@@ -333,12 +333,15 @@ const Sender = (() => {
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
+    // reset() clears the form for a fresh send, so preserve a pasted private
+    // resume link across that reset before deciding which sender path to use.
+    const resumeLink = els.resumeLinkInput.value.trim();
     reset();
+    els.resumeLinkInput.value = resumeLink;
     files = selectedFiles.filter(Boolean);
     if (files.length === 0) return;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
 
-    const resumeLink = els.resumeLinkInput.value.trim();
     const resumable = els.resumableCheck.checked || resumeLink.length > 0;
     if (resumable && files.length !== 1) {
       failSend('Resumable sends currently support one named file. Choose one file and try again.');
