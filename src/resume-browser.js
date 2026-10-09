@@ -8,7 +8,6 @@ import { IncrementalSHA256 } from './incremental-sha256.js';
 export const RESUME_CHUNK_SIZE = 256 * 1024;
 export const RESUME_LIMIT_MS = 24 * 60 * 60 * 1000;
 export const RESUME_DB_NAME = 'cd-resume-v2';
-const MAX_CHECKPOINTS_PER_CLEANUP = 128;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8', { fatal: true });
 
@@ -88,20 +87,7 @@ function idbRequest(db, name, mode, invoke) {
   });
 }
 
-export async function cleanExpiredResumeRecords({ checkpoints, secrets, storage, now = Date.now(), max = MAX_CHECKPOINTS_PER_CLEANUP }) {
-  let removed = 0;
-  for (const key of (await checkpoints.keys()).slice(0, Math.min(max, MAX_CHECKPOINTS_PER_CLEANUP))) {
-    const checkpoint = await checkpoints.get(key);
-    if (!checkpoint || checkpoint.expiresAt > now) continue;
-    if (checkpoint.stagingId && isOpaqueStagingId(checkpoint.stagingId) && storage?.getDirectory) {
-      try { await (await storage.getDirectory()).removeEntry(checkpoint.stagingId); } catch { /* Already removed. */ }
-    }
-    await checkpoints.delete(key);
-    await secrets.delete(key);
-    removed++;
-  }
-  return removed;
-}
+export { cleanExpiredResumeRecords } from './resume-retention.js';
 
 export function newStagingId() { return `cd-rx-${crypto.randomUUID()}`; }
 export function isOpaqueStagingId(value) { return typeof value === 'string' && /^cd-rx-[0-9a-f-]{36}$/.test(value); }
