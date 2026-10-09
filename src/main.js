@@ -415,7 +415,19 @@ const Sender = (() => {
               onError(error) { if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message); }
             }
           });
-          active.done.then(() => { if (current === generation) showComplete(); }, (error) => { if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message); });
+          active.done.then(() => {
+            if (current === generation) {
+              active = null;
+              showComplete();
+            }
+          }, (error) => {
+            if (current === generation) {
+              // A failed connection preserves resume authority. Resetting the
+              // form must not cancel the settled transfer and delete it.
+              active = null;
+              if (error.message !== 'Transfer canceled.') failSend(error.message);
+            }
+          });
         } catch (error) {
           if (current === generation) failSend(error.message || 'This browser cannot keep resumable transfer data locally.');
         }
