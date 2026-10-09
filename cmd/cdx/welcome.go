@@ -24,15 +24,8 @@ var wordmark = []string{
 	" ╚═════╝╚═════╝ ╚═╝  ╚═╝",
 }
 
-// wordmarkColors runs violet to pink down the wordmark.
-var wordmarkColors = []string{"38;5;99", "38;5;105", "38;5;141", "38;5;177", "38;5;213", "38;5;219"}
-
-var welcomeFeatures = [][2]string{
-	{"Peer to peer", "direct between devices whenever the network allows"},
-	{"Encrypted", "every byte verified · --link for end-to-end privacy"},
-	{"No accounts", "nothing to sign up for, nothing kept on a server"},
-	{"Anywhere", "phone, browser, or another terminal"},
-}
+// wordmarkColors follows the warm accent used by the share card.
+var wordmarkColors = []string{"38;2;255;218;171", "38;2;250;199;146", "38;2;244;178;121", "38;2;237;158;101", "38;2;229;138;87", "38;2;205;113;73"}
 
 type welcome struct {
 	out   io.Writer
@@ -78,8 +71,10 @@ func runWelcome(argv []string) int {
 		w.tty = tty
 		defer tty.Close()
 	}
-	fmt.Fprint(w.out, "\x1b[?25l")
-	defer fmt.Fprint(w.out, "\x1b[?25h")
+	if isTerminal(os.Stdout) {
+		fmt.Fprint(w.out, "\x1b[?25l")
+		defer fmt.Fprint(w.out, "\x1b[?25h")
+	}
 	interrupts := make(chan os.Signal, 1)
 	signal.Notify(interrupts, shutdownSignals()...)
 	defer signal.Stop(interrupts)
@@ -120,45 +115,43 @@ func (w welcome) typeOut(prefix, text string, style func(string) string) {
 
 func (w welcome) heading(step, title string) {
 	fmt.Fprintln(w.out)
-	fmt.Fprintln(w.out, "  "+accent(step)+"  "+bold(title))
+	fmt.Fprintln(w.out, "  "+sgr("1;38;2;229;138;87", step+" / 02")+"  "+bold(title))
 	fmt.Fprintln(w.out, "  "+dim(strings.Repeat("─", 52)))
+	fmt.Fprintln(w.out)
 }
 
 func (w welcome) intro() {
-	fmt.Fprint(w.out, "\x1b[2J\x1b[H\n")
+	fmt.Fprintln(w.out)
+	fmt.Fprintln(w.out, "    "+accent("GETTING STARTED")+dim("  /  cdx"))
+	fmt.Fprintln(w.out)
 	for index, line := range wordmark {
 		color := wordmarkColors[index]
 		if w.speed == 0 {
 			fmt.Fprintln(w.out, "    "+sgr("1;"+color, line))
 			continue
 		}
-		// Sweep each row in from the left.
 		runes := []rune(line)
-		for end := 0; end <= len(runes); end += 3 {
-			if end > len(runes) {
-				end = len(runes)
-			}
+		for end := 0; end < len(runes); end += 3 {
 			fmt.Fprint(w.out, "\r    "+sgr("1;"+color, string(runes[:end])))
 			w.pause(6)
 		}
 		fmt.Fprintln(w.out, "\r    "+sgr("1;"+color, line))
 	}
 	fmt.Fprintln(w.out)
-	w.typeOut("    ", "Send any file to any device. Instantly.", bold)
-	w.typeOut("    ", "No cloud in the middle, no accounts, no limits on who can receive.", dim)
+	w.typeOut("    ", "Your files. Any device.", bold)
+	w.typeOut("    ", "Send a file. Share a code. Open it on the other side.", dim)
 	fmt.Fprintln(w.out)
-	w.pause(250)
-	for _, feature := range welcomeFeatures {
-		fmt.Fprintf(w.out, "    %s %s%s%s\n", accent("◆"), bold(feature[0]), strings.Repeat(" ", 14-len(feature[0])), dim(feature[1]))
-		w.pause(140)
-	}
-	w.pause(400)
+	fmt.Fprintln(w.out, "    "+accent("●")+" "+bold("No accounts")+dim("  ·  phone, browser, or terminal"))
+	fmt.Fprintln(w.out, "    "+accent("●")+" "+bold("Peer to peer")+dim("  ·  relay when a direct path fails"))
+	fmt.Fprintln(w.out, "    "+accent("●")+" "+bold("Private links")+dim("  ·  end-to-end encryption with --link"))
+	w.pause(200)
 }
 
 func (w welcome) agents() {
-	w.heading("01", "Let your AI agents send you files")
-	fmt.Fprintln(w.out, "  "+dim("Ask Claude Code, Codex, Gemini or opencode to \"send me the build\""))
-	fmt.Fprintln(w.out, "  "+dim("and they reply with a cdx code instead of an upload link."))
+	w.heading("01", "Connect your AI agents")
+	fmt.Fprintln(w.out, "    "+dim("Ask your agent to send a file. Get a download link."))
+	fmt.Fprintln(w.out)
+	fmt.Fprintln(w.out, "    "+accent("❯")+" "+bold("\"Send me the build with cdx\""))
 	fmt.Fprintln(w.out)
 
 	home, _ := os.UserHomeDir()
@@ -169,34 +162,38 @@ func (w welcome) agents() {
 		}
 	}
 	if len(found) == 0 {
-		fmt.Fprintln(w.out, "  "+dim("No agents found on this machine yet. Later, run ")+cmdText("cdx agent setup"))
+		fmt.Fprintln(w.out, "    "+dim("No supported agents found. You can set them up later:"))
+		fmt.Fprintln(w.out, "    "+cmdText("cdx agent setup"))
 		return
 	}
 	var names []string
 	for _, target := range found {
 		names = append(names, target.name)
 	}
-	fmt.Fprintln(w.out, "  "+dim("Found: ")+strings.Join(names, dim(", ")))
+	fmt.Fprintln(w.out, "    "+dim("Detected on this machine"))
+	for _, name := range names {
+		fmt.Fprintln(w.out, "    "+green("✓")+" "+name)
+	}
 	fmt.Fprintln(w.out)
 
-	if !w.choose([]string{"Yes, set them up", "Not now"}) {
-		fmt.Fprintln(w.out, "  "+dim("Skipped. Run ")+cmdText("cdx agent setup")+dim(" any time."))
+	if !w.choose([]string{"Set up file sharing", "Skip for now"}) {
+		fmt.Fprintln(w.out, "    "+dim("Run ")+cmdText("cdx agent setup")+dim(" any time."))
 		return
 	}
 	for _, target := range found {
 		frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 		for index := 0; w.speed > 0 && index < 8; index++ {
-			fmt.Fprintf(w.out, "\r  %s %s", accent(frames[index%len(frames)]), target.name)
+			fmt.Fprintf(w.out, "\r    %s %s", accent(frames[index%len(frames)]), target.name)
 			w.pause(45)
 		}
 		where := tildePath(target.path, home)
 		if err := target.install(); err != nil {
-			fmt.Fprintf(w.out, "\r  %s %s  %s\x1b[K\n", sgr("38;5;203", "✗"), target.name, dim(err.Error()))
+			fmt.Fprintf(w.out, "\r    %s %s  %s\x1b[K\n", sgr("38;5;203", "✗"), target.name, dim(err.Error()))
 			continue
 		}
-		fmt.Fprintf(w.out, "\r  %s %s  %s\x1b[K\n", green("✓"), target.name, dim(where))
+		fmt.Fprintf(w.out, "\r    %s %s  %s\x1b[K\n", green("✓"), target.name, dim(where))
 	}
-	fmt.Fprintln(w.out, "  "+dim("Undo any time with ")+cmdText("cdx agent remove"))
+	fmt.Fprintln(w.out, "    "+dim("Undo any time with ")+cmdText("cdx agent remove"))
 }
 
 // choose shows an arrow-key menu and reports whether the first option won.
@@ -222,12 +219,12 @@ func (w welcome) choose(options []string) bool {
 		}
 		for index, option := range options {
 			if index == selected {
-				fmt.Fprintf(w.out, "\r  %s %s\x1b[K\n", accent("❯"), bold(option))
+				fmt.Fprintf(w.out, "\r    %s %s\x1b[K\n", accent("❯"), bold(option))
 			} else {
-				fmt.Fprintf(w.out, "\r    %s\x1b[K\n", dim(option))
+				fmt.Fprintf(w.out, "\r      %s\x1b[K\n", dim(option))
 			}
 		}
-		fmt.Fprintf(w.out, "\r  %s\x1b[K\n", dim("↑/↓ to move · enter to select"))
+		fmt.Fprintf(w.out, "\r    %s\x1b[K\n", dim("↑/↓ choose   enter confirm"))
 	}
 	draw(true)
 	buffer := make([]byte, 8)
@@ -254,7 +251,7 @@ func (w welcome) choose(options []string) bool {
 		if key == "\n" || key == "\r" || key == "y" || key == "Y" || key == "n" || key == "N" || key == "q" || key == "\x1b" {
 			// Collapse the menu into the chosen answer.
 			fmt.Fprintf(w.out, "\x1b[%dA\x1b[J", len(options)+1)
-			fmt.Fprintf(w.out, "  %s %s\n", accent("❯"), options[selected])
+			fmt.Fprintf(w.out, "    %s %s\n", accent("❯"), options[selected])
 			return selected == 0
 		}
 	}
@@ -284,25 +281,32 @@ func (w welcome) sttySet(args ...string) error {
 
 func (w welcome) firstSend() {
 	w.heading("02", "Send your first file")
-	w.pause(200)
-	w.typeOut("  "+dim("$ "), "cdx send ./photo.jpg", cmdText)
-	w.pause(350)
+	w.typeOut("    "+dim("$ "), "cdx send ./photo.jpg", cmdText)
 	fmt.Fprintln(w.out)
+	w.pause(200)
 	box(w.out, 44, []string{
 		"",
-		dim("SHARE CODE") + "            " + bold(accent(spacedCode("48291"))),
-		"",
+		dim("EXAMPLE TRANSFER"),
 		bold("photo.jpg") + dim("  ·  2.4 MiB"),
 		"",
+		dim("SHARE CODE") + "   " + bold(accent(spacedCode("48291"))),
+		"",
+		dim("15 minutes to connect · one receiver"),
+		"",
 	})
-	w.pause(300)
+	w.pause(200)
 	fmt.Fprintln(w.out)
-	fmt.Fprintln(w.out, "  "+bold("On the other side")+dim(", pick one:"))
-	fmt.Fprintln(w.out, "    "+accent("→")+" open "+hyperlink(publicSite(), strings.TrimPrefix(publicSite(), "https://"))+dim(" on any phone or browser and type the code"))
-	fmt.Fprintln(w.out, "    "+accent("→")+" or run "+cmdText("cdx receive 48291"))
+	fmt.Fprintln(w.out, "    "+bold("Receive in your browser"))
+	fmt.Fprintln(w.out, "    Open "+hyperlink(publicSite(), strings.TrimPrefix(publicSite(), "https://"))+dim(" and enter the code."))
 	fmt.Fprintln(w.out)
-	fmt.Fprintln(w.out, "  "+dim("Folders and several files go as one .zip. Need privacy? ")+cmdText("cdx send --link"))
+	fmt.Fprintln(w.out, "    "+bold("Or in another terminal"))
+	fmt.Fprintln(w.out, "    "+dim("$ ")+cmdText("cdx receive 48291"))
 	fmt.Fprintln(w.out)
-	w.typeOut("  ", "You're all set. ✦", func(text string) string { return green(bold(text)) })
+	fmt.Fprintln(w.out, "    "+dim("Folders and multiple files arrive as one .zip."))
+	fmt.Fprintln(w.out, "    "+dim("For a private link: ")+cmdText("cdx send --link ./photo.jpg"))
+	fmt.Fprintln(w.out)
+	fmt.Fprintln(w.out, "  "+dim(strings.Repeat("─", 52)))
+	w.typeOut("    "+green("✓ "), "You're ready to share.", bold)
+	fmt.Fprintln(w.out, "    "+dim("More commands: ")+cmdText("cdx help"))
 	fmt.Fprintln(w.out)
 }
