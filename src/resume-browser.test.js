@@ -5,7 +5,7 @@ import { encodeBase64Url } from './agent-protocol.js';
 import { BLOB_FALLBACK_LIMIT } from './sink.js';
 import {
   RESUME_CHUNK_SIZE, bytesToHex, createReceiverStage, decodeResumeAck, decodeResumeCounts,
-  encodeResumeAck, encodeResumeCounts, hashFile, parseResumeLink, resumeSafeFilename
+  encodeResumeAck, encodeResumeCounts, hashFile, parseResumeLink, resumeSafeFilename, assertResumeSourceIdentity
 } from './resume-browser.js';
 
 function makeKV() {
@@ -80,6 +80,15 @@ describe('resume browser primitives', () => {
     const reference = new IncrementalSHA256().update(bytes).digestHex();
     assert.equal(hash.digestHex(), reference);
     assert.equal(bytesToHex(hash.digest()).length, 64);
+  });
+
+  it('binds a resumed sender to the original name, size, and whole digest', () => {
+    const file = { name: 'same.bin', size: 3 };
+    const saved = { role: 'sender', filename: 'same.bin', size: 3, wholeSha256: 'a'.repeat(64) };
+    assert.equal(assertResumeSourceIdentity(saved, file, 'a'.repeat(64)), true);
+    assert.throws(() => assertResumeSourceIdentity(saved, { ...file, name: 'other.bin' }, 'a'.repeat(64)), /does not match/);
+    assert.throws(() => assertResumeSourceIdentity(saved, { ...file, size: 4 }, 'a'.repeat(64)), /does not match/);
+    assert.throws(() => assertResumeSourceIdentity(saved, file, 'b'.repeat(64)), /does not match/);
   });
 
   it('writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption', async () => {

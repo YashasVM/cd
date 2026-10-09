@@ -24,7 +24,7 @@ export function parseResumeLink(value, base = globalThis.location?.href) {
   if (!path || !hash) throw new Error('This resumable CD link is invalid.');
   const id = decodeBase64Url(path[1]);
   const key = decodeBase64Url(hash[1]);
-  if (id.byteLength !== 16 || key.byteLength !== 32) throw new Error('This resumable CD link is invalid.');
+  if (id.byteLength !== 16 || key.byteLength !== 32 || encodeBase64Url(id) !== path[1] || encodeBase64Url(key) !== hash[1]) throw new Error('This resumable CD link is invalid.');
   return { id, key, rootId: path[1], url };
 }
 
@@ -93,7 +93,7 @@ export async function cleanExpiredResumeRecords({ checkpoints, secrets, storage,
   for (const key of (await checkpoints.keys()).slice(0, Math.min(max, MAX_CHECKPOINTS_PER_CLEANUP))) {
     const checkpoint = await checkpoints.get(key);
     if (!checkpoint || checkpoint.expiresAt > now) continue;
-    if (checkpoint.stagingId && isOpaqueStagingId(checkpoint.stagingId)) {
+    if (checkpoint.stagingId && isOpaqueStagingId(checkpoint.stagingId) && storage?.getDirectory) {
       try { await (await storage.getDirectory()).removeEntry(checkpoint.stagingId); } catch { /* Already removed. */ }
     }
     await checkpoints.delete(key);
@@ -159,7 +159,8 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     checkpoint = await signResumeCheckpoint(unsigned, secret);
     await checkpoints.put(checkpointKey, checkpoint);
   }
-  async function append(bytes, priorSessionNonce) {
+  let operation = Promise.resolve();
+  async function appendInner(bytes, priorSessionNonce) {
     if (closed) throw new Error('The saved receive stage is closed.');
     const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     const nextOffset = currentOffset + value.byteLength;
@@ -173,21 +174,48 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     currentOffset = nextOffset;
     hash = nextHash;
   }
-  async function finish() {
+  function append(bytes, priorSessionNonce) {
+    const current = operation.then(() => appendInner(bytes, priorSessionNonce));
+    operation = current.catch(() => {});
+    return current;
+  }
+  async function finishInner() {
+    if (closed) throw new Error('The saved receive stage is closed.');
     if (currentOffset !== Number(offer.size) || hash.digestHex() !== offer.wholeSha256) throw new Error('The received file did not match the sender’s whole-file digest.');
     closed = true;
     return handle.getFile();
   }
+  function finish() {
+    const current = operation.then(finishInner);
+    operation = current.catch(() => {});
+    return current;
+  }
   async function cancel() {
     closed = true;
+    await operation.catch(() => {});
     try { await directory.removeEntry(stagingId); } catch { /* Best effort. */ }
     await checkpoints.delete(checkpointKey);
   }
-  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, append, finish, cancel, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
+  function bindSession(priorSessionNonce) {
+    const current = operation.then(() => {
+      if (closed) throw new Error('The saved receive stage is closed.');
+      return persist(currentOffset, hash, priorSessionNonce);
+    });
+    operation = current.catch(() => {});
+    return current;
+  }
+  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, bindSession, append, finish, cancel, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
 }
 
 export async function hashFilePrefix(file, offset) {
   return (await hashFile(file, { length: offset })).digestHex();
+}
+
+export function assertResumeSourceIdentity(checkpoint, file, wholeSha256) {
+  if (!checkpoint || checkpoint.role !== 'sender' || checkpoint.filename !== file.name || checkpoint.size !== file.size || checkpoint.wholeSha256 !== wholeSha256) {
+    throw new Error('The selected file does not match the saved source. Choose the original file and try again.');
+  }
+  return true;
 }
 
 export async function createPrivateSenderCapability({ origin = globalThis.location?.origin, secrets }) {
@@ -202,7 +230,7 @@ export async function createPrivateSenderCapability({ origin = globalThis.locati
   return { invitation, rootId, senderToken, receiverToken: receiver.token, receiverTokenHash: receiver.digest, expiresAt, url: `${origin}/s/${rootId}#v2.${encodeBase64Url(key)}` };
 }
 
-export async function createV2Socket(invitation, role, token, { senderTokenHash, receiverTokenHash, sessionNonce, WebSocketCtor = globalThis.WebSocket, location = globalThis.location } = {}) {
+export async function createV2Socket(invitation, role, token, { senderTokenHash, receiverTokenHash, sessionNonce, onSocket, WebSocketCtor = globalThis.WebSocket, location = globalThis.location } = {}) {
   const { token: receiverToken } = await resumeReceiverAdmission(invitation);
   const nonce = sessionNonce || crypto.getRandomValues(new Uint8Array(32));
   const proofRole = role === 'sender' ? 'sender' : 'receiver';
@@ -210,9 +238,11 @@ export async function createV2Socket(invitation, role, token, { senderTokenHash,
   const encodedId = encodeBase64Url(invitation.id);
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
   const socket = new WebSocketCtor(`${scheme}://${location.host}/ws/v2/${encodedId}`);
+  onSocket?.(socket);
   socket.binaryType = 'arraybuffer';
   const inbox = createSocketInbox(socket);
   await waitSocketOpen(socket);
+  if (socket.readyState !== 1) throw new Error('The transfer connection was closed before joining.');
   const join = role === 'sender'
     ? senderTokenHash
       ? { type: 'join', protocol: 'cd-transfer-v2', role, senderToken: encodeBase64Url(token), senderTokenHash, receiverTokenHash, sessionNonce: encodeBase64Url(nonce), nonceProof: encodeBase64Url(proof) }
@@ -348,6 +378,8 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     hooks.onStatus?.('Checking the file before sharing…');
     const fullHash = await hashFile(file);
     const wholeSha256 = fullHash.digestHex();
+    if (cancelled) throw new Error('Transfer canceled.');
+    if (reconnect) assertResumeSourceIdentity(saved, file, wholeSha256);
     const chunkCount = Math.ceil(file.size / RESUME_CHUNK_SIZE);
     let sourceBytesRead = file.size;
     let maxWorkingBytes = RESUME_CHUNK_SIZE * 2 + 64;
@@ -360,11 +392,13 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
         expiresAt, priorSessionNonce: encodeBase64Url(sessionNonce)
       }, senderToken));
     }
+    if (cancelled) throw new Error('Transfer canceled.');
     const tokenHashBytes = await crypto.subtle.digest('SHA-256', senderToken);
+    if (cancelled) throw new Error('Transfer canceled.');
     const connection = await createV2Socket(invitation, 'sender', senderToken, {
-      senderTokenHash: reconnect ? undefined : encodeBase64Url(new Uint8Array(tokenHashBytes)),
+      senderTokenHash: encodeBase64Url(new Uint8Array(tokenHashBytes)),
       receiverTokenHash: encodeBase64Url(receiverTokenHash), sessionNonce,
-      location: globalThis.location
+      onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: globalThis.location
     });
     socket = connection.socket;
     const session = await authenticateV2Peer(invitation, 'sender', sessionNonce, connection.inbox);
@@ -439,16 +473,17 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     hooks.onComplete?.();
     return { rootId, url, bytesRead: sourceBytesRead, bytesSent: file.size - offset, resumedBytes: offset, retainedBytes: 0, maxWorkingBytes };
   })();
-  done.catch((error) => { if (!cancelled) hooks.onError?.(error); });
-  return { done, cancel() {
-    cancelled = true;
-    try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
-    // User cancellation discards local resume authority. A socket loss or
-    // page close never calls this method and keeps committed progress.
-    if (privateRootId) {
+  done.catch((error) => { if (!cancelled) hooks.onError?.(error); }).finally(() => {
+    if (cancelled && privateRootId) {
       void checkpoints.delete(`sender:${privateRootId}`).catch(() => {});
       void secrets.delete(`sender:${privateRootId}`).catch(() => {});
     }
+  });
+  return { done, cancel() {
+    cancelled = true;
+    try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
+    // Cleanup waits until active hashing and checkpoint writes have settled.
+    // A socket loss or page close never calls this method.
   } };
 }
 
@@ -468,6 +503,7 @@ async function loadSenderCapability(link, { secrets, checkpoints, origin }) {
 
 export function mountResumableReceiver(container, link, { storage = globalThis.navigator?.storage, checkpoints, secrets, download = true, hooks = {} } = {}) {
   let stopped = false;
+  let discard = false;
   let socket;
   container.classList.add('share-panel');
   container.innerHTML = '<span class="panel-kicker">resumable transfer</span><p role="status" data-resume-status>Connecting securely…</p><strong data-resume-name></strong><div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill"></div></div><span data-resume-progress></span><button type="button" class="secondary-btn" data-resume-cancel>Cancel saved progress</button>';
@@ -477,13 +513,19 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
   const fill = container.querySelector('.progress-fill');
   const cancel = container.querySelector('[data-resume-cancel]');
   let stage;
-  const cancelClick = () => { stopped = true; void stage?.cancel(); try { socket?.close(1000, 'receiver canceled'); } catch { /* Best effort. */ } status.textContent = 'Saved progress removed.'; };
+  const cancelClick = () => {
+    stopped = true;
+    discard = true;
+    void stage?.cancel();
+    try { socket?.close(1000, 'receiver canceled'); } catch { /* Best effort. */ }
+    status.textContent = 'Saved progress removed.';
+  };
   cancel.addEventListener('click', cancelClick);
   const done = (async () => {
     if (!storage?.getDirectory) throw new Error('Resume needs browser durable storage (OPFS). Open this link in a supported browser with site storage enabled.');
     const parsed = parseResumeLink(link);
     const invitation = { id: parsed.id, key: parsed.key };
-    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null);
+    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; } });
     socket = activeSocket;
     const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox);
     if (stopped) return;
@@ -492,12 +534,20 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       createResumeSealer(invitation, RECEIVER_DIRECTION, sessionParams(session))
     ]);
     const rawOffer = await nextRecord(inbox, opener, KIND_OFFER);
+    if (stopped) return;
     if (rawOffer.byteLength > 16 * 1024) throw new Error('The sender offered oversized file metadata.');
     let offer;
     try { offer = JSON.parse(textDecoder.decode(rawOffer)); } catch { throw new Error('The sender offered invalid file details.'); }
     if (!resumeSafeFilename(offer.name) || !Number.isSafeInteger(offer.expiresAt) || offer.expiresAt <= Date.now() || (session.expiresAt && offer.expiresAt !== session.expiresAt)) throw new Error('The sender offered an invalid or expired file.');
     filename.textContent = offer.name;
     stage = await createReceiverStage({ invitation, rootId: parsed.rootId, offer, storage, checkpoints, secrets, now: Date.now() });
+    if (stopped) {
+      if (discard) await stage.cancel();
+      else await stage.bindSession(encodeBase64Url(session.sessionNonce));
+      return;
+    }
+    await stage.bindSession(encodeBase64Url(session.sessionNonce));
+    if (stopped) { if (discard) await stage.cancel(); return; }
     const resumeControl = { offset: String(stage.offset), prefixSha256: stage.prefixSha256 };
     sendRecord(socket, await sealer.seal(KIND_ACCEPT, textEncoder.encode(JSON.stringify(resumeControl))));
     let chunks = Math.ceil(stage.offset / RESUME_CHUNK_SIZE);
@@ -522,7 +572,9 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       const end = decodeResumeCounts(opened.plaintext);
       if (end.chunks !== chunks || end.bytes !== BigInt(offer.size) || end.wholeSha256 !== offer.wholeSha256 || stage.currentOffset !== Number(offer.size)) throw new Error('The sender’s final counts did not match the staged file.');
       const stagedFile = await stage.finish();
+      if (stopped) { if (discard) await stage.cancel(); return; }
       const endHash = await hashFile(stagedFile);
+      if (stopped) { if (discard) await stage.cancel(); return; }
       if (endHash.digestHex() !== offer.wholeSha256) throw new Error('The received file failed its whole-file digest check.');
       if (download) {
         const url = URL.createObjectURL(stagedFile);
@@ -541,6 +593,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: 0, maxWorkingBytes };
     }
   })().catch(async (error) => {
+    if (stopped) { if (discard) status.textContent = 'Saved progress removed.'; return; }
     if (stage && !stopped) {
       // An interruption preserves only data whose stage close and checkpoint
       // write completed. Explicit cancel removes the file and checkpoint.
@@ -554,9 +607,15 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
 
 function waitSocketOpen(socket, timeout = 15000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Could not reach CD. Check your connection and try again.')), timeout);
-    socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
-    socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Could not reach CD. Check your connection and try again.')); }, { once: true });
+    const finish = (error) => {
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    const timer = setTimeout(() => finish(new Error('Could not reach CD. Check your connection and try again.')), timeout);
+    socket.addEventListener('open', () => finish(), { once: true });
+    socket.addEventListener('error', () => finish(new Error('Could not reach CD. Check your connection and try again.')), { once: true });
+    socket.addEventListener('close', () => finish(new Error('Transfer canceled before the connection opened.')), { once: true });
   });
 }
 
