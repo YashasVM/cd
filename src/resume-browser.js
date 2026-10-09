@@ -230,9 +230,7 @@ export async function createV2Socket(invitation, role, token, { senderTokenHash,
   await waitSocketOpen(socket);
   if (socket.readyState !== 1) throw new Error('The transfer connection was closed before joining.');
   const join = role === 'sender'
-    ? senderTokenHash
-      ? { type: 'join', protocol: 'cd-transfer-v2', role, senderToken: encodeBase64Url(token), senderTokenHash, receiverTokenHash, sessionNonce: encodeBase64Url(nonce), nonceProof: encodeBase64Url(proof) }
-      : { type: 'join', protocol: 'cd-transfer-v2', role, senderToken: encodeBase64Url(token), sessionNonce: encodeBase64Url(nonce), nonceProof: encodeBase64Url(proof) }
+    ? { type: 'join', protocol: 'cd-transfer-v2', role, senderToken: encodeBase64Url(token), senderTokenHash, receiverTokenHash, sessionNonce: encodeBase64Url(nonce), nonceProof: encodeBase64Url(proof) }
     : { type: 'join', protocol: 'cd-transfer-v2', role, receiverToken: encodeBase64Url(receiverToken), receiverNonce: encodeBase64Url(nonce), nonceProof: encodeBase64Url(proof) };
   socket.send(JSON.stringify(join));
   return { socket, nonce, receiverToken, inbox };
@@ -297,11 +295,13 @@ async function waitForRelayEvent(inbox, types, timeout) {
   }
 }
 
-async function authenticateV2Peer(invitation, role, ownNonce, inbox) {
+async function authenticateV2Peer(invitation, role, ownNonce, inbox, onAccepted) {
   let relayEvent = await waitForRelayEvent(inbox, ['accepted', 'peer-joined'], 15 * 60_000);
+  if (relayEvent.type === 'accepted') await onAccepted?.(Number(relayEvent.expiresAt) || 0);
   while (!relayEvent.sessionNonce || !relayEvent.receiverNonce) {
     relayEvent = await waitForRelayEvent(inbox, ['accepted', 'peer-joined'], 15 * 60_000);
   }
+  if (relayEvent.type === 'peer-joined') await onAccepted?.(Number(relayEvent.expiresAt) || 0);
   const sessionNonceText = relayEvent.sessionNonce;
   const receiverNonceText = relayEvent.receiverNonce;
   if (!/^[A-Za-z0-9_-]{43}$/.test(sessionNonceText || '') || !/^[A-Za-z0-9_-]{43}$/.test(receiverNonceText || '')) throw new Error('The relay did not bind this transfer to a fresh session.');
@@ -360,7 +360,6 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
       await secrets.delete(`sender:${rootId}`);
       throw new Error('Transfer canceled.');
     }
-    hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect) });
     hooks.onStatus?.('Checking the file before sharing…');
     const fullHash = await hashFile(file);
     const wholeSha256 = fullHash.digestHex();
@@ -387,7 +386,21 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
       onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: globalThis.location
     });
     socket = connection.socket;
-    const session = await authenticateV2Peer(invitation, 'sender', sessionNonce, connection.inbox);
+    let sharePublished = false;
+    const publishShare = async (relayExpiry) => {
+      if (cancelled) throw new Error('Transfer canceled.');
+      const authoritativeExpiry = relayExpiry || expiresAt;
+      if (!reconnect && authoritativeExpiry !== expiresAt) {
+        await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: authoritativeExpiry });
+        const checkpoint = await checkpoints.get(`sender:${rootId}`);
+        if (checkpoint) await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({ ...checkpoint, expiresAt: authoritativeExpiry }, senderToken));
+      }
+      if (!sharePublished) {
+        hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect) });
+        sharePublished = true;
+      }
+    };
+    const session = await authenticateV2Peer(invitation, 'sender', sessionNonce, connection.inbox, publishShare);
     if (cancelled) throw new Error('Transfer canceled.');
     const activeExpiry = session.expiresAt || expiresAt;
     if (!reconnect && session.expiresAt) {
