@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -35,9 +36,17 @@ func updateAsset() string {
 
 // latestTag reads the tag GitHub's /releases/latest redirect points at.
 func latestTag() (string, error) {
+	return latestTagContext(context.Background())
+}
+
+func latestTagContext(ctx context.Context) (string, error) {
 	client := *updateClient
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	response, err := client.Get(releaseBase + "/latest")
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, releaseBase+"/latest", nil)
+	if err != nil {
+		return "", err
+	}
+	response, err := client.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("check for updates: %w", err)
 	}

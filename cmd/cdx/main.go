@@ -528,5 +528,8 @@ func run(argv []string) int {
 }
 
 func main() {
+	if isTerminal(os.Stderr) {
+		notifyUpdate(os.Args[1:], os.Stderr)
+	}
 	os.Exit(run(os.Args[1:]))
 }

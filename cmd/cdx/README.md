@@ -12,6 +12,11 @@ cdx send ./file.zip
 cdx receive 48291 --out ./downloads/
 ```
 
+When a newer release is available, terminal commands show a notice with
+`cdx update`. The check runs at most once an hour and times out after 750 ms;
+offline checks stay silent. Notices go to stderr, so captured share codes and
+JSON remain unchanged. Set `CD_NO_UPDATE_CHECK=1` to disable the check.
+
 Or install the latest checksum-verified release without Go. On Linux or
 macOS:
 
