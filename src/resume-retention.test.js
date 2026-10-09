@@ -19,7 +19,7 @@ describe('resume retention', () => {
     const entries = Array.from({ length: 130 }, (_, i) => [`receiver:${String(i).padStart(3, '0')}`, { expiresAt: now + 1 }]);
     entries.push(['receiver:expired-late', { expiresAt: now - 1 }]);
     const checkpoints = makeKV(entries);
-    const secrets = makeKV([['sender:orphan', { expiresAt: now + 1 }]]);
+    const secrets = makeKV([['sender:orphan', { expiresAt: now - 1 }]]);
     const removedStages = [];
     const storage = { async getDirectory() { return { async removeEntry(name) { removedStages.push(name); } }; } };
 
@@ -56,6 +56,17 @@ describe('resume retention', () => {
     assert.ok(checkpointReads <= 2);
     assert.deepEqual(removedStages, [`cd-rx-${'a'.repeat(36)}`]);
     assert.equal(values.has('receiver:expired'), false);
+  });
+
+  it('keeps an unexpired secret while its checkpoint is being created', async () => {
+    const now = 10_000;
+    const checkpoints = makeKV();
+    const secrets = makeKV([['sender:in-progress', { expiresAt: now + 1 }]]);
+
+    const removed = await cleanExpiredResumeRecords({ checkpoints, secrets, storage: {}, now });
+
+    assert.equal(removed, 0);
+    assert.equal(secrets.values.has('sender:in-progress'), true);
   });
 
   it('rotates through more than 128 live secrets to remove a late orphan', async () => {

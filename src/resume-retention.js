@@ -58,7 +58,7 @@ export async function cleanExpiredResumeRecords({ checkpoints, secrets, storage,
       const secret = await secrets.get(key);
       if (!secret) continue;
       const checkpoint = await checkpoints.get(key);
-      if (!checkpoint || checkpoint.expiresAt <= now || secret.expiresAt <= now) {
+      if (secret.expiresAt <= now || (checkpoint && checkpoint.expiresAt <= now)) {
         await secrets.delete(key);
         removed++;
       }
