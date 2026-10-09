@@ -404,11 +404,18 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     const publishShare = async (relayExpiry) => {
       if (cancelled) throw new Error('Transfer canceled.');
       const authoritativeExpiry = relayExpiry || expiresAt;
+      if (!Number.isSafeInteger(authoritativeExpiry) || authoritativeExpiry <= Date.now() || authoritativeExpiry > Date.now() + RESUME_LIMIT_MS + 60_000) {
+        throw new Error('The relay returned an invalid resume expiry.');
+      }
+      if (reconnect && authoritativeExpiry !== saved.expiresAt) {
+        throw new Error('The relay expiry does not match this saved transfer.');
+      }
       if (!reconnect && authoritativeExpiry !== expiresAt) {
         await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: authoritativeExpiry });
         const checkpoint = await checkpoints.get(`sender:${rootId}`);
         if (checkpoint) await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({ ...checkpoint, expiresAt: authoritativeExpiry }, senderToken));
       }
+      if (cancelled) throw new Error('Transfer canceled.');
       if (!sharePublished) {
         hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect) });
         sharePublished = true;
