@@ -61,7 +61,8 @@ cdx receive --resume '<private-v2-link>' --out ./report.pdf
 Resumable CLI sends stay in the foreground and use private links. Receiver checkpoints
 are kept beside the output; sender records live in the private CLI state directory.
 Reselect the same file and private link in the browser to resume a send; reopen the
-link in the same browser to resume a receive. Browser resume requires OPFS storage.
+link in the same browser to resume a receive. Restart the sender first and wait for
+its private link to appear, then reconnect the receiver. Browser resume requires OPFS storage.
 Records expire after 24 hours. Resume verifies the source and retained prefix and uses
 fresh session keys. This first resumable protocol uses the relay; ordinary transfers
 retain direct WebRTC transport. Explicit browser cancellation discards saved progress;

@@ -131,3 +131,64 @@ Wave4architecture agreed inADR0001 andissue15 before implementationsplit.
 Sendersecret distinct fromreceiver capability; both peers contributefresh
 nonces/proofs;checkpointMAC exact canonical fields;durableverifiedprefix;
 24hretention;no v1sequence resets. MoreLuna workers added peruser request.
+
+## Wave 4 ownership and contracts
+
+Architecture was resolved in issue #15 and ADR0001 before splitting implementation.
+A owns CLI resume/storage and tests; Luna browser owns browser resume/staging/UI;
+Luna protocol owns Go/JS v2 crypto fixtures and relay reconnect authorization.
+Coordinator owns integration, cross-client checks, README and verification commands.
+A separate Luna retention owner implements the independent bounded cleanup module.
+
+V2 uses private root identity, separate sender authorization, authenticated fresh
+peer nonces and directional session keys. Durable checkpoints authenticate file
+identity, offset, prefix, staging and destination. Retention is fixed at24h.
+First v2 cycle is opt-in, relay-only, one file, foregroundCLI and OPFSbrowser.
+Paired devices, compression and infrastructure experiments remain out of scope.
+
+## Final regression evidence
+
+76JS tests, Go race tests, typecheck, existing agent/browser checks, 7retry scenarios,
+8transport scenarios at64MiB and deploy dry-run passed before final browser fixes.
+The first agent folder-download run timed out; its rerun passed with exact bundle
+verification. CLI resume3/3 passes:32MiB+77 delivered exactly after resuming262144
+verified bytes; changed source and tampered checkpoint rejected. Latest measured
+restart654ms on local Worker. Native T3 browser received2097155bytes from CLIv2,
+with downloaded SHA256 a9e124b2fc19a2b4bb341a25f2ddfb1ba832acd62f597afa12c91ca82120737d
+matching source exactly. Cross-client resumed browser evidence follows below.
+
+Browser-to-CLI restart passed in the native T3 browser. Receiver was SIGKILLed
+after a262144-byte committed checkpoint; sender page was reloaded and the same
+file/private link reselected. CLI reported resumedBytes262144 and delivered
+8388685 bytes with SHA2564987f3e181c62c2064d3952177007e553346da49ae67b0f18a958ec6dda815ba,
+matching the original checkpoint identity. Browser sender observer reported
+resumedBytes262144, bytesRead16777370 and maxWorkingBytes524352. The UI retained
+the pasted resume link across initialization. Rotation tests cover late expired
+records after128live entries and preserve unexpired secrets before checkpoint
+creation. Final JavaScript count after source, cancellation, retention, and race tests is 82 passing.
+
+Final browser review added three corrections before the gate: sender links are
+published only after relay admission and authoritative expiry persistence;
+completed or failed sender handles are released before resetting the form, so
+Try again preserves interrupted-transfer authority; cancellation waits for stage
+close and checkpoint writes before deleting either record. A focused blocked-write
+race test verifies no checkpoint can be recreated after cancellation. Resume
+retention rotates bounded batches through both checkpoint and secret stores,
+including expired orphan secrets, while preserving new unexpired sender secrets.
+
+### Wave 4 gate passed
+
+The native T3 browser-to-browser restart test passed on the final build. The
+receiver navigated away after its first 256 KiB progress callback. The sender
+clicked Try again, reselected the identical 48 MiB file with the same private
+link, and waited for fresh relay admission. Reopening the receiver link delivered
+50,331,648 bytes with SHA-256
+355aabf28c5289a31d064799296cea858c5c1f002185cfe5db9f696407efca11,
+matching the source. The initial resumed offset was not sampled precisely in this
+run; the first visible progress sample was 7,340,032 bytes. Browser-to-CLI and CLI
+restart tests separately asserted the exact retained offset of 262,144 bytes.
+
+All four waves are integrated. Final checks include 82 JavaScript tests, Go race
+tests, typecheck, skill generation drift, agent/browser workflows, seven retry
+cases, eight 64 MiB transport cases, CLI resume and relay-authentication checks,
+and a deployment dry-run. Changes are local and have not been deployed.
