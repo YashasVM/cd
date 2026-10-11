@@ -27,7 +27,9 @@ cdx receive 48291              # save to the current directory
 cdx receive 48291 --out ~/Downloads
 ```
 
-Without the CLI, type the code into the **Receive** box on [cd.yash0.in](https://cd.yash0.in).
+Without the CLI, open `https://cd.yash0.in/#<code>` (for example
+[cd.yash0.in/#48291](https://cd.yash0.in/#48291)) or type the code into the
+**Receive** box on [cd.yash0.in](https://cd.yash0.in).
 To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in/send).
 
 | Command | What it does |

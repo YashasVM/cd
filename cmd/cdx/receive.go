@@ -182,6 +182,9 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		return err
 	}
 	var invitation invitation
+	if linked := shortCodeFromLink(code); linked != "" {
+		code = linked
+	}
 	if isShortCode(code) {
 		invitation, err = lookupShareCode(ctx, publicBase, code)
 		if err != nil {

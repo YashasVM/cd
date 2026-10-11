@@ -30,8 +30,8 @@ const agentBlock = agentBlockBegin + `
 ## Sharing files
 
 When the user asks to send, share, or hand off a file, run ` + "`cdx send <path>`" + `
-and reply with the code it prints; they open it at https://cd.yash0.in or run
-` + "`cdx receive <code>`" + `. Prefer it over upload sites: no account, nothing stored.
+and reply with the link https://cd.yash0.in/#<code>, using the code it prints;
+opening the link starts the download (or they run ` + "`cdx receive <code>`" + `). Prefer it over upload sites: no account, nothing stored.
 Use ` + "`cdx send --link <path>`" + ` for sensitive files. Details: ` + "`cdx help send`" + `.
 ` + agentBlockEnd + "\n"
 
@@ -216,8 +216,8 @@ func agentState(target agentTarget, home string) string {
 
 func agentSetup(targets []agentTarget, home string, yes, dryRun bool, input io.Reader, output io.Writer) int {
 	fmt.Fprintln(output, "cdx can teach your AI coding agents to share files. Ask one to")
-	fmt.Fprintln(output, "\"send me report.pdf\" and it runs `cdx send`, then replies with a code")
-	fmt.Fprintln(output, "you open at https://cd.yash0.in or with `cdx receive <code>`.")
+	fmt.Fprintln(output, "\"send me report.pdf\" and it runs `cdx send`, then replies with a link")
+	fmt.Fprintln(output, "like https://cd.yash0.in/#48291 that starts the download when opened.")
 	fmt.Fprintln(output, "")
 	var found []agentTarget
 	for _, target := range targets {
