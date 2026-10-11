@@ -192,3 +192,17 @@ func TestLookupShareCodeMapsMissingToBadCode(t *testing.T) {
 		t.Fatalf("missing code = %v", err)
 	}
 }
+
+func TestShortCodeFromLink(t *testing.T) {
+	for input, want := range map[string]string{
+		"https://cd.yash0.in/#48291":  "48291",
+		" https://cd.yash0.in#4829 ":  "4829",
+		"https://cd.yash0.in/#abcde":  "",
+		"https://cd.yash0.in/s/#4829": "",
+		"48291":                       "",
+	} {
+		if got := shortCodeFromLink(input); got != want {
+			t.Errorf("shortCodeFromLink(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
