@@ -70,7 +70,7 @@ expire on their own, and keep no file data.
 
 ## Develop
 
-Requires Node.js 24+, npm, and Go 1.26.8+.
+Requires Node.js 24+, npm, and Go 1.26.9+.
 
 ```bash
 npm ci
