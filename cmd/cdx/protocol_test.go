@@ -92,3 +92,19 @@ func TestInvitationUsesStrongCanonicalParts(t *testing.T) {
 		t.Fatal("receiver admission values must be 256 bits")
 	}
 }
+
+func BenchmarkSealChunk(b *testing.B) {
+	sealer, err := newSealer(testInvitation(), senderDirection)
+	if err != nil {
+		b.Fatal(err)
+	}
+	payload := make([]byte, chunkSize)
+	b.SetBytes(int64(len(payload)))
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		if _, err := sealer.seal(kindChunk, payload); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

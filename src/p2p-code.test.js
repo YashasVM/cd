@@ -1,35 +1,71 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  P2P_CODE_LENGTH,
+  P2P_WORDS,
   cleanCode,
   codeFromUrl,
   generateCode,
+  generateEphemeralId,
   isValidCode,
+  normalizeCode,
   peerIdFor,
   receiveLinkFor,
 } from './p2p-code.js';
 
-test('generates a 128-bit base64url code', () => {
-  const code = generateCode({ getRandomValues: (bytes) => bytes.fill(0xff) });
-  assert.equal(code, '_____________________w');
-  assert.equal(code.length, P2P_CODE_LENGTH);
-  assert.equal(isValidCode(code), true);
+test('word list is short plain words', () => {
+  assert.ok(P2P_WORDS.length >= 100);
+  assert.equal(new Set(P2P_WORDS).size, P2P_WORDS.length);
+  for (const word of P2P_WORDS) {
+    assert.match(word, /^[a-z]{3,5}$/);
+  }
 });
 
-test('preserves case and rejects short or decorated codes', () => {
-  const code = 'AbCdEfGhIjKlMnOpQrStUv';
-  assert.equal(cleanCode(` ${code}!`), code);
-  assert.equal(isValidCode(code), true);
+test('generates a word pair deterministically', () => {
+  const a = generateCode({ getRandomValues: (bytes) => bytes.fill(0x00) });
+  const b = generateCode({ getRandomValues: (bytes) => bytes.fill(0x00) });
+  assert.equal(a, b);
+  assert.match(a, /^[a-z]{3,5}-[a-z]{3,5}$/);
+  assert.equal(isValidCode(a), true);
+});
+
+test('still accepts legacy single words', () => {
+  assert.equal(isValidCode('river'), true);
+  assert.equal(normalizeCode('RIVER'), 'river');
+  assert.equal(peerIdFor('river'), 'cd-river');
+});
+
+test('ephemeral ids are always valid PeerJS ids', () => {
+  // PeerJS: alphanumerics joined by single separators.
+  const peerId = /^[A-Za-z0-9]+(?:[ _-][A-Za-z0-9]+)*$/;
+  for (let value = 0; value < 256; value += 1) {
+    const id = generateEphemeralId({ getRandomValues: (bytes) => bytes.fill(value) });
+    assert.equal(id.length, 12);
+    assert.match(`cd-r-${id}`, peerId);
+  }
+});
+
+test('codes are case-insensitive but links stay lowercase', () => {
+  assert.equal(isValidCode('RIVER-BRAVE'), true);
+  assert.equal(isValidCode('river-brave'), true);
+  assert.equal(normalizeCode('RIVER-BRAVE'), 'river-brave');
+  assert.equal(peerIdFor('RIVER-BRAVE'), 'cd-river-brave');
+  const link = receiveLinkFor('RIVER-BRAVE', 'https://cd.yash0.in/anything?old=1');
+  assert.equal(link, 'https://cd.yash0.in/#p2p.river-brave');
+  assert.equal(codeFromUrl(link), 'river-brave');
+  assert.equal(codeFromUrl('https://cd.yash0.in/#p2p.RIVER-BRAVE'), 'river-brave');
+});
+
+test('rejects random short strings that are not words', () => {
   assert.equal(isValidCode('waffle'), false);
+  assert.equal(isValidCode('zzzz'), false);
+  assert.equal(cleanCode(' mango!'), 'mango');
 });
 
-test('puts private routing material in the URL fragment', () => {
-  const code = 'AbCdEfGhIjKlMnOpQrStUv';
-  const link = receiveLinkFor(code, 'https://cd.yash0.in/anything?old=1');
-  assert.equal(link, `https://cd.yash0.in/#p2p.${code}`);
-  assert.equal(codeFromUrl(link), code);
-  assert.equal(peerIdFor(code), `cd-${code}`);
+test('still accepts legacy random codes', () => {
+  assert.equal(isValidCode('AbCdEfGh'), true);
+  assert.equal(isValidCode('AbCdEfGhIjKlMnOpQrStUv'), true);
+  assert.equal(peerIdFor('AbCdEfGh'), 'cd-AbCdEfGh');
+  assert.equal(codeFromUrl('https://cd.yash0.in/#p2p.AbCdEfGh'), 'AbCdEfGh');
 });
 
 test('does not turn an unrelated URL into a code', () => {

@@ -2,11 +2,21 @@
 
 ## Caller contract
 
-`cdx send <file>` opens and validates one regular file, reserves a live relay
-room, then writes one capability URL to stdout. The process stays in the
-foreground. Status goes to stderr. Exit code 0 means the receiver reconstructed
-the authenticated byte stream and prepared it for download or finished writing
-it to a user-approved file destination.
+`cdx send <path>...` opens and validates one regular file (or, for a folder
+or several paths, streams one uncompressed zip whose size is computed up
+front, so the offer below is unchanged), reserves a live relay
+room, claims a short numeric share code, then writes the code to stdout.
+Status goes to stderr. In the foreground (a terminal, or `--wait`), exit code
+0 means the receiver reconstructed the authenticated byte stream and prepared
+it for download or finished writing it to a user-approved file destination.
+When stdout is not a terminal (or with `--detach`), a background holder keeps
+the room and the command exits 0 once the code is live. `cdx wait <code>`
+then carries the same exit-code meaning as a foreground send.
+
+`cdx send --link <file>` skips the code claim and writes the full capability
+URL instead (see below). The browser `/send` page is an equivalent
+code-mode sender: it mints the same invitation, claims the same directory
+code, and shows the code plus a ready `cdx receive <code>` command.
 
 The URL has this form:
 
@@ -17,6 +27,37 @@ https://cd.yash0.in/s/<transfer-id>#v1.<master-key>
 The transfer ID is 16 random bytes encoded as 22 unpadded base64url characters.
 The master key is 32 random bytes encoded as 43 unpadded base64url characters.
 The fragment is never part of an HTTP or WebSocket request.
+
+## Short share codes
+
+Code mode keeps the room, records, and flow control above, but replaces the
+fragment capability with a 5-digit code from the relay directory:
+
+- The sender adds `"shareKey": "<master key>"` to its join. The room claims a
+  random code from the directory and returns it in the same event:
+  `{"type":"accepted","code":"48291","expiresAt":...}`. From connect to code
+  is one relay round trip after the WebSocket opens. Code TTL: 15 minutes.
+  A relay that returns no code (older deployments) makes the sender fall back
+  to `POST /api/codes {transferId, key}`, which older clients also use.
+- Any receiver (terminal or browser) `GET /api/codes/<code>` and receives
+  `{transferId, key}`, then joins the room exactly like a link receiver.
+- The room releases its code as soon as a receiver pairs (or the room ends),
+  because a room admits one receiver. A used code stops resolving at once.
+- The browser Receive box and `cdx receive` both accept codes; links keep
+  working everywhere they did before.
+- The directory is ten Durable Objects (`codes-v2-<first digit>`), each a
+  SQLite table with an expiry index. A claim purges expired rows with an
+  indexed delete, checks the code, and inserts it, all without awaits, so it
+  is atomic. An alarm purges rows that expire without further claims. Each
+  shard holds at most 1,000 live codes (10,000 overall). Both endpoints share
+  the relay's 30/minute per-IP rate limit, which also bounds code guessing.
+
+Security difference: the directory holds the master key, so code transfers
+are not end-to-end encrypted. TLS protects them in transit; the relay
+forwards ciphertext-sized records it could decrypt but never stores. Anyone
+who guesses an active code within its lifetime receives the file; the room's
+single-receiver tombstone still prevents a second join. Sensitive files
+should use `--link` mode, which keeps the trust model in the section above.
 
 ## Trust model
 
@@ -83,13 +124,22 @@ representation. Chunk content is raw bytes. Ack, end, and complete are fixed
 binary counters. Either peer closes the socket to abort.
 
 The receiver must explicitly accept the decrypted offer before chunks start.
-The sender permits at most 1 MiB of unacknowledged plaintext. An acknowledgement
-is sent only after the active byte sink owns the bytes. The receiver also caps
-pending encrypted input at 2 MiB and closes peers that ignore flow control.
+The CLI sender permits 8–24 MiB of unacknowledged plaintext, sized to about
+two bandwidth-delay products (2 × delivered bytes per second × minimum ack
+RTT), over a
+full-duplex pipeline (background ack reader, foreground writer). An
+acknowledgement is sent only after the active byte sink owns the bytes
+(every 1 MiB). The receiver also caps pending encrypted input at 32 MiB
+and closes peers that ignore flow control. Offer chunk sizes 64 KiB (legacy)
+and 256 KiB (current) are both accepted.
 
 The end record authenticates total bytes and chunk count. The receiver compares
 them with the offer and its committed counters before closing its sink. It sends
-complete with the matching counters. Per-record authentication, ordered
+complete with the matching counters, then closes with a normal WebSocket
+close frame and waits up to 3 seconds for the relay's close reply. Dropping
+TCP right after `complete` let the relay edge discard that last frame, so the
+sender saw `peer-left` and exited 1 for a delivered file. The sender sends
+`end` as soon as the file is read and then waits for acks and `complete`. Per-record authentication, ordered
 sequences, and authenticated terminal counts detect changed, reordered,
 duplicated, missing, or extra content without a second file read.
 
@@ -98,12 +148,18 @@ duplicated, missing, or extra content without a second file read.
 - Sender relay admission: 10 seconds.
 - Receiver wait: 15 minutes.
 - User consent after an offer: 10 minutes.
-- Transfer inactivity after acceptance: 45 seconds.
+- Transfer inactivity after acceptance: 90 seconds.
 - Hard room lifetime: 2 hours.
-- Plaintext chunk: 64 KiB.
-- Unacknowledged sender window: 1 MiB.
-- Pending receiver ciphertext: 2 MiB.
-- Blob fallback: 256 MiB.
+- Plaintext chunk: 256 KiB (64 KiB senders still accepted).
+- Unacknowledged sender window: 8–24 MiB, adaptive (CLI); 8 MiB (browser `/send`).
+- Relay frame cap: 1 MiB; peer buffer: 32 MiB. Durable Object WebSockets
+  cannot pause reading, so the relay cannot push back on a sender. The
+  end-to-end ack window keeps compliant senders under the cap; only a sender
+  that ignores flow control reaches it and is disconnected.
+- Pending receiver ciphertext: 32 MiB.
+- Large-file receiver sink: File System Access streaming, then Origin
+  Private File System staging, then a Blob download capped at 256 MiB
+  on WebKit receivers (large blob downloads crash real iOS devices).
 
 The browser reports a Blob result as "ready to download", not "saved". A direct
 file-system sink may report "saved" only after its writable closes successfully.
@@ -125,3 +181,63 @@ Primary references:
 - https://github.com/schollz/croc/blob/main/src/docs/STORED_TRANSFERS.md
 - https://developers.cloudflare.com/durable-objects/best-practices/websockets/
 - https://developers.cloudflare.com/durable-objects/platform/limits/
+
+## Browser P2P relay tunnel
+
+Browser-to-browser transfers try a WebRTC data channel first. The receiver
+also mints a fresh capability (transfer ID + key), opens the relay room as the
+room's `sender` role, and passes the capability to the sender inside the PeerJS
+connect metadata. If the sender's data channel is not open 3 seconds after the
+receiver arrives, the sender joins that room as `receiver` and sends the
+unchanged P2P messages (manifest, file-start, chunks, progress, and so on) as
+records of two tunnel kinds: `7` (JSON message) and `8` (bytes). Both
+directions use both kinds, and tunnel openers reject file-transfer kinds and
+vice versa. The receiver commits to whichever transport delivers the first
+message and closes the other. Signaling carries the key, so the tunnel has
+the same trust as short share codes.
+
+## Browser P2P raw channel and window
+
+PeerJS `binary` serialization BinaryPacks every message and re-splits
+anything over 16,300 bytes into packed pieces the receiver reassembles. A
+receiver that supports it therefore adds `raw: 1` and `window: <bytes>` to its
+PeerJS connect metadata and creates a pre-negotiated data channel (`cd-raw`,
+SCTP stream id 1000) on the same peer connection. A sender that sees `raw: 1`
+creates the matching channel and sends the same P2P messages on it: control
+messages as JSON strings, file bytes as ArrayBuffers of up to 256 KiB (capped
+by the connection's SCTP `maxMessageSize`). The sender keeps at most `window`
+unacknowledged bytes in flight: 16 MiB from desktop receivers, 4 MiB from
+phones, 3 MiB when no window was announced. The receiver's pending-input
+cap grows to match. Peers that ignore the metadata (cached
+old pages) keep using the PeerJS channel, and the receiver commits to
+whichever channel delivers the first message.
+
+## Direct path (WebRTC) for relay transfers
+
+The relay room doubles as the rendezvous for a direct connection. For files
+of 1 MiB or more, `cdx send` gathers ICE candidates (host, then STUN) while
+it waits for the receiver and adds `"direct": {"sdp": "<offer>"}` to the
+encrypted file offer. Receivers that predate it ignore the field.
+
+A current receiver (`cdx receive` or the browser share page) answers with a
+`signal` record (kind `9`, receiver→sender, JSON `{"sdp": ...}`), then sends
+one `signal` record per local ICE candidate as it is found (`{"candidate":
+{...}}`, trickle ICE). It sends `signal` only when the offer included SDP, so
+older senders never see it. Both sides create a pre-negotiated data channel
+(`cd-direct`, stream id 1).
+
+The transfer starts on the relay immediately after `accept`. Each side sends
+on the data channel once it is open, otherwise on the relay, and splits each
+record into 64 KiB messages that the peer rebuilds from the 12-byte header.
+Inbound records from both paths are merged by their header sequence number.
+While the direct path may still open, each side keeps the records it sent
+on the relay and re-sends them on the data channel when it opens, so the
+transfer never waits for a slow relay to drain. The receiver of two copies
+keeps the first and drops the second (the kept copy is still authenticated
+when opened). The sender releases retained chunks as acks cover them.
+
+Records keep their AES-GCM encryption on the data channel, which adds DTLS
+underneath. Once a record has crossed the direct path, losing the relay
+WebSocket is harmless and losing the direct path is fatal. Before that, a
+direct path that fails or never connects changes nothing. `CD_DIRECT=0`
+forces the relay.

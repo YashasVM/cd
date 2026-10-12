@@ -16,8 +16,19 @@ import (
 const (
 	invitationBytes = 48
 	headerBytes     = 12
-	maxRecordBytes  = 80 * 1024
+	// 1 MiB frame cap: fits 256 KiB plaintext chunks with AES-GCM overhead
+	// and leaves headroom for future sizes. Must match the Worker's
+	// MAX_RECORD_BYTES and the browser's MAX_RECORD_BYTES.
+	maxRecordBytes  = 1024 * 1024
 	protocolVersion = 1
+)
+
+// Supported plaintext chunk sizes. Senders advertise one offer.chunkSize;
+// receivers accept any entry here so old 64 KiB senders keep working after
+// the upgrade to 256 KiB.
+const (
+	chunkSizeLegacy = 64 * 1024
+	chunkSize       = 256 * 1024
 )
 
 type direction byte
@@ -35,6 +46,10 @@ const (
 	kindAccept
 	kindAck
 	kindComplete
+	// kindSignal (receiver→sender) carries the receiver's WebRTC answer for
+	// the direct path. Receivers send it only when the offer included SDP,
+	// so senders that predate it never see it.
+	kindSignal messageKind = 9
 )
 
 type invitation struct {
@@ -122,7 +137,7 @@ func validKind(valueDirection direction, kind messageKind) bool {
 	if valueDirection == senderDirection {
 		return kind >= kindOffer && kind <= kindEnd
 	}
-	return kind >= kindAccept && kind <= kindComplete
+	return kind >= kindAccept && kind <= kindComplete || kind == kindSignal
 }
 
 func recordNonce(valueDirection direction, sequence uint32) []byte {
@@ -152,14 +167,14 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 	if headerBytes+ciphertextLength > maxRecordBytes {
 		return nil, errors.New("record is too large")
 	}
-	header := make([]byte, headerBytes)
+	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
 	copy(header, []byte("CD"))
 	header[2] = protocolVersion
 	header[3] = byte(kind)
 	sequence := uint32(value.sequence)
 	binary.BigEndian.PutUint32(header[4:8], sequence)
 	binary.BigEndian.PutUint32(header[8:12], uint32(len(plaintext)))
-	record := append(header, value.aead.Seal(nil, recordNonce(value.direction, sequence), plaintext, recordAAD(header, value.id))...)
+	record := value.aead.Seal(header, recordNonce(value.direction, sequence), plaintext, recordAAD(header, value.id))
 	value.sequence++
 	return record, nil
 }

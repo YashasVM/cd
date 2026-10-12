@@ -1,139 +1,125 @@
 # cd
 
-Fast, private file handoffs at [cd.yash0.in](https://cd.yash0.in).
+Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 
-CD supports two focused flows:
+- **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
+  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files arrive as one .zip.
 
-- Browsers exchange one or more files directly over WebRTC.
-- Agents and terminals run `cdx send <file>` and produce one browser link.
+CD never stores files. Transfers are live and end-to-end encrypted.
 
-Files are never intentionally stored by CD. The orange CD interface is the
-receiver for both flows.
+## Install `cdx`
 
-## Send a file from an agent or terminal
+| Platform | Command |
+| --- | --- |
+| Linux / macOS | `curl -fsSL https://cd.yash0.in/install.sh \| sh` |
+| Windows (PowerShell) | `irm https://cd.yash0.in/install.ps1 \| iex` |
+| Go 1.26+ | `go install github.com/YashasVM/cd/cmd/cdx@latest` |
 
-Install `cdx` with Go:
+The shell installers check release checksums. The CLI is named `cdx` because `cd` is a shell builtin.
 
-```bash
-go install github.com/YashasVM/cd/cmd/cdx@latest
-```
-
-Or install the latest checksum-verified release on Linux or macOS:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/YashasVM/cd/master/scripts/install.sh | sh
-```
-
-Then send one regular file:
+## Use
 
 ```bash
-cdx send ./app.apk
+cdx send ./report.pdf          # prints a code, e.g. 48291
+cdx send ./shots ./notes.md    # several paths arrive as one .zip
+cdx send --link ./secret.zip   # private end-to-end encrypted link instead of a code
+cdx receive 48291              # save to the current directory
+cdx receive 48291 --out ~/Downloads
 ```
 
-The binary is named `cdx` because `cd` is already the shell's change-directory
-command.
+Without the CLI, open `https://cd.yash0.in/#<code>` (for example
+[cd.yash0.in/#48291](https://cd.yash0.in/#48291)) or type the code into the
+**Receive** box on [cd.yash0.in](https://cd.yash0.in).
+To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in/send).
 
-Standard output contains only the private share URL:
+| Command | What it does |
+| --- | --- |
+| `cdx status [code]` | List background sends |
+| `cdx wait <code>` | Exit 0 once the receiver has verified every byte, or 1 if the transfer failed |
+| `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
+| `cdx update` | Update cdx to the latest release (checksum-verified) |
+| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
+| `--wait` / `--detach` | Force foreground or background sending |
 
-```text
-https://cd.yash0.in/s/3JgrxJIKt2cqd2V0aTDQyQ#v1.<private-key>
-```
+**Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
+receiver verifies the file. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
+the code is live. Codes expire after 15 minutes and admit one receiver.
+Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
 
-Send that complete URL to the receiver. Keep `cdx` running while they accept
-and download the file. Progress is written to standard error; exit status 0
-means the receiver verified the complete byte count. Use `--json` when a tool
-needs structured output.
+**Security:** a 5-digit code lets the relay hold the transfer key so the code is easy to type, so anyone who
+guesses a live code can receive the file. For sensitive files, use `--link`: the key stays in the URL fragment,
+which never reaches the server. Details are in [SECURITY.md](SECURITY.md) and the [protocol spec](docs/agent-transfer-v1.md).
 
-The URL fragment holds the encryption key. Browsers do not send fragments to
-the server, and the relay receives encrypted records only. A receiver must
-also prove knowledge of a token derived from that key before joining. Treat
-the full URL as a temporary secret.
+Agents should follow [AGENTS.md](AGENTS.md) and the [file-sharing skill](skills/cd-file-sharing/SKILL.md).
 
-Repository agents should follow [AGENTS.md](AGENTS.md) and the reusable
-[CD file-sharing skill](skills/cd-file-sharing/SKILL.md).
-
-## Browser-to-browser sharing
-
-Open [cd.yash0.in](https://cd.yash0.in), choose files, and share the displayed
-128-bit private code, link, or QR code. The private code is placed in the URL
-fragment so it is not sent in HTTP requests. Keep both tabs open until the
-WebRTC transfer finishes. CD coordinates the connection through its own
-`cd.yash0.in` Worker; file bytes travel over the encrypted WebRTC data channel.
-WebRTC may use public STUN servers for NAT discovery, but they do not receive
-file bytes. This remains separate from the agent relay.
-
-## Develop locally
-
-Requirements: Node.js 24+, npm, and Go 1.26.8+.
-
-```bash
-npm ci
-npm run dev
-```
-
-Build the local CLI with `make cdx`; it is written to `bin/cdx`. Run the full
-production checks with:
-
-```bash
-npm test
-npm run test:cli
-npm run typecheck
-npm run verify:agent
-npm run deploy:dry
-cd android && ./gradlew testDebugUnitTest lintDebug assembleDebug
-```
-
-`verify:agent` starts a local Worker, builds the real Go sender, and drives the
-built receiver page in Chromium. It checks admission failures, duplicate
-participants, multi-chunk flow control, Unicode filenames, the downloaded
-bytes, visible CD branding, and the sender's completion status. Set
-`CHROMIUM_PATH` if Chromium is installed outside the common system paths.
-
-To exercise the browser receiver locally:
-
-```bash
-npx wrangler dev
-CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 \
-CD_PUBLIC_URL=http://127.0.0.1:8787 \
-./bin/cdx send ./README.md
-```
+To teach the AI coding agents on your machine to share files with cdx, run `cdx agent setup` (the
+installer offers it too). It asks per agent: Claude Code and `~/.agents/skills` get the skill; Codex,
+Gemini CLI and opencode get a short note in their global instructions file. `cdx agent remove` undoes it.
+Or install just the skill with `npx skills add YashasVM/cd`.
 
 ## Architecture
 
 ```text
-Browser sender  ── CD signaling ── WebRTC ── Browser receiver
-
-cdx sender ── encrypted WebSocket records ── CD relay ── Browser receiver
-                 key remains in URL fragment
+Browser / cdx ── encrypted WebSocket ── CD relay (Durable Object) ── Browser / cdx
+                └─ direct WebRTC upgrade for large files from cdx ─┘
 ```
 
-The Cloudflare Worker uses one Durable Object room per random 128-bit transfer
-identifier. Rooms admit one sender and one authorized receiver, bound memory
-and frame sizes, expire automatically, and retain no file contents. The sender
-uses 64 KiB chunks with an acknowledged 1 MiB window. The browser streams to
-the File System Access API where available and otherwise offers a bounded
-256 MiB Blob download.
+One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code directory (`/api/codes`).
+Each transfer gets its own Durable Object room. Rooms hold one sender and one receiver, limit memory use,
+expire on their own, and keep no file data.
 
-The exact protocol and trust boundaries are documented in
-[Agent transfer protocol v1](docs/agent-transfer-v1.md). Operational recovery
-notes are in [Production recovery](docs/production-recovery.md).
+## Develop
 
-## Repository layout
+Requires Node.js 24+, npm, and Go 1.26.8+.
 
-```text
-cmd/cdx/                  Go sender CLI
-src/                      Browser UI and transfer protocols
-worker/                   Cloudflare Worker and Durable Object relay
-scripts/verify-agent.mjs  Deterministic end-to-end verification
-android/                  Android shell for the browser P2P flow
-skills/                   Instructions for AI agents
+```bash
+npm ci
+npm run dev        # web UI
+make cdx           # builds ./bin/cdx
 ```
+
+Point a local CLI at a local Worker:
+
+```bash
+npx wrangler dev
+CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 CD_PUBLIC_URL=http://127.0.0.1:8787 ./bin/cdx send ./README.md
+```
+
+### Checks
+
+| Command | Covers |
+| --- | --- |
+| `npm test` | Browser unit tests |
+| `npm run test:cli` | Go CLI tests |
+| `npm run typecheck` | TypeScript |
+| `npm run verify:agent` | CLI → Worker → browser, end to end in Chromium |
+| `npm run verify:browser` | Browser send → browser (typed code and scanned QR) and → `cdx receive` |
+| `npm run verify:terminal` | CLI ↔ CLI and browser → CLI |
+| `npm run bench` | Throughput benchmarks |
+| `npm run deploy:dry` | Worker bundle |
+
+Set `CD_VERIFY_URL=https://cd.yash0.in` to run the `verify:*` scripts against production, and
+`CHROMIUM_PATH` if Chromium isn't installed in a standard location.
 
 ## Deploy and release
 
-`npm run build && npx wrangler deploy` publishes the Worker and assets using
-`wrangler.jsonc`. Pushing a `v*` tag runs the release workflow, cross-compiles
-`cdx`, publishes SHA-256 checksums, and creates a GitHub release.
+```bash
+npm run build && npx wrangler deploy           # production: cd.yash0.in
+npx wrangler deploy --env test                 # staging: cd-test.yash0.in
+git tag v1.2.3 && git push --tags              # builds cdx for all platforms and publishes a release
+```
 
-See [SECURITY.md](SECURITY.md) before reporting vulnerabilities. CD is
-available under the [MIT License](LICENSE).
+If something breaks in production, see [docs/production-recovery.md](docs/production-recovery.md).
+
+## Layout
+
+```text
+cmd/cdx/   Go CLI
+src/       browser UI and transfer protocols
+worker/    Cloudflare Worker + Durable Object relay
+scripts/   build, verify, and bench scripts
+skills/    instructions for AI agents
+docs/      protocol spec, recovery runbook, audit notes
+```
+
+MIT licensed. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).

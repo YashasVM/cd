@@ -7,10 +7,13 @@ npm-debug.log*
 .agents/
 skills-lock.json
 
-# Android (local SDK path + generated outputs)
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
+# Generated from scripts/install.* at build time (see scripts/sync-install.mjs)
+public/install.sh
+public/install.ps1
+
 *.iml
 .idea/
+
+# Stray `go build` outputs at the repository root
+/cd
+/cdx

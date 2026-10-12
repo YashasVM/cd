@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +13,10 @@ import {
   receiverAdmission
 } from '../src/agent-protocol.js';
 
-const port = await availablePort();
+const hosted = process.env.CD_VERIFY_URL;
+const port = hosted ? null : await availablePort();
+const publicBase = hosted ? new URL(hosted).origin : `http://127.0.0.1:${port}`;
+const relayBase = publicBase.replace(/^http/, 'ws') + '/ws/v1';
 const work = await mkdtemp(join(tmpdir(), 'cd-verify-'));
 const executable = join(work, process.platform === 'win32' ? 'cdx.exe' : 'cdx');
 const sourcePath = join(work, 'résumé final.bin');
@@ -25,49 +28,53 @@ let sender;
 let browser;
 try {
   await run('go', ['build', '-buildvcs=false', '-trimpath', '-o', executable, './cmd/cdx']);
-  const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
-  worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  collect(worker.stdout);
-  collect(worker.stderr);
-  await waitForHealth(`http://127.0.0.1:${port}/api/health`, worker);
-  await verifyPeerSignaling(port);
-  const missing = await runCapture(executable, ['send', join(work, 'missing.bin')]);
-  assert.equal(missing.code, 1);
-  assert.equal(missing.stdout, '');
-  await expectClose(
-    `ws://127.0.0.1:${port}/ws/v1/AAAAAAAAAAAAAAAAAAAAAA`,
-    { type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
-    4404
-  );
-  await expectClose(
-    `ws://127.0.0.1:${port}/ws/v1/CCCCCCCCCCCCCCCCCCCCCC`,
-    { type: 'join', protocol: 'cd-transfer-v0', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
-    4406
-  );
-  await expectSilentTimeout(`ws://127.0.0.1:${port}/ws/v1/DDDDDDDDDDDDDDDDDDDDDD`);
-  const abandonedRoom = `ws://127.0.0.1:${port}/ws/v1/BBBBBBBBBBBBBBBBBBBBBB`;
-  await connectAndClose(abandonedRoom, {
-    type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-  });
-  await expectClose(abandonedRoom, {
-    type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
-  }, 4409);
-  sender = spawn(executable, ['send', sourcePath], {
+  if (!hosted) {
+    const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
+    worker = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    collect(worker.stdout);
+    collect(worker.stderr);
+    await waitForHealth(`http://127.0.0.1:${port}/api/health`, worker);
+    await verifyPeerSignaling(port);
+    const missing = await runCapture(executable, ['send', join(work, 'missing.bin')]);
+    assert.equal(missing.code, 1);
+    assert.equal(missing.stdout, '');
+    await expectClose(
+      `ws://127.0.0.1:${port}/ws/v1/AAAAAAAAAAAAAAAAAAAAAA`,
+      { type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      4404
+    );
+    await expectClose(
+      `ws://127.0.0.1:${port}/ws/v1/CCCCCCCCCCCCCCCCCCCCCC`,
+      { type: 'join', protocol: 'cd-transfer-v0', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' },
+      4406
+    );
+    await expectSilentTimeout(`ws://127.0.0.1:${port}/ws/v1/DDDDDDDDDDDDDDDDDDDDDD`);
+    const abandonedRoom = `ws://127.0.0.1:${port}/ws/v1/BBBBBBBBBBBBBBBBBBBBBB`;
+    await connectAndClose(abandonedRoom, {
+      type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    });
+    await expectClose(abandonedRoom, {
+      type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+    }, 4409);
+  }
+  sender = spawn(executable, ['send', '--wait', '--link', sourcePath], {
     env: {
       ...process.env,
-      CD_RELAY_URL: `ws://127.0.0.1:${port}/ws/v1`,
-      CD_PUBLIC_URL: `http://127.0.0.1:${port}`
+      CD_RELAY_URL: relayBase,
+      CD_PUBLIC_URL: publicBase
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const senderExit = new Promise((resolve) => sender.once('exit', resolve));
   const stderr = collect(sender.stderr);
   const link = await firstLine(sender.stdout);
-  assert.match(link, new RegExp(`^http://127\\.0\\.0\\.1:${port}/s/[A-Za-z0-9_-]{22}#v1\\.[A-Za-z0-9_-]{43}$`));
   const linkUrl = new URL(link);
-  const relayUrl = `ws://${linkUrl.host}/ws/v1/${linkUrl.pathname.split('/').at(-1)}`;
+  assert.equal(linkUrl.origin, publicBase);
+  assert.match(linkUrl.pathname, /^\/s\/[A-Za-z0-9_-]{22}$/);
+  assert.match(linkUrl.hash, /^#v1\.[A-Za-z0-9_-]{43}$/);
+  const relayUrl = `${relayBase}/${linkUrl.pathname.split('/').at(-1)}`;
   await expectClose(relayUrl, {
     type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
   }, 4401);
@@ -86,23 +93,30 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);
   await page.goto(link);
-  await page.locator('#offer:not([hidden])').waitFor();
+  await page.locator('[data-relay="offer"]:not([hidden])').waitFor();
   await assertVisibleBrand(page);
-  assert.equal(await page.locator('#file-name').textContent(), 'résumé final.bin');
+  assert.equal(await page.locator('[data-relay="file-name"]').textContent(), 'résumé final.bin');
   await expectClose(relayUrl, {
     type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: encodeBase64Url(token)
   }, 4409);
-  await page.locator('#accept').click();
-  await page.locator('#status').filter({ hasText: 'File verified and ready to download.' }).waitFor();
+  await page.locator('[data-relay="accept"]').click();
+  await page.locator('[data-relay="status"]').filter({ hasText: 'File verified and ready to download.' }).waitFor();
   const downloadEvent = page.waitForEvent('download');
-  await page.locator('#download').click();
+  await page.locator('[data-relay="download"]').click();
   const download = await downloadEvent;
   const receivedPath = join(work, await download.suggestedFilename());
   await download.saveAs(receivedPath);
   const received = await readFile(receivedPath);
   const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish');
-  assert.equal(exitCode, 0, await stderr);
+  const senderLog = await stderr;
+  assert.equal(exitCode, 0, senderLog);
+  // The direct path is opportunistic: on a slow runner the relay can finish
+  // this small file before WebRTC connects. link_test.go covers the switch.
+  const direct = /switched to a direct connection/.test(senderLog);
+  console.log(`sender ${direct ? 'switched to the direct path' : 'finished on the relay'}`);
   assert.deepEqual(Uint8Array.from(received), source);
+  await verifyFolderBundle(context);
+  if (!hosted) await verifyPeerRegistrationBurst(port);
   console.log(`verified ${received.byteLength} exact bytes through CLI, Worker, encryption, flow control, and receiver`);
 } finally {
   await browser?.close();
@@ -111,9 +125,41 @@ try {
   await rm(work, { recursive: true, force: true });
 }
 
+// A folder plus a file go out detached as one streamed zip; pasting the link
+// into the home page's Receive box receives it in place, without leaving.
+async function verifyFolderBundle(context) {
+  const folder = join(work, 'bundle folder');
+  await mkdir(join(folder, 'nested'), { recursive: true });
+  await writeFile(join(folder, 'nested', 'a.bin'), source);
+  await writeFile(join(work, 'extra.txt'), 'extra');
+  const bundleSender = spawn(executable, ['send', '--link', folder, join(work, 'extra.txt')], {
+    env: { ...process.env, CD_RELAY_URL: relayBase, CD_PUBLIC_URL: publicBase, CD_STATE_DIR: join(work, 'state') },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const bundleLink = await firstLine(bundleSender.stdout);
+  assert.equal(await new Promise((resolve) => bundleSender.once('exit', resolve)), 0, 'detached bundle send did not exit 0');
+  const page = await context.newPage();
+  await page.goto(publicBase);
+  await page.locator('#receive-mode-btn').click();
+  const downloadEvent = page.waitForEvent('download');
+  await page.locator('#code-input').fill(bundleLink);
+  const download = await downloadEvent;
+  assert.equal(download.suggestedFilename(), 'bundle folder-and-1-more.zip');
+  const bundlePath = join(work, 'received-bundle.zip');
+  await download.saveAs(bundlePath);
+  const bundle = await readFile(bundlePath);
+  assert.deepEqual([...bundle.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04], 'bundle is not a zip');
+  assert.ok(bundle.includes(Buffer.from('bundle folder/nested/a.bin')), 'bundle is missing the nested file');
+  assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
+  await page.close();
+  console.log(`verified a ${bundle.byteLength}-byte folder bundle into the browser`);
+}
+
 async function assertVisibleBrand(page) {
   assert.equal(await page.locator('.brand-lockup h1').textContent(), 'cd');
-  assert.match(await page.locator('.watermark').textContent(), /cd\.yash0\.in/);
+  // Watermark shows the actual host under test (prod, cd-test, or local dev).
+  const expectedHost = new URL(publicBase).host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  assert.match(await page.locator('.watermark').textContent(), new RegExp(expectedHost));
   assert.match(await page.locator('.share-description').textContent(), /handed to you through CD/);
 }
 
@@ -140,7 +186,7 @@ async function verifyPeerSignaling(port) {
   const urlFor = (id) => `ws://127.0.0.1:${port}/peerjs/peerjs?key=peerjs&id=${id}&token=test&version=1.5.5`;
   const sender = await connectPeer(urlFor(senderID));
   const receiver = await connectPeer(urlFor(receiverID));
-  const offer = { type: 'OFFER', dst: senderID, payload: { connectionId: 'dc_test', type: 'data' } };
+  const offer = { type: 'OFFER', src: 'forged-sender', dst: senderID, payload: { connectionId: 'dc_test', type: 'data' } };
   receiver.send(JSON.stringify(offer));
   assert.deepEqual(await nextJSON(sender), { ...offer, src: receiverID });
 
@@ -151,6 +197,21 @@ async function verifyPeerSignaling(port) {
   receiver.close(1000, 'test complete');
   assert.deepEqual(await leave, { type: 'LEAVE', src: receiverID });
   sender.close(1000, 'test complete');
+
+  for (const [index, invalid] of [null, [], 42, 'signal', {}, { type: 'OFFER', dst: '../bad' }].entries()) {
+    await expectClose(urlFor(`invalid-${index}`), invalid, 4400);
+  }
+}
+
+async function verifyPeerRegistrationBurst(port) {
+  // Both endpoints can share one public IP. Repeated quick handoffs must not
+  // exhaust the signaling allowance while the stricter relay guard stays put.
+  for (let index = 0; index < 40; index += 1) {
+    const id = `burst-${index}`;
+    const socket = await connectPeer(`ws://127.0.0.1:${port}/peerjs/peerjs?key=peerjs&id=${id}&token=test&version=1.5.5`);
+    socket.close(1000, 'test complete');
+  }
+  console.log('verified 40 signaling registrations from one IP');
 }
 
 async function connectPeer(url) {

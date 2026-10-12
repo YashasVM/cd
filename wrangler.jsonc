@@ -5,30 +5,74 @@
   "compatibility_date": "2026-09-12",
   "workers_dev": false,
   "routes": [
-    { "pattern": "cd.yash0.in", "custom_domain": true }
+    { "pattern": "cd.yash0.in", "custom_domain": true },
+    { "pattern": "design.yash0.in", "custom_domain": true }
   ],
+  // Test env: isolated Worker + DO namespaces on cd-test.yash0.in.
+  // Deploy with `wrangler deploy --env test`. Never bare-deploy from a branch.
+  // Note: durable_objects/ratelimits/migrations are NOT inherited by envs,
+  // so they are repeated here for isolated test namespaces.
+  "env": {
+    "test": {
+      "name": "cd-test",
+      "routes": [{ "pattern": "cd-test.yash0.in", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "TRANSFERS", "class_name": "TransferRoom" },
+          { "name": "PEERS", "class_name": "PeerSignal" },
+          { "name": "CODES", "class_name": "CodeDirectory" }
+        ]
+      },
+      "ratelimits": [
+        // Keep CLI relay attempts strict, but allow repeated browser
+        // signaling from a household or other shared public IP.
+        {
+          "name": "CONNECTION_RATE_LIMITER",
+          "namespace_id": "9237404",
+          "simple": { "limit": 30, "period": 60 }
+        },
+        {
+          "name": "PEER_RATE_LIMITER",
+          "namespace_id": "9237403",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ]
+    }
+  },
   "durable_objects": {
     "bindings": [
       { "name": "TRANSFERS", "class_name": "TransferRoom" },
-      { "name": "PEERS", "class_name": "PeerSignal" }
+      { "name": "PEERS", "class_name": "PeerSignal" },
+      { "name": "CODES", "class_name": "CodeDirectory" }
     ]
   },
   "ratelimits": [
+    // Separate namespaces keep signaling bursts and test traffic from
+    // exhausting the production CLI relay allowance.
     {
       "name": "CONNECTION_RATE_LIMITER",
       "namespace_id": "9237401",
       "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      "name": "PEER_RATE_LIMITER",
+      "namespace_id": "9237402",
+      "simple": { "limit": 120, "period": 60 }
     }
   ],
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["TransferRoom"] },
-    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] }
+    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] },
+    { "tag": "v3", "new_sqlite_classes": ["CodeDirectory"] }
   ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/ws/*", "/api/*", "/peerjs/*"]
+    // Root-level entries let the Worker remap design.yash0.in requests
+    // (/, /docs.json, /app.js, /style.css) into /design/*. All other
+    // asset requests keep the default asset-first behavior.
+    "run_worker_first": ["/ws/*", "/api/*", "/peerjs/*", "/", "/docs.json", "/app.js", "/style.css"]
   },
   "observability": {
     "enabled": true,
