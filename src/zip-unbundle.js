@@ -100,13 +100,29 @@ export async function readBundle(blob) {
 // downloadNames gives each file a flat download name: its own name, or its
 // folder path joined with "_" when two files would otherwise collide.
 export function downloadNames(paths) {
+  // Downloads are flat; case-insensitive filesystems also treat differently
+  // cased or canonically equivalent names as the same file.
+  const key = (name) => name.normalize('NFC').toLowerCase();
+  const bases = paths.map((path) => path.slice(path.lastIndexOf('/') + 1));
   const counts = new Map();
-  for (const path of paths) {
-    const base = path.slice(path.lastIndexOf('/') + 1);
-    counts.set(base, (counts.get(base) || 0) + 1);
-  }
-  return paths.map((path) => {
-    const base = path.slice(path.lastIndexOf('/') + 1);
-    return counts.get(base) > 1 ? path.replaceAll('/', '_') : base;
+  for (const base of bases) counts.set(key(base), (counts.get(key(base)) || 0) + 1);
+
+  // Reserve unique original basenames before flattening folder paths so a
+  // generated name cannot steal a later file's original download name.
+  const reserved = new Set(bases.filter((base) => counts.get(key(base)) === 1).map(key));
+  const used = new Set();
+  return paths.map((path, index) => {
+    const base = bases[index];
+    const collides = counts.get(key(base)) > 1;
+    const preferred = collides ? path.replaceAll('/', '_') : base;
+    const dot = preferred.lastIndexOf('.');
+    const stem = dot > 0 ? preferred.slice(0, dot) : preferred;
+    const extension = dot > 0 ? preferred.slice(dot) : '';
+    let name = preferred;
+    for (let copy = 2; used.has(key(name)) || (collides && reserved.has(key(name))); copy += 1) {
+      name = `${stem} (${copy})${extension}`;
+    }
+    used.add(key(name));
+    return name;
   });
 }

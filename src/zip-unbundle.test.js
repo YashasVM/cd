@@ -51,3 +51,30 @@ test('safeEntryPath rejects escapes and control characters', () => {
 test('downloadNames flattens only colliding paths', () => {
   assert.deepEqual(downloadNames(['a.txt', 'x/b.txt', 'y/b.txt']), ['a.txt', 'x_b.txt', 'y_b.txt']);
 });
+
+test('downloadNames reserves unique basenames against flattened collisions', () => {
+  assert.deepEqual(
+    downloadNames(['x/a.txt', 'y/a.txt', 'x_a.txt']),
+    ['x_a (2).txt', 'y_a.txt', 'x_a.txt']
+  );
+  assert.deepEqual(
+    downloadNames(['x/a.txt', 'y/a.txt', 'x_a.txt', 'x_a (2).txt']),
+    ['x_a (3).txt', 'y_a.txt', 'x_a.txt', 'x_a (2).txt']
+  );
+});
+
+test('downloadNames avoids case-insensitive and Unicode-equivalent collisions', () => {
+  assert.deepEqual(
+    downloadNames(['A.txt', 'a.txt', 'a (2).txt']),
+    ['A.txt', 'a (3).txt', 'a (2).txt']
+  );
+  const names = downloadNames(['x/café.txt', 'x/cafe\u0301.txt']);
+  assert.equal(new Set(names.map((name) => name.normalize('NFC').toLowerCase())).size, names.length);
+});
+
+test('downloadNames is deterministic and keeps all suggested names distinct', () => {
+  const paths = ['x/a.txt', 'y/a.txt', 'x_a.txt', 'x_a (2).txt', 'z/a.txt'];
+  const first = downloadNames(paths);
+  assert.deepEqual(downloadNames(paths), first);
+  assert.equal(new Set(first.map((name) => name.normalize('NFC').toLowerCase())).size, paths.length);
+});
