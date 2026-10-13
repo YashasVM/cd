@@ -3,7 +3,7 @@
 Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 
 - **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
-  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files arrive as one .zip.
+  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files share one code and arrive as separate files.
 
 CD never stores files. Transfers are live and end-to-end encrypted.
 
@@ -21,7 +21,7 @@ The shell installers check release checksums. The CLI is named `cdx` because `cd
 
 ```bash
 cdx send ./report.pdf          # prints a code, e.g. 48291
-cdx send ./shots ./notes.md    # several paths arrive as one .zip
+cdx send ./shots ./notes.md    # several files, one code; they arrive separately
 cdx send --link ./secret.zip   # private end-to-end encrypted link instead of a code
 cdx receive 48291              # save to the current directory
 cdx receive 48291 --out ~/Downloads

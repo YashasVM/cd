@@ -100,6 +100,8 @@ type receiveResult struct {
 	Filename string `json:"filename"`
 	Size     uint64 `json:"size"`
 	Path     string `json:"path"`
+	// Files lists what a multi-file send unpacked into Path, a folder.
+	Files []receivedFile `json:"files,omitempty"`
 }
 
 // parseReceivedOffer validates the sender's encrypted file offer against the
@@ -259,11 +261,21 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return err
 	}
-	final, staging, err := resolveReceiveDest(offer.Name, out, force)
-	if err != nil {
-		return err
+	var final, staging, bundleDir string
+	if offer.Bundle {
+		// Several files: stage the zip inside the folder they unpack into.
+		if bundleDir, err = resolveBundleDir(out); err != nil {
+			return err
+		}
+		final = filepath.Join(bundleDir, offer.Name)
+		staging = filepath.Join(bundleDir, "."+offer.Name+".cd-part")
+		fmt.Fprintf(os.Stderr, "receiving several files (%s)\n", formatBytes(size))
+	} else {
+		if final, staging, err = resolveReceiveDest(offer.Name, out, force); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
 	}
-	fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
 
 	stagingFile, err := os.OpenFile(staging, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
@@ -341,6 +353,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := stagingFile.Close(); err != nil {
 				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
 			}
+			if offer.Bundle {
+				succeeded = true
+				return finishBundle(link, staging, final, bundleDir, force, offer.Name, size, chunks, received, onReceived)
+			}
 			if force {
 				_ = os.Remove(final)
 			}
@@ -370,6 +386,43 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			return errors.New("the sender sent a message out of order")
 		}
 	}
+}
+
+// finishBundle confirms delivery, then unpacks the received zip so each file
+// lands on its own. If unpacking fails the zip is kept, so nothing is lost.
+func finishBundle(link *recordLink, staging, final, dir string, force bool, name string, size uint64, chunks uint32, received uint64, onReceived func(receiveResult) error) error {
+	if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
+		_ = os.Remove(staging)
+		return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
+	}
+	link.finish(true)
+	files, err := unpackBundle(staging, dir, force)
+	if err != nil {
+		kept := staging
+		if _, statErr := os.Lstat(final); statErr != nil && os.Rename(staging, final) == nil {
+			kept = final
+		}
+		abs, _ := filepath.Abs(kept)
+		fmt.Fprintf(os.Stderr, "kept the files as one zip: %s\n", abs)
+		return err
+	}
+	_ = os.Remove(staging)
+	abs, _ := filepath.Abs(dir)
+	if abs == "" {
+		abs = dir
+	}
+	noun := "files"
+	if len(files) == 1 {
+		noun = "file"
+	}
+	fmt.Fprintf(os.Stderr, "received %d %s (%s) — saved to %s\n", len(files), noun, formatBytes(size), abs)
+	for _, file := range files {
+		fmt.Fprintf(os.Stderr, "  %s\n", file.Filename)
+	}
+	if onReceived != nil {
+		return onReceived(receiveResult{Version: 1, Filename: name, Size: size, Path: abs, Files: files})
+	}
+	return nil
 }
 
 func copyFile(source, dest string) error {

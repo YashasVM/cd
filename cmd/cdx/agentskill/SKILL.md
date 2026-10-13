@@ -11,7 +11,9 @@ Run:
 cdx send <path>...
 ```
 
-Several paths or a folder arrive as one `.zip`.
+To share several files, pass them all to one `cdx send` instead of zipping
+them yourself: one code delivers them, and they arrive as separate files with
+folders kept.
 
 It prints one line to stdout, a short share code such as `48291`, and exits 0
 while a background sender keeps the transfer live. Reply to the user with that

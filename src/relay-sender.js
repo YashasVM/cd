@@ -241,7 +241,8 @@ export function startRelaySend(source, hooks = {}) {
       name: source.name,
       mediaType: source.type || 'application/octet-stream',
       size: String(source.size),
-      chunkSize: CHUNK_SIZE
+      chunkSize: CHUNK_SIZE,
+      ...(source.bundle ? { bundle: true, files: source.files } : {})
     })));
     await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
 

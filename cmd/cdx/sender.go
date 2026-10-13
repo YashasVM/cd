@@ -46,6 +46,10 @@ type fileOffer struct {
 	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
 	// that predate it ignore the field.
 	Direct *directOffer `json:"direct,omitempty"`
+	// Bundle marks a zip that cdx or the browser built from several files.
+	// Receivers that know it unpack the files; older ones keep the .zip.
+	Bundle bool `json:"bundle,omitempty"`
+	Files  int  `json:"files,omitempty"`
 }
 
 func endpointBase() (string, string, error) {
@@ -300,7 +304,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	ready := readyOutput{
 		Version:  1,
 		URL:      publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
-		Filename: filename, Size: source.size,
+		Filename: filename, Size: source.size, Files: source.files,
 	}
 	if linkMode {
 		if err := hooks.ready(ready); err != nil {
@@ -455,7 +459,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 // transfer streams one source over a paired link. offerSDP, when not nil,
 // yields the direct-path offer to embed in the file offer.
 func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
-	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize}
+	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files}
 	if offerSDP != nil {
 		if sdp := <-offerSDP; sdp != "" {
 			offer.Direct = &directOffer{SDP: sdp}
