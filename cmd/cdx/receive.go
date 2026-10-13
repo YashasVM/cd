@@ -270,8 +270,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		if bundleDir, err = resolveBundleDir(out); err != nil {
 			return err
 		}
-		final = filepath.Join(bundleDir, offer.Name)
-		staging = filepath.Join(bundleDir, "."+offer.Name+".cd-part")
+		// The sender's name is never used on disk here: the zip has a fixed
+		// name, and each file is named by the unpacker's own checks.
+		final = filepath.Join(bundleDir, "cd-bundle.zip")
+		staging = final + ".cd-part"
 		fmt.Fprintf(os.Stderr, "receiving several files (%s)\n", formatBytes(size))
 	} else {
 		if final, staging, err = resolveReceiveDest(offer.Name, out, force); err != nil {
