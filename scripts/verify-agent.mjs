@@ -125,8 +125,8 @@ try {
   await rm(work, { recursive: true, force: true });
 }
 
-// A folder plus a file go out detached as one streamed zip; pasting the link
-// into the home page's Receive box receives it in place, without leaving.
+// A folder plus a file go out detached under one code; pasting the link into
+// the home page's Receive box downloads each file on its own, in place.
 async function verifyFolderBundle(context) {
   const folder = join(work, 'bundle folder');
   await mkdir(join(folder, 'nested'), { recursive: true });
@@ -141,18 +141,20 @@ async function verifyFolderBundle(context) {
   const page = await context.newPage();
   await page.goto(publicBase);
   await page.locator('#receive-mode-btn').click();
-  const downloadEvent = page.waitForEvent('download');
+  const downloads = [];
+  const onDownload = (download) => downloads.push(download);
+  page.on('download', onDownload);
   await page.locator('#code-input').fill(bundleLink);
-  const download = await downloadEvent;
-  assert.equal(download.suggestedFilename(), 'bundle folder-and-1-more.zip');
-  const bundlePath = join(work, 'received-bundle.zip');
-  await download.saveAs(bundlePath);
-  const bundle = await readFile(bundlePath);
-  assert.deepEqual([...bundle.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04], 'bundle is not a zip');
-  assert.ok(bundle.includes(Buffer.from('bundle folder/nested/a.bin')), 'bundle is missing the nested file');
+  for (let waited = 0; downloads.length < 2 && waited < 300; waited += 1) await page.waitForTimeout(100);
+  page.off('download', onDownload);
+  assert.deepEqual(downloads.map((download) => download.suggestedFilename()).sort(), ['a.bin', 'extra.txt'], 'folder send did not arrive as separate files');
+  const nested = downloads.find((download) => download.suggestedFilename() === 'a.bin');
+  const nestedPath = join(work, 'received-a.bin');
+  await nested.saveAs(nestedPath);
+  assert.deepEqual(await readFile(nestedPath), Buffer.from(source), 'nested file differs from the original');
   assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
   await page.close();
-  console.log(`verified a ${bundle.byteLength}-byte folder bundle into the browser`);
+  console.log(`verified a folder send arrived as ${downloads.length} separate files in the browser`);
 }
 
 async function assertVisibleBrand(page) {
