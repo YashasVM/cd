@@ -16,9 +16,11 @@ them yourself: one code delivers them, and they arrive as separate files with
 folders kept.
 
 It prints one line to stdout, a short share code such as `48291`, and exits 0
-while a background sender keeps the transfer live. Reply to the user with that
-code: they type it at https://cd.yash0.in (or run `cdx receive <code>`). The
-code is valid for 15 minutes and admits one receiver. Done.
+while a background sender keeps the transfer live. Reply to the user with the
+link `https://cd.yash0.in/#<code>` (e.g. `https://cd.yash0.in/#48291`):
+opening it starts the download. Terminal users can run `cdx receive <code>`.
+If `CD_PUBLIC_URL` is set, use that origin instead. The code is valid for 15
+minutes and admits one receiver. Done.
 
 Branches:
 

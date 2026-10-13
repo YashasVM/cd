@@ -91,14 +91,15 @@ func writeReadyCard(output io.Writer, value readyOutput) {
 	size := formatShortBytes(value.Size)
 	fmt.Fprintln(output)
 	if value.Code != "" {
-		site := hyperlink(publicSite(), strings.TrimPrefix(publicSite(), "https://"))
+		link := codeLink(value.Code)
+		site := hyperlink(link, strings.TrimPrefix(link, "https://"))
 		box(output, 44, []string{
 			"",
 			dim("SHARE CODE") + "            " + bold(accent(spacedCode(value.Code))),
 			"",
 			bold(shortName(value.Filename, 28)) + dim("  ·  "+size),
 			"",
-			dim("open ") + site + dim(" and type the code"),
+			dim("open ") + site,
 			dim("or run ") + cmdText("cdx receive "+value.Code),
 			"",
 		})
@@ -121,6 +122,11 @@ func publicSite() string {
 		return strings.TrimRight(value, "/")
 	}
 	return "https://cd.yash0.in"
+}
+
+// codeLink is the browser link that opens straight into receiving code.
+func codeLink(code string) string {
+	return publicSite() + "/#" + code
 }
 
 // shortName keeps long filenames from breaking the card frame.

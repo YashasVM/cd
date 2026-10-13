@@ -336,7 +336,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if !fancyReady {
 		fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
 		if ready.Code != "" {
-			fmt.Fprintln(os.Stderr, "receivers type the code in the browser Receive box or run: cdx receive <code>")
+			fmt.Fprintln(os.Stderr, "browsers: open "+codeLink(ready.Code)+"  ·  terminals: cdx receive "+ready.Code)
 		} else {
 			fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 		}

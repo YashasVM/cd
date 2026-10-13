@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -23,6 +24,16 @@ var shortCodePattern = regexp.MustCompile(`^\d{4,5}$`)
 
 func isShortCode(value string) bool {
 	return shortCodePattern.MatchString(strings.TrimSpace(value))
+}
+
+// shortCodeFromLink returns the code in a link like https://cd.yash0.in/#48291,
+// or "" when value is not such a link.
+func shortCodeFromLink(value string) string {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || strings.Trim(parsed.Path, "/") != "" || !isShortCode(parsed.Fragment) {
+		return ""
+	}
+	return parsed.Fragment
 }
 
 type codeClaimRequest struct {
