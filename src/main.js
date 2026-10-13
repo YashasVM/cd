@@ -316,7 +316,7 @@ function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef
 
 // Browser sends go through the relay with the same protocol as `cdx send`,
 // so one numeric code works in any browser Receive box and in
-// `cdx receive`. Several files travel as one .zip.
+// `cdx receive`. Several files travel as one .zip that receivers unpack.
 const Sender = (() => {
   let active = null;
   let files = [];

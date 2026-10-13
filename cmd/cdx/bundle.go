@@ -24,6 +24,8 @@ type shareSource struct {
 	open func() (io.ReadCloser, error)
 	// skipped counts symlinks and special files left out of a bundle.
 	skipped int
+	// files counts a bundle's regular files; zero for a single file.
+	files int
 }
 
 // bundleEntry is one file or directory inside a zip bundle.
@@ -119,7 +121,13 @@ func prepareBundle(paths []string) (shareSource, error) {
 	if err != nil {
 		return shareSource{}, err
 	}
-	return shareSource{name: bundleName(paths), size: size, skipped: skipped, open: func() (io.ReadCloser, error) {
+	files := 0
+	for _, entry := range entries {
+		if !entry.dir {
+			files++
+		}
+	}
+	return shareSource{name: bundleName(paths), size: size, skipped: skipped, files: max(files, 1), open: func() (io.ReadCloser, error) {
 		reader, writer := io.Pipe()
 		go func() {
 			writer.CloseWithError(writeBundle(writer, entries, openBundleEntry))

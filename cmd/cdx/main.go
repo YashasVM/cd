@@ -39,6 +39,9 @@ type readyOutput struct {
 	Code     string `json:"code,omitempty"`
 	Filename string `json:"filename"`
 	Size     uint64 `json:"size"`
+	// Files counts the files in a multi-file send. The receiver unpacks
+	// them, so each one arrives on its own.
+	Files int `json:"files,omitempty"`
 }
 
 func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
@@ -56,6 +59,14 @@ func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
 func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error {
 	if jsonOutput {
 		return json.NewEncoder(output).Encode(value)
+	}
+	if len(value.Files) > 0 {
+		for _, file := range value.Files {
+			if _, err := fmt.Fprintln(output, file.Path); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	_, err := fmt.Fprintln(output, value.Path)
 	return err
@@ -75,7 +86,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
-	fmt.Fprintln(output, "  send <path>...     send a file, or several files and folders as one .zip")
+	fmt.Fprintln(output, "  send <path>...     send one or more files and folders with one code")
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
@@ -88,8 +99,9 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for receive:")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
+	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show help for receive")
 	fmt.Fprintln(output, "")
@@ -127,7 +139,7 @@ func usage(output io.Writer) {
 func sendUsage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (sent as one .zip)")
+	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (they arrive as separate files)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
@@ -148,8 +160,9 @@ func receiveUsage(output io.Writer) {
 	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
 	fmt.Fprintln(output, "                   (a full share link works too)")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
+	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\"} instead of the bare path")
+	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show this help")
 	fmt.Fprintln(output, "")

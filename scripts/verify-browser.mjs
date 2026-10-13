@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -102,23 +102,22 @@ try {
     await context.close();
   }
 
-  // 2. Browser -> cdx receive, several files as one zip.
+  // 2. Browser -> cdx receive, several files arrive as separate files.
   {
     const { context, page, code } = await startSend(batchPaths);
-    const outDir = join(work, 'zip');
+    const outDir = join(work, 'unpacked');
     await mkdir(outDir);
     const receiver = spawn(executable, ['receive', code, '--out', outDir, '--json'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout = collect(receiver.stdout);
     const stderr = collect(receiver.stderr);
     assert.equal(await withTimeout(childExit(receiver), 60_000, 'cdx receive did not finish'), 0, await stderr);
-    const { path } = JSON.parse(await stdout);
-    assert.match(path, /cd-\d{8}-\d{6}\.zip$/);
-    execFileSync('unzip', ['-q', path, '-d', join(outDir, 'unzipped')]);
+    const { files } = JSON.parse(await stdout);
+    assert.deepEqual(files.map((file) => file.filename).sort(), batch.map(([name]) => name).sort());
     for (const [name, bytes] of batch) {
-      assert.equal(sha(await readFile(join(outDir, 'unzipped', name))), sha(bytes), `${name} differs`);
+      assert.equal(sha(await readFile(join(outDir, name))), sha(bytes), `${name} differs`);
     }
     await page.locator('#sender-complete:not(.hidden)').waitFor();
-    console.log('verified browser->terminal: three files arrive as one exact zip');
+    console.log('verified browser->terminal: three files arrive as separate exact files');
     await context.close();
   }
 

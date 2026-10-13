@@ -15,7 +15,8 @@ import {
   parseInvitation,
   receiverAdmission
 } from './agent-protocol.js';
-import { createSink as createDownloadSink } from './sink.js';
+import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
+import { downloadNames, readBundle } from './zip-unbundle.js';
 import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
@@ -38,7 +39,8 @@ const PANEL_HTML = `
     </div>
     <span data-relay="progress-copy">0%</span>
   </div>
-  <a class="primary-btn share-download" data-relay="download" hidden>Download file</a>`;
+  <a class="primary-btn share-download" data-relay="download" hidden>Download file</a>
+  <ul class="bundle-files" data-relay="files" hidden></ul>`;
 
 function formatSize(bytes) {
   const value = Number(bytes);
@@ -60,7 +62,10 @@ function parseOffer(plaintext) {
   if (typeof size !== 'string' || !/^(0|[1-9][0-9]{0,19})$/.test(size)) throw new Error('The sender offered an invalid file size.');
   const byteSize = BigInt(size);
   if (byteSize > 0xffffffffffffffffn || (chunkSize !== 64 * 1024 && chunkSize !== 256 * 1024)) throw new Error('The sender uses unsupported transfer limits.');
-  return { name, mediaType, size: byteSize, directSdp: parseDirectOffer(value) };
+  // A bundle is several files sent as one zip; it is unpacked on arrival.
+  const bundle = value.bundle === true;
+  const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
+  return { name, mediaType, size: byteSize, bundle, files, directSdp: parseDirectOffer(value) };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -94,7 +99,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     progressBar: pick('progress').querySelector('.progress-bar'),
     progressFill: pick('progress').querySelector('.progress-fill'),
     progressCopy: pick('progress-copy'),
-    download: pick('download')
+    download: pick('download'),
+    files: pick('files')
   };
   let failureShown = false;
   // Leaving before the socket exists must still stop receive() from joining.
@@ -102,11 +108,83 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
   let stop = () => { stopped = true; failureShown = true; };
 
   async function createSink(offer) {
+    if (offer.bundle) {
+      // Stage the whole zip (OPFS when available), then hand out its files.
+      const staged = await createStageSink({ name: offer.name, size: offer.size });
+      return {
+        kind: 'bundle',
+        write: (bytes) => staged.write(bytes),
+        close: () => staged.toFile('application/zip'),
+        abort: () => staged.discard()
+      };
+    }
     return createDownloadSink({ name: offer.name, size: offer.size, mediaType: offer.mediaType, preferDownload: autoReceive });
   }
 
+  function offerLabel(offer) {
+    if (!offer.bundle) return offer.name;
+    return offer.files > 1 ? `${offer.files} files` : 'Several files';
+  }
+
+  // Lists each file from a received bundle with its own download link. If the
+  // archive cannot be read, the .zip itself is offered instead.
+  async function showBundle(offer, staged) {
+    let files;
+    try { files = await readBundle(staged.file); }
+    catch {
+      const result = downloadUrlFor(staged.file, offer.name, staged.cleanup);
+      elements.download.href = result.url;
+      elements.download.download = offer.name;
+      elements.download.textContent = `Download ${offer.name}`;
+      elements.download.hidden = false;
+      elements.status.textContent = 'Files verified. Download them as one zip.';
+      window.addEventListener('pagehide', result.revoke, { once: true });
+      return;
+    }
+    const names = downloadNames(files.map((file) => file.path));
+    const links = files.map((file, index) => {
+      const url = URL.createObjectURL(file.blob);
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = names[index];
+      link.textContent = file.path;
+      const size = document.createElement('span');
+      size.textContent = formatSize(file.size);
+      item.append(link, size);
+      elements.files.append(item);
+      return link;
+    });
+    window.addEventListener('pagehide', () => {
+      for (const link of links) URL.revokeObjectURL(link.href);
+      void Promise.resolve(staged.cleanup()).catch(() => {});
+    }, { once: true });
+    const noun = files.length === 1 ? 'file' : 'files';
+    elements.files.hidden = false;
+    elements.download.textContent = files.length === 1 ? 'Download file' : `Download all ${files.length} files`;
+    elements.download.removeAttribute('href');
+    elements.download.hidden = files.length === 0;
+    elements.status.textContent = `${files.length} ${noun} verified and ready to download.`;
+    // Browsers may ask once before allowing several downloads; spacing
+    // the clicks keeps them from being dropped.
+    const downloadAll = async () => {
+      for (const link of links) {
+        link.click();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+    };
+    elements.download.addEventListener('click', (event) => {
+      event.preventDefault();
+      void downloadAll();
+    });
+    if (autoReceive) {
+      await downloadAll();
+      elements.status.textContent = `${files.length} ${noun} verified. Downloads started; use the links below if your browser blocked any.`;
+    }
+  }
+
   function waitForAcceptance(offer) {
-    elements.fileName.textContent = offer.name;
+    elements.fileName.textContent = offerLabel(offer);
     elements.fileSize.textContent = formatSize(offer.size);
     elements.offer.hidden = false;
     if (autoReceive) {
@@ -114,7 +192,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       elements.status.textContent = 'Preparing your download...';
       return createSink(offer);
     }
-    elements.status.textContent = 'Ready when you are. The file stays with the sender until you accept.';
+    if (offer.bundle) elements.accept.textContent = 'Receive files';
+    elements.status.textContent = offer.bundle
+      ? 'Ready when you are. The files stay with the sender until you accept.'
+      : 'Ready when you are. The file stays with the sender until you accept.';
     return new Promise((resolve, reject) => {
       elements.accept.addEventListener('click', async () => {
         elements.accept.disabled = true;
@@ -287,6 +368,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
 
     async function processMessage(data) {
       if (typeof data === 'string') {
+        // The sender leaving after delivery is expected, not a failure.
+        if (state === 'complete') return;
         const value = JSON.parse(data);
         if (value.protocol !== 'cd-transfer-v1') throw new Error('The sender uses an incompatible CD version.');
         // Once the direct path carries the transfer, the relay is optional.
@@ -305,7 +388,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
           return;
         }
         elements.offer.hidden = true;
-        elements.status.textContent = `Receiving ${offer.name}...`;
+        elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
         state = 'receiving';
         renderProgress(0n, offer.size, true);
         await send(KIND_ACCEPT);
@@ -330,7 +413,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         state = 'complete';
         renderProgress(received, offer.size, true);
         await send(KIND_COMPLETE, encodeCounts(chunks, received));
-        if (sink.kind === 'download') {
+        if (sink.kind === 'bundle') await showBundle(offer, result);
+        else if (sink.kind === 'download') {
           elements.download.href = result.url;
           elements.download.download = offer.name;
           elements.download.textContent = `Download ${offer.name}`;

@@ -65,8 +65,10 @@ Rules for v1:
 
 - One path sends that file as-is. A folder, or several paths, is streamed as
   one uncompressed `.zip` built on the fly (its exact size is computed up
-  front, since the protocol offers a known size). Symlinks inside folders are
-  skipped, not followed. A file that changes size mid-send fails the
+  front, since the protocol offers a known size) and marked as a bundle in
+  the offer. `cdx receive` and the browser unpack it, so each file arrives on
+  its own (`--out` names the folder they land in); receivers that predate the
+  marker keep the `.zip`. Symlinks inside folders are skipped, not followed. A file that changes size mid-send fails the
   transfer.
 - Flags may come before or after the file path. Use `--` before a file whose
   name starts with `-` (for example `cdx send -- -weird-name.bin`).
