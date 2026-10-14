@@ -150,10 +150,12 @@ async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
     await receiver.goto(baseUrl);
     await receiver.locator('.workbench:not([inert])').waitFor();
     await receiver.locator('#receive-mode-btn').click();
-    await receiver.locator('#code-input').fill(code);
     const downloadEvent = receiver.waitForEvent('download', { timeout: 600_000 });
     const started = performance.now();
-    await receiver.locator('#connect-btn').click();
+    // A complete short code connects as it is typed; longer input waits
+    // for the button.
+    await receiver.locator('#code-input').fill(code);
+    if (await receiver.locator('#connect-btn').isVisible()) await receiver.locator('#connect-btn').click();
     const download = await downloadEvent;
     const seconds = (performance.now() - started) / 1000;
     const savedPath = join(work, `${mode}.bin`);
