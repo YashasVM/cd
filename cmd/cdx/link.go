@@ -44,6 +44,13 @@ type recordLink struct {
 	// drops whichever copy arrives second.
 	retained []retainedRecord
 	switched bool
+	// striping, set by senders, keeps the relay carrying data records
+	// alongside the direct path once it opens (see stripe.go); stripe is
+	// its state from then on.
+	striping bool
+	stripe   *striper
+	// ackedBytes is the peer's last acknowledged byte count.
+	ackedBytes uint64
 }
 
 type retainedRecord struct {
@@ -89,6 +96,10 @@ func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *rec
 // start begins reading the relay WebSocket; call it once the caller no
 // longer reads the socket itself.
 func (link *recordLink) start() {
+	// Clear the deadline waitRelayEvent left behind (10s on a receiver):
+	// next and poll time out on their own, and a deadline here would end
+	// the relay reader mid-transfer.
+	_ = link.connection.SetReadDeadline(time.Time{})
 	go link.readRelay()
 	go link.pingRelay()
 }
@@ -174,17 +185,29 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 	if err != nil {
 		return err
 	}
+	if link.stripe != nil {
+		// The writer goroutines own both paths now.
+		return link.sendReleasableStriped(record, release)
+	}
 	path := link.direct.Load()
 	if path != nil && path.isOpen() {
 		link.directUsed.Store(true)
 		if !link.switched {
 			link.switched = true
+			if link.striping {
+				link.startStriping(path)
+			}
 			for _, earlier := range link.retained {
-				if err := path.send(earlier.record); err != nil {
+				if link.stripe != nil {
+					link.enqueueControl(earlier.record)
+				} else if err := path.send(earlier.record); err != nil {
 					return err
 				}
 			}
 			link.retained = nil
+		}
+		if link.stripe != nil {
+			return link.sendReleasableStriped(record, release)
 		}
 		return path.send(record)
 	}
@@ -210,6 +233,10 @@ func (link *recordLink) acknowledged(bytes uint64) {
 		}
 	}
 	link.retained = kept
+	if link.stripe != nil {
+		link.stripe.acknowledged(bytes, link.ackedBytes, time.Now())
+	}
+	link.ackedBytes = bytes
 }
 
 // next returns the next record in sequence order, waiting up to timeout.
@@ -274,7 +301,10 @@ func (link *recordLink) accept(item linkItem) error {
 			return nil // an unused direct path failing changes nothing
 		}
 		if !item.direct && link.directUsed.Load() {
-			return nil // the relay is optional once the direct path carries the transfer
+			// The relay is optional once the direct path carries the
+			// transfer; records striped onto it go out again there.
+			link.relayFailed()
+			return nil
 		}
 		return item.err
 	}
