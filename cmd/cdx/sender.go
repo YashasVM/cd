@@ -350,6 +350,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		return err
 	}
 	link := newRecordLink(connection, sealer, opener, errors.New("receiver disconnected (they closed the tab or lost network)"))
+	link.striping = stripeEnabled()
 	defer link.close()
 	// Gather direct-path candidates while waiting for the receiver.
 	var offerSDP chan string
