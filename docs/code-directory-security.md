@@ -8,6 +8,8 @@ Every lookup spends one durable token for the requesting IPv4 address or IPv6 /6
 
 Each prefix gets a burst of 12 lookups and refills at 12 per minute. Each of the ten shards gets a burst of 30 and refills at 60 per minute. Across arbitrary address rotation, the aggregate maximum is 300 initial probes plus 600 per minute. The existing edge limit of 30 connections per minute remains an additional bound. It uses the same canonical address prefix, but its eventually consistent counters are not the security boundary.
 
+Twelve lookups per minute permits one new receive every five seconds, with a burst for retries. One prefix can spend at most 40% of one shard's initial burst and 20% of its refill rate. It cannot exhaust that shard by itself. Sharding avoids making a single exhausted budget disable every numeric code.
+
 The prefix parser uses URL IPv6 normalization before expanding the address into eight words and taking the first four. It joins expanded, compressed, uppercase, and lowercase variants. IPv4-mapped IPv6 addresses use the corresponding IPv4 bucket. Invalid or missing addresses share the `unknown` bucket. Cloudflare must supply `CF-Connecting-IP`; callers must not be allowed to override that header at another proxy.
 
 The budgets use synchronous SQLite read/debit/write operations inside existing `CodeDirectory` objects. They survive object eviction. Denied requests cannot extend a lockout. Tokens refill with elapsed time, so a prefix can retry after five seconds and a shard after one second. HTTP 429 responses advertise a conservative five-second retry delay. Code responses use `Cache-Control: no-store`.
@@ -24,7 +26,7 @@ POST dispatches through an internal binding to the transfer room. The room must 
 
 Supported old clients already join before POST. Their call order and payload stay unchanged. Concurrent retries share one in-flight claim and return the existing unexpired code. A room admitted by older Worker code without a captured prefix cannot create a new claim after upgrade; reconnecting creates an admission with the required prefix.
 
-Each sender prefix can hold at most 16 unexpired claims across all code shards. The sender's admission prefix owns the reservation, even if POST comes from a different address. A random lease identifies each reservation. Pairing, cancellation, and room expiry release the code and lease. Expired leases are removed on reservation and by alarms. Stale releases cannot free another lease. If an internal claim fails ambiguously, its lease remains until the 15-minute expiry; it cannot evade the bound through retries.
+Each sender prefix can hold at most 16 unexpired claims across all code shards. Sixteen slots allow multiple users behind one NAT while limiting one prefix to 0.16% of the directory's 10,000-code holding capacity. The sender's admission prefix owns the reservation, even if POST comes from a different address. A random lease identifies each reservation. Pairing, cancellation, and room expiry release the code and lease. Expired leases are removed on reservation and by alarms. Stale releases cannot free another lease. If an internal claim fails ambiguously, its lease remains until the 15-minute expiry; it cannot evade the bound through retries.
 
 Room completion can interleave with a cross-object claim. The claimant rechecks the room after reservation and directory publication and releases a claim whose sender has left or paired. Abrupt crashes can leave a bounded orphan until expiry.
 

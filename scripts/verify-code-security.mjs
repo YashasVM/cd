@@ -223,8 +223,9 @@ try {
   const bindings = await mf.getBindings('cd-security');
   const expiryGuard = bindings.CODES.getByName('test-expiring-leases');
   const expiryStore = await sql('test-expiring-leases');
-  for (let i = 0; i < 16; i += 1) assert.equal(await expiryGuard.hold(`lease-${i}`, Date.now() + 500), true);
-  assert.equal(await expiryGuard.hold('blocked-lease', Date.now() + 500), false);
+  const leasesExpireAt = Date.now() + 1500;
+  for (let i = 0; i < 16; i += 1) assert.equal(await expiryGuard.hold(`lease-${i}`, leasesExpireAt), true);
+  assert.equal(await expiryGuard.hold('blocked-lease', leasesExpireAt), false);
   await eventually(async () => (await expiryStore.exec('SELECT COUNT(*) AS n FROM holds'))[0].n === 0, 'real alarm did not expire orphan leases');
   assert.equal(await expiryGuard.hold('new-lease', Date.now() + 500), true);
   await expiryGuard.unhold('lease-0');
@@ -235,6 +236,7 @@ try {
   const survivor = capability();
   const survivorSender = await socket(survivor, '203.0.113.50');
   const survivorCode = survivorSender.accepted.code;
+  await (await sql(`codes-v2-${survivorCode[0]}`)).exec('UPDATE lookup_budget SET updated_at = updated_at - 60000');
   const wrongCode = `${survivorCode[0]}${survivorCode.endsWith('0000') ? '0001' : '0000'}`;
   for (let i = 0; i < 15; i += 1) await request(`/api/codes/${wrongCode}`, '203.0.113.51');
   const survived = await request(`/api/codes/${survivorCode}`, '203.0.113.52');

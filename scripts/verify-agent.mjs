@@ -68,6 +68,8 @@ try {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const senderExit = new Promise((resolve) => sender.once('exit', resolve));
+  let senderDiagnostics = '';
+  sender.stderr.on('data', (chunk) => { senderDiagnostics = (senderDiagnostics + chunk.toString()).slice(-16 * 1024); });
   const stderr = collect(sender.stderr);
   const link = await firstLine(sender.stdout);
   const linkUrl = new URL(link);
@@ -107,7 +109,9 @@ try {
   const receivedPath = join(work, await download.suggestedFilename());
   await download.saveAs(receivedPath);
   const received = await readFile(receivedPath);
-  const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish');
+  const exitCode = await withTimeout(senderExit, 30_000, 'sender did not finish').catch((error) => {
+    throw new Error(`${error.message}\nSender output:\n${senderDiagnostics}`, { cause: error });
+  });
   const senderLog = await stderr;
   assert.equal(exitCode, 0, senderLog);
   // The direct path is opportunistic: on a slow runner the relay can finish
