@@ -132,6 +132,14 @@ async function verifyFolderBundle(context) {
   await mkdir(join(folder, 'nested'), { recursive: true });
   await writeFile(join(folder, 'nested', 'a.bin'), source);
   await writeFile(join(work, 'extra.txt'), 'extra');
+  await mkdir(join(folder, 'x'), { recursive: true });
+  await mkdir(join(folder, 'y'), { recursive: true });
+  const collisionFiles = {
+    'x/a.txt': 'first collision payload',
+    'y/a.txt': 'second collision payload',
+    'bundle folder_x_a.txt': 'reserved basename payload'
+  };
+  for (const [path, bytes] of Object.entries(collisionFiles)) await writeFile(join(folder, path), bytes);
   const bundleSender = spawn(executable, ['send', '--link', folder, join(work, 'extra.txt')], {
     env: { ...process.env, CD_RELAY_URL: relayBase, CD_PUBLIC_URL: publicBase, CD_STATE_DIR: join(work, 'state') },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -145,13 +153,22 @@ async function verifyFolderBundle(context) {
   const onDownload = (download) => downloads.push(download);
   page.on('download', onDownload);
   await page.locator('#code-input').fill(bundleLink);
-  for (let waited = 0; downloads.length < 2 && waited < 300; waited += 1) await page.waitForTimeout(100);
+  for (let waited = 0; downloads.length < 5 && waited < 300; waited += 1) await page.waitForTimeout(100);
   page.off('download', onDownload);
-  assert.deepEqual(downloads.map((download) => download.suggestedFilename()).sort(), ['a.bin', 'extra.txt'], 'folder send did not arrive as separate files');
+  assert.deepEqual(downloads.map((download) => download.suggestedFilename()).sort(), ['a.bin', 'bundle folder_x_a (2).txt', 'bundle folder_x_a.txt', 'bundle folder_y_a.txt', 'extra.txt'], 'folder send did not arrive as separate files');
   const nested = downloads.find((download) => download.suggestedFilename() === 'a.bin');
   const nestedPath = join(work, 'received-a.bin');
   await nested.saveAs(nestedPath);
   assert.deepEqual(await readFile(nestedPath), Buffer.from(source), 'nested file differs from the original');
+  const expectedCollisions = {
+    'bundle folder_x_a (2).txt': 'first collision payload',
+    'bundle folder_y_a.txt': 'second collision payload',
+    'bundle folder_x_a.txt': 'reserved basename payload'
+  };
+  for (const [name, contents] of Object.entries(expectedCollisions)) {
+    const download = downloads.find((download) => download.suggestedFilename() === name);
+    assert.equal((await readFile(await download.path())).toString(), contents, name);
+  }
   assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
   await page.close();
   console.log(`verified a folder send arrived as ${downloads.length} separate files in the browser`);

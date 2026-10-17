@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -60,14 +61,21 @@ func bundleEntryPath(name string) (string, bool) {
 }
 
 // unpackBundle extracts a received bundle into dir, one file at a time.
-// Every target is checked first, so a name clash leaves nothing half
-// written. os.Root keeps writes inside dir even through symlinks.
+// Preflight rejects known name clashes before extraction. Each file is
+// published without replacement unless force is set. os.Root confines writes.
 func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
+	info, err := os.Stat(archivePath)
+	if err != nil {
+		return nil, err
+	}
 	archive, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return nil, errors.New("the sender's files could not be unpacked")
 	}
 	defer archive.Close()
+	if len(archive.File) > 10_000 {
+		return nil, errors.New("the sender offered too many files")
+	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(err))
@@ -81,26 +89,31 @@ func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
 	var files []target
 	var folders []string
 	seen := map[string]bool{}
+	var expanded uint64
 	for _, entry := range archive.File {
 		name, ok := bundleEntryPath(entry.Name)
-		if !ok || seen[name] {
+		key := strings.ToLower(name)
+		if !ok || seen[key] || strings.Count(name, "/") > 64 {
 			return nil, errors.New("the sender offered an unsafe filename")
 		}
-		seen[name] = true
+		seen[key] = true
 		mode := entry.Mode()
 		switch {
 		case mode.IsDir():
 			folders = append(folders, name)
 		case mode.IsRegular():
-			if entry.Method != zip.Store && entry.Method != zip.Deflate {
+			if entry.Method != zip.Store || entry.CompressedSize64 != entry.UncompressedSize64 || entry.UncompressedSize64 > uint64(info.Size())-expanded {
 				return nil, errors.New("the sender's files could not be unpacked")
 			}
+			expanded += entry.UncompressedSize64
 			if !force {
 				if _, err := root.Lstat(filepath.FromSlash(name)); err == nil {
 					return nil, fmt.Errorf("%q already exists in %s: use --out <folder> or --force to overwrite", name, dir)
 				}
 			}
 			files = append(files, target{file: entry, name: name})
+		default:
+			return nil, errors.New("the sender offered an unsupported file type")
 		}
 	}
 
@@ -118,7 +131,7 @@ func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
 				return received, fmt.Errorf("cannot create %q: %s", parent, underlyingReason(err))
 			}
 		}
-		if err := extractEntry(root, item.file, local); err != nil {
+		if err := extractEntry(root, item.file, local, force); err != nil {
 			return received, err
 		}
 		received = append(received, receivedFile{Filename: item.name, Size: item.file.UncompressedSize64, Path: filepath.Join(absolute, local)})
@@ -126,7 +139,7 @@ func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
 	return received, nil
 }
 
-func extractEntry(root *os.Root, entry *zip.File, local string) error {
+func extractEntry(root *os.Root, entry *zip.File, local string, force bool) error {
 	source, err := entry.Open()
 	if err != nil {
 		return errors.New("the sender's files could not be unpacked")
@@ -136,19 +149,29 @@ func extractEntry(root *os.Root, entry *zip.File, local string) error {
 	if entry.Mode()&0o111 != 0 {
 		permissions = 0o755
 	}
-	staging := local + ".cd-part"
-	output, err := root.OpenFile(staging, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, permissions)
+	staging := filepath.Join(filepath.Dir(local), ".cd-"+rand.Text()+".part")
+	output, err := root.OpenFile(staging, os.O_CREATE|os.O_EXCL|os.O_WRONLY, permissions)
 	if err != nil {
 		return fmt.Errorf("cannot write %q: %s", local, underlyingReason(err))
 	}
 	// zip's reader checks each entry's size and CRC as it reaches EOF.
-	_, copyErr := io.Copy(output, source)
+	written, copyErr := io.Copy(output, io.LimitReader(source, int64(entry.UncompressedSize64)+1))
+	if copyErr == nil && uint64(written) != entry.UncompressedSize64 {
+		copyErr = zip.ErrFormat
+	}
 	closeErr := output.Close()
 	if copyErr == nil {
 		copyErr = closeErr
 	}
 	if copyErr == nil {
-		copyErr = root.Rename(staging, local)
+		if force {
+			copyErr = root.Rename(staging, local)
+		} else {
+			copyErr = root.Link(staging, local)
+			if copyErr == nil {
+				_ = root.Remove(staging)
+			}
+		}
 	}
 	if copyErr != nil {
 		_ = root.Remove(staging)

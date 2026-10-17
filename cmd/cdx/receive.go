@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -282,10 +281,11 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
 	}
 
-	stagingFile, err := os.OpenFile(staging, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	stagingFile, err := os.CreateTemp(filepath.Dir(staging), ".cd-*.part")
 	if err != nil {
 		return fmt.Errorf("cannot write %q: %s", staging, underlyingReason(err))
 	}
+	staging = stagingFile.Name()
 	// Best effort cleanup of the staging file on failure; the rename below
 	// moves it away on success.
 	succeeded := false
@@ -362,15 +362,8 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				succeeded = true
 				return finishBundle(link, staging, final, bundleDir, force, offer.Name, size, chunks, received, onReceived)
 			}
-			if force {
-				_ = os.Remove(final)
-			}
-			if err := os.Rename(staging, final); err != nil {
-				// Cross-device rename fallback: copy then remove.
-				if copyErr := copyFile(staging, final); copyErr != nil {
-					return fmt.Errorf("save received file: %s", underlyingReason(err))
-				}
-				_ = os.Remove(staging)
+			if err := publishReceivedFile(staging, final, force); err != nil {
+				return fmt.Errorf("save received file: %s", underlyingReason(err))
 			}
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
@@ -404,7 +397,7 @@ func finishBundle(link *recordLink, staging, final, dir string, force bool, name
 	files, err := unpackBundle(staging, dir, force)
 	if err != nil {
 		kept := staging
-		if _, statErr := os.Lstat(final); statErr != nil && os.Rename(staging, final) == nil {
+		if publishReceivedFile(staging, final, false) == nil {
 			kept = final
 		}
 		abs, _ := filepath.Abs(kept)
@@ -430,33 +423,16 @@ func finishBundle(link *recordLink, staging, final, dir string, force bool, name
 	return nil
 }
 
-func copyFile(source, dest string) error {
-	in, err := os.Open(source)
-	if err != nil {
+// publishReceivedFile refuses destination races without --force. The staging
+// file is in the destination directory, so no cross-device copy is needed.
+func publishReceivedFile(staging, final string, force bool) error {
+	if force {
+		return os.Rename(staging, final)
+	}
+	if err := os.Link(staging, final); err != nil {
 		return err
 	}
-	defer in.Close()
-	out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	buffer := make([]byte, 128*1024)
-	for {
-		count, readErr := in.Read(buffer)
-		if count > 0 {
-			if _, writeErr := out.Write(buffer[:count]); writeErr != nil {
-				return writeErr
-			}
-		}
-		if readErr != nil {
-			if errors.Is(readErr, io.EOF) {
-				break
-			}
-			return readErr
-		}
-	}
-	return out.Sync()
+	return os.Remove(staging)
 }
 
 // answerDirectPath answers the sender's direct-path offer with a signal

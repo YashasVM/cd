@@ -26,13 +26,14 @@ type recordLink struct {
 	// peerLeft is the error for a relay `peer-left` event.
 	peerLeft error
 
-	items      chan linkItem
-	stop       chan struct{}
-	readerDone chan struct{}
-	stopOnce   sync.Once
-	writeMu    sync.Mutex
-	pending    map[uint32][]byte
-	expected   uint32
+	items        chan linkItem
+	stop         chan struct{}
+	readerDone   chan struct{}
+	stopOnce     sync.Once
+	writeMu      sync.Mutex
+	pending      map[uint32][]byte
+	pendingBytes int
+	expected     uint32
 
 	direct atomic.Pointer[directPath]
 	// directUsed is set once a record crossed the direct path in either
@@ -76,6 +77,7 @@ func (linkTimeout) Temporary() bool { return true }
 
 // maxPendingRecords bounds records held while an earlier one is missing.
 const maxPendingRecords = 256
+const maxPendingBytes = 32 * 1024 * 1024
 
 // closeWait bounds how long a finished transfer waits for the peer and the
 // relay to acknowledge the close.
@@ -285,6 +287,7 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 		return 0, nil, false, nil
 	}
 	delete(link.pending, link.expected)
+	link.pendingBytes -= len(record)
 	kind, plaintext, err := link.opener.open(record)
 	if err != nil {
 		return 0, nil, false, err
@@ -320,10 +323,11 @@ func (link *recordLink) accept(item linkItem) error {
 		// copy. Authentication happens when the kept copy is opened.
 		return nil
 	}
-	if len(link.pending) >= maxPendingRecords {
+	if len(item.record) > maxRecordBytes || len(link.pending) >= maxPendingRecords || link.pendingBytes+len(item.record) > maxPendingBytes {
 		return errors.New("the peer sent too many records out of order")
 	}
 	link.pending[sequence] = item.record
+	link.pendingBytes += len(item.record)
 	return nil
 }
 

@@ -11,6 +11,7 @@ const TAG_BYTES = 16;
 const MAX_RECORD_BYTES = 1024 * 1024;
 const MAX_SDP_BYTES = 64 * 1024;
 const MAX_PENDING_RECORDS = 256;
+const MAX_PENDING_BYTES = 32 * 1024 * 1024;
 export const DIRECT_CHANNEL_ID = 1;
 export const DIRECT_PIECE_BYTES = 64 * 1024;
 export const DIRECT_ICE_SERVERS = [
@@ -61,17 +62,21 @@ export function createRecordAssembler() {
 export function createRecordMerger() {
   let expected = 0;
   const pending = new Map();
+  let pendingBytes = 0;
   return {
     push(record) {
       const bytes = record instanceof Uint8Array ? record : new Uint8Array(record);
       if (bytes.byteLength < HEADER_BYTES) throw new Error('The sender sent an invalid record.');
       const sequence = new DataView(bytes.buffer, bytes.byteOffset + 4, 4).getUint32(0);
       if (sequence < expected || pending.has(sequence)) return [];
-      if (pending.size >= MAX_PENDING_RECORDS) throw new Error('The sender sent too many records out of order.');
+      if (bytes.byteLength > MAX_RECORD_BYTES || pending.size >= MAX_PENDING_RECORDS || pendingBytes + bytes.byteLength > MAX_PENDING_BYTES) throw new Error('The sender sent too many records out of order.');
       pending.set(sequence, bytes);
+      pendingBytes += bytes.byteLength;
       const ready = [];
       while (pending.has(expected)) {
-        ready.push(pending.get(expected));
+        const record = pending.get(expected);
+        ready.push(record);
+        pendingBytes -= record.byteLength;
         pending.delete(expected);
         expected += 1;
       }

@@ -41,3 +41,18 @@ test('direct offers are optional and bounded', () => {
   assert.equal(parseDirectOffer({ direct: { sdp: 'x'.repeat(70_000) } }), null);
   assert.equal(parseDirectOffer({ direct: { sdp: 5 } }), null);
 });
+
+test('the merger bounds held bytes while a sequence is missing', () => {
+  const merger = createRecordMerger();
+  for (let sequence = 1; sequence <= 32; sequence += 1) {
+    assert.deepEqual(merger.push(record(sequence, 1024 * 1024 - 28)), []);
+  }
+  assert.throws(() => merger.push(record(33, 1)), /out of order/);
+});
+
+test('the merger releases its byte budget after ordered records drain', () => {
+  const merger = createRecordMerger();
+  for (let sequence = 1; sequence <= 31; sequence += 1) merger.push(record(sequence, 1024 * 1024 - 28));
+  assert.equal(merger.push(record(0, 1)).length, 32);
+  for (let sequence = 33; sequence <= 64; sequence += 1) assert.deepEqual(merger.push(record(sequence, 1024 * 1024 - 28)), []);
+});

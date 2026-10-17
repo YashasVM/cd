@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"github.com/pion/webrtc/v4"
 	"reflect"
 	"testing"
 	"time"
@@ -192,4 +196,90 @@ func releasesOf(items []stripeItem) []uint64 {
 		out = append(out, item.release)
 	}
 	return out
+}
+
+func TestStripedTransferSurvivesRelayLoss(t *testing.T) {
+	saved := directICEServers
+	directICEServers = []webrtc.ICEServer{}
+	t.Cleanup(func() { directICEServers = saved })
+	sender, receiver, _ := linkedPair(t)
+	senderPath, err := newDirectPath(sender.directRecord, sender.directLost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sender.attachDirect(senderPath)
+	offer, err := senderPath.createOffer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiverPath, err := newDirectPath(receiver.directRecord, receiver.directLost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receiver.attachDirect(receiverPath)
+	answer, err := receiverPath.answerOffer(offer, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := senderPath.acceptAnswer(answer); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []*directPath{senderPath, receiverPath} {
+		select {
+		case <-path.opened:
+		case <-time.After(10 * time.Second):
+			t.Fatal("local direct path did not open")
+		}
+	}
+	sender.striping = true
+	if err := sender.send(kindOffer, []byte("ready")); err != nil {
+		t.Fatal(err)
+	}
+	if kind, _, err := receiver.next(context.Background(), 5*time.Second); err != nil || kind != kindOffer {
+		t.Fatalf("direct setup = %v %v", kind, err)
+	}
+	received := make(chan error, 1)
+	go func() {
+		for index := range 32 {
+			kind, payload, err := receiver.next(context.Background(), 5*time.Second)
+			if err != nil {
+				received <- err
+				return
+			}
+			if kind != kindChunk || !bytes.Equal(payload, bytes.Repeat([]byte{byte(index)}, chunkSize)) {
+				received <- fmt.Errorf("record %d differs", index)
+				return
+			}
+			if index == 7 {
+				_ = sender.connection.Close()
+			}
+		}
+		received <- nil
+	}()
+	for index := range 32 {
+		if err := sender.sendReleasable(kindChunk, bytes.Repeat([]byte{byte(index)}, chunkSize), uint64(index+1)*chunkSize); err != nil {
+			t.Fatal(err)
+		}
+		// Poll to observe a relay failure and schedule its held records again.
+		if _, _, _, err := sender.poll(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deadline := time.After(10 * time.Second)
+	for {
+		select {
+		case err := <-received:
+			if err != nil {
+				t.Fatal(err)
+			}
+			return
+		case <-deadline:
+			t.Fatal("striped transfer stalled after relay loss")
+		default:
+			if _, _, _, err := sender.poll(); err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
 }
