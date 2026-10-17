@@ -63,17 +63,22 @@ func TestBundleRejectsCaseAliasesBeforeWriting(t *testing.T) {
 
 func TestPublishReceivedFilePreservesDestinationThatAppears(t *testing.T) {
 	dir := t.TempDir()
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
 	staging := filepath.Join(dir, "received.part")
 	dest := filepath.Join(dir, "notes.txt")
 	_ = os.WriteFile(staging, []byte("received"), 0600)
 	_ = os.WriteFile(dest, []byte("USER DATA"), 0600)
-	if err := publishReceivedFile(staging, dest, false); err == nil {
+	if err := publishReceivedFile(root, "received.part", "notes.txt", false); err == nil {
 		t.Fatal("replaced a newly appeared destination")
 	}
 	if data, _ := os.ReadFile(dest); string(data) != "USER DATA" {
 		t.Fatalf("destination = %q", data)
 	}
-	if err := publishReceivedFile(staging, dest, true); err != nil {
+	if err := publishReceivedFile(root, "received.part", "notes.txt", true); err != nil {
 		t.Fatal(err)
 	}
 	if data, _ := os.ReadFile(dest); string(data) != "received" {

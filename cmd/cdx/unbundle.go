@@ -64,23 +64,33 @@ func bundleEntryPath(name string) (string, bool) {
 // Preflight rejects known name clashes before extraction. Each file is
 // published without replacement unless force is set. os.Root confines writes.
 func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
-	info, err := os.Stat(archivePath)
+	archive, err := os.Open(archivePath)
 	if err != nil {
 		return nil, err
 	}
-	archive, err := zip.OpenReader(archivePath)
-	if err != nil {
-		return nil, errors.New("the sender's files could not be unpacked")
-	}
 	defer archive.Close()
-	if len(archive.File) > 10_000 {
-		return nil, errors.New("the sender offered too many files")
-	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(err))
 	}
 	defer root.Close()
+	return unpackBundleFile(archive, root, dir, force)
+}
+
+// The receiver passes its open staging file and output root so a directory
+// rename cannot redirect archive reads or extraction to a different directory.
+func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]receivedFile, error) {
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	archive, err := zip.NewReader(file, info.Size())
+	if err != nil {
+		return nil, errors.New("the sender's files could not be unpacked")
+	}
+	if len(archive.File) > 10_000 {
+		return nil, errors.New("the sender offered too many files")
+	}
 
 	type target struct {
 		file *zip.File
