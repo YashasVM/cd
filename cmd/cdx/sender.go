@@ -460,10 +460,23 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 // transfer streams one source over a paired link. offerSDP, when not nil,
 // yields the direct-path offer to embed in the file offer.
 func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	stopOnCancel := context.AfterFunc(ctx, func() {
+		_ = link.connection.Close()
+		link.close()
+	})
+	defer stopOnCancel()
 	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files}
 	if offerSDP != nil {
-		if sdp := <-offerSDP; sdp != "" {
-			offer.Direct = &directOffer{SDP: sdp}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case sdp := <-offerSDP:
+			if sdp != "" {
+				offer.Direct = &directOffer{SDP: sdp}
+			}
 		}
 	}
 	encoded, err := json.Marshal(offer)
@@ -471,6 +484,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return err
 	}
 	if err := link.send(kindOffer, encoded); err != nil {
+		if cancellation := ctx.Err(); cancellation != nil {
+			return cancellation
+		}
 		return friendlyRelayError(fmt.Errorf("send file offer: %w", err))
 	}
 
@@ -558,6 +574,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return nil
 	}
 	linkError := func(err error) error {
+		if cancellation := ctx.Err(); cancellation != nil {
+			return cancellation
+		}
 		if isTimeoutError(err) {
 			if progress.ended {
 				return errors.New("receiver did not verify within 90s: they may have disconnected")
@@ -568,10 +587,16 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	}
 	await := func(done func() bool) error {
 		for {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			// Take everything already received before deciding to wait, so
 			// acks reach the window estimate on time. After COMPLETE the
 			// relay's peer-left follows immediately; it is not a failure.
 			for !progress.completed {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				kind, payload, ok, err := link.poll()
 				if err != nil {
 					return linkError(err)
@@ -600,11 +625,19 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 
 	buffer := make([]byte, chunkSize)
 	for {
+		if err := ctx.Err(); err != nil {
+			finishLine()
+			return err
+		}
 		count, readErr := io.ReadFull(file, buffer)
+		if err := ctx.Err(); err != nil {
+			finishLine()
+			return err
+		}
 		if count > 0 {
 			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
 				finishLine()
-				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
+				return linkError(friendlyRelayError(fmt.Errorf("send file data: %w", err)))
 			}
 			progress.sent += uint64(count)
 			progress.chunks++
@@ -628,7 +661,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	}
 	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
-		return friendlyRelayError(fmt.Errorf("finish transfer: %w", err))
+		return linkError(friendlyRelayError(fmt.Errorf("finish transfer: %w", err)))
 	}
 	progress.ended = true
 	err = await(func() bool { return progress.completed })
