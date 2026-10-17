@@ -307,8 +307,15 @@ func TestDirectPathConnectsWithTrickledCandidates(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Skip("no usable network interface for a local WebRTC connection")
 	}
-	if route := senderPath.route(); route != "same network" {
-		t.Fatalf("route = %q for a local connection", route)
+	if err := sender.send(kindChunk, []byte("trickled candidates")); err != nil {
+		t.Fatal(err)
+	}
+	kind, payload, err := receiver.next(context.Background(), 5*time.Second)
+	if err != nil || kind != kindChunk || !bytes.Equal(payload, []byte("trickled candidates")) {
+		t.Fatalf("trickled transfer = %v %q %v", kind, payload, err)
+	}
+	if !sender.directUsed.Load() || !receiver.directUsed.Load() {
+		t.Fatal("trickled transfer did not use the direct path at both ends")
 	}
 }
 
