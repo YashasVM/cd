@@ -44,6 +44,8 @@ const (
 	maxSDPBytes = 64 * 1024
 )
 
+var errDirectStalled = errors.New("direct connection stalled")
+
 // directICEServers is a variable so tests can run without STUN.
 var directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"}}}
 
@@ -230,7 +232,7 @@ func (path *directPath) send(record []byte) error {
 		case <-path.lost:
 			return errors.New("direct connection lost")
 		case <-time.After(transferIdle):
-			return errors.New("direct connection stalled")
+			return errDirectStalled
 		}
 	}
 	for start := 0; start < len(record); start += directPieceSize {

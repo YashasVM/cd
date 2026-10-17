@@ -26,13 +26,14 @@ type recordLink struct {
 	// peerLeft is the error for a relay `peer-left` event.
 	peerLeft error
 
-	items      chan linkItem
-	stop       chan struct{}
-	readerDone chan struct{}
-	stopOnce   sync.Once
-	writeMu    sync.Mutex
-	pending    map[uint32][]byte
-	expected   uint32
+	items        chan linkItem
+	stop         chan struct{}
+	readerDone   chan struct{}
+	stopOnce     sync.Once
+	writeMu      sync.Mutex
+	pending      map[uint32][]byte
+	pendingBytes int
+	expected     uint32
 
 	direct atomic.Pointer[directPath]
 	// directUsed is set once a record crossed the direct path in either
@@ -44,6 +45,13 @@ type recordLink struct {
 	// drops whichever copy arrives second.
 	retained []retainedRecord
 	switched bool
+	// striping, set by senders, keeps the relay carrying data records
+	// alongside the direct path once it opens (see stripe.go); stripe is
+	// its state from then on.
+	striping bool
+	stripe   *striper
+	// ackedBytes is the peer's last acknowledged byte count.
+	ackedBytes uint64
 }
 
 type retainedRecord struct {
@@ -69,6 +77,7 @@ func (linkTimeout) Temporary() bool { return true }
 
 // maxPendingRecords bounds records held while an earlier one is missing.
 const maxPendingRecords = 256
+const maxPendingBytes = 32 * 1024 * 1024
 
 // closeWait bounds how long a finished transfer waits for the peer and the
 // relay to acknowledge the close.
@@ -89,6 +98,10 @@ func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *rec
 // start begins reading the relay WebSocket; call it once the caller no
 // longer reads the socket itself.
 func (link *recordLink) start() {
+	// Clear the deadline waitRelayEvent left behind (10s on a receiver):
+	// next and poll time out on their own, and a deadline here would end
+	// the relay reader mid-transfer.
+	_ = link.connection.SetReadDeadline(time.Time{})
 	go link.readRelay()
 	go link.pingRelay()
 }
@@ -174,17 +187,29 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 	if err != nil {
 		return err
 	}
+	if link.stripe != nil {
+		// The writer goroutines own both paths now.
+		return link.sendReleasableStriped(record, release)
+	}
 	path := link.direct.Load()
 	if path != nil && path.isOpen() {
 		link.directUsed.Store(true)
 		if !link.switched {
 			link.switched = true
+			if link.striping {
+				link.startStriping(path)
+			}
 			for _, earlier := range link.retained {
-				if err := path.send(earlier.record); err != nil {
+				if link.stripe != nil {
+					link.enqueueControl(earlier.record)
+				} else if err := path.send(earlier.record); err != nil {
 					return err
 				}
 			}
 			link.retained = nil
+		}
+		if link.stripe != nil {
+			return link.sendReleasableStriped(record, release)
 		}
 		return path.send(record)
 	}
@@ -210,6 +235,10 @@ func (link *recordLink) acknowledged(bytes uint64) {
 		}
 	}
 	link.retained = kept
+	if link.stripe != nil {
+		link.stripe.acknowledged(bytes, link.ackedBytes, time.Now())
+	}
+	link.ackedBytes = bytes
 }
 
 // next returns the next record in sequence order, waiting up to timeout.
@@ -258,6 +287,7 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 		return 0, nil, false, nil
 	}
 	delete(link.pending, link.expected)
+	link.pendingBytes -= len(record)
 	kind, plaintext, err := link.opener.open(record)
 	if err != nil {
 		return 0, nil, false, err
@@ -274,7 +304,10 @@ func (link *recordLink) accept(item linkItem) error {
 			return nil // an unused direct path failing changes nothing
 		}
 		if !item.direct && link.directUsed.Load() {
-			return nil // the relay is optional once the direct path carries the transfer
+			// The relay is optional once the direct path carries the
+			// transfer; records striped onto it go out again there.
+			link.relayFailed()
+			return nil
 		}
 		return item.err
 	}
@@ -290,10 +323,11 @@ func (link *recordLink) accept(item linkItem) error {
 		// copy. Authentication happens when the kept copy is opened.
 		return nil
 	}
-	if len(link.pending) >= maxPendingRecords {
+	if len(item.record) > maxRecordBytes || len(link.pending) >= maxPendingRecords || link.pendingBytes+len(item.record) > maxPendingBytes {
 		return errors.New("the peer sent too many records out of order")
 	}
 	link.pending[sequence] = item.record
+	link.pendingBytes += len(item.record)
 	return nil
 }
 

@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v4"
@@ -111,15 +112,8 @@ func parseReceivedOffer(payload []byte) (fileOffer, uint64, error) {
 	if err := json.Unmarshal(payload, &offer); err != nil {
 		return offer, 0, errors.New("the sender offered invalid file details")
 	}
-	if _, err := safeFilename(offer.Name); err != nil {
+	if _, err := receiveFilename(offer.Name); err != nil {
 		return offer, 0, errors.New("the sender offered an unsafe filename")
-	}
-	// safeFilename takes the basename, so a crafted offer like "../evil"
-	// would slip through. The wire name itself must already be clean.
-	for _, character := range offer.Name {
-		if character == '\\' || character == '/' || character < 0x20 || character == 0x7f {
-			return offer, 0, errors.New("the sender offered an unsafe filename")
-		}
 	}
 	if len(offer.MediaType) == 0 || len(offer.MediaType) > 127 {
 		return offer, 0, errors.New("the sender offered an invalid file type")
@@ -142,38 +136,60 @@ func parseReceivedOffer(payload []byte) (fileOffer, uint64, error) {
 	return offer, size, nil
 }
 
-// resolveReceiveDest maps the offer filename (or --out) to a final path and a
-// staging temp path in the same directory. It refuses to overwrite unless
-// force is set.
-func resolveReceiveDest(offerName, out string, force bool) (final, staging string, err error) {
-	name, err := safeFilename(offerName)
-	if err != nil {
-		return "", "", errors.New("the sender offered an unsafe filename")
+// receiveFilename accepts one local component without repairing a wire name.
+// IsLocal also rejects platform-specific names such as Windows device paths.
+func receiveFilename(name string) (string, error) {
+	if name == "." || !filepath.IsLocal(name) || strings.ContainsAny(name, `/\`) || !utf8.ValidString(name) || len(name) > 255 {
+		return "", errors.New("the sender offered an unsafe filename")
 	}
-	final = out
-	if final == "" {
-		final = name
-	} else {
-		if info, statErr := os.Stat(final); statErr == nil && info.IsDir() {
-			final = filepath.Join(final, name)
+	for _, character := range name {
+		if character < 0x20 || character == 0x7f {
+			return "", errors.New("the sender offered an unsafe filename")
 		}
+	}
+	return name, nil
+}
+
+type receiveDestination struct {
+	root *os.Root
+	dir  string
+	name string
+}
+
+// resolveReceiveDest keeps the locally selected directory separate from the
+// sender's single-component name. Explicit --out file paths remain local input.
+// The caller owns the root until publication and cleanup are finished.
+func resolveReceiveDest(offerName, out string, force bool) (*receiveDestination, error) {
+	name, err := receiveFilename(offerName)
+	if err != nil {
+		return nil, err
+	}
+	dir := "."
+	if out != "" {
+		if info, statErr := os.Stat(out); statErr == nil && info.IsDir() {
+			dir = out
+		} else {
+			dir, name = filepath.Dir(out), filepath.Base(out)
+		}
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(err))
 	}
 	if !force {
-		if _, statErr := os.Lstat(final); statErr == nil {
-			return "", "", fmt.Errorf("%q already exists: use --out <path> or --force to overwrite", final)
+		if _, statErr := root.Lstat(name); statErr == nil {
+			_ = root.Close()
+			return nil, fmt.Errorf("%q already exists: use --out <path> or --force to overwrite", filepath.Join(dir, name))
 		}
 	}
-	dir := filepath.Dir(final)
-	if dir != "." && dir != "" {
-		if info, statErr := os.Stat(dir); statErr != nil || !info.IsDir() {
-			return "", "", fmt.Errorf("cannot write to %q: directory does not exist", dir)
-		}
-	}
-	staging = final + ".cd-part"
-	if _, statErr := os.Lstat(staging); statErr == nil && !force {
-		return "", "", fmt.Errorf("%q already exists from an interrupted download: remove it or use --force", staging)
-	}
-	return final, staging, nil
+	return &receiveDestination{root: root, dir: dir, name: name}, nil
+}
+
+// createReceiveStaging never derives a directory or scratch name from the offer.
+func createReceiveStaging(root *os.Root) (*os.File, string, error) {
+	name := ".cd-" + rand.Text() + ".part"
+	file, err := root.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
+	return file, name, err
 }
 
 // receiveFile joins the relay as the receiver, accepts one file offer, and
@@ -264,27 +280,30 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return err
 	}
-	var final, staging, bundleDir string
+	var dest *receiveDestination
 	if offer.Bundle {
-		// Several files: stage the zip inside the folder they unpack into.
-		if bundleDir, err = resolveBundleDir(out); err != nil {
-			return err
+		// Both the archive and its extracted files use this same open root.
+		dir, dirErr := resolveBundleDir(out)
+		if dirErr != nil {
+			return dirErr
 		}
-		// The sender's name is never used on disk here: the zip has a fixed
-		// name, and each file is named by the unpacker's own checks.
-		final = filepath.Join(bundleDir, "cd-bundle.zip")
-		staging = final + ".cd-part"
+		root, rootErr := os.OpenRoot(dir)
+		if rootErr != nil {
+			return fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(rootErr))
+		}
+		dest = &receiveDestination{root: root, dir: dir, name: "cd-bundle.zip"}
 		fmt.Fprintf(os.Stderr, "receiving several files (%s)\n", formatBytes(size))
 	} else {
-		if final, staging, err = resolveReceiveDest(offer.Name, out, force); err != nil {
+		if dest, err = resolveReceiveDest(offer.Name, out, force); err != nil {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
 	}
+	defer dest.root.Close()
 
-	stagingFile, err := os.OpenFile(staging, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	stagingFile, staging, err := createReceiveStaging(dest.root)
 	if err != nil {
-		return fmt.Errorf("cannot write %q: %s", staging, underlyingReason(err))
+		return fmt.Errorf("cannot write to %q: %s", dest.dir, underlyingReason(err))
 	}
 	// Best effort cleanup of the staging file on failure; the rename below
 	// moves it away on success.
@@ -292,7 +311,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	defer func() {
 		_ = stagingFile.Close()
 		if !succeeded {
-			_ = os.Remove(staging)
+			_ = dest.root.Remove(staging)
 		}
 	}()
 
@@ -355,27 +374,21 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := stagingFile.Sync(); err != nil {
 				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
 			}
+			if offer.Bundle {
+				succeeded = true
+				return finishBundle(link, dest, stagingFile, staging, force, offer.Name, size, chunks, received, onReceived)
+			}
 			if err := stagingFile.Close(); err != nil {
 				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
 			}
-			if offer.Bundle {
-				succeeded = true
-				return finishBundle(link, staging, final, bundleDir, force, offer.Name, size, chunks, received, onReceived)
-			}
-			if force {
-				_ = os.Remove(final)
-			}
-			if err := os.Rename(staging, final); err != nil {
-				// Cross-device rename fallback: copy then remove.
-				if copyErr := copyFile(staging, final); copyErr != nil {
-					return fmt.Errorf("save received file: %s", underlyingReason(err))
-				}
-				_ = os.Remove(staging)
+			if err := publishReceivedFile(dest.root, staging, dest.name, force); err != nil {
+				return fmt.Errorf("save received file: %s", underlyingReason(err))
 			}
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 			}
 			link.finish(true)
+			final := filepath.Join(dest.dir, dest.name)
 			abs, _ := filepath.Abs(final)
 			if abs == "" {
 				abs = final
@@ -395,26 +408,30 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 
 // finishBundle confirms delivery, then unpacks the received zip so each file
 // lands on its own. If unpacking fails the zip is kept, so nothing is lost.
-func finishBundle(link *recordLink, staging, final, dir string, force bool, name string, size uint64, chunks uint32, received uint64, onReceived func(receiveResult) error) error {
+func finishBundle(link *recordLink, dest *receiveDestination, archive *os.File, staging string, force bool, name string, size uint64, chunks uint32, received uint64, onReceived func(receiveResult) error) error {
 	if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
-		_ = os.Remove(staging)
+		_ = archive.Close()
+		_ = dest.root.Remove(staging)
 		return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 	}
 	link.finish(true)
-	files, err := unpackBundle(staging, dir, force)
+	files, err := unpackBundleFile(archive, dest.root, dest.dir, force)
+	if closeErr := archive.Close(); err == nil {
+		err = closeErr
+	}
 	if err != nil {
 		kept := staging
-		if _, statErr := os.Lstat(final); statErr != nil && os.Rename(staging, final) == nil {
-			kept = final
+		if publishReceivedFile(dest.root, staging, dest.name, false) == nil {
+			kept = dest.name
 		}
-		abs, _ := filepath.Abs(kept)
+		abs, _ := filepath.Abs(filepath.Join(dest.dir, kept))
 		fmt.Fprintf(os.Stderr, "kept the files as one zip: %s\n", abs)
 		return err
 	}
-	_ = os.Remove(staging)
-	abs, _ := filepath.Abs(dir)
+	_ = dest.root.Remove(staging)
+	abs, _ := filepath.Abs(dest.dir)
 	if abs == "" {
-		abs = dir
+		abs = dest.dir
 	}
 	noun := "files"
 	if len(files) == 1 {
@@ -430,33 +447,16 @@ func finishBundle(link *recordLink, staging, final, dir string, force bool, name
 	return nil
 }
 
-func copyFile(source, dest string) error {
-	in, err := os.Open(source)
-	if err != nil {
+// publishReceivedFile refuses destination races without --force. The staging
+// file is in the destination directory, so no cross-device copy is needed.
+func publishReceivedFile(root *os.Root, staging, final string, force bool) error {
+	if force {
+		return root.Rename(staging, final)
+	}
+	if err := root.Link(staging, final); err != nil {
 		return err
 	}
-	defer in.Close()
-	out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	buffer := make([]byte, 128*1024)
-	for {
-		count, readErr := in.Read(buffer)
-		if count > 0 {
-			if _, writeErr := out.Write(buffer[:count]); writeErr != nil {
-				return writeErr
-			}
-		}
-		if readErr != nil {
-			if errors.Is(readErr, io.EOF) {
-				break
-			}
-			return readErr
-		}
-	}
-	return out.Sync()
+	return root.Remove(staging)
 }
 
 // answerDirectPath answers the sender's direct-path offer with a signal
