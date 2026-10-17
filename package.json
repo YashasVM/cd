@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "audit": "npm audit --audit-level=moderate",
     "test": "node --test src/*.test.js",
+    "verify:security": "node scripts/verify-code-security.mjs",
     "test:cli": "go test ./...",
     "typecheck": "tsc",
     "verify:agent": "npm run build && node scripts/verify-agent.mjs",

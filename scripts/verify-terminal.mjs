@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { receiverAdmission, encodeBase64Url } from '../src/agent-protocol.js';
 import { access, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -78,16 +79,31 @@ try {
 
   // Older clients still claim codes over POST /api/codes (sharded directory).
   {
-    const capability = { transferId: 'A'.repeat(21) + 'B', key: 'C'.repeat(43) };
-    const claim = await fetch(`${publicBase}/api/codes`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(capability)
-    });
-    assert.equal(claim.status, 200);
-    const { code } = await claim.json();
-    assert.match(code, /^\d{5}$/);
-    assert.deepEqual(await (await fetch(`${publicBase}/api/codes/${code}`)).json(), capability);
-    assert.equal((await fetch(`${publicBase}/api/codes`, { method: 'POST', body: '{"transferId":"x"}' })).status, 400);
-    console.log('verified POST /api/codes claims and resolves through the sharded directory');
+    const capability = { transferId: randomBytes(16).toString('base64url'), key: randomBytes(32).toString('base64url') };
+    const { digest } = await receiverAdmission({ id: Buffer.from(capability.transferId, 'base64url'), key: Buffer.from(capability.key, 'base64url') });
+    const legacySender = new WebSocket(`${relayBase}/${capability.transferId}`);
+    try {
+      await withTimeout(new Promise((resolve, reject) => {
+        legacySender.addEventListener('error', reject, { once: true });
+        legacySender.addEventListener('message', (event) => {
+          assert.equal(JSON.parse(event.data).type, 'accepted');
+          resolve();
+        }, { once: true });
+        legacySender.addEventListener('open', () => legacySender.send(JSON.stringify({
+          type: 'join', protocol: 'cd-transfer-v1', role: 'sender', receiverTokenHash: encodeBase64Url(digest)
+        })), { once: true });
+      }), 10_000, 'old-client sender admission timed out');
+      const claim = await fetch(`${publicBase}/api/codes`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(capability)
+      });
+      assert.equal(claim.status, 200);
+      const { code } = await claim.json();
+      assert.match(code, /^\d{5}$/);
+      assert.deepEqual(await (await fetch(`${publicBase}/api/codes/${code}`)).json(), capability);
+      assert.equal((await fetch(`${publicBase}/api/codes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"transferId":"x"}' })).status, 400);
+      assert.equal((await fetch(`${publicBase}/api/codes`, { method: 'POST', body: JSON.stringify(capability) })).status, 415);
+      console.log('verified admitted old-client POST /api/codes claims and resolves through the sharded directory');
+    } finally { legacySender.close(); }
   }
 
   // Flow 2: browser /send -> terminal.
