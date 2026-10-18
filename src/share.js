@@ -323,12 +323,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       return sendChain;
     }
 
-    function enqueueRecords(records, size) {
-      pendingBytes += size;
-      if (pendingBytes > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
-        fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
-        return;
-      }
+    function enqueueRecords(records) {
       let ordered;
       try {
         ordered = merger.push(records);
@@ -336,12 +331,22 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         fail(error, socket, sink);
         return;
       }
-      if (ordered.length === 0) {
-        pendingBytes -= size;
+      if (ordered.length === 0) return;
+      const size = ordered.reduce((total, record) => total + record.byteLength, 0);
+      if (pendingBytes + size > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
+        fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
         return;
       }
+      pendingBytes += size;
+      // Begin decrypting every ready record while the ordered sink queue
+      // waits on earlier writes. Handle rejections until that queue reaches it.
+      const opening = ordered.map((record) => {
+        const result = opener.open(record);
+        result.catch(() => {});
+        return result;
+      });
       queue = queue.then(async () => {
-        for (const record of ordered) await processMessage(record);
+        for (const result of opening) await processMessage(result);
       }).finally(() => { pendingBytes -= size; });
       queue.catch((error) => fail(error, socket, sink));
     }
@@ -354,7 +359,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         onSignal: (signal) => { void send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))).catch(() => {}); },
         onRecord: (record) => {
           directUsed = true;
-          enqueueRecords(record, record.byteLength);
+          enqueueRecords(record);
         },
         onOpen: () => {},
         onLost: (error) => {
@@ -377,7 +382,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         if (value.type === 'accepted') elements.status.textContent = 'Connected. Waiting for file details...';
         return;
       }
-      const { kind, plaintext } = await opener.open(data);
+      const { kind, plaintext } = await data;
       if (state === 'connecting' && kind === KIND_OFFER) {
         offer = parseOffer(plaintext);
         state = 'offered';
@@ -458,7 +463,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     };
     socket.addEventListener('message', (event) => {
       if (typeof event.data !== 'string') {
-        enqueueRecords(event.data, event.data.byteLength);
+        enqueueRecords(event.data);
         return;
       }
       const size = event.data.length;
