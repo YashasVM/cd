@@ -1,3 +1,5 @@
+import { onActivityChange } from './transfer-activity.js';
+
 const SPACING = 16;
 const REACH = 115;
 const PUSH = 11;
@@ -14,6 +16,7 @@ export function startAmbientDots() {
   let frame = 0;
   let width = 0;
   let height = 0;
+  let paused = false;
 
   function paint() {
     context.clearRect(0, 0, width, height);
@@ -53,12 +56,22 @@ export function startAmbientDots() {
 
   function tick() {
     frame = 0;
-    if (paint()) frame = requestAnimationFrame(tick);
+    if (!paused && paint()) frame = requestAnimationFrame(tick);
   }
 
   function schedule() {
-    if (!frame && !document.hidden) frame = requestAnimationFrame(tick);
+    if (!paused && !frame && !document.hidden) frame = requestAnimationFrame(tick);
   }
+
+  onActivityChange((active) => {
+    paused = active;
+    if (paused) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    } else {
+      schedule();
+    }
+  });
 
   function resize() {
     const bounds = canvas.getBoundingClientRect();

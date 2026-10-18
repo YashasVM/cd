@@ -15,6 +15,7 @@ import {
 import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
 import { SendWindow } from './send-window.js';
+import { beginTransfer } from './transfer-activity.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -352,6 +353,13 @@ export function mountRelaySender(els) {
   let active = null;
   let shareUrl = '';
   let shareCode = '';
+  let stopTransferActivity = null;
+  let generation = 0;
+
+  function stopActivity() {
+    stopTransferActivity?.();
+    stopTransferActivity = null;
+  }
 
   function paintProgress(sent, total) {
     const percent = total === 0 ? 100 : Math.min((sent / total) * 100, 100);
@@ -362,6 +370,7 @@ export function mountRelaySender(els) {
   }
 
   function sendFile(file) {
+    const current = ++generation;
     els.pickBtn.disabled = true;
     els.cancelBtn.hidden = false;
     els.againBtn.hidden = true;
@@ -376,12 +385,20 @@ export function mountRelaySender(els) {
         els.receiveCommand.textContent = `cdx receive ${code}`;
       },
       onStatus(text) { els.status.textContent = text; },
+      onState(state) {
+        if (current !== generation) return;
+        if (state === 'transferring') stopTransferActivity ??= beginTransfer();
+      },
       onProgress: paintProgress
     });
     active.done.then(() => {
+      if (current !== generation) return;
+      stopActivity();
       els.cancelBtn.hidden = true;
       els.againBtn.hidden = false;
     }, (error) => {
+      if (current !== generation) return;
+      stopActivity();
       els.status.textContent = error.message;
       els.cancelBtn.hidden = true;
       els.againBtn.hidden = false;
@@ -401,6 +418,8 @@ export function mountRelaySender(els) {
     if (file) sendFile(file);
   });
   els.cancelBtn.addEventListener('click', () => {
+    generation += 1;
+    stopActivity();
     active?.cancel();
     els.shareBox.hidden = true;
     els.progress.hidden = true;

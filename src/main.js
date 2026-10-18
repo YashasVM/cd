@@ -6,6 +6,7 @@ import { startQrScanner } from './qr-scanner.js';
 import { parseManifest } from './p2p-manifest.js';
 import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
 import { openRawChannel, parseTransferOffer, receiveWindowFor } from './raw-channel.js';
+import { beginTransfer } from './transfer-activity.js';
 import {
   DOWNLOAD_TOO_LARGE,
   createSink,
@@ -195,8 +196,15 @@ const STATE_LABELS = {
 // Closing the tab mid-transfer kills it, so the browser asks first.
 const BUSY_STATES = new Set(['connecting', 'waiting', 'transferring', 'saving']);
 const BASE_TITLE = document.title;
+let stopTransferActivity = null;
 
 function setState(state) {
+  if (state === 'transferring' || state === 'saving') {
+    stopTransferActivity ??= beginTransfer();
+  } else {
+    stopTransferActivity?.();
+    stopTransferActivity = null;
+  }
   els.appState.textContent = STATE_LABELS[state] || state;
   els.appState.dataset.state = state;
   if (state === 'complete') document.title = `Done · ${BASE_TITLE}`;

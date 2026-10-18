@@ -103,3 +103,32 @@ test('CRC32 slicing and incremental tails match independent ZIP check values', (
   }
   assert.equal(crc32(new Uint8Array()), 0);
 });
+
+test('CRC32 matches the original bytewise algorithm on random lengths and split reads', () => {
+  const table = Uint32Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    return value >>> 0;
+  });
+  const bytewise = (bytes, previous = 0) => {
+    let value = ~previous >>> 0;
+    for (const byte of bytes) value = table[(value ^ byte) & 0xff] ^ (value >>> 8);
+    return ~value >>> 0;
+  };
+  let seed = 0x12345678;
+  const randomByte = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    return seed & 0xff;
+  };
+  for (let length = 0; length < 256; length += 1) {
+    const bytes = Uint8Array.from({ length }, randomByte);
+    const expected = bytewise(bytes);
+    assert.equal(crc32(bytes), expected, `length ${length}`);
+    const split = length >> 1;
+    assert.equal(crc32(bytes.subarray(split), crc32(bytes.subarray(0, split))), expected, `split ${length}`);
+  }
+  const large = Uint8Array.from({ length: 1_048_579 }, randomByte);
+  assert.equal(crc32(large), bytewise(large));
+});

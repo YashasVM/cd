@@ -18,6 +18,7 @@ import {
 import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
 import { downloadNames, readBundle } from './zip-unbundle.js';
 import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
+import { beginTransfer } from './transfer-activity.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
@@ -103,6 +104,14 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     files: pick('files')
   };
   let failureShown = false;
+  let stopTransferActivity = null;
+  function setTransferActive(active) {
+    if (active) stopTransferActivity ??= beginTransfer();
+    else {
+      stopTransferActivity?.();
+      stopTransferActivity = null;
+    }
+  }
   // Leaving before the socket exists must still stop receive() from joining.
   let stopped = false;
   let stop = () => { stopped = true; failureShown = true; };
@@ -252,6 +261,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
   function fail(error, socket, sink) {
     if (failureShown) return;
     failureShown = true;
+    setTransferActive(false);
     closeDirect();
     if (sink) void sink.abort().catch(() => {});
     if (socket?.readyState === WebSocket.OPEN) socket.close(4400, 'receiver failed');
@@ -390,6 +400,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         elements.offer.hidden = true;
         elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
         state = 'receiving';
+        setTransferActive(true);
         renderProgress(0n, offer.size, true);
         await send(KIND_ACCEPT);
         return;
@@ -411,6 +422,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         if (ended.bytes !== offer.size || ended.bytes !== received || ended.chunks !== chunks) throw new Error('The transfer ended before the complete file arrived.');
         const result = await sink.close();
         state = 'complete';
+        setTransferActive(false);
         renderProgress(received, offer.size, true);
         await send(KIND_COMPLETE, encodeCounts(chunks, received));
         if (sink.kind === 'bundle') await showBundle(offer, result);
@@ -447,6 +459,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     // Closing explicitly frees the sender's wait immediately; otherwise it only
     // learns the receiver left via the worker's close propagation.
     const leave = () => {
+      setTransferActive(false);
       try { socket.close(1000, 'receiver left'); } catch { /* Best effort. */ }
     };
     window.addEventListener('pagehide', leave, { once: true });
