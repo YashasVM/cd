@@ -11,7 +11,6 @@ import (
 	"io"
 	"mime"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/webrtc/v4"
 )
 
 const (
@@ -268,7 +268,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	}
 	dialCtx, cancelDial := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelDial()
-	connection, response, err := websocket.DefaultDialer.DialContext(dialCtx, relayBase+"/"+invitation.encodedID(), http.Header{})
+	connection, response, err := dialRelay(dialCtx, relayBase+"/"+invitation.encodedID())
 	if err != nil {
 		if dialCtx.Err() != nil && ctx.Err() == nil {
 			return errors.New("connect to CD relay timed out: check your network and try again")
@@ -475,7 +475,13 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return ctx.Err()
 		case sdp := <-offerSDP:
 			if sdp != "" {
-				offer.Direct = &directOffer{SDP: sdp}
+				if path := link.direct.Load(); path != nil {
+					// Include candidates gathered while waiting for the receiver, too.
+					if local := path.connection.LocalDescription(); local != nil {
+						sdp = local.SDP
+					}
+				}
+				offer.Direct = &directOffer{SDP: sdp, Trickle: true}
 			}
 		}
 	}
@@ -492,6 +498,28 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 
 	answered := false
 	candidates := 0
+	var localCandidates <-chan webrtc.ICECandidateInit
+	sendCandidates := func() error {
+		for localCandidates != nil {
+			select {
+			case candidate, ok := <-localCandidates:
+				if !ok {
+					localCandidates = nil
+					continue
+				}
+				payload, err := json.Marshal(directSignal{Candidate: &candidate})
+				if err != nil {
+					return err
+				}
+				if err := link.send(kindSignal, payload); err != nil {
+					return err
+				}
+			default:
+				return nil
+			}
+		}
+		return nil
+	}
 	handleSignal := func(payload []byte) {
 		path := link.direct.Load()
 		var signal directSignal
@@ -511,6 +539,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		answered = true
 		if err := path.acceptAnswer(signal.SDP); err != nil {
 			return
+		}
+		if signal.Trickle && offer.Direct != nil && offer.Direct.Trickle {
+			localCandidates = path.candidates
 		}
 		go func() {
 			select {
@@ -566,7 +597,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return err
 		}
 		if kind == kindAck {
-			window.acked(progress.acknowledged, time.Now())
+			window.acked(progress.acknowledged, link.receivedAt)
 			link.acknowledged(progress.acknowledged)
 		}
 		reportProgress(progress.acknowledged)
@@ -608,6 +639,11 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 					return err
 				}
 			}
+			if !progress.ended {
+				if err := sendCandidates(); err != nil {
+					return linkError(err)
+				}
+			}
 			if done() {
 				return nil
 			}
@@ -635,13 +671,14 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return err
 		}
 		if count > 0 {
+			sentAt := time.Now()
 			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
 				finishLine()
 				return linkError(friendlyRelayError(fmt.Errorf("send file data: %w", err)))
 			}
 			progress.sent += uint64(count)
 			progress.chunks++
-			window.sent(progress.sent, time.Now())
+			window.sent(progress.sent, sentAt)
 			if err := await(windowOpen); err != nil {
 				finishLine()
 				return err

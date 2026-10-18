@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,9 +33,11 @@ type recordLink struct {
 	readerDone   chan struct{}
 	stopOnce     sync.Once
 	writeMu      sync.Mutex
-	pending      map[uint32][]byte
+	writeBuffer  []byte
+	pending      map[uint32]linkItem
 	pendingBytes int
 	expected     uint32
+	receivedAt   time.Time
 
 	direct atomic.Pointer[directPath]
 	// directUsed is set once a record crossed the direct path in either
@@ -62,9 +66,10 @@ type retainedRecord struct {
 }
 
 type linkItem struct {
-	record []byte
-	err    error
-	direct bool
+	record     []byte
+	err        error
+	direct     bool
+	receivedAt time.Time
 }
 
 // errLinkTimeout reports a read deadline in the net.Error shape callers
@@ -87,10 +92,18 @@ const closeWait = 3 * time.Second
 // carries the transfer.
 const relayPingInterval = 20 * time.Second
 
+// dialRelay keeps a normal encrypted chunk in one masked WebSocket frame.
+// Gorilla's default 4 KiB client buffer otherwise fragments it into 65 writes.
+func dialRelay(ctx context.Context, endpoint string) (*websocket.Conn, *http.Response, error) {
+	dialer := *websocket.DefaultDialer
+	dialer.WriteBufferSize = chunkSize + headerBytes + recordTagBytes
+	return dialer.DialContext(ctx, endpoint, http.Header{})
+}
+
 func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *recordOpener, peerLeft error) *recordLink {
 	link := &recordLink{
 		connection: connection, sealer: sealer, opener: opener, peerLeft: peerLeft,
-		items: make(chan linkItem, 64), stop: make(chan struct{}), readerDone: make(chan struct{}), pending: map[uint32][]byte{},
+		items: make(chan linkItem, 64), stop: make(chan struct{}), readerDone: make(chan struct{}), pending: map[uint32]linkItem{},
 	}
 	return link
 }
@@ -107,6 +120,7 @@ func (link *recordLink) start() {
 }
 
 func (link *recordLink) deliver(item linkItem) {
+	item.receivedAt = time.Now()
 	select {
 	case link.items <- item:
 	case <-link.stop:
@@ -116,7 +130,15 @@ func (link *recordLink) deliver(item linkItem) {
 func (link *recordLink) readRelay() {
 	defer close(link.readerDone)
 	for {
-		messageType, data, err := link.connection.ReadMessage()
+		messageType, reader, err := link.connection.NextReader()
+		var data []byte
+		if err == nil {
+			if messageType == websocket.BinaryMessage {
+				data, err = readRelayRecord(reader)
+			} else {
+				data, err = io.ReadAll(io.LimitReader(reader, maxRecordBytes+1))
+			}
+		}
 		if err != nil {
 			link.deliver(linkItem{err: friendlyRelayError(fmt.Errorf("receive from CD: %w", err))})
 			return
@@ -141,6 +163,32 @@ func (link *recordLink) readRelay() {
 		}
 		link.deliver(linkItem{record: data})
 	}
+}
+
+// readRelayRecord allocates from the bounded record header instead of growing
+// ReadMessage's ReadAll buffer repeatedly for every 256 KiB chunk.
+func readRelayRecord(reader io.Reader) ([]byte, error) {
+	var header [headerBytes]byte
+	if _, err := io.ReadFull(reader, header[:]); err != nil {
+		return nil, err
+	}
+	if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
+		return nil, errors.New("the peer sent an invalid record")
+	}
+	length := uint64(headerBytes+recordTagBytes) + uint64(binary.BigEndian.Uint32(header[8:12]))
+	if length > maxRecordBytes {
+		return nil, errors.New("the peer sent an oversized record")
+	}
+	record := make([]byte, int(length))
+	copy(record, header[:])
+	if _, err := io.ReadFull(reader, record[headerBytes:]); err != nil {
+		return nil, err
+	}
+	var extra [1]byte
+	if n, err := io.ReadFull(reader, extra[:]); n != 0 || err != io.EOF {
+		return nil, errors.New("the peer sent an invalid record length")
+	}
+	return record, nil
 }
 
 func (link *recordLink) pingRelay() {
@@ -183,7 +231,13 @@ func (link *recordLink) send(kind messageKind, payload []byte) error {
 func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release uint64) error {
 	link.writeMu.Lock()
 	defer link.writeMu.Unlock()
-	record, err := link.sealer.seal(kind, payload)
+	path := link.direct.Load()
+	var buffer []byte
+	reusable := link.stripe == nil && (path == nil || path.isLost())
+	if reusable {
+		buffer = link.writeBuffer
+	}
+	record, err := link.sealer.sealInto(buffer, kind, payload)
 	if err != nil {
 		return err
 	}
@@ -191,7 +245,9 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		// The writer goroutines own both paths now.
 		return link.sendReleasableStriped(record, release)
 	}
-	path := link.direct.Load()
+	if reusable {
+		link.writeBuffer = record[:0]
+	}
 	if path != nil && path.isOpen() {
 		link.directUsed.Store(true)
 		if !link.switched {
@@ -234,9 +290,10 @@ func (link *recordLink) acknowledged(bytes uint64) {
 			kept = append(kept, entry)
 		}
 	}
+	clear(link.retained[len(kept):])
 	link.retained = kept
 	if link.stripe != nil {
-		link.stripe.acknowledged(bytes, link.ackedBytes, time.Now())
+		link.stripe.acknowledged(bytes, link.ackedBytes, link.receivedAt)
 	}
 	link.ackedBytes = bytes
 }
@@ -256,6 +313,9 @@ func (link *recordLink) next(ctx context.Context, timeout time.Duration) (messag
 			return 0, nil, linkTimeout{}
 		case item := <-link.items:
 			if err := link.accept(item); err != nil {
+				if ctx.Err() != nil {
+					return 0, nil, ctx.Err()
+				}
 				return 0, nil, err
 			}
 		}
@@ -282,7 +342,8 @@ func (link *recordLink) poll() (messageKind, []byte, bool, error) {
 
 // ready opens the record with the expected sequence number, if held.
 func (link *recordLink) ready() (messageKind, []byte, bool, error) {
-	record, ok := link.pending[link.expected]
+	item, ok := link.pending[link.expected]
+	record := item.record
 	if !ok {
 		return 0, nil, false, nil
 	}
@@ -293,6 +354,7 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 		return 0, nil, false, err
 	}
 	link.expected++
+	link.receivedAt = item.receivedAt
 	return kind, plaintext, true, nil
 }
 
@@ -318,7 +380,7 @@ func (link *recordLink) accept(item linkItem) error {
 		return errors.New("the peer sent an invalid record")
 	}
 	sequence := binary.BigEndian.Uint32(item.record[4:8])
-	if sequence < link.expected || link.pending[sequence] != nil {
+	if sequence < link.expected || link.pending[sequence].record != nil {
 		// The same record sent on both paths (see retained): keep the first
 		// copy. Authentication happens when the kept copy is opened.
 		return nil
@@ -326,7 +388,7 @@ func (link *recordLink) accept(item linkItem) error {
 	if len(item.record) > maxRecordBytes || len(link.pending) >= maxPendingRecords || link.pendingBytes+len(item.record) > maxPendingBytes {
 		return errors.New("the peer sent too many records out of order")
 	}
-	link.pending[sequence] = item.record
+	link.pending[sequence] = item
 	link.pendingBytes += len(item.record)
 	return nil
 }

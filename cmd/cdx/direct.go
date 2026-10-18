@@ -27,9 +27,10 @@ import (
 const (
 	directChannelID = 1
 	directPieceSize = 64 * 1024
-	// directGatherWait bounds ICE gathering: host candidates are immediate,
-	// a STUN answer normally takes one round trip.
-	directGatherWait = time.Second
+	// Offers wait briefly for host candidates; negotiated peers trickle
+	// later candidates. Non-trickling answers keep the full gather bound.
+	directGatherWait      = time.Second
+	directOfferGatherWait = 50 * time.Millisecond
 	// directMinBytes skips the direct path for small files, which finish
 	// on the relay before a data channel would open.
 	directMinBytes   = 1024 * 1024
@@ -51,12 +52,14 @@ var directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.co
 
 // directOffer is the optional `direct` member of the encrypted file offer.
 type directOffer struct {
-	SDP string `json:"sdp"`
+	SDP     string `json:"sdp"`
+	Trickle bool   `json:"trickle,omitempty"`
 }
 
-// directSignal is the payload of a receiver's signal record: its answer,
-// then (trickle ICE) one record per local candidate as it is discovered.
+// directSignal carries an SDP answer or a trickled candidate. Trickle in
+// the answer opts into candidates from senders that advertised support.
 type directSignal struct {
+	Trickle   bool                     `json:"trickle,omitempty"`
 	SDP       string                   `json:"sdp,omitempty"`
 	Candidate *webrtc.ICECandidateInit `json:"candidate,omitempty"`
 }
@@ -74,11 +77,12 @@ type directPath struct {
 	channel    *webrtc.DataChannel
 	opened     chan struct{}
 	// lost closes when the data channel or the ICE connection fails.
-	lost      chan struct{}
-	lostOnce  sync.Once
-	openOnce  sync.Once
-	drained   chan struct{}
-	assembler recordAssembler
+	lost       chan struct{}
+	lostOnce   sync.Once
+	openOnce   sync.Once
+	drained    chan struct{}
+	assembler  recordAssembler
+	candidates chan webrtc.ICECandidateInit
 }
 
 // newDirectPath creates the peer connection and its pre-negotiated data
@@ -149,6 +153,17 @@ func (path *directPath) localDescription() string {
 }
 
 func (path *directPath) createOffer() (string, error) {
+	path.candidates = make(chan webrtc.ICECandidateInit, maxRemoteCandidates)
+	path.connection.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+		if candidate == nil {
+			close(path.candidates)
+			return
+		}
+		select {
+		case path.candidates <- candidate.ToJSON():
+		default:
+		}
+	})
 	offer, err := path.connection.CreateOffer(nil)
 	if err != nil {
 		return "", err
@@ -156,7 +171,13 @@ func (path *directPath) createOffer() (string, error) {
 	if err := path.connection.SetLocalDescription(offer); err != nil {
 		return "", err
 	}
-	return path.localDescription(), nil
+	timer := time.NewTimer(directOfferGatherWait)
+	defer timer.Stop()
+	select {
+	case <-webrtc.GatheringCompletePromise(path.connection):
+	case <-timer.C:
+	}
+	return path.connection.LocalDescription().SDP, nil
 }
 
 func (path *directPath) acceptAnswer(sdp string) error {
@@ -264,31 +285,41 @@ func (path *directPath) close() {
 // recordAssembler rebuilds records from data-channel messages using each
 // record's plaintext header: 12 header bytes, the plaintext, a 16-byte tag.
 type recordAssembler struct {
-	buffer []byte
+	header       [headerBytes]byte
+	headerLength int
+	buffer       []byte
 }
 
 func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
-	assembler.buffer = append(assembler.buffer, piece...)
 	var records [][]byte
-	for len(assembler.buffer) >= headerBytes {
-		header := assembler.buffer[:headerBytes]
-		if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
-			return nil, errors.New("direct connection sent an invalid record")
+	for len(piece) > 0 {
+		if assembler.buffer == nil {
+			count := min(headerBytes-assembler.headerLength, len(piece))
+			copy(assembler.header[assembler.headerLength:], piece[:count])
+			assembler.headerLength += count
+			piece = piece[count:]
+			if assembler.headerLength < headerBytes {
+				break
+			}
+			header := assembler.header[:]
+			if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
+				return nil, errors.New("direct connection sent an invalid record")
+			}
+			length := uint64(headerBytes+recordTagBytes) + uint64(binary.BigEndian.Uint32(header[8:12]))
+			if length > maxRecordBytes {
+				return nil, errors.New("direct connection sent an oversized record")
+			}
+			assembler.buffer = make([]byte, headerBytes, int(length))
+			copy(assembler.buffer, header)
+			assembler.headerLength = 0
 		}
-		length := headerBytes + int(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
-		if length > maxRecordBytes {
-			return nil, errors.New("direct connection sent an oversized record")
+		count := min(cap(assembler.buffer)-len(assembler.buffer), len(piece))
+		assembler.buffer = append(assembler.buffer, piece[:count]...)
+		piece = piece[count:]
+		if len(assembler.buffer) == cap(assembler.buffer) {
+			records = append(records, assembler.buffer)
+			assembler.buffer = nil
 		}
-		if len(assembler.buffer) < length {
-			break
-		}
-		record := make([]byte, length)
-		copy(record, assembler.buffer[:length])
-		records = append(records, record)
-		assembler.buffer = assembler.buffer[length:]
-	}
-	if len(assembler.buffer) == 0 {
-		assembler.buffer = nil
 	}
 	return records, nil
 }
