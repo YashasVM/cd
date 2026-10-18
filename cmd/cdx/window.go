@@ -51,7 +51,9 @@ func (window *adaptiveWindow) acked(bytes uint64, at time.Time) {
 		if rtt > 0 && (window.minRTT == 0 || rtt < window.minRTT) {
 			window.minRTT = rtt
 		}
-		window.samples = window.samples[covered+1:]
+		remaining := copy(window.samples, window.samples[covered+1:])
+		clear(window.samples[remaining:])
+		window.samples = window.samples[:remaining]
 	}
 	if window.markTime.IsZero() {
 		window.markBytes, window.markTime = bytes, at

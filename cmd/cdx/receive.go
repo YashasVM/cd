@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,7 +18,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -221,7 +220,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	}
 	dialCtx, cancelDial := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelDial()
-	connection, response, err := websocket.DefaultDialer.DialContext(dialCtx, relayBase+"/"+invitation.encodedID(), http.Header{})
+	connection, response, err := dialRelay(dialCtx, relayBase+"/"+invitation.encodedID())
 	if err != nil {
 		if dialCtx.Err() != nil && ctx.Err() == nil {
 			return errors.New("connect to CD relay timed out: check your network and try again")
@@ -321,7 +320,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	// Data starts on the relay right away; answer a direct-path offer in the
 	// background and the sender moves over when the data channel opens.
 	if offer.Direct != nil && directEnabled() {
-		go answerDirectPath(link, offer.Direct.SDP)
+		go answerDirectPath(link, offer.Direct.SDP, offer.Direct.Trickle)
 	}
 
 	terminal := isTerminal(os.Stderr)
@@ -333,9 +332,11 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		}
 	}
 
+	writer := bufio.NewWriterSize(stagingFile, ackIntervalBytes)
 	var received uint64
 	var chunks uint32
 	var acknowledged uint64
+	candidates := 0
 	for {
 		kind, payload, err = link.next(ctx, transferIdle)
 		if err != nil {
@@ -346,12 +347,26 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			return err
 		}
 		switch kind {
+		case kindSignal:
+			if offer.Direct == nil || !offer.Direct.Trickle {
+				return errors.New("the sender sent an unexpected direct candidate")
+			}
+			if candidates >= maxRemoteCandidates {
+				continue
+			}
+			var signal directSignal
+			if json.Unmarshal(payload, &signal) == nil && signal.Candidate != nil {
+				candidates++
+				if path := link.direct.Load(); path != nil {
+					_ = path.addCandidate(*signal.Candidate)
+				}
+			}
 		case kindChunk:
 			if len(payload) == 0 || received+uint64(len(payload)) > size {
 				bar.finish()
 				return errors.New("the sender sent more data than promised")
 			}
-			if _, err := stagingFile.Write(payload); err != nil {
+			if _, err := writer.Write(payload); err != nil {
 				bar.finish()
 				return fmt.Errorf("write file while receiving: %s", underlyingReason(err))
 			}
@@ -370,6 +385,9 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			endChunks, endBytes, err := decodeCounts(payload)
 			if err != nil || endBytes != size || endBytes != received || endChunks != chunks {
 				return errors.New("the transfer ended before the complete file arrived")
+			}
+			if err := writer.Flush(); err != nil {
+				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
 			}
 			if err := stagingFile.Sync(); err != nil {
 				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
@@ -463,7 +481,7 @@ func publishReceivedFile(root *os.Root, staging, final string, force bool) error
 // record, then trickles each local ICE candidate in its own signal record,
 // so the answer waits for no STUN round trip. Any failure leaves the
 // transfer on the relay.
-func answerDirectPath(link *recordLink, offerSDP string) {
+func answerDirectPath(link *recordLink, offerSDP string, trickle bool) {
 	path, err := newDirectPath(link.directRecord, link.directLost)
 	if err != nil {
 		return
@@ -492,7 +510,7 @@ func answerDirectPath(link *recordLink, offerSDP string) {
 	if err != nil {
 		return
 	}
-	signal, err := json.Marshal(directSignal{SDP: answer})
+	signal, err := json.Marshal(directSignal{SDP: answer, Trickle: trickle})
 	if err != nil || link.send(kindSignal, signal) != nil {
 		return
 	}

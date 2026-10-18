@@ -47,7 +47,6 @@ const (
 	// one record so its delivery rate stays known.
 	stripeBudget = 16 * 1024 * 1024
 	stripeMinCap = chunkSize + 64
-	stripePoll   = 2 * time.Millisecond
 	// stripeQueueRecords bounds the queues; the ack window keeps them far
 	// below it.
 	stripeQueueRecords = 512
@@ -64,7 +63,8 @@ type striper struct {
 	data    chan stripeItem
 	control chan []byte
 	// relayRoom wakes the relay writer when an ack frees room.
-	relayRoom chan struct{}
+	relayRoom  chan struct{}
+	directRoom chan struct{}
 
 	mu        sync.Mutex
 	relayCap  uint64
@@ -86,10 +86,11 @@ type striper struct {
 
 func newStriper() *striper {
 	s := &striper{
-		data:      make(chan stripeItem, stripeQueueRecords),
-		control:   make(chan []byte, stripeQueueRecords),
-		relayRoom: make(chan struct{}, 1),
-		step:      stripeShareStep,
+		data:       make(chan stripeItem, stripeQueueRecords),
+		control:    make(chan []byte, stripeQueueRecords),
+		relayRoom:  make(chan struct{}, 1),
+		directRoom: make(chan struct{}, 1),
+		step:       stripeShareStep,
 	}
 	s.setShare(stripeStartShare)
 	return s
@@ -111,19 +112,25 @@ func (s *striper) acknowledged(bytes uint64, previous uint64, at time.Time) {
 		s.relayBytes -= uint64(len(s.relayUnacked[covered].record))
 		covered++
 	}
-	clear(s.relayUnacked[:covered])
-	s.relayUnacked = s.relayUnacked[covered:]
+	remaining := copy(s.relayUnacked, s.relayUnacked[covered:])
+	clear(s.relayUnacked[remaining:])
+	s.relayUnacked = s.relayUnacked[:remaining]
 	covered = 0
 	for covered < len(s.directReleases) && s.directReleases[covered] <= bytes {
 		covered++
 	}
-	s.directReleases = s.directReleases[covered:]
+	remaining = copy(s.directReleases, s.directReleases[covered:])
+	s.directReleases = s.directReleases[:remaining]
 	if !s.relayDead {
 		s.adjust(bytes-min(previous, bytes), at)
 	}
 	s.mu.Unlock()
 	select {
 	case s.relayRoom <- struct{}{}:
+	default:
+	}
+	select {
+	case s.directRoom <- struct{}{}:
 	default:
 	}
 }
@@ -206,6 +213,7 @@ func (link *recordLink) directHasRoom(path *directPath) bool {
 	link.stripe.mu.Lock()
 	limit := link.stripe.directCap
 	link.stripe.mu.Unlock()
+	path.channel.SetBufferedAmountLowThreshold(min(directBufferLow, limit/2))
 	return path.channel.BufferedAmount() < limit
 }
 
@@ -229,8 +237,17 @@ func (link *recordLink) writeDirect(path *directPath) {
 				select {
 				case <-link.stop:
 					return
+				case <-path.lost:
+					return
+				case record = <-s.control:
+					if err := path.send(record); err != nil {
+						link.deliver(linkItem{err: err, direct: true})
+						return
+					}
+					idleSince = time.Now()
 				case <-path.drained:
-				case <-time.After(stripePoll):
+				case <-s.directRoom:
+				case <-time.After(transferIdle - time.Since(idleSince)):
 				}
 				continue
 			}

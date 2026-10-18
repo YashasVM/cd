@@ -1,0 +1,213 @@
+diff --git i/cmd/cdx/direct_bench_test.go w/cmd/cdx/direct_bench_test.go
+index 6efda60..522c559 100644
+--- i/cmd/cdx/direct_bench_test.go
++++ w/cmd/cdx/direct_bench_test.go
+@@ -3,0 +4 @@ import (
++	"bytes"
+@@ -4,0 +6 @@ import (
++	"fmt"
+@@ -15,3 +17,5 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-	t := &testing.T{}
+-	sender, receiver, _ := linkedPair(t)
+-	senderPath, _ := newDirectPath(sender.directRecord, sender.directLost)
++	sender, receiver, _ := linkedPair(b)
++	senderPath, err := newDirectPath(sender.directRecord, sender.directLost)
++	if err != nil {
++		b.Fatal(err)
++	}
+@@ -19,2 +23,8 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-	offer, _ := senderPath.createOffer()
+-	receiverPath, _ := newDirectPath(receiver.directRecord, receiver.directLost)
++	offer, err := senderPath.createOffer()
++	if err != nil {
++		b.Fatal(err)
++	}
++	receiverPath, err := newDirectPath(receiver.directRecord, receiver.directLost)
++	if err != nil {
++		b.Fatal(err)
++	}
+@@ -22,4 +32,24 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-	answer, _ := receiverPath.answerOffer(offer, nil)
+-	_ = senderPath.acceptAnswer(answer)
+-	<-senderPath.opened
+-	<-receiverPath.opened
++	answer, err := receiverPath.answerOffer(offer, nil)
++	if err != nil {
++		b.Fatal(err)
++	}
++	if err := senderPath.acceptAnswer(answer); err != nil {
++		b.Fatal(err)
++	}
++	for _, path := range []*directPath{senderPath, receiverPath} {
++		select {
++		case <-path.opened:
++		case <-time.After(10 * time.Second):
++			b.Fatal("direct path did not open")
++		}
++	}
++	benchmarkRecordTransfer(b, sender, receiver)
++}
++
++func BenchmarkRelayPathThroughput(b *testing.B) {
++	sender, receiver, _ := linkedPair(b)
++	benchmarkRecordTransfer(b, sender, receiver)
++}
++
++func benchmarkRecordTransfer(b *testing.B, sender, receiver *recordLink) {
++	b.Helper()
+@@ -26,0 +57,3 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
++	for index := range chunk {
++		chunk[index] = byte(index*31 + index/251)
++	}
+@@ -28,0 +62 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
++	b.ReportAllocs()
+@@ -31 +65 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-		done := make(chan struct{})
++		done := make(chan error, 1)
+@@ -33,2 +67,10 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-			for range total {
+-				_, _, _ = receiver.next(context.Background(), 10*time.Second)
++			for index := range total {
++				kind, payload, err := receiver.next(context.Background(), 10*time.Second)
++				if err != nil {
++					done <- err
++					return
++				}
++				if kind != kindChunk || !bytes.Equal(payload, chunk) {
++					done <- fmt.Errorf("record %d: kind %d or payload differs", index, kind)
++					return
++				}
+@@ -36 +78 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-			close(done)
++			done <- nil
+@@ -39 +81,6 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-			_ = sender.send(kindChunk, chunk)
++			if err := sender.send(kindChunk, chunk); err != nil {
++				b.Fatal(err)
++			}
++		}
++		if err := <-done; err != nil {
++			b.Fatal(err)
+@@ -41 +87,0 @@ func BenchmarkDirectPathThroughput(b *testing.B) {
+-		<-done
+diff --git i/cmd/cdx/link_test.go w/cmd/cdx/link_test.go
+index aa73cb9..e2510b2 100644
+--- i/cmd/cdx/link_test.go
++++ w/cmd/cdx/link_test.go
+@@ -20 +20 @@ import (
+-func relayPair(t *testing.T) (*websocket.Conn, *websocket.Conn, chan int) {
++func relayPair(t testing.TB) (*websocket.Conn, *websocket.Conn, chan int) {
+@@ -63 +63 @@ func relayPair(t *testing.T) (*websocket.Conn, *websocket.Conn, chan int) {
+-func linkedPair(t *testing.T) (*recordLink, *recordLink, chan int) {
++func linkedPair(t testing.TB) (*recordLink, *recordLink, chan int) {
+diff --git a/cmd/cdx/codec_bench_test.go b/cmd/cdx/codec_bench_test.go
+new file mode 100644
+--- /dev/null
++++ b/cmd/cdx/codec_bench_test.go
+@@ -0,0 +1,25 @@
++package main
++import ("bytes";"testing")
++func BenchmarkRecordRoundTrip(b *testing.B) {
++	sealer, err := newSealer(testInvitation(), senderDirection)
++	if err != nil {
++		b.Fatal(err)
++	}
++	opener, err := newOpener(testInvitation(), senderDirection)
++	if err != nil {
++		b.Fatal(err)
++	}
++	payload := bytes.Repeat([]byte{31}, chunkSize)
++	b.SetBytes(chunkSize)
++	b.ReportAllocs()
++	for b.Loop() {
++		record, err := sealer.seal(kindChunk, payload)
++		if err != nil {
++			b.Fatal(err)
++		}
++		kind, got, err := opener.open(record)
++		if err != nil || kind != kindChunk || !bytes.Equal(got, payload) {
++			b.Fatalf("round trip failed: %d %v", kind, err)
++		}
++	}
++}
+diff --git a/cmd/cdx/perf_regression_test.go b/cmd/cdx/perf_regression_test.go
+new file mode 100644
+--- /dev/null
++++ b/cmd/cdx/perf_regression_test.go
+@@ -0,0 +1,76 @@
++package main
++import ("bytes";"context";"net";"strings";"sync/atomic";"testing";"time";"github.com/pion/webrtc/v4";"github.com/gorilla/websocket")
++func TestOfferDoesNotWaitForUnresponsiveSTUN(t *testing.T) {
++	socket, err := net.ListenPacket("udp4", "127.0.0.1:0")
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer socket.Close()
++	saved := directICEServers
++	directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:" + socket.LocalAddr().String()}}}
++	defer func() { directICEServers = saved }()
++	path, err := newDirectPath(func([]byte) {}, func(error) {})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer path.close()
++	started := time.Now()
++	offer, err := path.createOffer()
++	elapsed := time.Since(started)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if elapsed > 500*time.Millisecond {
++		t.Fatalf("offer waited %s for STUN", elapsed)
++	}
++	if !strings.Contains(offer, " typ host") {
++		t.Fatal("offer omitted host candidates")
++	}
++	t.Logf("offer ready in %s with host candidates while STUN remains unanswered", elapsed)
++}
++
++type countedRelayConn struct {
++	net.Conn
++	writes *atomic.Uint64
++}
++
++func (connection countedRelayConn) Write(payload []byte) (int, error) {
++	connection.writes.Add(1)
++	return connection.Conn.Write(payload)
++}
++
++func TestRelayChunkUsesOneSocketWrite(t *testing.T) {
++	var writes atomic.Uint64
++	saved := websocket.DefaultDialer
++	dialer := *saved
++	dialer.NetDialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
++		var networkDialer net.Dialer
++		connection, err := networkDialer.DialContext(ctx, network, address)
++		if err != nil {
++			return nil, err
++		}
++		return countedRelayConn{Conn: connection, writes: &writes}, nil
++	}
++	websocket.DefaultDialer = &dialer
++	defer func() { websocket.DefaultDialer = saved }()
++	sender, receiver, _ := relayPair(t)
++	sealer, err := newSealer(testInvitation(), senderDirection)
++	if err != nil {
++		t.Fatal(err)
++	}
++	record, err := sealer.seal(kindChunk, bytes.Repeat([]byte{7}, chunkSize))
++	if err != nil {
++		t.Fatal(err)
++	}
++	writes.Store(0)
++	if err := sender.WriteMessage(websocket.BinaryMessage, record); err != nil {
++		t.Fatal(err)
++	}
++	kind, received, err := receiver.ReadMessage()
++	if err != nil || kind != websocket.BinaryMessage || !bytes.Equal(received, record) {
++		t.Fatalf("relay record changed: %d %v", kind, err)
++	}
++	if count := writes.Load(); count != 1 {
++		t.Fatalf("256 KiB record took %d socket writes, want 1", count)
++	}
++}

@@ -46,9 +46,8 @@ const (
 	kindAccept
 	kindAck
 	kindComplete
-	// kindSignal (receiver→sender) carries the receiver's WebRTC answer for
-	// the direct path. Receivers send it only when the offer included SDP,
-	// so senders that predate it never see it.
+	// kindSignal carries WebRTC answers and candidates. Sender candidates
+	// require the receiver to advertise trickle support in its answer.
 	kindSignal messageKind = 9
 )
 
@@ -95,16 +94,18 @@ func (value invitation) receiverTokenHash() ([]byte, error) {
 
 type recordSealer struct {
 	aead      cipher.AEAD
-	id        [16]byte
 	direction direction
 	sequence  uint64
+	nonce     [12]byte
+	aad       [headerBytes + 16]byte
 }
 
 type recordOpener struct {
 	aead      cipher.AEAD
-	id        [16]byte
 	direction direction
 	sequence  uint64
+	nonce     [12]byte
+	aad       [headerBytes + 16]byte
 }
 
 func newRecordAEAD(value invitation, valueDirection direction) (cipher.AEAD, error) {
@@ -125,38 +126,43 @@ func newRecordAEAD(value invitation, valueDirection direction) (cipher.AEAD, err
 
 func newSealer(value invitation, valueDirection direction) (*recordSealer, error) {
 	aead, err := newRecordAEAD(value, valueDirection)
-	return &recordSealer{aead: aead, id: value.id, direction: valueDirection}, err
+	return &recordSealer{aead: aead, direction: valueDirection, nonce: recordNonce(valueDirection, 0), aad: recordAAD(nil, value.id)}, err
 }
 
 func newOpener(value invitation, valueDirection direction) (*recordOpener, error) {
 	aead, err := newRecordAEAD(value, valueDirection)
-	return &recordOpener{aead: aead, id: value.id, direction: valueDirection}, err
+	return &recordOpener{aead: aead, direction: valueDirection, nonce: recordNonce(valueDirection, 0), aad: recordAAD(nil, value.id)}, err
 }
 
 func validKind(valueDirection direction, kind messageKind) bool {
 	if valueDirection == senderDirection {
-		return kind >= kindOffer && kind <= kindEnd
+		return kind >= kindOffer && kind <= kindEnd || kind == kindSignal
 	}
 	return kind >= kindAccept && kind <= kindComplete || kind == kindSignal
 }
 
-func recordNonce(valueDirection direction, sequence uint32) []byte {
-	nonce := make([]byte, 12)
-	copy(nonce, []byte("CDS1"))
+func recordNonce(valueDirection direction, sequence uint32) [12]byte {
+	var nonce [12]byte
+	copy(nonce[:], []byte("CDS1"))
 	if valueDirection == receiverDirection {
-		copy(nonce, []byte("CDR1"))
+		copy(nonce[:], []byte("CDR1"))
 	}
 	binary.BigEndian.PutUint64(nonce[4:], uint64(sequence))
 	return nonce
 }
 
-func recordAAD(header []byte, id [16]byte) []byte {
-	aad := make([]byte, 0, headerBytes+len(id))
-	aad = append(aad, header...)
-	return append(aad, id[:]...)
+func recordAAD(header []byte, id [16]byte) [headerBytes + 16]byte {
+	var aad [headerBytes + 16]byte
+	copy(aad[:headerBytes], header)
+	copy(aad[headerBytes:], id[:])
+	return aad
 }
 
 func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, error) {
+	return value.sealInto(nil, kind, plaintext)
+}
+
+func (value *recordSealer) sealInto(buffer []byte, kind messageKind, plaintext []byte) ([]byte, error) {
 	if !validKind(value.direction, kind) {
 		return nil, errors.New("message kind is invalid for direction")
 	}
@@ -167,18 +173,26 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 	if headerBytes+ciphertextLength > maxRecordBytes {
 		return nil, errors.New("record is too large")
 	}
-	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
+	length := headerBytes + ciphertextLength
+	if cap(buffer) < length {
+		buffer = make([]byte, length)
+	}
+	header := buffer[:headerBytes]
 	copy(header, []byte("CD"))
 	header[2] = protocolVersion
 	header[3] = byte(kind)
 	sequence := uint32(value.sequence)
 	binary.BigEndian.PutUint32(header[4:8], sequence)
 	binary.BigEndian.PutUint32(header[8:12], uint32(len(plaintext)))
-	record := value.aead.Seal(header, recordNonce(value.direction, sequence), plaintext, recordAAD(header, value.id))
+	binary.BigEndian.PutUint64(value.nonce[4:], uint64(sequence))
+	copy(value.aad[:headerBytes], header)
+	record := value.aead.Seal(header, value.nonce[:], plaintext, value.aad[:])
 	value.sequence++
 	return record, nil
 }
 
+// open authenticates and decrypts record in place. The caller owns record
+// exclusively; the returned plaintext shares its backing array.
 func (value *recordOpener) open(record []byte) (messageKind, []byte, error) {
 	if len(record) < headerBytes+value.aead.Overhead() || len(record) > maxRecordBytes {
 		return 0, nil, errors.New("record length is invalid")
@@ -199,7 +213,9 @@ func (value *recordOpener) open(record []byte) (messageKind, []byte, error) {
 	if uint64(plaintextLength)+uint64(headerBytes+value.aead.Overhead()) != uint64(len(record)) {
 		return 0, nil, errors.New("record plaintext length is invalid")
 	}
-	plaintext, err := value.aead.Open(nil, recordNonce(value.direction, sequence), record[headerBytes:], recordAAD(header, value.id))
+	binary.BigEndian.PutUint64(value.nonce[4:], uint64(sequence))
+	copy(value.aad[:headerBytes], header)
+	plaintext, err := value.aead.Open(record[headerBytes:headerBytes], value.nonce[:], record[headerBytes:], value.aad[:])
 	if err != nil {
 		return 0, nil, errors.New("record authentication failed")
 	}

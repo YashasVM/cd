@@ -17,7 +17,7 @@ import (
 
 // relayPair connects two WebSockets through an in-memory relay that
 // forwards binary frames both ways, like a paired TransferRoom.
-func relayPair(t *testing.T) (*websocket.Conn, *websocket.Conn, chan int) {
+func relayPair(t testing.TB) (*websocket.Conn, *websocket.Conn, chan int) {
 	t.Helper()
 	upgrader := websocket.Upgrader{}
 	sockets := make(chan *websocket.Conn, 2)
@@ -31,11 +31,11 @@ func relayPair(t *testing.T) (*websocket.Conn, *websocket.Conn, chan int) {
 	}))
 	t.Cleanup(server.Close)
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
-	left, _, err := websocket.DefaultDialer.Dial(url, nil)
+	left, _, err := dialRelay(context.Background(), url)
 	if err != nil {
 		t.Fatal(err)
 	}
-	right, _, err := websocket.DefaultDialer.Dial(url, nil)
+	right, _, err := dialRelay(context.Background(), url)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func relayPair(t *testing.T) (*websocket.Conn, *websocket.Conn, chan int) {
 	return left, right, closeCodes
 }
 
-func linkedPair(t *testing.T) (*recordLink, *recordLink, chan int) {
+func linkedPair(t testing.TB) (*recordLink, *recordLink, chan int) {
 	t.Helper()
 	value := testInvitation()
 	senderSealer, _ := newSealer(value, senderDirection)
@@ -80,7 +80,7 @@ func TestLinkMergesRecordsFromBothPathsInSequenceOrder(t *testing.T) {
 	value := testInvitation()
 	sealer, _ := newSealer(value, senderDirection)
 	opener, _ := newOpener(value, senderDirection)
-	link := &recordLink{opener: opener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32][]byte{}}
+	link := &recordLink{opener: opener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32]linkItem{}}
 	var records [][]byte
 	for index := 0; index < 4; index++ {
 		record, _ := sealer.seal(kindChunk, []byte{byte(index)})
@@ -105,7 +105,7 @@ func TestLinkMergesRecordsFromBothPathsInSequenceOrder(t *testing.T) {
 }
 
 func TestLinkPathFailuresOnlyMatterForThePathInUse(t *testing.T) {
-	link := &recordLink{items: make(chan linkItem, 2), stop: make(chan struct{}), pending: map[uint32][]byte{}}
+	link := &recordLink{items: make(chan linkItem, 2), stop: make(chan struct{}), pending: map[uint32]linkItem{}}
 	if err := link.accept(linkItem{err: errors.New("ice failed"), direct: true}); err != nil {
 		t.Fatalf("an unused direct path failing ended the transfer: %v", err)
 	}
@@ -325,7 +325,7 @@ func TestPeerLeftRightAfterCompleteIsNotAFailure(t *testing.T) {
 	value := testInvitation()
 	receiverSealer, _ := newSealer(value, receiverDirection)
 	senderOpener, _ := newOpener(value, receiverDirection)
-	link := &recordLink{opener: senderOpener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32][]byte{}}
+	link := &recordLink{opener: senderOpener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32]linkItem{}}
 	complete, _ := receiverSealer.seal(kindComplete, encodeCounts(0, 0))
 	link.items <- linkItem{record: complete}
 	link.items <- linkItem{err: errors.New("receiver disconnected")}
@@ -342,7 +342,7 @@ func TestPeerLeftRightAfterCompleteIsNotAFailure(t *testing.T) {
 }
 
 func TestRecordLinkBoundsHeldBytes(t *testing.T) {
-	link := &recordLink{pending: map[uint32][]byte{}}
+	link := &recordLink{pending: map[uint32]linkItem{}}
 	for sequence := uint32(1); sequence <= 32; sequence++ {
 		record := make([]byte, maxRecordBytes)
 		binary.BigEndian.PutUint32(record[4:8], sequence)
