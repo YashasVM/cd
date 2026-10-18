@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createSink, createStageSink, createOPFSSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
+import { createSink, createStageSink, createOPFSSink, createPickerSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
 
 const SAFARI_MAC =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
@@ -120,7 +120,7 @@ describe('download sink lifecycle', () => {
     await withBrowser(t, { async getDirectory() { return {
       async getFileHandle() { return {
         async createWritable() { return {
-          async write(bytes) { writes.push(Uint8Array.from(bytes)); },
+          async write(bytes) { writes.push(bytes); },
           async close() { closed++; },
           async abort() {}
         }; },
@@ -129,27 +129,28 @@ describe('download sink lifecycle', () => {
       async removeEntry() {}
     }; } }, async () => {
       const sink = await createOPFSSink({ name: 'big.bin' });
-      const chunkSize = 64 * 1024;
-      for (let index = 0; index < 10; index++) {
+      const chunkSize = 256 * 1024;
+      for (let index = 0; index < 18; index++) {
         const chunk = new Uint8Array(chunkSize).fill(index);
         // Exercise every accepted input shape across the chunks.
         if (index % 3 === 0) await sink.write(chunk);
         else if (index % 3 === 1) await sink.write(chunk.buffer.slice(0));
         else await sink.write(new DataView(chunk.buffer.slice(0)));
       }
-      // 10 x 64 KiB: the 8th chunk completes 512 KiB and flushes once.
+      // The sixteenth chunk fills the 4 MiB batch.
       assert.equal(writes.length, 1);
-      assert.equal(writes[0].byteLength, 512 * 1024);
+      assert.equal(writes[0].size, 4 * 1024 * 1024);
       await sink.file();
       assert.equal(writes.length, 2);
-      assert.equal(writes[1].byteLength, 2 * chunkSize);
+      assert.equal(writes[1].size, 2 * chunkSize);
       assert.equal(closed, 1);
-      const total = writes[0].byteLength + writes[1].byteLength;
-      assert.equal(total, 10 * chunkSize);
+      const parts = await Promise.all(writes.map(async (part) => new Uint8Array(await part.arrayBuffer())));
+      const total = parts[0].byteLength + parts[1].byteLength;
+      assert.equal(total, 18 * chunkSize);
       const flat = new Uint8Array(total);
-      flat.set(writes[0]);
-      flat.set(writes[1], writes[0].byteLength);
-      for (let index = 0; index < 10; index++) {
+      flat.set(parts[0]);
+      flat.set(parts[1], parts[0].byteLength);
+      for (let index = 0; index < 18; index++) {
         assert.ok(flat.slice(index * chunkSize, (index + 1) * chunkSize).every((byte) => byte === index));
       }
     });
@@ -181,9 +182,8 @@ describe('download sink lifecycle', () => {
     let maxOutstanding = 0;
     const writable = {
       write(bytes) {
-        const copy = Uint8Array.from(bytes);
         const index = written.length;
-        written.push(copy);
+        written.push(bytes);
         outstanding++;
         maxOutstanding = Math.max(maxOutstanding, outstanding);
         // Vary completion timing so out-of-order completion would show up.
@@ -196,7 +196,7 @@ describe('download sink lifecycle', () => {
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'ordered.bin' });
       const expected = [];
-      for (let index = 0; index < 8; index++) {
+      for (let index = 0; index < 20; index++) {
         const chunk = new Uint8Array(256 * 1024).fill(index + 1);
         expected.push(chunk);
         await sink.write(chunk);
@@ -205,11 +205,69 @@ describe('download sink lifecycle', () => {
       expected.push(tail);
       await sink.write(tail);
       await sink.file();
-      const actual = Buffer.concat(written.map((part) => Buffer.from(part)));
+      const actual = Buffer.concat(await Promise.all(written.map(async (part) => Buffer.from(part instanceof Blob ? await part.arrayBuffer() : part))));
       assert.equal(actual.equals(Buffer.concat(expected.map((part) => Buffer.from(part)))), true);
       assert.equal(maxOutstanding, 1);
       assert.deepEqual(events.slice(0, -1), written.map((_, index) => `done:${index}`));
       assert.equal(events.at(-1), 'close');
+    });
+  });
+
+  it('batches picker writes and waits for the final write before closing', async () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    const pending = deferred();
+    const writes = [];
+    let closed = false;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+      async showSaveFilePicker() { return { async createWritable() { return {
+        write(bytes) { writes.push(bytes); return pending.promise; },
+        async close() { closed = true; },
+        async abort() {}
+      }; } }; }
+    } });
+    try {
+      const sink = await createPickerSink({ name: 'picked.bin' });
+      for (let index = 0; index < 16; index++) await sink.write(new Uint8Array(256 * 1024).fill(index));
+      assert.equal(writes.length, 1);
+      const closing = sink.close();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(closed, false);
+      pending.resolve();
+      await closing;
+      const bytes = new Uint8Array(await writes[0].arrayBuffer());
+      for (let index = 0; index < 16; index++) {
+        assert.ok(bytes.subarray(index * 256 * 1024, (index + 1) * 256 * 1024).every((byte) => byte === index));
+      }
+      assert.equal(closed, true);
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'window', original);
+      else delete globalThis.window;
+    }
+  });
+
+  it('flushes staged OPFS bytes before exposing a bundle file', async (t) => {
+    const writes = [];
+    const removed = [];
+    let closed = false;
+    const storage = { async getDirectory() { return {
+      async getFileHandle() { return {
+        async createWritable() { return {
+          async write(bytes) { writes.push(bytes); },
+          async close() { closed = true; },
+          async abort() {}
+        }; },
+        async getFile() { assert.equal(closed, true); return new Blob(writes); }
+      }; },
+      async removeEntry(name) { removed.push(name); }
+    }; } };
+    await withBrowser(t, storage, async () => {
+      const staged = await createStageSink({ name: 'bundle.zip', size: 3 });
+      await staged.write(new Uint8Array([1, 2]));
+      await staged.write(new Uint8Array([3]));
+      const { file, cleanup } = await staged.toFile();
+      assert.deepEqual([...new Uint8Array(await file.arrayBuffer())], [1, 2, 3]);
+      await cleanup();
+      assert.equal(removed.length, 1);
     });
   });
 
@@ -223,9 +281,9 @@ describe('download sink lifecycle', () => {
     };
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'fail.bin' });
-      await sink.write(new Uint8Array(512 * 1024));
+      await sink.write(new Uint8Array(4 * MiB));
       // Second flush is due while the first is still in flight, so it waits on it.
-      const second = sink.write(new Uint8Array(512 * 1024));
+      const second = sink.write(new Uint8Array(4 * MiB));
       first.reject(new Error('disk full'));
       await assert.rejects(second, { message: 'disk full' });
       assert.equal(calls, 1);
@@ -241,7 +299,7 @@ describe('download sink lifecycle', () => {
     };
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'fail-small.bin' });
-      await sink.write(new Uint8Array(512 * 1024));
+      await sink.write(new Uint8Array(4 * MiB));
       first.reject(new Error('disk full'));
       await new Promise((resolve) => setImmediate(resolve));
       await assert.rejects(sink.write(new Uint8Array(10)), { message: 'disk full' });

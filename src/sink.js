@@ -66,14 +66,59 @@ export function downloadUrlFor(file, offerName, onRevoke) {
   };
 }
 
+const FLUSH_BYTES = 4 * 1024 * 1024;
+
+function bufferedWriter(writable) {
+  let pending = [];
+  let pendingBytes = 0;
+  let inflight = null;
+  let failure = null;
+  const flush = async () => {
+    if (pendingBytes === 0) return;
+    // Blob accepts byte views and keeps the coalesced batch off the JS heap.
+    // A single large chunk can go straight through without a second copy.
+    const batch = pending.length === 1 ? pending[0] : new Blob(pending);
+    pending = [];
+    pendingBytes = 0;
+    if (inflight) await inflight;
+    const next = writable.write(batch);
+    next.catch((error) => { failure ??= error; });
+    inflight = next;
+  };
+  return {
+    async write(bytes) {
+      if (failure) throw failure;
+      const view = bytes instanceof Uint8Array
+        ? bytes
+        : ArrayBuffer.isView(bytes)
+          ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+          : new Uint8Array(bytes);
+      pending.push(view);
+      pendingBytes += view.byteLength;
+      if (pendingBytes >= FLUSH_BYTES) await flush();
+    },
+    async drain() {
+      await flush();
+      if (inflight) await inflight;
+      if (failure) throw failure;
+    },
+    async abort() {
+      pending = [];
+      pendingBytes = 0;
+      try { await writable.abort(); } catch { /* Best effort. */ }
+    }
+  };
+}
+
 export async function createPickerSink({ name }) {
   const handle = await window.showSaveFilePicker({ suggestedName: name });
   const writable = await handle.createWritable();
+  const writer = bufferedWriter(writable);
   return {
     kind: 'saved',
-    async write(bytes) { await writable.write(bytes); },
-    async close() { await writable.close(); return {}; },
-    async abort() { try { await writable.abort(); } catch { /* Best effort. */ } }
+    write: writer.write,
+    async close() { await writer.drain(); await writable.close(); return {}; },
+    abort: writer.abort
   };
 }
 
@@ -88,68 +133,17 @@ export async function createOPFSSink({ name }) {
     try { await root.removeEntry(internal); } catch { /* Best effort. */ }
     throw error;
   }
-  // Every write() is an IPC round-trip to the storage thread. Coalescing
-  // small network chunks (16-64 KiB) into ~512 KiB flushes cuts the syscall
-  // count by an order of magnitude; the copy is one fast memmove.
-  const FLUSH_BYTES = 512 * 1024;
-  let pending = [];
-  let pendingBytes = 0;
-  // At most one writable.write() is outstanding. A flush starts its write
-  // without waiting for it, so the next chunk's decrypt overlaps disk I/O;
-  // the next flush (or close) waits for the previous one first, which keeps
-  // writes in byte order and bounds memory to two flushes.
-  let inflight = null;
-  let failure = null;
-  const flush = async () => {
-    if (pendingBytes === 0) return;
-    let merged;
-    if (pending.length === 1) {
-      merged = pending[0];
-    } else {
-      merged = new Uint8Array(pendingBytes);
-      let offset = 0;
-      for (const part of pending) {
-        merged.set(part, offset);
-        offset += part.byteLength;
-      }
-    }
-    pending = [];
-    pendingBytes = 0;
-    if (inflight) await inflight;
-    const next = writable.write(merged);
-    // Record a failure now so the next write() or close() reports it even
-    // when no flush is due; the .catch keeps it from being unhandled.
-    next.catch((error) => { failure ??= error; });
-    inflight = next;
-  };
-  // Waits for every queued write, then surfaces any failure.
-  const drain = async () => {
-    await flush();
-    if (inflight) await inflight;
-    if (failure) throw failure;
-  };
+  const writer = bufferedWriter(writable);
   const discard = async () => {
-    pending = [];
-    pendingBytes = 0;
-    try { await writable.abort(); } catch { /* Best effort. */ }
+    await writer.abort();
     try { await root.removeEntry(internal); } catch { /* Best effort. */ }
   };
   return {
     kind: 'download',
     internalName: internal,
-    async write(bytes) {
-      if (failure) throw failure;
-      const view = bytes instanceof Uint8Array
-        ? bytes
-        : ArrayBuffer.isView(bytes)
-          ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-          : new Uint8Array(bytes);
-      pending.push(view);
-      pendingBytes += view.byteLength;
-      if (pendingBytes >= FLUSH_BYTES) await flush();
-    },
+    write: writer.write,
     async file() {
-      await drain();
+      await writer.drain();
       await writable.close();
       return fileHandle.getFile();
     },

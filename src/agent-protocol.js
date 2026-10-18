@@ -121,30 +121,32 @@ export async function createSealer(invitation, direction, { tunnel = false } = {
 export async function createOpener(invitation, direction, { tunnel = false } = {}) {
   const key = await recordKey(invitation, direction);
   let expectedSequence = 0;
+  let authenticated = Promise.resolve();
   return {
-    async open(input) {
+    open(input) {
       const record = input instanceof Uint8Array ? input : new Uint8Array(input);
-      if (record.byteLength < HEADER_BYTES + 16 || record.byteLength > MAX_RECORD_BYTES) throw new Error('Record length is invalid.');
+      if (record.byteLength < HEADER_BYTES + 16 || record.byteLength > MAX_RECORD_BYTES) return Promise.reject(new Error('Record length is invalid.'));
       const header = record.slice(0, HEADER_BYTES);
       const view = new DataView(header.buffer);
       const kind = header[3];
-      if (header[0] !== 0x43 || header[1] !== 0x44 || header[2] !== VERSION) throw new Error('Record protocol is invalid.');
-      if (!isValidKind(direction, kind, tunnel)) throw new Error('Message kind is invalid for direction.');
+      if (header[0] !== 0x43 || header[1] !== 0x44 || header[2] !== VERSION) return Promise.reject(new Error('Record protocol is invalid.'));
+      if (!isValidKind(direction, kind, tunnel)) return Promise.reject(new Error('Message kind is invalid for direction.'));
       const sequence = view.getUint32(4);
-      if (sequence !== expectedSequence) throw new Error(`Record sequence ${sequence}, expected ${expectedSequence}.`);
-      if (view.getUint32(8) + HEADER_BYTES + 16 !== record.byteLength) throw new Error('Record plaintext length is invalid.');
-      let plaintext;
-      try {
-        plaintext = new Uint8Array(await crypto.subtle.decrypt({
-          name: 'AES-GCM',
-          iv: nonce(direction, sequence),
-          additionalData: additionalData(header, invitation.id)
-        }, key, record.slice(HEADER_BYTES)));
-      } catch {
-        throw new Error('Record authentication failed.');
-      }
+      if (sequence !== expectedSequence) return Promise.reject(new Error(`Record sequence ${sequence}, expected ${expectedSequence}.`));
+      if (view.getUint32(8) + HEADER_BYTES + 16 !== record.byteLength) return Promise.reject(new Error('Record plaintext length is invalid.'));
       expectedSequence += 1;
-      return { kind, plaintext };
+      const decrypted = crypto.subtle.decrypt({
+        name: 'AES-GCM',
+        iv: nonce(direction, sequence),
+        additionalData: additionalData(header, invitation.id)
+      }, key, record.subarray(HEADER_BYTES)).then(
+        (plaintext) => new Uint8Array(plaintext),
+        () => { throw new Error('Record authentication failed.'); }
+      );
+      // Start WebCrypto now, but release results in sequence. A failed
+      // authentication poisons all later records already in flight.
+      authenticated = Promise.all([authenticated, decrypted]).then(([, plaintext]) => ({ kind, plaintext }));
+      return authenticated;
     }
   };
 }
