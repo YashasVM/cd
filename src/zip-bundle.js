@@ -7,6 +7,7 @@ const LOCAL_HEADER_BYTES = 30;
 const DESCRIPTOR_BYTES = 16;
 const CENTRAL_HEADER_BYTES = 46;
 const END_BYTES = 22;
+const READ_BYTES = 1024 * 1024;
 // Bit 3: CRC in the data descriptor. Bit 11: UTF-8 names.
 const FLAGS = 0x0808;
 const ZIP_LIMIT = 0xffff_fffe;
@@ -15,18 +16,34 @@ export const MAX_BUNDLE_BYTES = ZIP_LIMIT;
 const encoder = new TextEncoder();
 
 const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
+  const table = new Uint32Array(8 * 256);
   for (let n = 0; n < 256; n += 1) {
     let c = n;
     for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
     table[n] = c >>> 0;
+  }
+  for (let n = 0; n < 256; n += 1) {
+    let c = table[n];
+    for (let slice = 1; slice < 8; slice += 1) {
+      c = table[c & 0xff] ^ (c >>> 8);
+      table[slice * 256 + n] = c >>> 0;
+    }
   }
   return table;
 })();
 
 export function crc32(bytes, previous = 0) {
   let crc = ~previous >>> 0;
-  for (let index = 0; index < bytes.length; index += 1) crc = CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  let index = 0;
+  // Slicing by eight removes the per-byte dependency chain on large files.
+  for (; index + 8 <= bytes.length; index += 8) {
+    const word = crc ^ bytes[index] ^ (bytes[index + 1] << 8) ^ (bytes[index + 2] << 16) ^ (bytes[index + 3] << 24);
+    crc = CRC_TABLE[0x700 + (word & 0xff)] ^ CRC_TABLE[0x600 + ((word >>> 8) & 0xff)]
+      ^ CRC_TABLE[0x500 + ((word >>> 16) & 0xff)] ^ CRC_TABLE[0x400 + (word >>> 24)]
+      ^ CRC_TABLE[0x300 + bytes[index + 4]] ^ CRC_TABLE[0x200 + bytes[index + 5]]
+      ^ CRC_TABLE[0x100 + bytes[index + 6]] ^ CRC_TABLE[bytes[index + 7]];
+  }
+  for (; index < bytes.length; index += 1) crc = CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
   return ~crc >>> 0;
 }
 
@@ -60,7 +77,7 @@ export function bundleName(date = new Date()) {
 
 // createZipBundle returns { name, size, stream() } for files (Blob-like with
 // name, size, and slice). stream() yields Uint8Arrays in archive order.
-export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 1024 } = {}) {
+export function createZipBundle(files, { now = new Date(), chunkBytes = READ_BYTES } = {}) {
   const names = uniqueNames(files).map((name) => encoder.encode(name));
   const { time, day } = dosDateTime(now);
   let size = END_BYTES;
@@ -144,7 +161,7 @@ export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 10
 }
 
 // fileSource streams one file as-is.
-export function fileSource(file, { chunkBytes = 256 * 1024 } = {}) {
+export function fileSource(file, { chunkBytes = READ_BYTES } = {}) {
   return {
     name: file.name,
     type: file.type || 'application/octet-stream',
@@ -158,27 +175,28 @@ export function fileSource(file, { chunkBytes = 256 * 1024 } = {}) {
 }
 
 // rechunk regroups a byte stream into pieces of exactly `size` bytes (the
-// last may be shorter), the unit the relay protocol sends. A piece that is
-// already exactly `size` bytes with nothing buffered is yielded as-is, so the
-// caller receives the source's own buffer: sources must not reuse a yielded
-// buffer after handing it over (fileSource and the zip stream allocate fresh).
+// last may be shorter), the unit the relay protocol sends. Aligned chunks
+// use views into the source buffer without copying. Sources must not reuse
+// a yielded buffer (fileSource and the zip stream allocate fresh).
 export async function* rechunk(source, size) {
-  let buffer = new Uint8Array(size);
+  let buffer = null;
   let filled = 0;
   for await (const piece of source) {
-    if (filled === 0 && piece.length === size) {
-      yield piece;
-      continue;
-    }
     let offset = 0;
     while (offset < piece.length) {
+      if (filled === 0 && piece.length - offset >= size) {
+        yield offset === 0 && piece.length === size ? piece : piece.subarray(offset, offset + size);
+        offset += size;
+        continue;
+      }
+      buffer ??= new Uint8Array(size);
       const take = Math.min(size - filled, piece.length - offset);
       buffer.set(piece.subarray(offset, offset + take), filled);
       filled += take;
       offset += take;
       if (filled === size) {
         yield buffer;
-        buffer = new Uint8Array(size);
+        buffer = null;
         filled = 0;
       }
     }

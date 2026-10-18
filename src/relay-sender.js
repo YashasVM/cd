@@ -14,6 +14,7 @@ import {
 } from './agent-protocol.js';
 import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
+import { SendWindow } from './send-window.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -22,7 +23,7 @@ import { fileSource, rechunk } from './zip-bundle.js';
 // wires it to the standalone `/send` page.
 
 const CHUNK_SIZE = 256 * 1024;
-const SEND_WINDOW_BYTES = 8 * 1024 * 1024;
+const PREPARED_CHUNKS = 3;
 const ADMISSION_WAIT_MS = 10_000;
 const PEER_WAIT_MS = 15 * 60_000;
 const CONSENT_WAIT_MS = 10 * 60_000;
@@ -78,6 +79,7 @@ export function startRelaySend(source, hooks = {}) {
   const onProgress = hooks.onProgress || (() => {});
   let socket = null;
   let cancelled = false;
+  let sendWindow = null;
 
   // Single persistent pump: every socket message is buffered exactly once and
   // handed to waiters in arrival order. Attaching a fresh message listener per
@@ -88,7 +90,8 @@ export function startRelaySend(source, hooks = {}) {
   let closedError = null;
 
   function attachPump() {
-    socket.addEventListener('message', (event) => {
+    socket.addEventListener('message', (message) => {
+      const event = { data: message.data, arrivedAt: performance.now() };
       const waiter = waiters.shift();
       if (waiter) waiter(event);
       else incoming.push(event);
@@ -132,7 +135,11 @@ export function startRelaySend(source, hooks = {}) {
           .then((result) => {
             if (result === null || result === undefined) {
               // Not what this wait wanted; keep waiting for the next message.
-              if (!settled) waiters.push(entry);
+              if (!settled) {
+                if (incoming.length > 0) entry(incoming.shift());
+                else if (closedError) entry(null);
+                else waiters.push(entry);
+              }
               return;
             }
             finish(null, result);
@@ -166,7 +173,7 @@ export function startRelaySend(source, hooks = {}) {
       }
       const { kind, plaintext } = await opener.open(event.data);
       if (!kinds.includes(kind)) throw new RelaySendError('The receiver sent a message out of order.');
-      return { kind, plaintext };
+      return { kind, plaintext, arrivedAt: event.arrivedAt };
     }, timeoutMessage);
   }
 
@@ -230,9 +237,30 @@ export function startRelaySend(source, hooks = {}) {
       createSealer(invitation, SENDER_DIRECTION),
       createOpener(invitation, RECEIVER_DIRECTION)
     ]);
-    const send = async (kind, payload = new Uint8Array()) => {
-      if (cancelled) throw new RelaySendError('Transfer canceled.');
-      socket.send(await sealer.seal(kind, payload));
+    let seals = Promise.resolve();
+    let sends = Promise.resolve();
+    const send = (kind, payload = new Uint8Array()) => {
+      // Encryption and transport have separate ordered queues. A few chunks
+      // can be read and sealed while the transport waits for window space,
+      // without concurrent seal calls reusing the sealer's sequence/nonce.
+      const record = seals.then(() => {
+        if (cancelled) throw new RelaySendError('Transfer canceled.');
+        if (sendWindow?.error) throw sendWindow.error;
+        return sealer.seal(kind, payload);
+      });
+      seals = record;
+      sends = sends.then(async () => {
+        const sealed = await record;
+        if (kind === KIND_CHUNK) {
+          await sendWindow.waitForSpace(sealed.byteLength, () => socket.bufferedAmount);
+          sendWindow.recordSent(payload.byteLength, sealed.byteLength, performance.now());
+        }
+        if (cancelled) throw new RelaySendError('Transfer canceled.');
+        socket.send(sealed);
+      });
+      void record.catch(() => {});
+      void sends.catch(() => {});
+      return sends;
     };
 
     onState('connecting');
@@ -249,33 +277,46 @@ export function startRelaySend(source, hooks = {}) {
     onState('transferring');
     onStatus('Sending...');
     const total = BigInt(source.size);
-    let sent = 0n;
-    let acknowledged = 0n;
-    let chunks = 0;
+    sendWindow = new SendWindow();
+    let ending = false;
     onProgress(0, source.size);
-    const awaitAck = async () => {
-      const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
-      const ack = decodeCounts(plaintext);
-      if (ack.chunks > chunks || ack.bytes < acknowledged || ack.bytes > sent) {
-        throw new RelaySendError('The receiver sent invalid progress.');
+    // This is the only reader after ACCEPT. Decrypt in order, but use the
+    // pump's arrival time rather than time spent waiting on crypto/UI work.
+    const complete = (async () => {
+      while (true) {
+        const { kind, plaintext, arrivedAt } = await waitForRecord(opener, [KIND_ACK, KIND_COMPLETE], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
+        const counts = decodeCounts(plaintext);
+        if (kind === KIND_COMPLETE) {
+          if (!ending || counts.bytes !== sendWindow.sent || counts.chunks !== sendWindow.chunks) {
+            throw new RelaySendError('The receiver did not verify the transfer.');
+          }
+          return;
+        }
+        try { sendWindow.acknowledge(counts, arrivedAt); }
+        catch (error) { throw new RelaySendError(error.message); }
+        onProgress(Number(sendWindow.acknowledged), source.size);
       }
-      acknowledged = ack.bytes;
-      onProgress(Number(acknowledged), source.size);
-    };
-    for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
-      if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
-      await send(KIND_CHUNK, chunk);
-      sent += BigInt(chunk.byteLength);
-      chunks += 1;
-      while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES)) await awaitAck();
-    }
-    if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
-    while (acknowledged < sent) await awaitAck();
+    })();
+    void complete.catch((error) => sendWindow.fail(error));
 
-    await send(KIND_END, encodeCounts(chunks, sent));
-    const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');
-    const done = decodeCounts(plaintext);
-    if (done.bytes !== sent || done.chunks !== chunks) throw new RelaySendError('The receiver did not verify the transfer.');
+    const transfer = (async () => {
+      const pending = [];
+      let read = 0n;
+      for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
+        if (sendWindow.error) throw sendWindow.error;
+        read += BigInt(chunk.byteLength);
+        if (read > total) throw new RelaySendError('A file changed while it was being sent.');
+        pending.push(send(KIND_CHUNK, chunk));
+        if (pending.length >= PREPARED_CHUNKS) await pending.shift();
+      }
+      await Promise.all(pending);
+      if (read !== total) throw new RelaySendError('A file changed while it was being sent.');
+      await sendWindow.waitForAcknowledged();
+      ending = true;
+      await send(KIND_END, encodeCounts(sendWindow.chunks, sendWindow.sent));
+      await complete;
+    })();
+    await Promise.race([transfer, sendWindow.failed]);
     onProgress(source.size, source.size);
     onState('complete');
     onStatus('The receiver has every byte.');
@@ -285,6 +326,7 @@ export function startRelaySend(source, hooks = {}) {
 
   const done = run().catch((error) => {
     window.removeEventListener('pagehide', onPageHide);
+    sendWindow?.fail(error);
     try { socket?.close(cancelled ? 1000 : 4400, cancelled ? 'sender canceled' : 'sender failed'); } catch { /* Best effort. */ }
     if (cancelled) throw new RelaySendError('Transfer canceled.');
     throw error instanceof RelaySendError ? error : new RelaySendError('The transfer failed. Try again.');
@@ -295,6 +337,7 @@ export function startRelaySend(source, hooks = {}) {
     cancel() {
       if (cancelled) return;
       cancelled = true;
+      sendWindow?.fail(new RelaySendError('Transfer canceled.'));
       try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
       for (const waiter of waiters.splice(0)) waiter(null);
     }
@@ -323,7 +366,7 @@ export function mountRelaySender(els) {
     els.cancelBtn.hidden = false;
     els.againBtn.hidden = true;
     els.fileLine.textContent = `${file.name} · ${formatSize(file.size)}`;
-    active = startRelaySend(fileSource(file, { chunkBytes: CHUNK_SIZE }), {
+    active = startRelaySend(fileSource(file), {
       onShare({ code, url }) {
         shareCode = code;
         shareUrl = url;
