@@ -1,0 +1,124 @@
+{
+  "baselineRef": "9732bbb",
+  "runs": 2,
+  "sizes": [
+    256
+  ],
+  "rtts": [
+    0
+  ],
+  "results": [
+    {
+      "variant": "old",
+      "mib": 256,
+      "rtt": 0,
+      "pair": 0,
+      "seconds": 5.491050684,
+      "mibPerSecond": 46.62131434079475,
+      "wireSeconds": 5.3865,
+      "wireMiBPerSecond": 47.52622296481946,
+      "maxBuffered": 4051573,
+      "chunks": 1024,
+      "acceptRTT": 25.700000002980232,
+      "sha256": "7cc0c6a9b51ada24d3f02022f66593e535c78c43436bacdd983a832b0af54fac",
+      "profile": {
+        "sender": {
+          "peakHeapBytes": 4032492,
+          "peakBackingBytes": 69566901,
+          "taskSeconds": 3.4527330000000003,
+          "scriptSeconds": 0.01459
+        },
+        "receiver": {
+          "peakHeapBytes": 4299504,
+          "peakBackingBytes": 79017123,
+          "taskSeconds": 3.852247,
+          "scriptSeconds": 0.130778
+        }
+      }
+    },
+    {
+      "variant": "new",
+      "mib": 256,
+      "rtt": 0,
+      "pair": 0,
+      "seconds": 5.878787726999999,
+      "mibPerSecond": 43.546392876927236,
+      "wireSeconds": 5.76379999999702,
+      "wireMiBPerSecond": 44.41514278776716,
+      "maxBuffered": 10094224,
+      "chunks": 1024,
+      "acceptRTT": 17.80000000447035,
+      "sha256": "7cc0c6a9b51ada24d3f02022f66593e535c78c43436bacdd983a832b0af54fac",
+      "profile": {
+        "sender": {
+          "peakHeapBytes": 4183832,
+          "peakBackingBytes": 98677876,
+          "taskSeconds": 2.767877,
+          "scriptSeconds": 0.022134
+        },
+        "receiver": {
+          "peakHeapBytes": 2827280,
+          "peakBackingBytes": 71676240,
+          "taskSeconds": 3.598033,
+          "scriptSeconds": 0.122355
+        }
+      }
+    },
+    {
+      "variant": "new",
+      "mib": 256,
+      "rtt": 0,
+      "pair": 1,
+      "seconds": 5.619636641000001,
+      "mibPerSecond": 45.55454673568457,
+      "wireSeconds": 5.509599999994039,
+      "wireMiBPerSecond": 46.46435312913405,
+      "maxBuffered": 10675125,
+      "chunks": 1024,
+      "acceptRTT": 20.600000001490116,
+      "sha256": "7cc0c6a9b51ada24d3f02022f66593e535c78c43436bacdd983a832b0af54fac",
+      "profile": {
+        "sender": {
+          "peakHeapBytes": 4013868,
+          "peakBackingBytes": 77965032,
+          "taskSeconds": 2.6774940000000003,
+          "scriptSeconds": 0.020721
+        },
+        "receiver": {
+          "peakHeapBytes": 2993784,
+          "peakBackingBytes": 76919625,
+          "taskSeconds": 3.598773,
+          "scriptSeconds": 0.113704
+        }
+      }
+    },
+    {
+      "variant": "old",
+      "mib": 256,
+      "rtt": 0,
+      "pair": 1,
+      "seconds": 5.499086501999998,
+      "mibPerSecond": 46.553186589607876,
+      "wireSeconds": 5.395,
+      "wireMiBPerSecond": 47.45134383688601,
+      "maxBuffered": 5636784,
+      "chunks": 1024,
+      "acceptRTT": 18.200000002980232,
+      "sha256": "7cc0c6a9b51ada24d3f02022f66593e535c78c43436bacdd983a832b0af54fac",
+      "profile": {
+        "sender": {
+          "peakHeapBytes": 4199972,
+          "peakBackingBytes": 103582345,
+          "taskSeconds": 3.347633,
+          "scriptSeconds": 0.013335
+        },
+        "receiver": {
+          "peakHeapBytes": 2900664,
+          "peakBackingBytes": 74036912,
+          "taskSeconds": 3.860097,
+          "scriptSeconds": 0.126013
+        }
+      }
+    }
+  ]
+}

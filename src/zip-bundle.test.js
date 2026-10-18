@@ -84,3 +84,22 @@ test('rechunk mixes fast-path and buffered pieces in order', async () => {
   assert.deepEqual(result.map((piece) => Array.from(piece)), [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13]]);
   assert.equal(result[2], exact);
 });
+
+test('rechunk yields aligned spans of a larger read without copying', async () => {
+  const bytes = Uint8Array.from({ length: 13 }, (_, index) => index);
+  async function* source() { yield bytes; }
+  const out = [];
+  for await (const piece of rechunk(source(), 4)) out.push(piece);
+  assert.deepEqual(out.map((piece) => Array.from(piece)), [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12]]);
+  for (const piece of out.slice(0, 3)) assert.equal(piece.buffer, bytes.buffer);
+  assert.notEqual(out[3].buffer, bytes.buffer);
+});
+
+test('CRC32 slicing and incremental tails match independent ZIP check values', () => {
+  const bytes = Uint8Array.from({ length: 1027 }, (_, index) => (index * 31 + 7) % 256);
+  assert.equal(crc32(bytes), 0x3ae3de29);
+  for (let split = 0; split <= 16; split += 1) {
+    assert.equal(crc32(bytes.subarray(split), crc32(bytes.subarray(0, split))), 0x3ae3de29);
+  }
+  assert.equal(crc32(new Uint8Array()), 0);
+});
