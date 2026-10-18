@@ -1,0 +1,1 @@
+{"receiveMiB":8,"highMiB":8,"lowMiB":2,"minCwnd":0,"exit":0,"output":"goos: linux\ngoarch: amd64\npkg: github.com/YashasVM/cd/.perf-round2/r8-c0\ncpu: 13th Gen Intel(R) Core(TM) i5-13420H\nBenchmarkDirectPathThroughput-12    \t       1\t3654903388 ns/op\t  18.36 MB/s\t1141976704 B/op\t 4914386 allocs/op\nPASS\n"}

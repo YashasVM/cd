@@ -381,3 +381,46 @@ func TestLinkClearsAdmissionReadDeadline(t *testing.T) {
 		t.Fatalf("delayed record = %v %q %v", kind, payload, err)
 	}
 }
+
+func TestMergerFitsSharedSendWindow(t *testing.T) {
+	link := &recordLink{pending: map[uint32]linkItem{}}
+	sealer, _ := newSealer(testInvitation(), senderDirection)
+	// Leave sequence zero missing while every later chunk in the largest
+	// sender window arrives, including the final chunk's permitted overshoot.
+	if _, err := sealer.seal(kindChunk, nil); err != nil {
+		t.Fatal(err)
+	}
+	for range maxSendWindow/chunkSize + 1 {
+		record, err := sealer.seal(kindChunk, make([]byte, chunkSize))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := link.accept(linkItem{record: record}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Also leave room for a maximum-size control record and bounded signals.
+	reserve := maxRecordBytes + maxRemoteCandidates*2048
+	if link.pendingBytes+reserve >= maxPendingBytes {
+		t.Fatalf("pending %d plus controls %d exceeds %d", link.pendingBytes, reserve, maxPendingBytes)
+	}
+}
+
+func TestLinkMeasuresRelayOfferAccept(t *testing.T) {
+	sender, receiver, _ := linkedPair(t)
+	if err := sender.send(kindOffer, []byte("offer")); err != nil {
+		t.Fatal(err)
+	}
+	if kind, _, err := receiver.next(context.Background(), time.Second); err != nil || kind != kindOffer {
+		t.Fatalf("offer: %d %v", kind, err)
+	}
+	if err := receiver.send(kindAccept, nil); err != nil {
+		t.Fatal(err)
+	}
+	if kind, _, err := sender.next(context.Background(), time.Second); err != nil || kind != kindAccept {
+		t.Fatalf("accept: %d %v", kind, err)
+	}
+	if sender.relayRTT <= 0 {
+		t.Fatal("authenticated relay accept did not measure round trip")
+	}
+}

@@ -19,14 +19,14 @@ import (
 // STUN-discovered internet path). Signaling rides inside the encrypted
 // records: the sender's SDP offer in the file offer, the receiver's answer in
 // a signal record. Records keep their end-to-end encryption on the data
-// channel; they are split into 64 KiB messages that every SCTP stack
+// channel; they are split into 60 KiB messages that every SCTP stack
 // (Chrome, Firefox, Safari, pion) accepts. Transfers start on the relay and
 // move to the direct path when it opens, so a direct path that never connects
 // costs nothing.
 
 const (
 	directChannelID = 1
-	directPieceSize = 64 * 1024
+	directPieceSize = 60 * 1024
 	// Offers wait briefly for host candidates; negotiated peers trickle
 	// later candidates. Non-trickling answers keep the full gather bound.
 	directGatherWait      = time.Second
@@ -244,7 +244,7 @@ func (path *directPath) isOpen() bool {
 	}
 }
 
-// send writes one record as 64 KiB messages, waiting while the channel's
+// send writes one record as 60 KiB messages, waiting while the channel's
 // send buffer is full.
 func (path *directPath) send(record []byte) error {
 	for path.channel.BufferedAmount() > directBufferHigh {

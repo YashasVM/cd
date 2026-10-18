@@ -55,7 +55,9 @@ type recordLink struct {
 	striping bool
 	stripe   *striper
 	// ackedBytes is the peer's last acknowledged byte count.
-	ackedBytes uint64
+	ackedBytes  uint64
+	offerSentAt time.Time
+	relayRTT    time.Duration
 }
 
 type retainedRecord struct {
@@ -82,6 +84,11 @@ func (linkTimeout) Temporary() bool { return true }
 
 // maxPendingRecords bounds records held while an earlier one is missing.
 const maxPendingRecords = 256
+
+// Both paths share maxSendWindow; relay backlog is part of that window,
+// not an additional allowance. A final chunk can overshoot it by <256 KiB.
+// Headers, in-flight signals, and END still fit below the browser's 32 MiB
+// bound. Duplicate records are discarded before consuming pending space.
 const maxPendingBytes = 32 * 1024 * 1024
 
 // closeWait bounds how long a finished transfer waits for the peer and the
@@ -274,6 +281,9 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 	} else {
 		link.retained = nil
 	}
+	if kind == kindOffer {
+		link.offerSentAt = time.Now()
+	}
 	if err := link.connection.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
 		return err
 	}
@@ -352,6 +362,13 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 	kind, plaintext, err := link.opener.open(record)
 	if err != nil {
 		return 0, nil, false, err
+	}
+	if kind == kindAccept && !item.direct {
+		link.writeMu.Lock()
+		if !link.offerSentAt.IsZero() {
+			link.relayRTT = item.receivedAt.Sub(link.offerSentAt)
+		}
+		link.writeMu.Unlock()
 	}
 	link.expected++
 	link.receivedAt = item.receivedAt

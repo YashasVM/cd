@@ -1,0 +1,88 @@
+
+> cd@1.0.0 test
+> node --test src/*.test.js
+
+▶ short share codes
+  ✔ accepts four or five digits (4.71146ms)
+  ✔ builds the lookup path (0.521036ms)
+  ✔ builds share links from capabilities (0.347612ms)
+  ✔ parses lookup responses strictly (1.07916ms)
+  ✔ keeps only the legacy host as a lookup origin (0.215689ms)
+  ✔ cleans pasted codes (0.131709ms)
+✔ short share codes (8.517314ms)
+▶ numeric share input
+  ✔ extracts complete numeric codes from input and advertised links (0.50751ms)
+  ✔ rejects non-web URLs, credentials, other paths, and unrelated fragments (0.258977ms)
+✔ numeric share input (1.111892ms)
+✔ browser record codec preserves authenticated bytes (13.28673ms)
+✔ browser record codec rejects a sequence gap without advancing (2.86862ms)
+✔ browser record codec rejects changed ciphertext (1.140666ms)
+✔ capability parser rejects missing and malformed fragments (0.451409ms)
+✔ records split into 64 KiB pieces rebuild exactly (2.705975ms)
+✔ the merger orders both paths and drops second copies (0.551511ms)
+✔ direct offers are optional and bounded (1.636408ms)
+✔ the merger bounds held bytes while a sequence is missing (15.172644ms)
+✔ the merger releases its byte budget after ordered records drain (25.123604ms)
+✔ word list is short plain words (4.420861ms)
+✔ generates a word pair deterministically (0.299118ms)
+✔ still accepts legacy single words (0.126604ms)
+✔ ephemeral ids are always valid PeerJS ids (2.245153ms)
+✔ codes are case-insensitive but links stay lowercase (0.585528ms)
+✔ rejects random short strings that are not words (0.179194ms)
+✔ still accepts legacy random codes (0.172837ms)
+✔ does not turn an unrelated URL into a code (0.131722ms)
+✔ accepts an exact manifest (1.214452ms)
+✔ rejects traversal, count, size, and total mismatches (0.404738ms)
+✔ raw chunks respect the negotiated SCTP message size (0.82237ms)
+✔ transfer offers accept only sane windows and an explicit raw flag (0.921346ms)
+✔ desktop receivers announce a larger window than phones (0.270647ms)
+✔ tunnel carries JSON and bytes both ways, in order (27.116241ms)
+✔ a joiner that arrives before the creator retries until the room exists (606.975303ms)
+✔ a tampered record fails the tunnel instead of delivering data (9.17194ms)
+✔ parseTunnelCapability accepts only well-formed metadata (0.340168ms)
+▶ webkit detection
+  ✔ flags Safari macOS, Safari iOS, and Chrome iOS as WebKit (0.583635ms)
+  ✔ does not flag desktop/Android Chromium or Firefox (0.171006ms)
+✔ webkit detection (1.724308ms)
+▶ tier selection
+  ✔ prefers the file picker whenever it exists, at any size (0.290948ms)
+  ✔ uses OPFS staging without a picker, at any size, on every engine (0.129908ms)
+  ✔ refuses over-limit blobs on WebKit only, with an exact 256 MiB boundary (0.144803ms)
+  ✔ leaves blobs uncapped off WebKit (0.142513ms)
+  ✔ accepts plain numbers as well as bigints for sizes (0.131087ms)
+✔ tier selection (1.20729ms)
+▶ capability detection
+  ✔ detects nothing in bare Node (no window/navigator) (0.693501ms)
+  ✔ reads picker and OPFS support from the host (0.178573ms)
+✔ capability detection (1.100276ms)
+▶ download sink lifecycle
+  ✔ refuses oversized Safari blobs when advertised OPFS fails (0.983563ms)
+  ✔ removes the staging entry when opening its writable fails (4.065882ms)
+  ✔ coalesces small OPFS writes into large flushes without losing bytes (6.687303ms)
+  ✔ keeps bytes in order with one write in flight at a time (21.854179ms)
+  ✔ surfaces an in-flight write error to the next flush that waits on it (0.380021ms)
+  ✔ surfaces an in-flight write error on the next write even without a flush (0.707214ms)
+  ✔ close waits for a pending write and reports its failure (1.310233ms)
+  ✔ preserves bytes in the fallback and revokes cleanup only once (20.344024ms)
+✔ download sink lifecycle (56.844146ms)
+✔ crc32 matches the standard check value (2.640918ms)
+✔ zip bundle size is exact and unzip restores every file (17.479874ms)
+✔ rechunk emits fixed-size pieces (2.402416ms)
+✔ rechunk yields exact-size pieces from the source without copying (0.327366ms)
+✔ rechunk mixes fast-path and buffered pieces in order (0.523144ms)
+✔ readBundle returns every file from a browser bundle (9.693029ms)
+✔ readBundle reads folders from a Go-built bundle (5.267943ms)
+✔ readBundle refuses archives it cannot hand out as-is (0.288117ms)
+✔ safeEntryPath rejects escapes and control characters (0.107116ms)
+✔ downloadNames flattens only colliding paths (0.206056ms)
+✔ downloadNames reserves unique basenames against flattened collisions (0.127594ms)
+✔ downloadNames avoids case-insensitive and Unicode-equivalent collisions (0.145748ms)
+✔ downloadNames is deterministic and keeps all suggested names distinct (0.095445ms)
+ℹ tests 64
+ℹ suites 6
+ℹ pass 64
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 719.106329

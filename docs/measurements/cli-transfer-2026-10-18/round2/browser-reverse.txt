@@ -1,0 +1,5 @@
+verified browser->browser by typed code: 3145805 exact bytes
+verified browser->browser by numeric-link paste: 3145805 exact bytes
+verified browser->browser by numeric-link autofill: 3145805 exact bytes
+verified browser->terminal: three files arrive as separate exact files
+verified browser->browser by scanning the QR code with a camera

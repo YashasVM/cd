@@ -229,27 +229,47 @@ func openBundleEntry(entry bundleEntry) (io.ReadCloser, error) {
 	return file, nil
 }
 
-// bundleSize runs writeBundle over zero-filled contents into a counter. Zip
-// headers and sizes do not depend on the bytes, only the CRCs do, so the
-// count is exact.
+// bundleSize counts stored data, local headers, descriptors, and the central
+// directory. These sizes mirror archive/zip.Writer; CRCs change no lengths.
 func bundleSize(entries []bundleEntry) (uint64, error) {
-	var counter countingWriter
-	err := writeBundle(&counter, entries, func(entry bundleEntry) (io.ReadCloser, error) {
-		return io.NopCloser(io.LimitReader(zeroReader{}, int64(entry.size))), nil
-	})
-	return counter.count, err
-}
-
-type countingWriter struct{ count uint64 }
-
-func (writer *countingWriter) Write(data []byte) (int, error) {
-	writer.count += uint64(len(data))
-	return len(data), nil
-}
-
-type zeroReader struct{}
-
-func (zeroReader) Read(data []byte) (int, error) {
-	clear(data)
-	return len(data), nil
+	const zip32Limit = 1<<32 - 1
+	var offset, directory uint64
+	for _, entry := range entries {
+		if len(entry.name) > 1<<16-1 {
+			return 0, errors.New("zip: FileHeader.Name too long")
+		}
+		if entry.size > 1<<63-1 {
+			return 0, errors.New("file is too large to bundle")
+		}
+		extra := uint64(0)
+		if !entry.modified.IsZero() {
+			extra = 9
+		} // extended modification time
+		central := uint64(46+len(entry.name)) + extra
+		size := entry.size
+		dir := strings.HasSuffix(entry.name, "/")
+		if dir {
+			size = 0
+		}
+		if size >= zip32Limit || offset >= zip32Limit {
+			central += 28
+		}
+		directory += central
+		local := uint64(30+len(entry.name)) + extra + size
+		if !dir {
+			local += 16
+			if size >= zip32Limit {
+				local += 8
+			}
+		}
+		if local > (1<<63-1)-offset-98 || directory > (1<<63-1)-offset-local-98 {
+			return 0, errors.New("bundle is too large")
+		}
+		offset += local
+	}
+	end := uint64(22)
+	if len(entries) >= 1<<16-1 || directory >= zip32Limit || offset >= zip32Limit {
+		end += 76
+	}
+	return offset + directory + end, nil
 }

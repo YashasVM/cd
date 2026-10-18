@@ -3,12 +3,14 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func writeTestFile(t *testing.T, path string, data []byte) {
@@ -152,5 +154,86 @@ func TestBundleFailsWhenAFileChangesMidSend(t *testing.T) {
 	defer reader.Close()
 	if _, err := io.ReadAll(reader); err == nil || !strings.Contains(err.Error(), "changed while it was being sent") {
 		t.Fatalf("changed file error = %v", err)
+	}
+}
+
+func TestBundleMetadataSizeDoesNotReadPayload(t *testing.T) {
+	done := make(chan uint64, 1)
+	go func() {
+		size, _ := bundleSize([]bundleEntry{{name: "large", size: 20 << 30}})
+		done <- size
+	}()
+	select {
+	case size := <-done:
+		if size != (20<<30)+236 {
+			t.Fatalf("size = %d, want %d", size, (20<<30)+236)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("size calculation processed payload bytes")
+	}
+}
+
+func TestBundleMetadataMatchesZipBoundaries(t *testing.T) {
+	for _, count := range []int{0, 1, 65534, 65535, 65536} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			entries := make([]bundleEntry, count)
+			for i := range entries {
+				entries[i] = bundleEntry{name: fmt.Sprintf("日本語/%d", i), modified: time.Unix(1, 0)}
+			}
+			want, err := bundleSize(entries)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var actual bytes.Buffer
+			if err := writeBundle(&actual, entries, func(bundleEntry) (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(nil)), nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if want != uint64(actual.Len()) {
+				t.Fatalf("computed %d, stream %d", want, actual.Len())
+			}
+		})
+	}
+}
+
+// CreateRaw and SetOffset exercise archive/zip's real ZIP64 descriptors,
+// central headers, and end records without generating a four-GiB payload.
+func TestBundleMetadataZip64Sizes(t *testing.T) {
+	for _, size := range []uint64{1<<32 - 31, 1<<32 - 1, 1 << 32, 20 << 30} {
+		entry := bundleEntry{name: "large", size: size}
+		want, err := bundleSize([]bundleEntry{entry, {name: "after"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var output bytes.Buffer
+		archive := zip.NewWriter(&output)
+		archive.SetOffset(int64(size))
+		_, err = archive.CreateRaw(&zip.FileHeader{Name: entry.name, Method: zip.Store, Flags: 8,
+			CompressedSize64: size, UncompressedSize64: size})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := archive.CreateRaw(&zip.FileHeader{Name: "after", Method: zip.Store, Flags: 8}); err != nil {
+			t.Fatal(err)
+		}
+		if err := archive.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if got := size + uint64(output.Len()); want != got {
+			t.Fatalf("size %d: computed %d, zip %d", size, want, got)
+		}
+	}
+}
+
+func TestBundleMetadataRejectsOverflowAndLongNames(t *testing.T) {
+	for _, entries := range [][]bundleEntry{
+		{{name: strings.Repeat("n", 65536)}},
+		{{name: "huge", size: 1<<63 - 1}},
+		{{name: "a", size: 1 << 62}, {name: "b", size: 1 << 62}},
+	} {
+		if _, err := bundleSize(entries); err == nil {
+			t.Fatal("accepted unrepresentable archive")
+		}
 	}
 }

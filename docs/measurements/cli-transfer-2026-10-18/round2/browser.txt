@@ -1,0 +1,4 @@
+sender switched to the direct path
+verified a folder send arrived as 5 separate files in the browser
+verified 40 signaling registrations from one IP
+verified 1572937 exact bytes through CLI, Worker, encryption, flow control, and receiver

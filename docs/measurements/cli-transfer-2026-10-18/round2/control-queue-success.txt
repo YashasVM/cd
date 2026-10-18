@@ -1,0 +1,4 @@
+=== RUN   TestStriperControlQueueFitsReplayAndCandidates
+--- PASS: TestStriperControlQueueFitsReplayAndCandidates (0.00s)
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	0.003s

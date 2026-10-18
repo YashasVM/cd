@@ -304,7 +304,7 @@ func BenchmarkRecordRoundTrip(b *testing.B) {
 	}
 }
 
-func TestStripedDirectDrainsBelowDefaultThreshold(t *testing.T) {
+func TestStripedDirectDrainsWithoutAcknowledgements(t *testing.T) {
 	saved := directICEServers
 	directICEServers = []webrtc.ICEServer{}
 	defer func() { directICEServers = saved }()
@@ -338,8 +338,7 @@ func TestStripedDirectDrainsBelowDefaultThreshold(t *testing.T) {
 		}
 	}
 	sender.stripe = newStriper()
-	sender.stripe.setShare(1)
-	// Run only the direct writer, with a cap below the usual 2 MiB low mark.
+	// Run only the direct writer with the full direct buffer capacity.
 	// No ACKs arrive to wake it; each restart must come from buffer drainage.
 	go sender.writeDirect(senderPath)
 	const records = 64
@@ -354,6 +353,30 @@ func TestStripedDirectDrainsBelowDefaultThreshold(t *testing.T) {
 			t.Fatalf("record %d: kind %d: %v", index, kind, err)
 		}
 	}
+	// Simulate a final relay record that never arrives. END must flush its
+	// retained ciphertext on direct even though no further ACK or data wakes it.
+	orphan, err := sender.sealer.seal(kindChunk, []byte("last relay record"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sender.stripe.mu.Lock()
+	sender.stripe.relayUnacked = append(sender.stripe.relayUnacked, stripeItem{record: orphan, release: 99 << 20})
+	sender.stripe.relayBytes += uint64(len(orphan))
+	sender.stripe.mu.Unlock()
+	if err := sender.send(kindEnd, []byte("done")); err != nil {
+		t.Fatal(err)
+	}
+	for i, want := range []string{"last relay record", "done"} {
+		kind, payload, err := receiver.next(context.Background(), time.Second)
+		expectedKind := kindChunk
+		if i == 1 {
+			expectedKind = kindEnd
+		}
+		if err != nil || kind != expectedKind || string(payload) != want {
+			t.Fatalf("final record %d: kind %d, payload %q, error %v", i, kind, payload, err)
+		}
+	}
+
 }
 
 type countedRelayConn struct {

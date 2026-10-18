@@ -10,48 +10,14 @@ import (
 	"time"
 )
 
-func TestStriperStartsAtHalfShare(t *testing.T) {
+func TestStriperStartsDirectOnly(t *testing.T) {
 	s := newStriper()
-	if s.share != stripeStartShare {
-		t.Fatalf("share = %v, want %v", s.share, stripeStartShare)
+	if s.relayCap != 0 {
+		t.Fatalf("initial relay cap = %d, want zero", s.relayCap)
 	}
-	if want := uint64(stripeBudget / 2); s.relayCap != want {
-		t.Fatalf("relayCap = %d, want %d", s.relayCap, want)
-	}
-	if want := uint64(stripeBudget / 2); s.directCap != want {
-		t.Fatalf("directCap = %d, want %d", s.directCap, want)
-	}
-}
-
-func TestStriperSetShareClampsToUnitInterval(t *testing.T) {
-	s := newStriper()
-	s.setShare(-3)
-	if s.share != 0 {
-		t.Fatalf("share after setShare(-3) = %v, want 0", s.share)
-	}
-	s.setShare(7)
-	if s.share != 1 {
-		t.Fatalf("share after setShare(7) = %v, want 1", s.share)
-	}
-	s.setShare(0.25)
-	if s.share != 0.25 {
-		t.Fatalf("share after setShare(0.25) = %v, want 0.25", s.share)
-	}
-}
-
-func TestStriperCapsStayWithinBounds(t *testing.T) {
-	for _, share := range []float64{-1, 0, 0.1, 0.5, 0.9, 1, 2} {
-		s := newStriper()
-		s.setShare(share)
-		if s.relayCap < stripeMinCap {
-			t.Errorf("share %v: relayCap = %d, below stripeMinCap %d", share, s.relayCap, stripeMinCap)
-		}
-		if s.directCap > directBufferHigh {
-			t.Errorf("share %v: directCap = %d, above directBufferHigh %d", share, s.directCap, directBufferHigh)
-		}
-		if s.directCap < stripeMinCap {
-			t.Errorf("share %v: directCap = %d, below stripeMinCap %d", share, s.directCap, stripeMinCap)
-		}
+	s.setShare(0)
+	if s.relayCap != 0 {
+		t.Fatal("zero share still assigns relay records")
 	}
 }
 
@@ -74,57 +40,15 @@ func TestStriperAcknowledgedPrunesRelayRecords(t *testing.T) {
 	}
 }
 
-func TestStriperAcknowledgedPrunesDirectReleases(t *testing.T) {
+func TestStriperAdjustNeedsDeliveredBytes(t *testing.T) {
 	s := newStriper()
-	s.directReleases = []uint64{50, 100, 150}
-
-	s.acknowledged(100, 0, time.Unix(0, 0))
-
-	if want := []uint64{150}; !reflect.DeepEqual(s.directReleases, want) {
-		t.Fatalf("directReleases = %v, want %v", s.directReleases, want)
+	at := time.Unix(1, 0)
+	s.adjust(0, at)
+	for i := range 10 {
+		s.adjust(0, at.Add(time.Duration(i+1)*time.Second))
 	}
-}
-
-func TestStriperAdjustStartsEpochThenMovesShare(t *testing.T) {
-	const mib = 1 << 20
-	s := newStriper()
-	t0 := time.Unix(0, 0)
-
-	// The first call only starts the epoch; its bytes are not counted.
-	s.acknowledged(1*mib, 0, t0)
-	if s.share != 0.5 {
-		t.Fatalf("share after first call = %v, want 0.5", s.share)
-	}
-
-	// Each step: bytes acknowledged so far, previous acknowledged, time,
-	// and the share expected afterwards.
-	steps := []struct {
-		name      string
-		bytes     uint64
-		previous  uint64
-		at        time.Time
-		wantShare float64
-		wantStep  float64
-	}{
-		// Epoch 1 closes at 200 ms with 1 MiB: 5 MiB/s, first rate, so up.
-		{"epoch 1 closes", 2 * mib, 1 * mib, t0.Add(200 * time.Millisecond), 0.625, +stripeShareStep},
-		// Inside epoch 2, not yet judged.
-		{"mid epoch 2", 2*mib + mib/2, 2 * mib, t0.Add(300 * time.Millisecond), 0.625, +stripeShareStep},
-		// Epoch 2 closes at 400 ms with 2 MiB total: 10 MiB/s, faster, keep going up.
-		{"epoch 2 closes faster", 4 * mib, 2*mib + mib/2, t0.Add(400 * time.Millisecond), 0.75, +stripeShareStep},
-		// Epoch 3 closes at 600 ms with 0.5 MiB: 2.5 MiB/s, slower, so turn back.
-		{"epoch 3 closes slower", 4*mib + mib/2, 4 * mib, t0.Add(600 * time.Millisecond), 0.625, -stripeShareStep},
-		// Epoch 4 closes at 800 ms with 1 MiB: 5 MiB/s, faster, keep going down.
-		{"epoch 4 closes faster", 5*mib + mib/2, 4*mib + mib/2, t0.Add(800 * time.Millisecond), 0.5, -stripeShareStep},
-	}
-	for _, step := range steps {
-		s.acknowledged(step.bytes, step.previous, step.at)
-		if s.share != step.wantShare {
-			t.Fatalf("%s: share = %v, want %v", step.name, s.share, step.wantShare)
-		}
-		if s.step != step.wantStep {
-			t.Fatalf("%s: step = %v, want %v", step.name, s.step, step.wantStep)
-		}
+	if s.share != 0 {
+		t.Fatalf("idle samples enabled relay: %v", s.share)
 	}
 }
 
@@ -146,9 +70,6 @@ func TestStriperFailRelayReturnsUnacknowledgedInOrder(t *testing.T) {
 	}
 	if !s.relayDead {
 		t.Fatal("relayDead = false after failRelay")
-	}
-	if s.directCap != directBufferHigh {
-		t.Fatalf("directCap = %d, want directBufferHigh %d", s.directCap, directBufferHigh)
 	}
 	if again := s.failRelay(); again != nil {
 		t.Fatalf("second failRelay() = %q, want nil", again)
@@ -177,7 +98,7 @@ func TestStriperAcknowledgedSignalsRoomWithoutBlocking(t *testing.T) {
 		defer close(done)
 		t0 := time.Unix(0, 0)
 		for i := range 5 {
-			s.acknowledged(uint64(i+1)<<20, uint64(i)<<20, t0.Add(time.Duration(i)*stripeEpoch))
+			s.acknowledged(uint64(i+1)<<20, uint64(i)<<20, t0.Add(time.Duration(i)*time.Second))
 		}
 	}()
 	select {
@@ -231,6 +152,9 @@ func TestStripedTransferSurvivesRelayLoss(t *testing.T) {
 			t.Fatal("local direct path did not open")
 		}
 	}
+	// Admit the relay for this failure-path fixture; policy admission is
+	// measured separately with real OFFER/ACCEPT and ICE round trips.
+	sender.relayRTT = time.Nanosecond
 	sender.striping = true
 	if err := sender.send(kindOffer, []byte("ready")); err != nil {
 		t.Fatal(err)
@@ -238,6 +162,12 @@ func TestStripedTransferSurvivesRelayLoss(t *testing.T) {
 	if kind, _, err := receiver.next(context.Background(), 5*time.Second); err != nil || kind != kindOffer {
 		t.Fatalf("direct setup = %v %v", kind, err)
 	}
+	if sender.stripe == nil {
+		t.Fatal("failure fixture did not start striped writers")
+	}
+	sender.stripe.mu.Lock()
+	sender.stripe.setShare(1)
+	sender.stripe.mu.Unlock()
 	received := make(chan error, 1)
 	go func() {
 		for index := range 32 {
@@ -250,7 +180,7 @@ func TestStripedTransferSurvivesRelayLoss(t *testing.T) {
 				received <- fmt.Errorf("record %d differs", index)
 				return
 			}
-			if index == 7 {
+			if index == 15 {
 				_ = sender.connection.Close()
 			}
 		}
@@ -281,5 +211,103 @@ func TestStripedTransferSurvivesRelayLoss(t *testing.T) {
 			}
 			time.Sleep(time.Millisecond)
 		}
+	}
+}
+
+func TestStriperDeadbandAndBackup(t *testing.T) {
+	s := newStriper()
+	at := time.Unix(1, 0)
+	s.adjust(0, at)
+	s.adjust(stripeEpochBytes, at.Add(time.Second))
+	initial := s.relayCap
+	s.directBlocked = true
+	s.adjust(stripeEpochBytes, at.Add(2*time.Second))
+	if s.relayCap != initial {
+		t.Fatalf("flat rate changed cap: %d -> %d", initial, s.relayCap)
+	}
+	s.adjust(stripeEpochBytes, at.Add(2500*time.Millisecond))
+	if s.relayCap != initial {
+		t.Fatal("faster delivery exceeded the relay bound")
+	}
+	s.relayUnacked = []stripeItem{{record: []byte("ciphertext"), release: 100}}
+	if got := s.backupRelay(true); len(got) != 1 || string(got[0]) != "ciphertext" {
+		t.Fatalf("backup = %q", got)
+	}
+	if len(s.backupRelay(true)) != 0 {
+		t.Fatal("backed up twice")
+	}
+	if !s.relayDisabled || s.relayCap != 0 {
+		t.Fatal("slow probe still enabled")
+	}
+	s.adjust(stripeEpochBytes, at.Add(3*time.Second))
+	s.adjust(stripeEpochBytes, at.Add(7*time.Second))
+	if s.relayCap != 0 {
+		t.Fatal("disabled probe restarted")
+	}
+}
+
+func TestStriperRateBackoffCanProbeAgain(t *testing.T) {
+	s := newStriper()
+	s.directBlocked = true
+	at := time.Unix(1, 0)
+	s.adjust(0, at)
+	s.adjust(stripeEpochBytes, at.Add(time.Second))
+	initial := s.relayCap
+	for i := 1; i <= 4; i++ {
+		s.adjust(stripeEpochBytes, at.Add(time.Second+time.Duration(i)*4*time.Second))
+	}
+	if s.relayCap >= initial || s.relayDisabled {
+		t.Fatal("rate dip did not back off safely")
+	}
+	for i := 5; i <= 20; i++ {
+		s.adjust(stripeEpochBytes, at.Add(time.Second+time.Duration(i)*4*time.Second))
+	}
+	if s.relayCap == 0 || s.relayDisabled {
+		t.Fatal("stable baseline did not permit another bounded probe")
+	}
+}
+
+func TestStriperBackupDeadlineAndControl(t *testing.T) {
+	s := newStriper()
+	s.relayWait = time.Second
+	s.relayUnacked = []stripeItem{{record: []byte("pending"), release: 1, sentAt: time.Now()}}
+	if len(s.backupRelay(false)) != 0 || s.relayDisabled {
+		t.Fatal("backed up a fresh fast-relay probe")
+	}
+	if got := s.backupRelay(true); len(got) != 1 {
+		t.Fatal("control did not force a backup")
+	}
+	if s.backupWake() != nil {
+		t.Fatal("backed-up records scheduled another timer")
+	}
+	s = newStriper()
+	s.relayWait = time.Millisecond
+	s.relayUnacked = []stripeItem{{record: []byte("late"), sentAt: time.Now().Add(-time.Second)}}
+	select {
+	case <-s.backupWake():
+	case <-time.After(time.Second):
+		t.Fatal("late relay record did not wake direct")
+	}
+	if got := s.backupRelay(false); len(got) != 1 || !s.relayDisabled {
+		t.Fatal("late relay probe was not backed up and disabled")
+	}
+}
+
+func TestStriperControlQueueFitsReplayAndCandidates(t *testing.T) {
+	link := &recordLink{stripe: newStriper(), stop: make(chan struct{})}
+	defer close(link.stop)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// The main loop must remain free to read an error if direct stalls while
+		// replaying a full window and sending the bounded candidate set.
+		for range maxSendWindow/chunkSize + maxRemoteCandidates + 8 {
+			link.enqueueControl([]byte("control"))
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("control queue blocked the error-reading transfer loop")
 	}
 }

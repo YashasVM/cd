@@ -1,0 +1,5 @@
+--- FAIL: TestStriperControlQueueFitsReplayAndCandidates (1.00s)
+    stripe_test.go:302: control queue blocked the error-reading transfer loop
+FAIL
+FAIL	github.com/YashasVM/cd/cmd/cdx	1.005s
+FAIL
