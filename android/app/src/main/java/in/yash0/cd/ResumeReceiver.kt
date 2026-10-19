@@ -122,19 +122,27 @@ class ResumeReceiver(private val context: Context, private val store: Store, pri
                         output.fd.sync()
                         active()
                         task.put("wholeSha256", digest)
-                        publish(task, stage, filename, size)
-                        diagnostic("published")
-                        writer.send(6, expectedEnd)
-                        wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
-                        runCatching { while (wire.json().getString("type") != "completed") { } }
-                        cpFile.delete(); stage.delete()
+                        ReceiveCompletion.finish(
+                            trustedReceiptFallback = task.optString("pairId").isNotEmpty(),
+                            publish = { publish(task, stage, filename, size).also { diagnostic("published") } },
+                            completed = { uri ->
+                                store.completed(task.getString("id"), uri, filename, size)
+                                task.put("state", "complete")
+                            },
+                            sendReceipt = {
+                                writer.send(6, expectedEnd)
+                                wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
+                            },
+                            awaitConfirmation = { while (wire.json().getString("type") != "completed") { } },
+                            cleanup = { cpFile.delete(); stage.delete() },
+                        )
                         return
                     }
                 }
             }
         } } finally { direct?.close() }
     }
-    private fun publish(task: JSONObject, stage: File, filename: String, size: Long) {
+    private fun publish(task: JSONObject, stage: File, filename: String, size: Long): String {
         val resolver = context.contentResolver
         val existing = task.optString("publishedUri")
         var uri = existing.takeIf { it.isNotEmpty() }?.let(Uri::parse)
@@ -158,6 +166,6 @@ class ResumeReceiver(private val context: Context, private val store: Store, pri
         active()
         check(stage.length() == size)
         check(resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null) == 1)
-        store.completed(task.getString("id"), uri.toString(), filename, size); task.put("state", "complete")
+        return uri.toString()
     }
 }
