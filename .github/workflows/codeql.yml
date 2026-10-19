@@ -4,7 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
-    branches: [main, master]
+    # Verify the stacked Android/private-v2 reliability follow-up before merge.
+    branches: [main, master, handoff/android-private-v2-2026-10-19]
   schedule:
     - cron: '17 4 * * 1'
 
