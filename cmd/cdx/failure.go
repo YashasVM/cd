@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"net"
 	"strings"
 )
 
@@ -28,11 +30,51 @@ const (
 	failureOther        = "failed"
 )
 
-// classifyFailure maps an error to a failure kind by its wording, which is
-// owned by this package.
+const (
+	retryNever       = "never"
+	retrySameRequest = "same_request"
+	retryNewTransfer = "new_transfer"
+)
+
+// Failure keeps machine contracts independent of human wording.
+type Failure struct {
+	Kind    string
+	Message string
+	Retry   string
+	Cause   error
+}
+
+func (f *Failure) Error() string { return f.Message }
+func (f *Failure) Unwrap() error { return f.Cause }
+func NewFailure(kind, message, retry string, cause ...error) *Failure {
+	f := &Failure{Kind: kind, Message: message, Retry: retry}
+	if len(cause) > 0 {
+		f.Cause = cause[0]
+	}
+	return f
+}
+func failuref(kind, retry, format string, args ...any) error {
+	cause := fmt.Errorf(format, args...)
+	return NewFailure(kind, cause.Error(), retry, cause)
+}
 func classifyFailure(err error) string {
 	if errors.Is(err, context.Canceled) {
 		return failureCanceled
+	}
+	var failure *Failure
+	if errors.As(err, &failure) {
+		return failure.Kind
+	}
+	if errors.Is(err, fs.ErrExist) {
+		return failureExists
+	}
+	var path *fs.PathError
+	if errors.As(err, &path) {
+		return failureLocal
+	}
+	var network net.Error
+	if errors.As(err, &network) || errors.Is(err, context.DeadlineExceeded) {
+		return failureNetwork
 	}
 	message := strings.ToLower(err.Error())
 	has := func(parts ...string) bool {
@@ -70,12 +112,30 @@ func classifyFailure(err error) string {
 	}
 	return failureOther
 }
+func failureGuidance(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return retryNever
+	}
+	var failure *Failure
+	if errors.As(err, &failure) && failure.Retry != "" {
+		return failure.Retry
+	}
+	switch classifyFailure(err) {
+	case failureNetwork, failureBusy:
+		return retrySameRequest
+	case failureExpired, failureDisconnected, failureStalled:
+		return retryNewTransfer
+	default:
+		return retryNever
+	}
+}
 
 type failureOutput struct {
 	Version int `json:"version"`
 	Error   struct {
 		Kind    string `json:"kind"`
 		Message string `json:"message"`
+		Retry   string `json:"retry"`
 	} `json:"error"`
 }
 
@@ -93,6 +153,7 @@ func reportFailure(stdout, stderr io.Writer, err error, jsonOutput bool) {
 		value.Version = 1
 		value.Error.Kind = kind
 		value.Error.Message = message
+		value.Error.Retry = failureGuidance(err)
 		_ = json.NewEncoder(stdout).Encode(value)
 	}
 }

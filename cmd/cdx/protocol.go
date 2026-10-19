@@ -7,8 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"hash"
 	"io"
 )
@@ -61,7 +59,7 @@ func newInvitation(random io.Reader) (invitation, error) {
 	var value invitation
 	buffer := make([]byte, invitationBytes)
 	if _, err := io.ReadFull(random, buffer); err != nil {
-		return value, fmt.Errorf("generate transfer secret: %w", err)
+		return value, failuref(failureProtocol, retryNever, "generate transfer secret: %w", err)
 	}
 	copy(value.id[:], buffer[:16])
 	copy(value.key[:], buffer[16:])
@@ -158,14 +156,14 @@ func recordAAD(header []byte, id [16]byte) []byte {
 
 func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, error) {
 	if !validKind(value.direction, kind) {
-		return nil, errors.New("message kind is invalid for direction")
+		return nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
 	if value.sequence > uint64(^uint32(0)) {
-		return nil, errors.New("record sequence exhausted")
+		return nil, NewFailure(failureProtocol, "record sequence exhausted", retryNever)
 	}
 	ciphertextLength := len(plaintext) + value.aead.Overhead()
 	if headerBytes+ciphertextLength > maxRecordBytes {
-		return nil, errors.New("record is too large")
+		return nil, NewFailure(failureProtocol, "record is too large", retryNever)
 	}
 	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
 	copy(header, []byte("CD"))
@@ -181,27 +179,27 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 
 func (value *recordOpener) open(record []byte) (messageKind, []byte, error) {
 	if len(record) < headerBytes+value.aead.Overhead() || len(record) > maxRecordBytes {
-		return 0, nil, errors.New("record length is invalid")
+		return 0, nil, NewFailure(failureProtocol, "record length is invalid", retryNever)
 	}
 	header := record[:headerBytes]
 	if string(header[:2]) != "CD" || header[2] != protocolVersion {
-		return 0, nil, errors.New("record protocol is invalid")
+		return 0, nil, NewFailure(failureProtocol, "record protocol is invalid", retryNever)
 	}
 	kind := messageKind(header[3])
 	if !validKind(value.direction, kind) {
-		return 0, nil, errors.New("message kind is invalid for direction")
+		return 0, nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
 	sequence := binary.BigEndian.Uint32(header[4:8])
 	if value.sequence > uint64(^uint32(0)) || uint64(sequence) != value.sequence {
-		return 0, nil, fmt.Errorf("record sequence %d, expected %d", sequence, value.sequence)
+		return 0, nil, failuref(failureProtocol, retryNever, "record sequence %d, expected %d", sequence, value.sequence)
 	}
 	plaintextLength := binary.BigEndian.Uint32(header[8:12])
 	if uint64(plaintextLength)+uint64(headerBytes+value.aead.Overhead()) != uint64(len(record)) {
-		return 0, nil, errors.New("record plaintext length is invalid")
+		return 0, nil, NewFailure(failureProtocol, "record plaintext length is invalid", retryNever)
 	}
 	plaintext, err := value.aead.Open(nil, recordNonce(value.direction, sequence), record[headerBytes:], recordAAD(header, value.id))
 	if err != nil {
-		return 0, nil, errors.New("record authentication failed")
+		return 0, nil, NewFailure(failureProtocol, "record authentication failed", retryNever)
 	}
 	value.sequence++
 	return kind, plaintext, nil

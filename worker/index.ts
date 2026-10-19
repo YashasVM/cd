@@ -1,3 +1,4 @@
+export { DeviceRoom } from './device-room';
 import { DurableObject } from 'cloudflare:workers';
 import { clientPrefix, sameOrigin } from './code-security';
 import { ResumeRoomProtocol } from './resume-room';
@@ -676,6 +677,13 @@ export default {
         console.error(JSON.stringify({ event: 'relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
         return new Response('relay temporarily unavailable', { status: 503 });
       }
+    }
+    const deviceMatch = /^\/ws\/devices\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (deviceMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientPrefix(request) });
+      if (!success) return new Response('connection rate limit reached', { status: 429 });
+      return env.DEVICES.getByName(deviceMatch[1]).fetch(request);
     }
     const resumeMatch = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
     if (resumeMatch) {

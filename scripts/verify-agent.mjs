@@ -90,7 +90,7 @@ try {
     headless: true,
     args: ['--disable-dev-shm-usage']
   });
-  const context = await browser.newContext({ acceptDownloads: true });
+  const context = await browser.newContext({ acceptDownloads: true, reducedMotion: 'reduce' });
   await context.addInitScript(() => { delete window.showSaveFilePicker; });
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);

@@ -19,6 +19,7 @@
             <!-- Frontend: share files from other apps into CD to send them. -->
             <intent-filter><action android:name="android.intent.action.SEND"/><action android:name="android.intent.action.SEND_MULTIPLE"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="*/*"/></intent-filter>
         </activity>
+        <activity android:name=".QrScannerActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.CD" />
         <service android:name=".ReceiverService" android:exported="false" android:foregroundServiceType="connectedDevice" />
     </application>
 </manifest>

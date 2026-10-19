@@ -49,7 +49,7 @@ fun SendTab(state: UiState, transfers: List<TransferView>, actions: CdActions, c
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("That didn’t work", style = CdType.rowTitle)
                     Text(error, style = CdType.small.copy(color = Cd.dangerText))
-                    Text("Dismiss", Modifier.padding(top = 6.dp).clip(RoundedCornerShape(6.dp)).clickable { state.sendError = null }.padding(vertical = 8.dp), style = CdType.label.copy(color = Cd.accent))
+                    Text("Dismiss", Modifier.padding(top = 6.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button) { state.sendError = null }.padding(vertical = 8.dp), style = CdType.label.copy(color = Cd.accent))
                 }
             }
             Spacer(Modifier.height(28.dp))
@@ -103,10 +103,10 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
             }
         },
     ) {
-        SectionHeader("Link from the sender")
+        SectionHeader("Code or link from the sender")
         InkField(
-            state.input, { state.input = it; state.inputError = "" }, "https://cd.yash0.in/s/…", error = state.inputError.isNotEmpty(),
-            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Pairing or private v2 transfer link",
+            state.input, { state.input = it; state.inputError = "" }, "Code or link", error = state.inputError.isNotEmpty(),
+            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Share code, private transfer link, or pairing link",
             trailing = {
                 if (state.input.isEmpty()) GhostButton("Paste", { actions.paste()?.let { state.input = it; state.inputError = "" } }, icon = CdIcons.Paste, color = Cd.accent)
                 else IconAction(CdIcons.Close, "Clear", { state.input = ""; state.inputError = "" }, tint = Cd.faint)
@@ -114,7 +114,7 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
         )
         AnimatedVisibility(state.inputError.isNotEmpty()) { Text(state.inputError, Modifier.padding(top = 10.dp), style = CdType.small.copy(color = Cd.danger)) }
         Spacer(Modifier.height(10.dp))
-        Text("Paste a private link from cdx send or cd.yash0.in, or scan its QR code.", style = CdType.small)
+        Text("Short codes go through the relay. Private links are end-to-end encrypted. Paste either, or scan the sender’s QR code.", style = CdType.small)
 
         Spacer(Modifier.height(32.dp))
         SectionHeader("Trusted devices")
@@ -218,6 +218,11 @@ fun DevicesTab(state: UiState, actions: CdActions, chrome: TabChrome) {
                 Text(step, style = CdType.body)
             }
         }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Chip("Beta", null)
+            Text("Pairing is in beta. Pair only laptops you control, and revoke any you stop using.", Modifier.weight(1f), style = CdType.small.copy(color = Cd.faint))
+        }
     }
     revoking?.let { pair ->
         CdDialog(
@@ -255,10 +260,11 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
                 trailing = { Icon(CdIcons.Open, null, Modifier.size(20.dp), tint = Cd.faint) })
         }
         Spacer(Modifier.height(32.dp))
-        SectionHeader("Get the cdx CLI")
-        val cmd = "curl -fsSL https://cd.yash0.in/install.sh | sh"
+        SectionHeader("Get the cdx CLI (beta)")
+        // The install script defaults to the latest stable release, which lacks cdx pair; pin the beta tag explicitly.
+        val cmd = "curl -fsSL https://cd.yash0.in/install.sh | CDX_VERSION=v0.4.0-beta.1 sh"
         Group {
-            ListRow(cmd, "Tap to copy. Then cdx receive <link>, or cdx pair.", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 1, onClick = { actions.copy("Install command", cmd) },
+            ListRow(cmd, "Tap to copy. Then cdx receive <code or link>, or cdx pair (beta).", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 3, onClick = { actions.copy("Install command", cmd) },
                 trailing = { Icon(CdIcons.Copy, null, Modifier.size(20.dp), tint = Cd.faint) })
         }
         Spacer(Modifier.height(40.dp))
@@ -273,6 +279,8 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
             Spacer(Modifier.height(8.dp))
             Text("Direct phone-to-terminal file transfer.", style = CdType.small)
             Text("Version $version · cd.yash0.in", style = CdType.small.copy(color = Cd.faint))
+            Spacer(Modifier.height(8.dp))
+            Text("Beta build. Features and compatibility may change between releases.", style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
         }
     }
 }

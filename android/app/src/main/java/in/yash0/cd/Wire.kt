@@ -24,6 +24,7 @@ sealed interface Frame {
     data class Failed(val error: Exception): Frame
 }
 class Wire(client: OkHttpClient, url: String, private val onSocket: (WebSocket) -> Unit): Closeable {
+    private val closed = java.util.concurrent.CountDownLatch(1)
     private val frames = BackpressureQueue<Frame>(8)
     @Volatile private var failed = false
     private fun fail(error: IOException = IOException("Connection closed")) { failed = true; frames.close(error) }
@@ -35,9 +36,9 @@ class Wire(client: OkHttpClient, url: String, private val onSocket: (WebSocket) 
             private fun offer(ws: WebSocket, frame: Frame) { try { frames.put(frame) } catch (e: Exception) { fail(IOException("Socket inbox stopped", e)); ws.cancel() } }
             override fun onMessage(webSocket: WebSocket, text: String) { if (text.length > 16384) { fail(IOException("Control frame too large")); webSocket.cancel(); return }; offer(webSocket, Frame.Text(text)) }
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) { if (bytes.size > 1048576) { fail(IOException("Data frame too large")); webSocket.cancel(); return }; offer(webSocket, Frame.Binary(bytes.toByteArray())) }
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { fail(WireFailure("failed", response?.code, t, expired = response?.code == 410)) }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { closed.countDown(); fail(WireFailure("failed", response?.code, t, expired = response?.code == 410)) }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { fail(WireFailure.closed(code, reason)); webSocket.close(code, "") }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { fail(WireFailure.closed(code, reason)) }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { closed.countDown(); fail(WireFailure.closed(code, reason)) }
         })
     }
     fun next(seconds: Long = 90): Frame {
@@ -49,5 +50,6 @@ class Wire(client: OkHttpClient, url: String, private val onSocket: (WebSocket) 
     fun send(bytes: ByteArray) { if (!socket.send(bytes.toByteString())) throw IOException("Socket closed") }
     fun direct(record: ByteArray) { frames.put(Frame.Binary(record)) }
     fun abort(error: IOException) { fail(error); socket.cancel() }
+    fun finish() { socket.close(1000, "complete"); closed.await(3, TimeUnit.SECONDS) }
     override fun close() { fail(); socket.cancel() }
 }

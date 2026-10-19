@@ -193,6 +193,9 @@ func pruneStates(dir string, now time.Time) {
 
 func holderArgs(request sendRequest, absolutePaths []string) []string {
 	args := []string{holderCommand}
+	if request.qrPath != "" {
+		args = append(args, "--qr", request.qrPath)
+	}
 	if request.linkMode {
 		args = append(args, "--link")
 	}
@@ -323,6 +326,9 @@ func runHolder(args []string) int {
 	pipe := os.Stdout
 	err = sendFile(ctx, request.files, request.linkMode, sendHooks{
 		ready: func(value readyOutput) error {
+			if err := saveReadyQR(&value, request.qrPath); err != nil {
+				return err
+			}
 			state.Code = value.Code
 			state.TransferID = transferIDFromURL(value.URL)
 			state.Filename = value.Filename

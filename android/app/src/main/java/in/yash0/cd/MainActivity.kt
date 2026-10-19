@@ -12,6 +12,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.WindowManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -132,15 +136,25 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun pickFiles() { runCatching { picker.launch(arrayOf("*/*")) }.onFailure { ui.sendError = "No file picker is available on this phone" } }
 
     override fun scan() {
-        scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Scan a CD link or the cdx pair QR code").setBeepEnabled(false).setOrientationLocked(false))
+        scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setBeepEnabled(false).setCaptureActivity(QrScannerActivity::class.java).setOrientationLocked(false))
     }
 
     override fun submit(raw: String) {
+        val input = raw.trim()
+        val lookup = runCatching { ShareCodes.lookupUrl(input) }.getOrElse { ui.inputError = it.message ?: "Invalid code"; return }
+        if (lookup == null) { submitLink(input); return }
+        lifecycleScope.launch {
+            runCatching { withContext(Dispatchers.IO) { ShareCodes.resolve(lookup) } }
+                .onSuccess { submitLink(it) }
+                .onFailure { ui.inputError = it.message ?: "Could not look up code" }
+        }
+    }
+
+    private fun submitLink(raw: String) {
         if (raw.isBlank()) return
         runCatching {
             if (raw.startsWith("cdpair:")) ui.pending = Pairing.parse(raw)
             else {
-                require(!raw.matches(Regex("\\d{4,8}"))) { "Private transfers require the sender’s QR or private link. Short codes are not supported here." }
                 val invitation = runCatching { Invitation.parse(raw) }.getOrElse { e -> throw IllegalArgumentException(if (e.message?.contains("v2") == true) e.message else "That isn’t a CD link. Paste the sender’s private link.") }
                 val id = invitation.id
                 if (TransferBus.sender.owns(id)) {

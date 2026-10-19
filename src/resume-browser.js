@@ -439,13 +439,15 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       sendRecord(socket, await sealer.seal(KIND_COMPLETE, encodeResumeCounts(chunks, stage.currentOffset, offer.wholeSha256)));
       socket.send(JSON.stringify({ type: 'complete', protocol: 'cd-transfer-v2', sessionNonce: encodeBase64Url(session.sessionNonce), receiverNonce: encodeBase64Url(session.receiverNonce) }));
       await waitForRelayEvent(inbox, ['completed'], 15000);
-      await stage.cancel();
+      // The download reads the OPFS file asynchronously. Keep its backing file
+      // until retention expiry; deleting it here can cancel the browser download.
+      if (!download) await stage.cancel();
       try { socket.close(1000, 'complete'); } catch { /* Best effort. */ }
       cancel.hidden = true;
       fill.style.transform = 'scaleX(1)';
       status.textContent = 'File received and verified.';
       hooks.onComplete?.();
-      return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: 0, maxWorkingBytes };
+      return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: download ? Number(offer.size) : 0, maxWorkingBytes };
     }
   })().catch(async (error) => {
     if (stopped) return;

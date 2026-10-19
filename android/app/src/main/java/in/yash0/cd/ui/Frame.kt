@@ -142,7 +142,12 @@ fun BrandMark(onLongPress: () -> Unit) {
             .combinedClickable(onClick = {}, onLongClick = onLongPress, indication = null, interactionSource = null)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
-    ) { Text("cd", style = CdType.brand.copy(fontSize = 28.sp)) }
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("cd", style = CdType.brand.copy(fontSize = 28.sp))
+            Chip("Beta", null)
+        }
+    }
 }
 
 @Composable

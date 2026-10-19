@@ -264,7 +264,8 @@ func (path *directPath) close() {
 // recordAssembler rebuilds records from data-channel messages using each
 // record's plaintext header: 12 header bytes, the plaintext, a 16-byte tag.
 type recordAssembler struct {
-	buffer []byte
+	version byte
+	buffer  []byte
 }
 
 func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
@@ -272,7 +273,7 @@ func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
 	var records [][]byte
 	for len(assembler.buffer) >= headerBytes {
 		header := assembler.buffer[:headerBytes]
-		if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
+		if header[0] != 'C' || header[1] != 'D' || header[2] != assembler.protocol() {
 			return nil, errors.New("direct connection sent an invalid record")
 		}
 		length := headerBytes + int(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
@@ -291,4 +292,11 @@ func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
 		assembler.buffer = nil
 	}
 	return records, nil
+}
+
+func (assembler *recordAssembler) protocol() byte {
+	if assembler.version == 0 {
+		return protocolVersion
+	}
+	return assembler.version
 }

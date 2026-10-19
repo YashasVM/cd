@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -148,7 +149,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
             style = CdType.bodyMuted, textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(6.dp))
-        Text("Short codes aren’t available for private resumable transfers.", style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
+        Text("Anyone with this link can receive the file. The link is end-to-end encrypted.", style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
         Hairline()
         Spacer(Modifier.height(20.dp))
@@ -156,7 +157,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
         Spacer(Modifier.height(20.dp))
         val cmd = "cdx receive $link"
         Row(
-            Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable { actions.copy("Command", cmd) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy("Command", cmd) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("$", style = CdType.mono.copy(color = Cd.accent))
@@ -208,7 +209,7 @@ private fun Progress(view: TransferView, link: String?, actions: CdActions) {
         if (view.direction == Direction.SEND && link != null) {
             Spacer(Modifier.height(20.dp))
             Row(
-                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable { actions.copy("Private link", link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy("Private link", link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(CdIcons.Link, null, Modifier.size(20.dp), tint = Cd.accent)
@@ -283,7 +284,7 @@ private fun ColumnScope.Pinned(view: TransferView, link: String?, actions: CdAct
                 SecondaryButton("Copy link", { actions.copy("Private link", link) }, Modifier.weight(1f), icon = CdIcons.Copy)
                 PrimaryButton("Share", { actions.share(link) }, Modifier.weight(1f), icon = CdIcons.Share)
             }
-            Text("Cancel send", Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(10.dp)).clickable { actions.cancel(view) }.padding(horizontal = 16.dp, vertical = 12.dp), style = CdType.label.copy(color = Cd.danger))
+            Text("Cancel send", Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { actions.cancel(view) }.padding(horizontal = 16.dp, vertical = 12.dp), style = CdType.label.copy(color = Cd.danger))
         }
         else -> {
             val canResume = view.phase == TransferPhase.PAUSED || (view.phase == TransferPhase.RETRYING && !send)

@@ -86,9 +86,9 @@ data class Pairing(val json: JSONObject) {
     }
 }
 
-data class Invitation(val id: String, val key: ByteArray, val relay: String) {
+data class Invitation(val id: String, val key: ByteArray, val relay: String, val version: Int = 2) {
     val rawId: ByteArray get() = Crypto.decode(id, 16)
-    fun token(): ByteArray = Crypto.derive(key, rawId, "cd-transfer-v2 receiver join")
+    fun token(): ByteArray = Crypto.derive(key, rawId, "cd-transfer-v$version receiver join")
     fun proof(role: String, nonce: ByteArray): ByteArray = Crypto.hmac(key, "cd-transfer-v2 $role nonce".toByteArray() + rawId + nonce)
     companion object {
         fun parse(raw: String): Invitation {
@@ -96,19 +96,20 @@ data class Invitation(val id: String, val key: ByteArray, val relay: String) {
             require(u.scheme == "https" || (u.scheme == "http" && localEndpoint("ws://${u.rawAuthority}${u.path}")))
             require(u.userInfo == null && u.query == null && u.path.matches(Regex("/s/[A-Za-z0-9_-]{22}")))
             val id = u.path.substringAfterLast('/')
-            require(u.rawFragment?.startsWith("v2.") == true) { "Use a resumable private #v2 link from cdx send --resume" }
+            val fragment = requireNotNull(u.rawFragment) { "Paste the complete CD link, including its key" }
+            val version = if (fragment.startsWith("v2.")) 2 else 1
             Crypto.decode(id, 16)
-            val key = Crypto.decode(u.rawFragment.substring(3), 32)
-            val relay = "${if (u.scheme == "https") "wss" else "ws"}://${u.rawAuthority}/ws/v2/$id"
+            val key = Crypto.decode(if (version == 2) fragment.substring(3) else fragment, 32)
+            val relay = "${if (u.scheme == "https") "wss" else "ws"}://${u.rawAuthority}/ws/v$version/$id"
             require(validEndpoint(relay))
-            return Invitation(id, key, relay)
+            return Invitation(id, key, relay, version)
         }
     }
 }
 
 class Records(private val invitation: Invitation, private val sender: ByteArray, private val receiver: ByteArray, private val fromSender: Boolean) {
     private var sequence = 0L
-    private val key = Crypto.derive(invitation.key, invitation.rawId + sender + receiver, "cd-transfer-v2 ${if (fromSender) "sender" else "receiver"} frames")
+    private val key = Crypto.derive(invitation.key, invitation.rawId + sender + receiver, "cd-transfer-v${invitation.version} ${if (fromSender) "sender" else "receiver"} frames")
     private val cipher = Cipher.getInstance("AES/GCM/NoPadding")
     private val aesKey = SecretKeySpec(key, "AES")
     private val recordContext = invitation.rawId + sender + receiver
@@ -118,18 +119,18 @@ class Records(private val invitation: Invitation, private val sender: ByteArray,
         cipher.updateAAD(recordContext)
         return cipher.doFinal(bytes, offset, bytes.size - offset)
     }
-    private fun nonce(): ByteArray = ByteBuffer.allocate(12).put((if (fromSender) "CDS2" else "CDR2").toByteArray()).putLong(sequence).array()
+    private fun nonce(): ByteArray = ByteBuffer.allocate(12).put((if (fromSender) "CDS${invitation.version}" else "CDR${invitation.version}").toByteArray()).putLong(sequence).array()
     private fun validKind(kind: Int): Boolean = if (fromSender) kind in 1..3 else kind in 4..6 || kind == 9
     fun seal(kind: Int, plaintext: ByteArray): ByteArray {
         require(validKind(kind) && sequence <= 0xffffffffL && plaintext.size <= 1048548)
-        val header = ByteBuffer.allocate(12).put('C'.code.toByte()).put('D'.code.toByte()).put(2).put(kind.toByte()).putInt(sequence.toInt()).putInt(plaintext.size).array()
+        val header = ByteBuffer.allocate(12).put('C'.code.toByte()).put('D'.code.toByte()).put(invitation.version.toByte()).put(kind.toByte()).putInt(sequence.toInt()).putInt(plaintext.size).array()
         val out = header + crypt(true, header, plaintext)
         sequence++; return out
     }
     fun open(record: ByteArray): Pair<Int, ByteArray> {
         require(record.size in 28..1048576)
         val h = ByteBuffer.wrap(record, 0, 12)
-        require(h.get() == 'C'.code.toByte() && h.get() == 'D'.code.toByte() && h.get().toInt() == 2)
+        require(h.get() == 'C'.code.toByte() && h.get() == 'D'.code.toByte() && h.get().toInt() == invitation.version)
         val kind = h.get().toInt() and 255
         require(validKind(kind) && h.int.toLong().and(0xffffffffL) == sequence)
         require(h.int == record.size - 28)

@@ -162,12 +162,21 @@ class ReceiverService: Service() {
                 var lastNetworkCheck = 0L
                 var allowed = true
                 transferActive = true; renewWake.run()
+                if (Invitation.parse(task.getString("url")).version == 1) {
+                LegacyReceiver(this, store, network.client(client, endpoint), { transferSocket = it }, { name, offset, size ->
+                    val now = SystemClock.elapsedRealtime()
+                    val text = "$name · $offset / $size bytes"
+                    store.progress(id, offset)
+                    if (now - lastProgressAt >= 250) { lastProgressAt = now; notify(text, offset, size) }
+                }, { val now = SystemClock.elapsedRealtime(); if (now - lastNetworkCheck >= 1000) { allowed = network.allowed(endpoint); lastNetworkCheck = now }; ReceiveGate.check(running.get(), store.taskState(id), allowed); true }).receive(task, endpoint)
+                } else {
                 ResumeReceiver(this, store, network.client(client, endpoint), { transferSocket = it }, { name, offset, size ->
                     val now = SystemClock.elapsedRealtime()
                     val text = "$name · $offset / $size bytes"
                     store.progress(id, offset)
                     if (now - lastProgressAt >= 250) { lastProgressAt = now; notify(text, offset, size) }
                 }, { val now = SystemClock.elapsedRealtime(); if (now - lastNetworkCheck >= 1000) { allowed = network.allowed(endpoint); lastNetworkCheck = now }; ReceiveGate.check(running.get(), store.taskState(id), allowed); true }, ::diagnostic).receive(task, endpoint, usingLocal)
+                }
                 scheduler.finished(id)
                 control(task.optString("pairId"), "received", id)
                 notify("Saved to Downloads/CD"); return
@@ -191,6 +200,10 @@ class ReceiverService: Service() {
                 val current = store.task(id) ?: return
                 if (current.getString("state") == "complete") { cleanupStaging(current); control(task.optString("pairId"), "received", id); return }
                 if (current.getString("state") in listOf("paused", "cancelled") || !running.get()) { control(task.optString("pairId"), "paused", id); return }
+                if (Invitation.parse(task.getString("url")).version == 1) {
+                    store.state(id, "paused", "This transfer cannot resume. Ask the sender for a new code or link.")
+                    return
+                }
                 if (e is ExhaustedTransferException || (e is WireFailure && e.exhausted)) {
                     val message = ExhaustedTransferException().message!!
                     store.state(id, "paused", message); notify(message); return

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { childExit, cliEnv, firstLine, startWorker, stopChild } from './harness.mjs';
 
-// Run unchanged v2 clients against this backend. Current main's CLI is still v1-only.
+// Exercise private transfers and restart recovery against the candidate CLI.
 assert.ok(process.env.CD_V2_VERIFY_CLI, 'Set CD_V2_VERIFY_CLI to a verified v2-capable cdx binary');
 assert.equal(process.env.CD_VERIFY_URL, undefined, 'This verification starts an isolated local Worker');
 function captureOutput(child) {

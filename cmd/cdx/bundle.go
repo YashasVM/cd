@@ -253,3 +253,41 @@ func (zeroReader) Read(data []byte) (int, error) {
 	clear(data)
 	return len(data), nil
 }
+
+func validateSourcePaths(paths []string) error {
+	if len(paths) == 0 {
+		return NewFailure(failureLocal, "missing file to send", retryNever)
+	}
+	topLevel := make(map[string]string, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if path == "-" || path == "" || err != nil || !info.IsDir() {
+			if _, err := prepareFile(path); err != nil {
+				return err
+			}
+		} else {
+			folder, err := os.Open(path)
+			if err != nil {
+				return failuref(failureLocal, retryNever, "cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+			_, err = folder.Readdirnames(1)
+			_ = folder.Close()
+			if err != nil && !errors.Is(err, io.EOF) {
+				return failuref(failureLocal, retryNever, "cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+		}
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		base := filepath.Base(absolute)
+		if !utf8.ValidString(base) {
+			return failuref(failureLocal, retryNever, "cannot share %q: its name is not valid UTF-8", path)
+		}
+		if previous, ok := topLevel[base]; ok {
+			return failuref(failureLocal, retryNever, "%q and %q would both be named %q in the bundle: rename one or send its folder", previous, path, base)
+		}
+		topLevel[base] = path
+	}
+	return nil
+}
