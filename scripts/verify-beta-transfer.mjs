@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { sanitizeDiagnostic } from './v2-browser-diagnostics.mjs';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
@@ -25,8 +26,10 @@ try {
     const destination = join(work, resumable ? 'v2.bin' : 'v1.bin');
     const receiver = spawn(executable, ['receive', '--json', ready.url, '--out', destination], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(receiver);
-    receiver.stdout.resume(); receiver.stderr.resume();
-    assert.equal(await childExit(receiver, 60000), 0, 'receiver failed');
+    receiver.stdout.resume();
+    let failure = '';
+    receiver.stderr.on('data', chunk => { failure += chunk; });
+    assert.equal(await childExit(receiver, 60000), 0, `receiver failed: ${sanitizeDiagnostic(failure)}`);
     assert.equal(await childExit(sender, 30000), 0, 'sender failed');
     assert.deepEqual(await readFile(destination), payload);
     console.log(`PASS ${resumable ? 'v2 private resumable' : 'v1 private'} relay: ${payload.length} exact bytes`);

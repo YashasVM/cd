@@ -28,3 +28,12 @@ ANDROID_HOME=/path/to/android-sdk ./gradlew --max-workers=2 -PcdBeta=true -PcdAb
 ```
 
 The user requested no emulator testing for this release. Physical-device camera behavior and native transfers still need their install feedback. JVM protocol fixtures, Android compilation/lint, Go and JS tests, local browser transfers, CLI interrupted resume, and hosted v1/v2/pairing checks provide the automated coverage.
+
+## Release verification
+
+- 55 Android JVM tests, lint with no errors, ARM64 APK assembly.
+- Go suites and 84 JavaScript tests passed; TypeScript and production build passed.
+- Browser private links, pasted links, QR input and 8 MiB interrupted resume passed exact-byte and private-key disclosure checks.
+- CLI restart recovered 262,144 retained bytes and verified 33,554,509 bytes; modified-source and checkpoint-tamper rejection passed.
+- Hosted staging v1/v2 relay and paired-device authentication/reconnect checks passed.
+- Production deployment: `f759bf5e-be03-480f-9b2d-3fd848f72da3`.
