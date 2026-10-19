@@ -77,7 +77,7 @@ func deviceOutputBytes(t *testing.T, file *os.File) []byte {
 func TestDevicesCLIListsNoSecretsAndForgetsCredential(t *testing.T) {
 	t.Setenv("CD_DEVICE_DIR", filepath.Join(t.TempDir(), "devices"))
 	output := deviceTestOutput(t)
-	pair, err := devices.NewPair("S24 Ultra", "wss://cd.yash0.in", nil, time.Now())
+	pair, err := devices.NewPair("S24 Ultra qr secret", "wss://cd.yash0.in", nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,15 +92,53 @@ func TestDevicesCLIListsNoSecretsAndForgetsCredential(t *testing.T) {
 		t.Fatalf("devices exit %d", code)
 	}
 	b := deviceOutputBytes(t, output)
-	if bytes.Contains(b, []byte(pair.Secret)) || bytes.Contains(b, []byte("secret")) || bytes.Contains(b, []byte("qr")) {
+	pairingQR, err := pair.QR()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(b, []byte(pair.Secret)) || bytes.Contains(b, []byte(pairingQR)) {
 		t.Fatal("device listing exposes pairing material")
 	}
-	var listing struct {
-		Version int                     `json:"version"`
-		Devices []devices.DeviceSummary `json:"devices"`
+	// Public names and random pair IDs may contain "qr" or "secret". Check
+	// the actual credential value and the exact JSON shape, not substrings.
+	// Keep this schema independent from the production DeviceSummary type.
+	type publicListing struct {
+		Version int `json:"version"`
+		Devices []struct {
+			Name       string `json:"name"`
+			PairID     string `json:"pairId"`
+			DeviceName string `json:"deviceName"`
+		} `json:"devices"`
 	}
-	if err = json.Unmarshal(b, &listing); err != nil || listing.Version != 1 || len(listing.Devices) != 1 || listing.Devices[0].Name != "phone" || listing.Devices[0].DeviceName != "S24 Ultra" {
-		t.Fatalf("wrong device listing: %s %v", b, err)
+	decode := func(data []byte) (publicListing, error) {
+		var listing publicListing
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&listing); err != nil {
+			return listing, err
+		}
+		if err := decoder.Decode(&struct{}{}); err != io.EOF {
+			return listing, errors.New("unexpected trailing listing data")
+		}
+		return listing, nil
+	}
+	listing, err := decode(b)
+	if err != nil || listing.Version != 1 || len(listing.Devices) != 1 || listing.Devices[0].Name != "phone" || listing.Devices[0].DeviceName != "S24 Ultra qr secret" || listing.Devices[0].PairID != pair.PairID {
+		t.Fatal("wrong public device listing")
+	}
+	for _, field := range []string{"secret", "qr"} {
+		var injected map[string]any
+		if err := json.Unmarshal(b, &injected); err != nil {
+			t.Fatal(err)
+		}
+		injected["devices"].([]any)[0].(map[string]any)[field] = "forbidden-field-fixture"
+		bad, err := json.Marshal(injected)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := decode(bad); err == nil {
+			t.Fatalf("listing schema accepted %s field", field)
+		}
 	}
 	if code := runDevices([]string{"forget", "phone", "--json"}); code != 0 {
 		t.Fatalf("forget exit %d", code)
