@@ -18,6 +18,7 @@ import javax.net.ssl.SSLPeerUnverifiedException
  * Messages are fixed text: they never contain keys, tokens, URLs or exception text.
  */
 enum class SendFailureKind(val terminal: Boolean, val message: String) {
+    NETWORK_POLICY(false, "Connect to unmetered Wi-Fi or enable Use mobile data in Settings, then tap Resume."),
     OFFLINE(false, "No internet connection. Connect to a network, then tap Resume."),
     UNREACHABLE(false, "Couldn't reach the CD server. Check your connection, then tap Resume."),
     TIMEOUT(false, "The connection timed out. Check your connection, then tap Resume."),

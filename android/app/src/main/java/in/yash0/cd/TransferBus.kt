@@ -91,6 +91,8 @@ interface SendEngine {
     fun cancel(context: Context, id: String)
     /** True when [id] is a send this device owns that is not cancelled/complete; the UI must not receive it. */
     fun owns(id: String): Boolean = false
+    /** Recheck live sender transports after the user changes network policy. */
+    fun networkPolicyChanged() {}
 
     object Unavailable: SendEngine {
         override fun start(context: Context, uris: List<Uri>): String = error("Sending is not available in this build")

@@ -95,7 +95,14 @@ class ReceiverService: Service() {
             "pause" -> stopReceiving(startId)
             "pause-task", "cancel-task" -> intent.getStringExtra("taskId")?.let { pauseTask(it, intent.action == "cancel-task") }
             "refresh" -> { store.pairs().forEach { PushBridge.disconnected(it.id) }; NativeNetworkDetector.refreshPolicy(); sockets.values.forEach { it.cancel() }; sockets.clear(); admitted.clear(); lastPing.clear(); transferSocket?.cancel() }
-            else -> if (intent != null) { store.enabled(!stopping.get()); store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) } }
+            else -> if (intent != null) {
+                // Explicit foreground activation also wins over an earlier queued pause command.
+                `in`.yash0.cd.ui.ReceiveMode.recordPaused(this, false)
+                val wasStopping = stopping.getAndSet(false)
+                store.enabled(true)
+                if (wasStopping) notify("Ready to receive")
+                store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) }
+            }
         }
         if (intent == null && !store.enabled()) stopSelf()
         return if (stopping.get()) START_NOT_STICKY else START_STICKY
@@ -111,13 +118,15 @@ class ReceiverService: Service() {
     }
     private fun stopReceiving(startId: Int) {
         if (!stopping.compareAndSet(false, true)) return
+        `in`.yash0.cd.ui.ReceiveMode.recordPaused(this, true)
         val paused = runCatching { store.pauseReceiving() }.getOrElse { store.tasks().filter { it.getString("state") == "paused" } }
         transferSocket?.cancel()
         paused.forEach { control(it.optString("pairId"), "paused", it.getString("id")) }
-        running.set(false)
         releaseTransferWake()
         notify("Receiving stopped")
-        handler.postDelayed({ stopSelf() }, 200)
+        // An explicit unpause can arrive while pause receipts drain. Keep the existing service
+        // alive in that case instead of dropping the newly requested receiver.
+        handler.postDelayed({ if (stopping.get()) { running.set(false); stopSelf() } }, 200)
     }
     private fun heartbeat() {
         val now = SystemClock.elapsedRealtime()

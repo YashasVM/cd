@@ -3,6 +3,7 @@ package `in`.yash0.cd.ui
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
+import `in`.yash0.cd.ReceiveActivation
 import `in`.yash0.cd.PushBridge
 import `in`.yash0.cd.ReceiverService
 import `in`.yash0.cd.StoreRegistry
@@ -10,17 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/*
- * HOOK: backend — stub for the wake-on-demand receive mode. Replace this object with the real
- * `ReceiveMode` (and change the imports in MainActivity / ui) once the receive backend exposes it.
- * The UI uses exactly these members:
- *   wakeAvailable: StateFlow<Boolean>   push wake-up is configured, trusted laptops can wake CD
- *   paused: StateFlow<Boolean>          user chose "Pause receiving" (reject wake-ups and trusted sends)
- *   load(context)                       read the persisted pause flag
- *   setPaused(context, paused)
- *   startTransfer(context)              a real transfer was queued (pasted link / Resume): run it now
- *   onForeground(context) / onBackground(context)   trusted sends work while CD is open
- * There is no idle "Ready to receive" foreground service any more; a notification exists only during a transfer.
+/** Foreground activation for the existing receiver service. Explicit Pause/Stop stays paused.
+ * The service currently keeps its visible notification while trusted receiving is enabled.
  */
 object ReceiveMode {
     private val _wake = MutableStateFlow(PushBridge.available)
@@ -32,20 +24,30 @@ object ReceiveMode {
         _paused.value = context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).getBoolean("receivePaused", false)
     }
 
-    fun setPaused(context: Context, paused: Boolean) {
+    fun recordPaused(context: Context, paused: Boolean) {
         context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).edit().putBoolean("receivePaused", paused).apply()
         _paused.value = paused
-        // Legacy backend: stop a running receiver so paused transfers keep their progress.
-        if (paused && StoreRegistry.get(context).enabled()) context.startService(Intent(context, ReceiverService::class.java).setAction("pause"))
     }
 
-    /** Legacy backend: the receiver service runs the queued task (its notification shows only while it works). */
+    fun setPaused(context: Context, paused: Boolean) {
+        recordPaused(context, paused)
+        // Stop a running receiver so paused transfers keep their progress.
+        if (paused && StoreRegistry.get(context).enabled()) context.startService(Intent(context, ReceiverService::class.java).setAction("pause"))
+        if (!paused) onForeground(context)
+    }
+
+    /** Start the foreground service only from a visible Activity or another permitted entry point. */
     fun startTransfer(context: Context) {
         if (_paused.value) return
         StoreRegistry.get(context).enabled(true)
         ContextCompat.startForegroundService(context, Intent(context, ReceiverService::class.java))
     }
 
-    fun onForeground(context: Context) {}
+    fun onForeground(context: Context) {
+        val store = StoreRegistry.get(context)
+        if (ReceiveActivation.shouldStart(_paused.value, store.pairs().isNotEmpty(), store.tasks().any { it.optString("state") == "queued" })) {
+            startTransfer(context)
+        }
+    }
     fun onBackground(context: Context) {}
 }

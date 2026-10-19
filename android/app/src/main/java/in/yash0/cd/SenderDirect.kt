@@ -27,7 +27,9 @@ internal class SenderDirect(private val context: Context, private val abort: (IO
     private val pending = ArrayList<IceCandidate>()
     fun offer(): String? = try {
         Runtime.initialize(context)
-        factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
+        factory = PeerConnectionFactory.builder().setOptions(PeerConnectionFactory.Options().apply {
+            networkIgnoreMask = NativeNetworkPolicy.ignoreMask(StoreRegistry.get(context).allowedMobile())
+        }).createPeerConnectionFactory()
         val config = PeerConnection.RTCConfiguration(listOf(PeerConnection.IceServer.builder(listOf("stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478")).createIceServer())).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         }

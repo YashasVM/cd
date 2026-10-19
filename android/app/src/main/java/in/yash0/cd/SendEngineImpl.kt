@@ -31,11 +31,13 @@ import java.util.zip.ZipOutputStream
 class SendEngineImpl(private val context: Context, private val publicBase: String = "https://cd.yash0.in", private val directEnabled: Boolean = true) : SendEngine {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val store = SenderStore(context)
+    private val network = ReceiverNetwork(context, StoreRegistry.get(context))
     private val client = OkHttpClient.Builder().pingInterval(20, TimeUnit.SECONDS).build()
     private class Running(val scope: CoroutineScope) {
         @Volatile var wire: Wire? = null
         var job: Job? = null
-        fun active() = scope.coroutineContext.ensureActive()
+        @Volatile var checkNetwork: (() -> Unit)? = null
+        fun active() { scope.coroutineContext.ensureActive(); checkNetwork?.invoke() }
         fun live() = scope.coroutineContext[Job]?.isActive == true
         fun stop() { scope.cancel(); wire?.close() }
     }
@@ -52,6 +54,12 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
             val expiresAt = state.optLong("expiresAt")
             if (phase == TransferPhase.PAUSED && expiresAt > 0 && System.currentTimeMillis() >= expiresAt) runCatching { synchronized(this) { halt(state.getString("id"), SendFailureKind.EXPIRED) } }
             else publish(state, phase, message = state.optString("message").ifEmpty { null })
+        }
+    }
+    override fun networkPolicyChanged() {
+        running.values.forEach { run ->
+            try { run.checkNetwork?.invoke() }
+            catch (e: SendProblem) { run.wire?.abort(e) }
         }
     }
     override fun owns(id: String): Boolean = known[id]?.let { SendStatus.owns(it.phase, it.expiresAt, System.currentTimeMillis()) } ?: false
@@ -239,8 +247,26 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
             join.put("expiresAt", state.getLong("expiresAt"))
         }
         publish(run, state, TransferPhase.CONNECTING)
-        Wire(client, invitation.relay) { ws -> ws.send(join.toString()) }.use { wire ->
+        // Re-evaluate on every start/resume; never fall back to Android's default route.
+        val guard = SendNetworkGuard { network.allowed(invitation.relay) }
+        guard.check()
+        val binding = try { network.bind(client, invitation.relay) }
+            catch (e: TransientNetworkException) { throw SendProblem(SendFailureKind.NETWORK_POLICY, e) }
+        val boundGuard = SendNetworkGuard(binding.allowed)
+        run.checkNetwork = boundGuard::check
+        run.active()
+        Wire(binding.client, invitation.relay) { ws ->
+            try { boundGuard.check(); ws.send(join.toString()) }
+            catch (e: SendProblem) { ws.cancel() }
+        }.use { wire ->
             run.wire = wire
+            // Also interrupt long waits for a receiver or ACK when the chosen network is no longer allowed.
+            run.scope.launch {
+                while (run.live()) {
+                    kotlinx.coroutines.delay(500)
+                    try { boundGuard.check() } catch (e: SendProblem) { wire.abort(e); break }
+                }
+            }
             run.active()
             var expiry = 0L
             lateinit var paired: JSONObject

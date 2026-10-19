@@ -63,7 +63,7 @@ class MainActivity: ComponentActivity(), CdActions {
         ReceiveViews.load(applicationContext)
         PushBridge.start(this)
         ReceiveMode.load(this)
-        // No idle receiver at launch: trusted laptops wake CD on demand (ReceiveMode); a notification exists only during a transfer.
+        // onStart activates trusted receiving unless the user explicitly paused it.
         refresh()
         ui.restoreNav(savedInstanceState?.getString("cd.navigation"))
         if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) acceptIntent(intent)
@@ -87,7 +87,7 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptIntent(intent) }
     override fun onResume() { super.onResume(); refresh() }
-    // HOOK: backend — trusted sends work while CD is open (ReceiveMode stub is a no-op today).
+    // Fresh installs need foreground activation after the first device is trusted.
     override fun onStart() { super.onStart(); ReceiveMode.onForeground(this) }
     override fun onStop() { ReceiveMode.onBackground(this); super.onStop() }
 
@@ -182,7 +182,7 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun trust(pair: Pairing) {
         runCatching {
             require(pair.json.getLong("expiresAt") > System.currentTimeMillis())
-            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); refreshService(); askNotifications() }
+            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); ReceiveMode.onForeground(this); refreshService(); askNotifications() }
             ui.pending = null; ui.input = ""; ui.toast("Trusted ${pair.name}")
         }.onFailure { ui.inputError = "Pairing expired. Run cdx pair again."; ui.pending = null }
         refresh()
@@ -194,7 +194,7 @@ class MainActivity: ComponentActivity(), CdActions {
         refresh()
     }
 
-    override fun setMobile(on: Boolean) { store.mobile(on); refreshService(); refresh() }
+    override fun setMobile(on: Boolean) { store.mobile(on); NativeNetworkDetector.refreshPolicy(); TransferBus.sender.networkPolicyChanged(); refreshService(); refresh() }
 
     override fun setPush(on: Boolean) {
         if (on && !notificationsAllowed()) pushNotifications.launch(Manifest.permission.POST_NOTIFICATIONS) else PushBridge.setEnabled(this, on)

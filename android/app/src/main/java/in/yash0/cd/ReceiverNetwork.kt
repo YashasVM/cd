@@ -32,11 +32,11 @@ class ReceiverNetwork(context: Context, private val store: Store) {
     }.getOrDefault(false)
     @Suppress("DEPRECATION") private fun networks(): List<Network> = (cm.allNetworks.toList() + discovered).distinct()
     fun close() { if (registered) runCatching { cm.unregisterNetworkCallback(localCallback) } }
-    @Suppress("DEPRECATION")
-    private fun publicNetwork(): Network? = networks().firstOrNull { network ->
-        val c = cm.getNetworkCapabilities(network) ?: return@firstOrNull false
-        c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && NativeNetworkPolicy.allowed(store.allowedMobile(), c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI), c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET), c.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR), c.hasTransport(NetworkCapabilities.TRANSPORT_VPN), c.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
+    private fun publicAllowed(network: Network): Boolean {
+        val c = cm.getNetworkCapabilities(network) ?: return false
+        return c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && NativeNetworkPolicy.allowed(store.allowedMobile(), c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI), c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET), c.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR), c.hasTransport(NetworkCapabilities.TRANSPORT_VPN), c.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
     }
+    private fun publicNetwork(): Network? = networks().firstOrNull(::publicAllowed)
     @Suppress("DEPRECATION")
     private fun localAddress(endpoint: String): InetAddress? {
         if (!localEndpoint(endpoint)) return null
@@ -64,15 +64,21 @@ class ReceiverNetwork(context: Context, private val store: Store) {
         }
     }
     fun allowed(endpoint: String): Boolean = validEndpoint(endpoint) && (localNetwork(endpoint) != null || localAddress(endpoint) != null || publicNetwork() != null)
-    fun client(base: OkHttpClient, endpoint: String): OkHttpClient {
+    /** Keep the selected network identity: another permitted network must not authorize an old socket. */
+    data class Binding(val client: OkHttpClient, val allowed: () -> Boolean)
+    fun client(base: OkHttpClient, endpoint: String): OkHttpClient = bind(base, endpoint).client
+    fun bind(base: OkHttpClient, endpoint: String): Binding {
         if (!validEndpoint(endpoint)) throw IOException("Invalid endpoint")
-        localNetwork(endpoint)?.let { return base.newBuilder().socketFactory(it.socketFactory).followRedirects(false).followSslRedirects(false).build() }
+        localNetwork(endpoint)?.let { network ->
+            return Binding(base.newBuilder().socketFactory(network.socketFactory).followRedirects(false).followSslRedirects(false).build()) { localNetwork(endpoint) == network }
+        }
         val local = localAddress(endpoint)
-        if (local != null) return base.newBuilder().socketFactory(BoundSockets(local)).followRedirects(false).followSslRedirects(false).build()
+        if (local != null) return Binding(base.newBuilder().socketFactory(BoundSockets(local)).followRedirects(false).followSslRedirects(false).build()) { localAddress(endpoint) == local }
         val network = publicNetwork() ?: throw TransientNetworkException()
-        return base.newBuilder().socketFactory(network.socketFactory).dns(object: Dns {
+        val bound = base.newBuilder().socketFactory(network.socketFactory).dns(object: Dns {
             override fun lookup(hostname: String): List<InetAddress> = network.getAllByName(hostname).toList()
-        }).build()
+        }).followRedirects(false).followSslRedirects(false).build()
+        return Binding(bound) { publicAllowed(network) }
     }
     private class BoundSockets(private val source: InetAddress): SocketFactory() {
         override fun createSocket(): Socket = Socket().apply { bind(InetSocketAddress(source, 0)) }
