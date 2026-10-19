@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 func TestStorePrivateAtomicAndPublicListing(t *testing.T) {
@@ -18,9 +20,9 @@ func TestStorePrivateAtomicAndPublicListing(t *testing.T) {
 	if err != nil || got.Secret != p.Secret {
 		t.Fatalf("load failed: %v", err)
 	}
-	for path, mode := range map[string]os.FileMode{store.Dir: 0700, filepath.Join(store.Dir, "phone.json"): 0600} {
+	for _, path := range []string{store.Dir, filepath.Join(store.Dir, "phone.json")} {
 		st, err := os.Stat(path)
-		if err != nil || st.Mode().Perm() != mode {
+		if err != nil || privatefs.Check(path, st) != nil {
 			t.Fatalf("private mode %s: %v %v", path, st, err)
 		}
 	}
@@ -69,9 +71,7 @@ func TestStoreRejectsUnsafeEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(store.Dir, "phone.json")
-	if err := os.Chmod(path, 0644); err != nil {
-		t.Fatal(err)
-	}
+	exposePrivateTestPath(t, path, 0644)
 	if _, err := store.Load("phone"); err == nil {
 		t.Fatal("publicly readable credential loaded")
 	}
@@ -80,11 +80,12 @@ func TestStoreRejectsUnsafeEntries(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("private"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, path); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.Load("phone"); err == nil {
-		t.Fatal("symlink credential loaded")
+	if err := os.Symlink(outside, path); err == nil {
+		if _, err := store.Load("phone"); err == nil {
+			t.Fatal("symlink credential loaded")
+		}
+	} else {
+		t.Logf("symlink unavailable: %v", err)
 	}
 	os.Remove(path)
 	if err := os.WriteFile(path, make([]byte, maxStoreFile+1), 0600); err != nil {
@@ -93,9 +94,7 @@ func TestStoreRejectsUnsafeEntries(t *testing.T) {
 	if _, err := store.Load("phone"); err == nil {
 		t.Fatal("oversized credential loaded")
 	}
-	if err := os.Chmod(store.Dir, 0755); err != nil {
-		t.Fatal(err)
-	}
+	exposePrivateTestPath(t, store.Dir, 0755)
 	if _, err := store.Load("phone"); err == nil {
 		t.Fatal("public store accepted")
 	}

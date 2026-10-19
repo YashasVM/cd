@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/YashasVM/cd/internal/privatefs"
 	"github.com/gorilla/websocket"
 )
 
@@ -461,7 +463,7 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 		return resumeFailure("invalid resume acceptance")
 	}
 	offset, err := strconv.ParseUint(accept.Offset, 10, 64)
-	if err != nil || offset > source.size || (offset%chunkSize != 0 && offset != source.size) {
+	if err != nil || !validResumeOffset(offset, source.size) {
 		return resumeFailure("invalid retained resume offset")
 	}
 	reader, err := source.open()
@@ -652,7 +654,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		if _, err = os.Lstat(final); err == nil {
 			return NewFailure(failureExists, "resume destination already exists; choose another --out path", retryNever)
 		}
-		stage, err = os.CreateTemp(filepath.Dir(final), ".cd-stage-*.part")
+		stage, err = privatefs.CreateTemp(filepath.Dir(final), ".cd-stage-*.part")
 		if err != nil {
 			return err
 		}
@@ -772,4 +774,8 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		}
 		return writeReceived(os.Stdout, receiveResult{Version: 2, Filename: checkpoint.Filename, Size: uint64(checkpoint.Size), Path: final}, false)
 	}
+}
+
+func validResumeOffset(offset, size uint64) bool {
+	return offset <= math.MaxInt64 && offset <= size && (offset%chunkSize == 0 || offset == size)
 }

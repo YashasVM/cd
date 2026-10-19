@@ -246,6 +246,9 @@ func (link *recordLink) next(ctx context.Context, timeout time.Duration) (messag
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
+		if err := ctx.Err(); err != nil {
+			return 0, nil, err
+		}
 		if kind, plaintext, ok, err := link.ready(); ok || err != nil {
 			return kind, plaintext, err
 		}
@@ -253,8 +256,14 @@ func (link *recordLink) next(ctx context.Context, timeout time.Duration) (messag
 		case <-ctx.Done():
 			return 0, nil, ctx.Err()
 		case <-timer.C:
+			if err := ctx.Err(); err != nil {
+				return 0, nil, err
+			}
 			return 0, nil, linkTimeout{}
 		case item := <-link.items:
+			if err := ctx.Err(); err != nil {
+				return 0, nil, err
+			}
 			if err := link.accept(item); err != nil {
 				return 0, nil, err
 			}

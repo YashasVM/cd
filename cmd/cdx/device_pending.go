@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 type devicePending struct {
@@ -25,15 +27,15 @@ func devicePendingDirectory() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err = os.MkdirAll(dir, 0700); err != nil {
+	if err = privatefs.MkdirAll(dir); err != nil {
 		return "", err
 	}
 	info, err := os.Lstat(dir)
 	if err != nil {
 		return "", err
 	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
-		return "", resumeFailure("pending device transfers require a private directory with mode 0700")
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || privatefs.Check(dir, info) != nil {
+		return "", resumeFailure("pending device transfers require a private directory")
 	}
 	return dir, nil
 }

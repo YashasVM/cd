@@ -8,13 +8,15 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 func checkpointFixture(t *testing.T, dir string) (ResumeCheckpoint, []byte, string) {
 	t.Helper()
 	master := make([]byte, 32)
 	rand.Read(master)
-	stage, err := os.CreateTemp(dir, ".cd-stage-*.part")
+	stage, err := privatefs.CreateTemp(dir, ".cd-stage-*.part")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,6 +105,7 @@ func TestResumeRejectsStagingSymlinkAndUnsafeMetadata(t *testing.T) {
 		t.Fatal("accepted staging path traversal")
 	}
 	os.WriteFile(path, []byte(`{}`), 0644)
+	exposePrivateTestPath(t, path, 0644)
 	var result ResumeCheckpoint
 	if resumeReadJSON(path, &result) == nil {
 		t.Fatal("accepted exposed checkpoint permissions")

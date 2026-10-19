@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math/rand/v2"
 	"net"
 	"net/http"
@@ -99,4 +100,37 @@ func dialRelay(ctx context.Context, endpoint string) (*websocket.Conn, error) {
 		return nil, NewFailure(failureNetwork, "connect to CD relay setup timed out within 20s: check your network and try again", retrySameRequest, err)
 	}
 	return connection, err
+}
+
+// Retry only known transport interruptions. Untyped local/protocol errors must
+// terminate instead of silently retrying forever with the same retained state.
+func retryDeviceTransfer(err error) bool {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, fs.ErrPermission) || errors.Is(err, fs.ErrNotExist) {
+		return false
+	}
+	var path *fs.PathError
+	if errors.As(err, &path) {
+		return false
+	}
+	var failure *Failure
+	if errors.As(err, &failure) {
+		return failure.Retry == retrySameRequest && (failure.Kind == failureDisconnected || failure.Kind == failureNetwork || failure.Kind == failureTimeout)
+	}
+	var closed *websocket.CloseError
+	if errors.As(err, &closed) {
+		return closed.Code == websocket.CloseAbnormalClosure || closed.Code == websocket.CloseGoingAway || closed.Code == websocket.CloseTryAgainLater || closed.Code == websocket.CloseInternalServerErr
+	}
+	if !transientSetup(err) {
+		return false
+	}
+	var operation *net.OpError
+	if errors.As(err, &operation) {
+		return true
+	}
+	var dns *net.DNSError
+	if errors.As(err, &dns) {
+		return dns.IsTemporary || dns.IsTimeout
+	}
+	var network net.Error
+	return errors.As(err, &network) && network.Timeout()
 }

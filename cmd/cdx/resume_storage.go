@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 type resumeCapability struct {
@@ -29,7 +31,7 @@ func resumeAtomicJSON(path string, value any) error {
 	if len(data) > 16384 {
 		return resumeFailure("resume metadata exceeds 16 KiB")
 	}
-	temp, err := os.CreateTemp(filepath.Dir(path), ".cd-resume-*")
+	temp, err := privatefs.CreateTemp(filepath.Dir(path), ".cd-resume-*")
 	if err != nil {
 		return err
 	}
@@ -50,20 +52,13 @@ func resumeAtomicJSON(path string, value any) error {
 	}
 	return resumeSyncDir(filepath.Dir(path))
 }
-func resumeSyncDir(dir string) error {
-	file, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return file.Sync()
-}
+func resumeSyncDir(dir string) error { return privatefs.SyncDir(dir) }
 func resumeReadJSON(path string, value any) error {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return err
 	}
-	if !info.Mode().IsRegular() || info.Size() > 16384 || info.Mode().Perm()&0077 != 0 {
+	if !info.Mode().IsRegular() || info.Size() > 16384 || privatefs.Check(path, info) != nil {
 		return resumeFailure("resume metadata must be a private regular file of at most 16 KiB")
 	}
 	data, err := os.ReadFile(path)
@@ -84,7 +79,7 @@ func resumeCapabilityPath(id string) (string, error) {
 		return "", err
 	}
 	dir = filepath.Join(dir, "resume")
-	if err = os.MkdirAll(dir, 0700); err != nil {
+	if err = privatefs.MkdirAll(dir); err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, id+".sender.json"), nil
@@ -184,7 +179,7 @@ func resumeStage(checkpoint ResumeCheckpoint, path string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+	if !info.Mode().IsRegular() || privatefs.Check(stage, info) != nil {
 		return nil, resumeFailure("resume staging is not a private regular file")
 	}
 	file, err := os.OpenFile(stage, os.O_RDWR, 0600)

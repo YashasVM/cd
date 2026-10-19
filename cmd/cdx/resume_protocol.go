@@ -124,7 +124,7 @@ func (s *resumeRecordSealer) seal(kind messageKind, plain []byte) ([]byte, error
 	if s.sequence > uint64(^uint32(0)) {
 		return nil, NewFailure(failureProtocol, "record sequence exhausted", retryNever)
 	}
-	if headerBytes+len(plain)+s.aead.Overhead() > maxRecordBytes {
+	if !validResumeRecordSize(len(plain), s.aead.Overhead()) {
 		return nil, NewFailure(failureProtocol, "record is too large", retryNever)
 	}
 	h := make([]byte, headerBytes, headerBytes+len(plain)+s.aead.Overhead())
@@ -283,4 +283,8 @@ func verifyResumeCheckpoint(c ResumeCheckpoint, secret []byte, now int64) error 
 		return errors.New("checkpoint authentication failed")
 	}
 	return nil
+}
+
+func validResumeRecordSize(size, overhead int) bool {
+	return size >= 0 && overhead >= 0 && overhead <= maxRecordBytes-headerBytes && size <= maxRecordBytes-headerBytes-overhead
 }

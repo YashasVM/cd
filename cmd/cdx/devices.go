@@ -556,8 +556,7 @@ func runDeviceSend(request sendRequest) int {
 			reportFailure(os.Stdout, os.Stderr, NewFailure(failureCanceled, "transfer paused; rerun the same command to retain progress", retrySameRequest, ctx.Err()), request.jsonOutput)
 			return 1
 		}
-		var failure *Failure
-		if errors.As(err, &failure) && failure.Kind != failureDisconnected && failure.Kind != failureNetwork && failure.Kind != failureTimeout {
+		if !retryDeviceTransfer(err) {
 			if errors.Is(err, errResumeSessionLimit) {
 				if resetErr := resetExhaustedDevicePending(pendingPath); resetErr != nil {
 					return deviceFailure(resetErr, request.jsonOutput)

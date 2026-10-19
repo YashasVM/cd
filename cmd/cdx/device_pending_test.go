@@ -8,13 +8,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/YashasVM/cd/internal/devices"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/YashasVM/cd/internal/devices"
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 func pendingCapabilityFixture(t *testing.T) (resumeCapability, string, string) {
@@ -64,11 +66,11 @@ func TestDevicePendingRetainsAuthenticatedRootAcrossReload(t *testing.T) {
 		t.Fatalf("reloaded pending root %q: %v", got, err)
 	}
 	info, err := os.Stat(path)
-	if err != nil || info.Mode().Perm() != 0600 {
+	if err != nil || privatefs.Check(path, info) != nil {
 		t.Fatalf("pending record permissions: %v %v", info, err)
 	}
 	info, err = os.Stat(filepath.Dir(path))
-	if err != nil || info.Mode().Perm() != 0700 {
+	if err != nil || privatefs.Check(filepath.Dir(path), info) != nil {
 		t.Fatalf("pending directory permissions: %v %v", info, err)
 	}
 	data, err := os.ReadFile(path)
@@ -194,7 +196,7 @@ func TestDevicePendingCorruptionAndUnsafePermissionsFail(t *testing.T) {
 			case "invalid expiry":
 				resumeAtomicJSON(path, devicePending{1, id, -1})
 			case "wrong record permissions":
-				os.Chmod(path, 0644)
+				exposePrivateTestPath(t, path, 0644)
 			case "oversized metadata":
 				os.WriteFile(path, make([]byte, 16385), 0600)
 			case "symlink record":
@@ -203,10 +205,10 @@ func TestDevicePendingCorruptionAndUnsafePermissionsFail(t *testing.T) {
 					t.Fatal(err)
 				}
 				if err := os.Symlink(outside, path); err != nil {
-					t.Fatal(err)
+					t.Skipf("symlink unavailable: %v", err)
 				}
 			case "wrong directory permissions":
-				os.Chmod(filepath.Dir(path), 0755)
+				exposePrivateTestPath(t, filepath.Dir(path), 0755)
 			case "tampered capability":
 				capability.Checkpoint.PrefixSHA256 = strings.Repeat("a", 64)
 				resumeAtomicJSON(capabilityPath, capability)

@@ -1,0 +1,21 @@
+name: Windows private storage
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  private-storage:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.9'
+          cache: true
+      - name: Exercise real Windows ACLs and resumable storage
+        run: go test ./internal/privatefs ./internal/devices ./cmd/cdx -run 'Test(PrivateWindows|Store|ResumeCheckpoint|ResumeRejects|DevicePending|DeviceRetry|RecordLinkCancellation|ReliabilityReceiveFailureNeverPublishes)' -count=1

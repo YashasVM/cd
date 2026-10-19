@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/YashasVM/cd/internal/privatefs"
 )
 
 const maxStoreFile = 32768
@@ -40,15 +42,15 @@ func (s Store) directory() (*os.Root, error) {
 	if s.Dir == "" {
 		return nil, errors.New("device store directory missing")
 	}
-	if err := os.MkdirAll(s.Dir, 0700); err != nil {
+	if err := privatefs.MkdirAll(s.Dir); err != nil {
 		return nil, err
 	}
 	st, err := os.Lstat(s.Dir)
 	if err != nil {
 		return nil, err
 	}
-	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("device store must be a private directory with mode 0700")
+	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || privatefs.Check(s.Dir, st) != nil {
+		return nil, errors.New("device store must be a private directory")
 	}
 	return os.OpenRoot(s.Dir)
 }
@@ -102,6 +104,15 @@ func (s Store) Save(name string, p Pair) error {
 		return err
 	}
 	defer root.Remove(temporary)
+	// Validate inherited permissions before any credential bytes are written.
+	info, checkErr := f.Stat()
+	if checkErr == nil {
+		checkErr = privatefs.Check(filepath.Join(root.Name(), temporary), info)
+	}
+	if checkErr != nil {
+		f.Close()
+		return checkErr
+	}
 	_, err = f.Write(data)
 	if err == nil {
 		err = f.Sync()
@@ -116,12 +127,7 @@ func (s Store) Save(name string, p Pair) error {
 	if err = root.Rename(temporary, name+".json"); err != nil {
 		return err
 	}
-	directory, err := os.Open(s.Dir)
-	if err != nil {
-		return err
-	}
-	defer directory.Close()
-	return directory.Sync()
+	return privatefs.SyncDir(s.Dir)
 }
 func (s Store) Load(name string) (Pair, error) {
 	if !validName(name) {
@@ -139,7 +145,7 @@ func load(root *os.Root, name string) (Pair, error) {
 	if err != nil {
 		return Pair{}, err
 	}
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() > maxStoreFile {
+	if !st.Mode().IsRegular() || privatefs.Check(filepath.Join(root.Name(), name+".json"), st) != nil || st.Size() > maxStoreFile {
 		return Pair{}, errors.New("credential must be a bounded private regular file")
 	}
 	f, err := root.Open(name + ".json")

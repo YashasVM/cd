@@ -86,3 +86,31 @@ func TestResumeV2FixtureAndProofs(t *testing.T) {
 		t.Fatal("expired checkpoint accepted")
 	}
 }
+
+func TestResumeRecordSizeArithmeticBounds(t *testing.T) {
+	maxInt := int(^uint(0) >> 1)
+	for _, size := range []int{0, maxRecordBytes - headerBytes - 16} {
+		if !validResumeRecordSize(size, 16) {
+			t.Errorf("rejected legal plaintext size %d", size)
+		}
+	}
+	for _, size := range []int{maxRecordBytes - headerBytes - 15, maxInt, maxInt - headerBytes} {
+		if validResumeRecordSize(size, 16) {
+			t.Errorf("accepted invalid plaintext size %d", size)
+		}
+	}
+}
+
+func TestResumeOffsetMustFitSignedReaderCount(t *testing.T) {
+	if !validResumeOffset(0, 1) || !validResumeOffset(chunkSize, chunkSize+1) || !validResumeOffset(1, 1) {
+		t.Fatal("rejected valid offset")
+	}
+	for _, offset := range []uint64{1 << 63, ^uint64(0)} {
+		if validResumeOffset(offset, offset) {
+			t.Errorf("accepted unsigned offset %d", offset)
+		}
+	}
+	if validResumeOffset(1, 2) || validResumeOffset(2, 1) {
+		t.Fatal("accepted unaligned/out-of-bounds offset")
+	}
+}
