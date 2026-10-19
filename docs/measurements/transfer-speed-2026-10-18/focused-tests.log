@@ -1,0 +1,40 @@
+✔ failed trials reduce completion rate and never inflate successful medians (1.028636ms)
+✔ output accounts for both streams and exact UTF-8 bytes (37.237162ms)
+✔ readiness handles fragmented lines and releases listeners (0.884694ms)
+✔ readiness timeout and early EOF remain actionable (6.749633ms)
+✔ browser evidence counts complete encrypted payloads after successful negotiated sends (3.662733ms)
+✔ records split into 64 KiB pieces rebuild exactly (1.960112ms)
+✔ the merger orders both paths and drops second copies (1.219944ms)
+✔ direct offers are optional and bounded (0.277406ms)
+✔ assembly rejects oversized native messages before buffering (0.380749ms)
+✔ ordering bytes and record count both remain bounded (8.043138ms)
+✔ merger validates header and record length before retaining bytes (0.26469ms)
+✔ direct native sends and queued ciphertext have independent hard caps (45.869688ms)
+✔ incremental SHA256 matches node across chunk boundaries and clone/final is nonmutating (26.403314ms)
+▶ resume browser primitives
+  ✔ parses only private v2 links and validates safe filenames (1.321767ms)
+  ✔ hashes files incrementally in bounded chunks (57.518388ms)
+  ✔ binds a resumed sender to the original name, size, and whole digest (0.335118ms)
+  ✔ writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption (40.297371ms)
+  ✔ round-trips v2 progress records and confirms the fallback cap (0.545689ms)
+✔ resume browser primitives (101.406465ms)
+✔ capacity admits complete chunks and prevents an extra chunk overflow (2.483122ms)
+✔ slow delivery shrinks the window while outstanding data remains accounted (0.396922ms)
+✔ sustained full-window receipts grow within the configured maximum (0.328612ms)
+✔ ACK compression and zero RTT do not inflate a window without a delivery interval (0.20415ms)
+✔ invalid ACKs and clocks leave accounting unchanged (1.048024ms)
+✔ tiny chunks use bounded metadata and payload is never retained (21.584094ms)
+✔ bounds reject unsafe allocations (0.64545ms)
+✔ cumulative counts remain exact beyond Number safe integer range (0.432684ms)
+✔ repeatable slow receiver keeps outstanding bytes and metadata bounded (4.016199ms)
+ℹ slow receiver {"seconds":64,"mibPerSecond":1,"maxInFlight":4194304,"maxSamples":16,"finalWindow":1048576}
+✔ adaptive window improves a high bandwidth delayed path without exceeding its cap (2.161297ms)
+ℹ delayed path adaptive={"seconds":7.276171875,"mibPerSecond":35.183336017608845,"maxInFlight":12582912,"maxSamples":48,"finalWindow":12582912} fixed={"seconds":9.723046875,"mibPerSecond":26.329195291470814,"maxInFlight":8388608,"maxSamples":0}
+ℹ tests 28
+ℹ suites 1
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 184.986285

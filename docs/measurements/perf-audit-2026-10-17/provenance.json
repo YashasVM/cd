@@ -1,0 +1,48 @@
+{
+  "baseCommit": "57232025406c6b86e688ffa598319cab7ffd60e8",
+  "checkout": "Includes pre-existing uncommitted changes; these fingerprints were captured after the measurements.",
+  "kernel": "7.2.5-3-omarchy",
+  "sourceSHA256": {
+    "scripts/bench.mjs": "70db9f39412997226f235f35daf0fb8f2ef606c04dad9b95cb241d2afb759162",
+    "scripts/bench-metrics.mjs": "89cc763b96961536194c9d5e58177fe2b7c7444cab3349b12e882e1b48762112",
+    "scripts/harness.mjs": "93b7eff6ce73b8b678a7cdf9cea4d1e81670c782ba4071ceddb7a68b0325710f",
+    "scripts/perf-audit.mjs": "b446a1d151d30ec8fef9f827cc2f7f86afaeeea0c716ca4c649c02a39b8e0e89",
+    "cmd/cdx/sender.go": "c8d4f5fd3a2773d5779700d50d376dd35d8216eb81a04ca3f92bfca4bd2f1c51",
+    "cmd/cdx/receive.go": "44cbd67d44cf15571a70c29910950a31284ea6bdcdf27a2a7a1c6f793c337d74",
+    "cmd/cdx/resume.go": "5d853555a3af09b100a1281c6bed3668b4efdcda6b5141c0e46ff1b09ed50f60",
+    "cmd/cdx/resume_storage.go": "2e34f70a990673b6cfbe74ce67a437c3966ebd600c6b75e99ef83a7862a35ac8",
+    "cmd/cdx/protocol.go": "3298e6c9cbacf1928df4237f074e19190118cae1fda1c46a77d55963ba2cd1bf",
+    "cmd/cdx/direct.go": "a59d766d8c11092ad771a51a521faaf79889f5546dee54a1124b43ade9deb7b4",
+    "cmd/cdx/link.go": "752760474332526196908f7036d3786b4c80ca108b070d2d6758f522471e5572",
+    "src/resume-browser.js": "3cbfd1c4a864357188c733ec63a5a49a6bdf66f7e0b5c3e991f7056f5829f869",
+    "src/incremental-sha256.js": "5f9ff0239bed98f90c110bbc66f5a12040e65c7489390fe78e07906ae074f287",
+    "src/relay-sender.js": "d4c93eebc70a9acad6954f918156f4bf7572b1358f5912e143432c748d17e5b1",
+    "src/send-window.js": "ec288e303dfd9752b447fde0e113a87f113f84e307d388f4a2127650d22ec60e",
+    "src/sink.js": "56942dfdcf542e521982a20b3f484a8a9d02d4a5cbe27c488cbf5c059da32cd5",
+    "src/direct-link.js": "07c4b7e70b9c8b857759f2bf19da125b34c7e352039994c4da423b27eea9fb9d",
+    "src/agent-protocol.js": "901141bab89cbef8b0949234319bbbc5a814ab18a2c83e5712e80b94fdd3a51d",
+    "worker/index.ts": "89f2d13983dde299b729b53a524d1c4e1fe0e72a01c0f7e8c1b9e694f0e10aa4",
+    "worker/resume-room.ts": "f63e3afe0c48621a6ffa26562abeade0a318cb03d462a0c4c92af0bbcc9cb8ea"
+  },
+  "notes": [
+    "Local capacity and artificial latency experiments, not internet bandwidth tests.",
+    "Early 64 MiB relay baseline preceded heavy competing emulator and Java load.",
+    "Do not compare absolute speeds across invocations as controlled performance deltas.",
+    "Go CPU profiler was killed and generated no usable profile.",
+    "Invalid early harness runs are retained for audit and excluded from conclusions.",
+    "No production application code was changed."
+  ],
+  "artifacts": {
+    "baseline-64.json": "Early 64 MiB CLI/browser relay baseline, five trials per mode.",
+    "network.json": "Final latency matrix, three trials per mode per added ACK RTT, all verified.",
+    "browser.json": "Actual browser modules, CPU and staging measurements, three runs at each throttle.",
+    "storage.json": "Storage-only reopen versus persistent worker-handle experiment.",
+    "direct-browser.json": "First direct browser probe on a busy host.",
+    "browser-routes-loaded.json": "Later direct and relay browser probes in one invocation on a busy host.",
+    "network-disk.json": "Btrfs-backed CLI source, destination, and checkpoints, no added latency.",
+    "go-bench.txt": "Failed profiling attempt; SIGKILL, no usable measurements.",
+    "network-invalid-proxy.json": "Invalid initial harness run; proxy close ordering was wrong.",
+    "network-partial-rate-limited.json": "Early run exhausted local admission limit; not used for performance conclusions.",
+    "report.html": "Interactive findings, limitations, source locations, and reproduction commands."
+  }
+}

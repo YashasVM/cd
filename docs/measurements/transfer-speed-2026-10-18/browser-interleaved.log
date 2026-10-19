@@ -1,0 +1,12 @@
+{"pair":-1,"mode":"relay","warmup":true,"completed":true,"readinessMs":64.90550200000007,"downloadReadySeconds":2.140129183,"seconds":2.276635996,"mibPerSecond":28.111652505032254}
+{"pair":-1,"mode":"automatic","warmup":true,"completed":true,"readinessMs":46.33974599999965,"downloadReadySeconds":2.855368861,"seconds":2.982168906,"mibPerSecond":21.460890384590442}
+{"pair":0,"mode":"automatic","warmup":false,"completed":true,"readinessMs":47.276428000000124,"downloadReadySeconds":2.1051378300000008,"seconds":2.231597559999999,"mibPerSecond":28.67900608387474}
+{"pair":0,"mode":"relay","warmup":false,"completed":true,"readinessMs":51.903731000000334,"downloadReadySeconds":1.9683580700000003,"seconds":2.0976774459999996,"mibPerSecond":30.509933794654533}
+{"pair":1,"mode":"relay","warmup":false,"completed":true,"readinessMs":48.376893000000564,"downloadReadySeconds":2.1654030389999988,"seconds":2.294999177,"mibPerSecond":27.886720239987262}
+{"pair":1,"mode":"automatic","warmup":false,"completed":true,"readinessMs":51.437254000000394,"downloadReadySeconds":2.5112021879999995,"seconds":2.6472571769999993,"mibPerSecond":24.175966187209628}
+{"pair":2,"mode":"automatic","warmup":false,"completed":true,"readinessMs":49.916299000000436,"downloadReadySeconds":3.1948201149999984,"seconds":3.3153756749999994,"mibPerSecond":19.30399637139161}
+{"pair":2,"mode":"relay","warmup":false,"completed":true,"readinessMs":43.40896799999973,"downloadReadySeconds":1.9486277599999995,"seconds":2.0713576930000017,"mibPerSecond":30.897608952950623}
+{"pair":3,"mode":"relay","warmup":false,"completed":true,"readinessMs":44.01634600000034,"downloadReadySeconds":2.241051474,"seconds":2.324441665999999,"mibPerSecond":27.53349371427075}
+{"pair":3,"mode":"automatic","warmup":false,"completed":true,"readinessMs":44.614104000000225,"downloadReadySeconds":2.490813483000002,"seconds":2.571184179,"mibPerSecond":24.891254591062108}
+{"pair":4,"mode":"automatic","warmup":false,"completed":false,"error":"locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#sender-code-section:not(.hidden)') to be visible\u001b[22m\n\n    at /home/yvm/code/cd/docs/measurements/transfer-speed-2026-10-18/compare-browser-routes.mjs:41:67"}
+{"pair":4,"mode":"relay","warmup":false,"completed":true,"readinessMs":51.140709999992396,"downloadReadySeconds":1.901592076000001,"seconds":1.9950355500000005,"mibPerSecond":32.07962885673891}

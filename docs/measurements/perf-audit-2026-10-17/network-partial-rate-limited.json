@@ -1,0 +1,300 @@
+{
+  "timestamp": "2026-10-17T14:38:03.732Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "runs": 3,
+  "workFilesystemPath": "/tmp/cd-perf-zgOLor",
+  "trials": [
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 46.612693000000036,
+      "seconds": 0.7486203999999997,
+      "mibPerSecond": 10.686323803091664,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 47.07378599999993,
+      "seconds": 1.4525050879999999,
+      "mibPerSecond": 5.507725973624955
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 40.68155900000056,
+      "seconds": 0.5069788559999997,
+      "mibPerSecond": 15.779750783137207,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 52.78127399999994,
+      "seconds": 1.5838953110000002,
+      "mibPerSecond": 5.050838868226183
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 33.41757099999995,
+      "seconds": 0.6039767869999996,
+      "mibPerSecond": 13.245542166838286,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 50.104151999999885,
+      "seconds": 1.6042480450000003,
+      "mibPerSecond": 4.986760011915737
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 99.62549799999942,
+      "seconds": 0.8090190270000003,
+      "mibPerSecond": 9.888518975462857,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 87.9509880000005,
+      "seconds": 4.483180292000001,
+      "mibPerSecond": 1.784447530311368
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 72.48357100000067,
+      "seconds": 0.5107494760000009,
+      "mibPerSecond": 15.663256402440219,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 76.18651500000124,
+      "seconds": 4.433074988,
+      "mibPerSecond": 1.8046164393012518
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 74.56908199999816,
+      "seconds": 0.5326470000000009,
+      "mibPerSecond": 15.019327997717038,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 82.08744600000136,
+      "seconds": 4.0170898600000005,
+      "mibPerSecond": 1.9914914225991447
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 165.6445849999982,
+      "seconds": 0.9516521159999974,
+      "mibPerSecond": 8.406433260113742,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 175.2518369999998,
+      "seconds": 10.973743333000002,
+      "mibPerSecond": 0.7290128588977085
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 166.45277799999894,
+      "seconds": 0.9648721799999985,
+      "mibPerSecond": 8.291253666366474,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 17.9622920000038,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 11.210825999994995,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 15.936510999999882,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    }
+  ]
+}

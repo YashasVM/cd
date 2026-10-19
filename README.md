@@ -3,7 +3,7 @@
 Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 
 - **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
-  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files arrive as one .zip.
+  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files share one code and arrive as separate files.
 
 CD never stores files. Transfers are live and end-to-end encrypted.
 
@@ -20,8 +20,9 @@ The shell installers check release checksums. The CLI is named `cdx` because `cd
 ## Use
 
 ```bash
-cdx send ./report.pdf          # prints a code, e.g. 48291
-cdx send ./shots ./notes.md    # several paths arrive as one .zip
+cdx send ./report.pdf          # shows a code and QR in a terminal
+cdx send ./shots ./notes.md    # several files, one code; they arrive separately
+cdx send --json --qr ./receive-qr.png ./report.pdf # QR image for chat
 cdx send --link ./secret.zip   # private end-to-end encrypted link instead of a code
 cdx receive 48291              # save to the current directory
 cdx receive 48291 --out ~/Downloads
@@ -32,17 +33,40 @@ To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in
 
 | Command | What it does |
 | --- | --- |
-| `cdx status [code]` | List background sends |
+| `cdx status [transfer-ID or code]` | List background sends |
 | `cdx wait <code>` | Exit 0 once the receiver has verified every byte, or 1 if the transfer failed |
 | `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
 | `cdx update` | Update cdx to the latest release (checksum-verified) |
-| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
+| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and explicit retry guidance |
+| `--qr <path>` | Save a QR PNG locally; JSON includes its absolute `qrPath`. The output path must not exist. |
 | `--wait` / `--detach` | Force foreground or background sending |
 
-**Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
-receiver verifies the file. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
+**Behavior:** in a terminal, `send` displays a share card with a scannable QR and waits until the
+receiver verifies the file. Captured stdout holds only the code (or compact JSON with `--json`). Progress is opt-in with `--progress` for captured output. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
 the code is live. Codes expire after 15 minutes and admit one receiver.
 Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
+
+For safe retries of a detached send, use `cdx send --request-id <unique-id> --json <path>`.
+Repeating the same request returns the original transfer; changing its input fails explicitly.
+Status history is stored by transfer ID, so reused codes do not overwrite earlier sends.
+
+To keep verified progress across interruptions, use the opt-in resume protocol:
+
+```bash
+cdx send --resumable --json ./report.pdf
+cdx send --resume <transfer-ID> --json ./report.pdf
+cdx receive --resume '<private-v2-link>' --out ./report.pdf
+```
+
+Resumable CLI sends stay in the foreground and use private links. Receiver checkpoints
+are kept beside the output; sender records live in the private CLI state directory.
+Reselect the same file and private link in the browser to resume a send; reopen the
+link in the same browser to resume a receive. Restart the sender first and wait for
+its private link to appear, then reconnect the receiver. Browser resume requires OPFS storage.
+Records expire after 24 hours. Resume verifies the source and retained prefix and uses
+fresh session keys. This first resumable protocol uses the relay; ordinary transfers
+retain direct WebRTC transport. Explicit browser cancellation discards saved progress;
+CLI receiver cancellation does too, while interrupting the sender retains its resume record.
 
 **Security:** a 5-digit code lets the relay hold the transfer key so the code is easy to type, so anyone who
 guesses a live code can receive the file. For sensitive files, use `--link`: the key stays in the URL fragment,
@@ -65,6 +89,23 @@ Browser / cdx ── encrypted WebSocket ── CD relay (Durable Object) ──
 One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code directory (`/api/codes`).
 Each transfer gets its own Durable Object room. Rooms hold one sender and one receiver, limit memory use,
 expire on their own, and keep no file data.
+
+## Android development preview
+
+A native receiver is available in [`android/`](android/README.md). Build the APK and a CLI from this checkout, then run:
+
+```bash
+go build -o ./bin/cdx-dev ./cmd/cdx
+./bin/cdx-dev pair --name phone
+./bin/cdx-dev devices
+./bin/cdx-dev send --to phone ./report.pdf
+```
+
+Approve the pairing QR in CD on the phone and enable receiving. Targeted sends keep resumable progress automatically. After an interruption, rerun the same command with the same files. Changed source bytes fail verification. Use `cdx devices forget phone` to remove the local credential, and **Revoke** in Android to stop trusting the laptop.
+
+This is a development preview. The new device relay endpoint must run from this checkout for internet fallback. No production deployment is included. Local handoffs use authenticated encrypted WebSockets and mDNS discovery. Remote transfers start on the resumable relay and upgrade to native WebRTC when reachable. Optional Firebase wake-up is implemented and needs a project configuration; follow the [Firebase setup guide](docs/guides/firebase-setup.md). The targeted sender still runs in the foreground. Files and folders selected together currently arrive as a ZIP in Android. See [Android setup](android/README.md) and [verification](docs/implementation/android-verification.md).
+
+See [the pairing decision](docs/adr/0002-paired-android-receiving.md) for protocol and lifecycle limits. Run `node scripts/verify-devices.mjs` to verify real CLI pairing through a local Worker, admission checks, reconnects, and credential privacy.
 
 ## Develop
 

@@ -120,3 +120,29 @@ func isBase64Url32(value string) bool {
 	}
 	return true
 }
+
+func TestCodeLookupRetriesTransientHTTPButClaimsDoNot(t *testing.T) {
+	var lookups, claims atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			claims.Add(1)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		if lookups.Add(1) < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		// Invalid content proves retry stops after the successful HTTP response.
+		w.Write([]byte(`{"transferId":"bad","key":"bad"}`))
+	}))
+	defer server.Close()
+	_, err := lookupShareCode(context.Background(), server.URL, "48291")
+	if classifyFailure(err) != failureProtocol || lookups.Load() != 3 {
+		t.Fatalf("lookups=%d err=%v", lookups.Load(), err)
+	}
+	_, err = claimShareCode(context.Background(), server.URL, "id", "key")
+	if classifyFailure(err) != failureBusy || claims.Load() != 1 {
+		t.Fatalf("claims=%d err=%v", claims.Load(), err)
+	}
+}

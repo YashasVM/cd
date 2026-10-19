@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <instrumentation android:name="in.yash0.cd.SendInstrumentation" android:targetPackage="in.yash0.cd" />
+</manifest>

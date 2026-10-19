@@ -1,0 +1,12 @@
+{"pair":-1,"mode":"relay","warmup":true,"completed":true,"readinessMs":60.009763999999905,"downloadReadySeconds":1.9771692140000001,"seconds":2.1317433919999997,"mibPerSecond":30.022375225920253}
+{"pair":-1,"mode":"automatic","warmup":true,"completed":true,"readinessMs":52.2665649999999,"downloadReadySeconds":3.659195535,"seconds":3.8134192469999997,"mibPerSecond":16.78283866908904}
+{"pair":0,"mode":"automatic","warmup":false,"completed":true,"readinessMs":54.639178999999785,"downloadReadySeconds":3.5627175330000007,"seconds":3.7190280080000013,"mibPerSecond":17.20879753051862}
+{"pair":0,"mode":"relay","warmup":false,"completed":true,"readinessMs":48.51694900000075,"downloadReadySeconds":1.9004595980000012,"seconds":2.0191853850000006,"mibPerSecond":31.69595049342138}
+{"pair":1,"mode":"relay","warmup":false,"completed":true,"readinessMs":50.59598400000141,"downloadReadySeconds":1.9387382460000009,"seconds":2.0544822849999984,"mibPerSecond":31.15140026627197}
+{"pair":1,"mode":"automatic","warmup":false,"completed":true,"readinessMs":52.188631000000896,"downloadReadySeconds":3.3990831309999994,"seconds":3.5237135880000023,"mibPerSecond":18.162656640980085}
+{"pair":2,"mode":"automatic","warmup":false,"completed":true,"readinessMs":49.21966600000087,"downloadReadySeconds":2.788785380999998,"seconds":2.9254705719999983,"mibPerSecond":21.876822352120396}
+{"pair":2,"mode":"relay","warmup":false,"completed":true,"readinessMs":42.0220530000006,"downloadReadySeconds":2.0314499620000026,"seconds":2.1115018960000014,"mibPerSecond":30.310178797963985}
+{"pair":3,"mode":"relay","warmup":false,"completed":true,"readinessMs":52.64261500000066,"downloadReadySeconds":1.9625846640000018,"seconds":2.0932243610000003,"mibPerSecond":30.574840037417275}
+{"pair":3,"mode":"automatic","warmup":false,"completed":true,"readinessMs":53.82612999999765,"downloadReadySeconds":3.3494446790000003,"seconds":3.4859040810000006,"mibPerSecond":18.359656064214004}
+{"pair":4,"mode":"automatic","warmup":false,"completed":true,"readinessMs":53.96980700000131,"downloadReadySeconds":3.225257755000006,"seconds":3.372650415000004,"mibPerSecond":18.97617366904003}
+{"pair":4,"mode":"relay","warmup":false,"completed":true,"readinessMs":42.02514800000063,"downloadReadySeconds":1.9642633309999946,"seconds":2.098034105999999,"mibPerSecond":30.504747190225146}

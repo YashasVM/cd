@@ -34,7 +34,8 @@ type progressBar struct {
 	colored   bool
 	// jsonLines writes one {"progress":…} object per line instead of a bar,
 	// for agents that read stderr from a pipe.
-	jsonLines bool
+	jsonLines  bool
+	plainLines bool
 }
 
 // jsonProgressInterval keeps machine-readable progress to about one line a second.
@@ -95,7 +96,11 @@ func (p *progressBar) updateAt(done uint64, now time.Time) {
 		_ = json.NewEncoder(p.out).Encode(line)
 		return
 	}
-	fmt.Fprintf(p.out, "\r%s\x1b[K", p.line(done, now))
+	if p.plainLines {
+		fmt.Fprintln(p.out, p.line(done, now))
+	} else {
+		fmt.Fprintf(p.out, "\r%s\x1b[K", p.line(done, now))
+	}
 }
 
 func (p *progressBar) line(done uint64, now time.Time) string {
@@ -133,7 +138,7 @@ func (p *progressBar) line(done uint64, now time.Time) string {
 
 // finish ends the line so later output starts on a fresh one.
 func (p *progressBar) finish() {
-	if p.drawn && !p.jsonLines {
+	if p.drawn && !p.jsonLines && !p.plainLines {
 		fmt.Fprintln(p.out)
 		p.drawn = false
 	}
@@ -145,4 +150,19 @@ func formatETA(d time.Duration) string {
 		return fmt.Sprintf("%d:%02d:%02d", seconds/3600, seconds/60%60, seconds%60)
 	}
 	return fmt.Sprintf("%d:%02d", seconds/60, seconds%60)
+}
+
+// Human terminals retain their status display; captured output requires opt-in.
+func transferProgressEnabled(terminal, jsonOutput, requested bool) bool {
+	return requested || terminal && !jsonOutput
+}
+
+func transferInfo(format string, args ...any) {
+	if jsonProgress || !transferProgressEnabled(isTerminal(os.Stderr), jsonProgress, progressRequested) {
+		return
+	}
+	if !strings.HasSuffix(format, "\n") {
+		format += "\n"
+	}
+	fmt.Fprintf(os.Stderr, format, args...)
 }

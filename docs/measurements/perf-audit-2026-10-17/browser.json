@@ -1,0 +1,448 @@
+{
+  "timestamp": "2026-10-17T14:38:56.089Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "runs": 3,
+  "workFilesystemPath": "/tmp/cd-perf-7FBrQ0",
+  "trials": [
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.5013999999994412,
+      "mibPerSecond": 31.910650179532972,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.016100000000558792,
+      "mibPerSecond": 993.7888198412844,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.03359999999962747,
+      "mibPerSecond": 476.1904761957558,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.1725,
+      "mibPerSecond": 92.75362318840581,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.1145,
+      "mibPerSecond": 139.73799126637553,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 0,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        288.20000000018626,
+        441.70000000018626,
+        645.7000000001863,
+        739.2000000001863
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 2.1412999999998137,
+      "mibPerSecond": 7.472096390044082,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.3685,
+      "mibPerSecond": 43.419267299864316,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.014,
+      "mibPerSecond": 1142.857142857143,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.03259999999962747,
+      "mibPerSecond": 490.79754601787846,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.153,
+      "mibPerSecond": 104.57516339869281,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.10009999999962747,
+      "mibPerSecond": 159.8401598407547,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 1,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        228,
+        389.69999999925494,
+        641.1000000005588,
+        794
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 2.0850999999996276,
+      "mibPerSecond": 7.673492878040793,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.4118999999994412,
+      "mibPerSecond": 38.8443797038643,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.016899999999441206,
+      "mibPerSecond": 946.7455621614814,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.03540000000037253,
+      "mibPerSecond": 451.97740112518716,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.18709999999962748,
+      "mibPerSecond": 85.51576696970527,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.1306000000005588,
+      "mibPerSecond": 122.51148545123691,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 2,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        410.3999999994412,
+        779.7999999998137,
+        1016.8000000007451,
+        1371.3999999994412
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 3.6149000000003726,
+      "mibPerSecond": 4.426125204016253,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 2.0354000000003727,
+      "mibPerSecond": 7.860862729683143,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.0805,
+      "mibPerSecond": 198.75776397515529,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.14670000000018626,
+      "mibPerSecond": 109.06612133592151,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.7381000000005588,
+      "mibPerSecond": 21.67727950140616,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.335,
+      "mibPerSecond": 47.76119402985074,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 0,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        788.2000000001863,
+        1169.0999999996275,
+        1397.6000000005588,
+        1995
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 5.543700000000186,
+      "mibPerSecond": 2.886159063441287,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 2.3759000000003727,
+      "mibPerSecond": 6.7342901637263735,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.06829999999981373,
+      "mibPerSecond": 234.26061493475308,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.175,
+      "mibPerSecond": 91.42857142857143,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 1.0902000000001864,
+      "mibPerSecond": 14.676206200694612,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.3106000000005588,
+      "mibPerSecond": 51.51320025747332,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 1,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        845.2999999998137,
+        1104.7999999998137,
+        1313.2999999998137,
+        1447.2000000001863
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 4.856600000000559,
+      "mibPerSecond": 3.294485854300984,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "incremental-sha256",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 1.9456000000005589,
+      "mibPerSecond": 8.223684210523954,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "native-sha256",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.06990000000037253,
+      "mibPerSecond": 228.89842632209914,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "crc32",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.15219999999925493,
+      "mibPerSecond": 105.12483574295878,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "record-seal-open",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 1.0216000000005587,
+      "mibPerSecond": 15.661707126068176,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-stream",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.31559999999962746,
+      "mibPerSecond": 50.69708491767708,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "resume-stage",
+      "run": 2,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        877.5,
+        1031.199999999255,
+        1485.6000000005588,
+        1500.3999999994412
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "resume-stage",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 5.021,
+      "mibPerSecond": 3.1866162119099783,
+      "completed": true
+    }
+  ],
+  "chromium": "152.0.7977.82"
+}

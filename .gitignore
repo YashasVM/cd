@@ -17,3 +17,7 @@ public/install.ps1
 # Stray `go build` outputs at the repository root
 /cd
 /cdx
+
+# Local Firebase project setup and server credentials
+/.firebase/
+/android/app/google-services.json

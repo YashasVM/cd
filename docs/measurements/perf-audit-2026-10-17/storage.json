@@ -1,0 +1,218 @@
+{
+  "timestamp": "2026-10-17T14:40:55.152Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "runs": 3,
+  "workFilesystemPath": "/tmp/cd-perf-zRzMLc",
+  "loadAverageBefore": [
+    5.1,
+    4.06,
+    2.32
+  ],
+  "trials": [
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 0,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        121.3999999994412,
+        259,
+        362,
+        463.79999999981374
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 1.2367000000001862,
+      "mibPerSecond": 12.937656666934252,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 0,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.09969999999925494,
+      "mibPerSecond": 160.48144433419827,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 1,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        96.20000000018626,
+        197,
+        382.29999999981374,
+        477.1000000005588
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 1.179,
+      "mibPerSecond": 13.570822731128073,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 1,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.09289999999944121,
+      "mibPerSecond": 172.22820236917374,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 2,
+      "throttle": 1,
+      "quarterMiB": 4,
+      "quarterMs": [
+        94.40000000037253,
+        215.59999999962747,
+        325.59999999962747,
+        418.5
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 1.0787999999998137,
+      "mibPerSecond": 14.831294030406713,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 2,
+      "throttle": 1,
+      "payloadMiB": 16,
+      "seconds": 0.07620000000018626,
+      "mibPerSecond": 209.97375328032666,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 0,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        105.40000000037253,
+        231.59999999962747,
+        400.90000000037253,
+        1360.7999999998137
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 2.2487000000001864,
+      "mibPerSecond": 7.115222128340229,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 0,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.17410000000055878,
+      "mibPerSecond": 91.90120620303645,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 1,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        386.29999999981374,
+        997.4000000003725,
+        952.7000000001863,
+        939.7000000001863
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 3.386800000000745,
+      "mibPerSecond": 4.724223455768419,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 1,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.15359999999962748,
+      "mibPerSecond": 104.1666666669193,
+      "completed": true
+    },
+    {
+      "suite": "browser-detail",
+      "mode": "opfs-reopen",
+      "run": 2,
+      "throttle": 4,
+      "quarterMiB": 4,
+      "quarterMs": [
+        226.79999999981374,
+        1089.0999999996275,
+        2059.9000000003725,
+        2671.7999999998137
+      ]
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-reopen",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 6.2685,
+      "mibPerSecond": 2.5524447635000396,
+      "completed": true
+    },
+    {
+      "suite": "browser",
+      "mode": "opfs-sync-worker",
+      "run": 2,
+      "throttle": 4,
+      "payloadMiB": 16,
+      "seconds": 0.38380000000074505,
+      "mibPerSecond": 41.68837936417129,
+      "completed": true
+    }
+  ],
+  "chromium": "152.0.7977.82",
+  "loadAverageAfter": [
+    6.78,
+    4.45,
+    2.48
+  ]
+}

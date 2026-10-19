@@ -140,7 +140,7 @@ export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 10
     yield end;
   }
 
-  return { name: bundleName(now), type: 'application/zip', size, stream };
+  return { name: bundleName(now), type: 'application/zip', size, stream, bundle: true, files: files.length };
 }
 
 // fileSource streams one file as-is.

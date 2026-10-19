@@ -1,0 +1,21 @@
+{"pair":-1,"mode":"relay","warmup":true,"completed":true,"readinessMs":60.52927199999999,"downloadReadySeconds":1.9496268399999999,"seconds":2.0940209679999997,"mibPerSecond":30.563208763437753}
+{"pair":-1,"mode":"automatic","warmup":true,"completed":true,"readinessMs":44.0963969999998,"downloadReadySeconds":2.815161096,"seconds":2.954516881,"mibPerSecond":21.66174795330269}
+{"pair":0,"mode":"automatic","warmup":false,"completed":true,"readinessMs":58.23837100000037,"downloadReadySeconds":3.140585454,"seconds":3.6802850639999996,"mibPerSecond":17.38995726881009}
+{"pair":0,"mode":"relay","warmup":false,"completed":true,"readinessMs":48.493930999999066,"downloadReadySeconds":1.880800745999999,"seconds":1.9660406879999992,"mibPerSecond":32.55273422906903}
+{"pair":1,"mode":"relay","warmup":false,"completed":true,"readinessMs":44.96409399999902,"downloadReadySeconds":2.7145447360000015,"seconds":8.685719581999999,"mibPerSecond":7.368416559594153}
+{"pair":1,"mode":"automatic","warmup":false,"completed":true,"readinessMs":51.746257999999216,"downloadReadySeconds":4.106220098999998,"seconds":4.242153794999998,"mibPerSecond":15.086676035987523}
+{"pair":2,"mode":"automatic","warmup":false,"completed":true,"readinessMs":48.881547000000865,"downloadReadySeconds":2.815555850000001,"seconds":2.9476352670000017,"mibPerSecond":21.71231994558707}
+{"pair":2,"mode":"relay","warmup":false,"completed":true,"readinessMs":50.313945000001695,"downloadReadySeconds":2.217981797,"seconds":2.345484876999995,"mibPerSecond":27.286468835330773}
+{"pair":3,"mode":"relay","warmup":false,"completed":true,"readinessMs":49.95137799999793,"downloadReadySeconds":1.8761376549999986,"seconds":1.9644269080000012,"mibPerSecond":32.579476354841276}
+{"pair":3,"mode":"automatic","warmup":false,"completed":true,"readinessMs":47.90744999999879,"downloadReadySeconds":2.758841272999998,"seconds":2.9078670019999993,"mibPerSecond":22.009259693095142}
+{"pair":4,"mode":"automatic","warmup":false,"completed":true,"readinessMs":48.664872000001196,"downloadReadySeconds":2.7636694080000015,"seconds":2.8490096159999956,"mibPerSecond":22.463946643274543}
+{"pair":4,"mode":"relay","warmup":false,"completed":true,"readinessMs":49.498083999998926,"downloadReadySeconds":1.8846300619999965,"seconds":2.013705304999996,"mibPerSecond":31.78220757580024}
+file:///home/yvm/code/cd/docs/measurements/transfer-speed-2026-10-18/compare-browser-routes.mjs:104
+  console.log(JSON.stringify(result, null, 2));
+                   ^
+
+TypeError: Do not know how to serialize a BigInt
+    at JSON.stringify (<anonymous>)
+    at file:///home/yvm/code/cd/docs/measurements/transfer-speed-2026-10-18/compare-browser-routes.mjs:104:20
+
+Node.js v26.10.0

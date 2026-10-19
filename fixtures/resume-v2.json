@@ -1,0 +1,19 @@
+{
+  "protocol": "cd-transfer-v2",
+  "invitation": { "rootId": "AAECAwQFBgcICQoLDA0ODw", "masterKey": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8" },
+  "sessionNonce": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY",
+  "receiverNonce": "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA",
+  "plaintext": "resume fixture record",
+  "kind": 1,
+  "record": "Q0QCAQAAAAAAAAAVJ9gxiC9d1xA7yIYnMidrMXULlgHJj3KSdus9ix5xCyRERCtIGQ",
+  "receiverRecord": "Q0QCBAAAAAAAAAAVrZs3HsRvgRdgviB13wJfB-rV3H-TKR1JQKR-VVweqV4H9JbhSg",
+  "receiverToken": "tv3A13vt67jg7N3OmSO-390R19s9pecIXKUhZ0p9IAg",
+  "receiverTokenHash": "iLGO6mZeaJglq0Dtlt7gVbXAxzfaRuuTB2EKU9pUzhI",
+  "senderNonceProof": "hYajIkE11zQHfASd_yQKyvTX_xFC_LvyDFQlCAi80Hs",
+  "checkpoint": {
+    "version": 2, "role": "receiver", "rootId": "AAECAwQFBgcICQoLDA0ODw", "filename": "fixture.bin", "size": 3, "chunkSize": 262144,
+    "wholeSha256": "0000000000000000000000000000000000000000000000000000000000000000", "offset": 3,
+    "prefixSha256": "1111111111111111111111111111111111111111111111111111111111111111", "stagingId": "stage-1", "destination": "/tmp/fixture.bin",
+    "expiresAt": 1791500000000, "priorSessionNonce": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY", "mac": "yJVZDnrtWoEvWo4Kacni1UcPh8dBmpFV7n6rmnj-v1s"
+  }
+}

@@ -1,0 +1,242 @@
+{
+  "units": "MiB/s, where MiB = 1048576 bytes",
+  "network": [
+    {
+      "mode": "v1",
+      "addedAckRTTMs": 0,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 34.46843520301265,
+      "minMiBPerSecond": 34.08287932914393,
+      "maxMiBPerSecond": 34.87812304217918
+    },
+    {
+      "mode": "v2",
+      "addedAckRTTMs": 0,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 18.81293042809012,
+      "minMiBPerSecond": 18.72674921929588,
+      "maxMiBPerSecond": 20.262102709079866
+    },
+    {
+      "mode": "v1",
+      "addedAckRTTMs": 100,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 18.642991993277704,
+      "minMiBPerSecond": 18.637064876049198,
+      "maxMiBPerSecond": 18.949210473802836
+    },
+    {
+      "mode": "v2",
+      "addedAckRTTMs": 100,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 2.029106957458319,
+      "minMiBPerSecond": 2.0211692870024516,
+      "maxMiBPerSecond": 2.029195640233293
+    },
+    {
+      "mode": "v1",
+      "addedAckRTTMs": 300,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 8.36427747447913,
+      "minMiBPerSecond": 8.357419730399593,
+      "maxMiBPerSecond": 8.43278336111663
+    },
+    {
+      "mode": "v2",
+      "addedAckRTTMs": 300,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 0.735555213043249,
+      "minMiBPerSecond": 0.7351328776692257,
+      "maxMiBPerSecond": 0.7372145619196527
+    }
+  ],
+  "browserComponents": [
+    {
+      "mode": "incremental-sha256",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 52.56241787083612,
+      "minMiBPerSecond": 50.80978088245929,
+      "maxMiBPerSecond": 52.66622778130599
+    },
+    {
+      "mode": "native-sha256",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 1185.1851851851852,
+      "minMiBPerSecond": 1167.883211742346,
+      "maxMiBPerSecond": 1194.0298505470996
+    },
+    {
+      "mode": "record-seal-open",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 123.83900928863984,
+      "minMiBPerSecond": 122.51148545036328,
+      "maxMiBPerSecond": 126.68250197866676
+    },
+    {
+      "mode": "opfs-stream",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 227.92022791055194,
+      "minMiBPerSecond": 223.46368714618734,
+      "maxMiBPerSecond": 255.18341308118227
+    },
+    {
+      "mode": "resume-stage",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 12.10836991068029,
+      "minMiBPerSecond": 11.657559198542804,
+      "maxMiBPerSecond": 12.132241431597635
+    },
+    {
+      "mode": "opfs-reopen",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 17.23023906960856,
+      "minMiBPerSecond": 17.14898177920686,
+      "maxMiBPerSecond": 17.57276221856123
+    },
+    {
+      "mode": "opfs-sync-worker",
+      "cpuThrottle": 1,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 198.0198019783721,
+      "minMiBPerSecond": 196.31901840490798,
+      "maxMiBPerSecond": 223.15202230592686
+    },
+    {
+      "mode": "incremental-sha256",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 12.559855561675732,
+      "minMiBPerSecond": 12.470771628994544,
+      "maxMiBPerSecond": 12.947078815334484
+    },
+    {
+      "mode": "native-sha256",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 290.90909090909093,
+      "minMiBPerSecond": 276.3385146875954,
+      "maxMiBPerSecond": 297.3977695332029
+    },
+    {
+      "mode": "record-seal-open",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 31.055900621162927,
+      "minMiBPerSecond": 31.03782735208536,
+      "maxMiBPerSecond": 31.16478379440288
+    },
+    {
+      "mode": "opfs-stream",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 89.13649025069638,
+      "minMiBPerSecond": 86.86210640643169,
+      "maxMiBPerSecond": 92.43212016294976
+    },
+    {
+      "mode": "resume-stage",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 6.230772226327377,
+      "minMiBPerSecond": 6.119014838609241,
+      "maxMiBPerSecond": 6.246583899433633
+    },
+    {
+      "mode": "opfs-reopen",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 14.411817690515887,
+      "minMiBPerSecond": 14.077071969011985,
+      "maxMiBPerSecond": 14.454783629928352
+    },
+    {
+      "mode": "opfs-sync-worker",
+      "cpuThrottle": 4,
+      "completed": 3,
+      "runs": 3,
+      "medianMiBPerSecond": 170.5756929623978,
+      "minMiBPerSecond": 170.2127659574468,
+      "maxMiBPerSecond": 172.5997842516569
+    }
+  ],
+  "cliHeadComparison": {
+    "head": {
+      "completed": 6,
+      "runs": 6,
+      "medianMiBPerSecond": 310.091698185106,
+      "minMiBPerSecond": 298.99846586223174,
+      "maxMiBPerSecond": 321.516212585636
+    },
+    "current": {
+      "completed": 6,
+      "runs": 6,
+      "medianMiBPerSecond": 307.10078589682803,
+      "minMiBPerSecond": 285.0302462072562,
+      "maxMiBPerSecond": 317.34306895589765
+    }
+  },
+  "browserRoutesLight": {
+    "automatic": {
+      "completed": 5,
+      "runs": 5,
+      "medianMiBPerSecond": 18.359656064214004,
+      "minMiBPerSecond": 17.20879753051862,
+      "maxMiBPerSecond": 21.876822352120396
+    },
+    "relay": {
+      "completed": 5,
+      "runs": 5,
+      "medianMiBPerSecond": 30.574840037417275,
+      "minMiBPerSecond": 30.310178797963985,
+      "maxMiBPerSecond": 31.69595049342138
+    }
+  },
+  "browserRoutesFull": {
+    "automatic": {
+      "completed": 4,
+      "runs": 5,
+      "medianMiBPerSecond": 24.533610389135866,
+      "minMiBPerSecond": 19.30399637139161,
+      "maxMiBPerSecond": 28.67900608387474
+    },
+    "relay": {
+      "completed": 5,
+      "runs": 5,
+      "medianMiBPerSecond": 30.509933794654533,
+      "minMiBPerSecond": 27.53349371427075,
+      "maxMiBPerSecond": 32.07962885673891
+    }
+  },
+  "limitations": [
+    "Local shared-host tests, not production internet capacity.",
+    "Storage cases are component experiments, not end-to-end speedups.",
+    "Detailed route probe had one setup failure; retained in denominator.",
+    "An earlier light-probe export failed on BigInt; its log is retained and excluded.",
+    "Original cold CLI comparison had two slow current trials; warmed repeat does not identify their cause."
+  ]
+}
