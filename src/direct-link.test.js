@@ -56,3 +56,19 @@ test('the merger releases its byte budget after ordered records drain', () => {
   assert.equal(merger.push(record(0, 1)).length, 32);
   for (let sequence = 33; sequence <= 64; sequence += 1) assert.deepEqual(merger.push(record(sequence, 1024 * 1024 - 28)), []);
 });
+
+test('assembly accepts fragmented headers and coalesced records without aliasing input', () => {
+  const expected = [record(0, 1), record(1, 100_000), record(2, 0)];
+  const wire = Buffer.concat(expected.map(value => Buffer.from(value)));
+  for (const size of [1, 7, 13, 4096, 65536]) {
+    const assembler = createRecordAssembler();
+    const received = [];
+    for (let at = 0; at < wire.length; at += size) {
+      const piece = new Uint8Array(wire.subarray(at, at + size));
+      received.push(...assembler.push(piece));
+      piece.fill(0);
+    }
+    assert.deepEqual(received, expected);
+    assert.equal(assembler.bufferedBytes, 0);
+  }
+});

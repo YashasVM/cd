@@ -87,6 +87,11 @@ export function startRelaySend(source, hooks = {}) {
   const waiters = [];
   let closedError = null;
 
+  function failPump(error) {
+    closedError = error;
+    for (const waiter of waiters.splice(0)) waiter(null);
+  }
+
   function attachPump() {
     socket.addEventListener('message', (event) => {
       const waiter = waiters.shift();
@@ -132,16 +137,19 @@ export function startRelaySend(source, hooks = {}) {
           .then((result) => {
             if (result === null || result === undefined) {
               // Not what this wait wanted; keep waiting for the next message.
-              if (!settled) waiters.push(entry);
+              if (!settled) next();
               return;
             }
             finish(null, result);
           })
           .catch((error) => finish(error));
       };
-      if (incoming.length > 0) entry(incoming.shift());
-      else if (closedError) entry(null);
-      else waiters.push(entry);
+      const next = () => {
+        if (closedError) entry(null);
+        else if (incoming.length > 0) entry(incoming.shift());
+        else waiters.push(entry);
+      };
+      next();
     });
   }
 
@@ -231,7 +239,7 @@ export function startRelaySend(source, hooks = {}) {
       createOpener(invitation, RECEIVER_DIRECTION)
     ]);
     const send = async (kind, payload = new Uint8Array()) => {
-      if (cancelled) throw new RelaySendError('Transfer canceled.');
+      if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
       socket.send(await sealer.seal(kind, payload));
     };
 
@@ -262,15 +270,42 @@ export function startRelaySend(source, hooks = {}) {
       acknowledged = ack.bytes;
       onProgress(Number(acknowledged), source.size);
     };
-    for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
-      if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
-      await send(KIND_CHUNK, chunk);
-      sent += BigInt(chunk.byteLength);
-      chunks += 1;
-      while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES)) await awaitAck();
-    }
-    if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
-    while (acknowledged < sent) await awaitAck();
+    let wakeSender;
+    let progressChanged = new Promise(resolve => { wakeSender = resolve; });
+    const readAcknowledgements = async () => {
+      try {
+        while (acknowledged < total) {
+          await awaitAck();
+          const wake = wakeSender;
+          progressChanged = new Promise(resolve => { wakeSender = resolve; });
+          wake();
+        }
+      } catch (error) {
+        failPump(error);
+        wakeSender();
+        throw error;
+      }
+    };
+    const sendSource = async () => {
+      try {
+        for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
+          if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
+          while (sent - acknowledged + BigInt(chunk.byteLength) > BigInt(SEND_WINDOW_BYTES)) {
+            if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
+            await progressChanged;
+          }
+          // Account before yielding to the transport: an ACK can arrive during send.
+          sent += BigInt(chunk.byteLength);
+          chunks += 1;
+          await send(KIND_CHUNK, chunk);
+        }
+        if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
+      } catch (error) {
+        failPump(error);
+        throw error;
+      }
+    };
+    await Promise.all([sendSource(), readAcknowledgements()]);
 
     await send(KIND_END, encodeCounts(chunks, sent));
     const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');

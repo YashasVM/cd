@@ -475,6 +475,15 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return ctx.Err()
 		case sdp := <-offerSDP:
 			if sdp != "" {
+				// Include candidates gathered while the recipient entered the code.
+				if path := link.direct.Load(); path != nil {
+					if current := path.connection.LocalDescription(); current != nil {
+						sdp = current.SDP
+					}
+				}
+				if len(sdp) > maxSDPBytes {
+					return errors.New("direct offer is too large")
+				}
 				offer.Direct = &directOffer{SDP: sdp}
 			}
 		}
