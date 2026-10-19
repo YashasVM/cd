@@ -122,3 +122,62 @@ it('cancel before an offer clears only the selected opaque receive stage', async
   await discardReceiverProgress(root, { storage, checkpoints });
   assert.equal(files.has('unrelated-file'), true, 'untrusted names never select an unrelated OPFS file');
 });
+
+
+it('failed cancellation before an offer remains immediately eligible for cleanup', async () => {
+  const { discardReceiverProgress } = await import('./resume-browser.js');
+  const { cleanExpiredResumeRecords } = await import('./resume-retention.js');
+  const { storage, files } = makeStorage();
+  const checkpoints = makeKV();
+  checkpoints.keys = async () => [...checkpoints.values.keys()];
+  const secrets = makeKV();
+  secrets.keys = async () => [];
+  const root = encodeBase64Url(new Uint8Array(16));
+  const stagingId = 'cd-rx-12345678-1234-1234-1234-123456789abc';
+  files.set(stagingId, Uint8Array.of(1));
+  await checkpoints.put(`receiver:${root}`, { stagingId, expiresAt: Date.now() + 60_000 });
+  const directory = await storage.getDirectory();
+  const remove = directory.removeEntry;
+  directory.removeEntry = async () => { throw new DOMException('Locked', 'NoModificationAllowedError'); };
+  await assert.rejects(discardReceiverProgress(root, { storage, checkpoints }), { name: 'NoModificationAllowedError' });
+  assert.equal(checkpoints.values.get(`receiver:${root}`).cleanupPending, true);
+  directory.removeEntry = remove;
+  await cleanExpiredResumeRecords({ checkpoints, secrets, storage });
+  assert.equal(files.has(stagingId), false);
+  assert.equal(checkpoints.values.has(`receiver:${root}`), false);
+});
+
+it('cancel UI reports a failed deletion and permits a second click', async () => {
+  const { mountResumableReceiver } = await import('./resume-browser.js');
+  const { storage } = makeStorage();
+  const checkpoints = makeKV();
+  const root = encodeBase64Url(new Uint8Array(16));
+  await checkpoints.put(`receiver:${root}`, { stagingId: 'cd-rx-12345678-1234-1234-1234-123456789abc' });
+  const directory = await storage.getDirectory();
+  let attempts = 0;
+  directory.removeEntry = async () => {
+    if (++attempts === 1) throw new DOMException('File is locked; try again.', 'NoModificationAllowedError');
+  };
+  const nodes = new Map();
+  const container = {
+    classList: { add() {} },
+    querySelector(selector) {
+      if (!nodes.has(selector)) nodes.set(selector, { style: {}, disabled: false, hidden: false, addEventListener() {} });
+      return nodes.get(selector);
+    }
+  };
+  const receiver = mountResumableReceiver(container, `https://cd.example/s/${root}#v2.${'A'.repeat(43)}`,
+    { storage, checkpoints, secrets: makeKV() });
+  // Cancel synchronously, before async socket setup, so no network is used.
+  await receiver.cancel();
+  const cancel = nodes.get('[data-resume-cancel]');
+  const status = nodes.get('[data-resume-status]');
+  assert.equal(cancel.disabled, false);
+  assert.equal(cancel.hidden, false);
+  assert.match(status.textContent, /locked/);
+  await receiver.cancel();
+  assert.equal(attempts, 2);
+  assert.equal(cancel.hidden, true);
+  assert.equal(status.textContent, 'Saved progress removed.');
+  await receiver.done;
+});

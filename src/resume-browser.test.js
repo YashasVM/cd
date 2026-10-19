@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { cleanExpiredResumeRecords } from './resume-retention.js';
 import { IncrementalSHA256 } from './incremental-sha256.js';
 import { encodeBase64Url } from './agent-protocol.js';
 import {
@@ -121,6 +122,29 @@ describe('resume browser primitives', () => {
     checkpoint.offset = String(0);
     checkpoints.values.set(`receiver:${rootId}`, checkpoint);
     await assert.rejects(createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets }), /integrity or file identity/);
+  });
+
+  it('keeps cancellation failures discoverable and retries removal on cleanup', async () => {
+    const { storage, files } = opfs();
+    const checkpoints = makeKV();
+    const secrets = makeKV();
+    const invitation = { id: new Uint8Array(16), key: new Uint8Array(32) };
+    const rootId = encodeBase64Url(invitation.id);
+    const bytes = Uint8Array.of(1, 2, 3);
+    const offer = { name: 'private.bin', size: '3', chunkSize: RESUME_CHUNK_SIZE,
+      wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+    const stage = await createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets });
+    await stage.append(bytes, 'A'.repeat(43));
+    const directory = await storage.getDirectory();
+    const remove = directory.removeEntry;
+    directory.removeEntry = async () => { throw new DOMException('Locked', 'NoModificationAllowedError'); };
+    await assert.rejects(stage.cancel(), { name: 'NoModificationAllowedError' });
+    assert.ok(checkpoints.values.has(`receiver:${rootId}`));
+    assert.equal(files.size, 1);
+    directory.removeEntry = remove;
+    await cleanExpiredResumeRecords({ checkpoints, secrets, storage });
+    assert.equal(files.size, 0, 'cancelled stages must not wait for the original expiry');
+    assert.equal(checkpoints.values.has(`receiver:${rootId}`), false);
   });
 
   it('round-trips v2 progress records', () => {

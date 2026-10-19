@@ -183,7 +183,11 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
   async function cancel() {
     closed = true;
     await operation.catch(() => {});
-    try { await directory.removeEntry(stagingId); } catch { /* Best effort. */ }
+    // Persist a cleanup tombstone before deletion. It remains retryable after
+    // a locked-file failure or a page close, even before the first chunk.
+    await checkpoints.put(checkpointKey, { stagingId, expiresAt: 0, cleanupPending: true });
+    try { await directory.removeEntry(stagingId); }
+    catch (error) { if (error?.name !== 'NotFoundError') throw error; }
     await checkpoints.delete(checkpointKey);
   }
   function bindSession(priorSessionNonce) {
@@ -329,6 +333,7 @@ export async function discardReceiverProgress(rootId, { storage, checkpoints }) 
   const checkpointKey = `receiver:${rootId}`;
   const checkpoint = await checkpoints.get(checkpointKey);
   if (isOpaqueStagingId(checkpoint?.stagingId)) {
+    await checkpoints.put(checkpointKey, { stagingId: checkpoint.stagingId, expiresAt: 0, cleanupPending: true });
     const directory = await storage.getDirectory();
     try { await directory.removeEntry(checkpoint.stagingId); }
     catch (error) { if (error?.name !== 'NotFoundError') throw error; }
@@ -348,14 +353,16 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
   const fill = container.querySelector('.progress-fill');
   const cancel = container.querySelector('[data-resume-cancel]');
   let stage;
+  let cancelPending = false;
   const cancelClick = () => {
-    if (discard) return;
+    if (cancelPending || cancel.hidden) return;
+    cancelPending = true;
     stopped = true;
     discard = true;
     cancel.disabled = true;
     try { socket?.close(1000, 'receiver canceled'); } catch { /* Best effort. */ }
     status.textContent = 'Removing saved progress...';
-    void (async () => {
+    return (async () => {
       if (stage) await stage.cancel();
       else {
         const { rootId } = parseResumeLink(link);
@@ -363,7 +370,11 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       }
       status.textContent = 'Saved progress removed.';
       cancel.hidden = true;
-    })().catch((error) => { status.textContent = error.message || 'Could not remove saved progress.'; });
+    })().catch((error) => {
+      status.textContent = error.message || 'Could not remove saved progress. Try again.';
+      cancelPending = false;
+      cancel.disabled = false;
+    });
   };
   cancel.addEventListener('click', cancelClick);
   const done = (async () => {

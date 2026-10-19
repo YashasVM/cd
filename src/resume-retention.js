@@ -19,7 +19,8 @@ async function advanceCursor(store, keys, start, count) {
 
 async function removeExpiredStage(checkpoint, storage) {
   if (!checkpoint.stagingId || typeof checkpoint.stagingId !== 'string' || !/^cd-rx-[0-9a-f-]{36}$/.test(checkpoint.stagingId)) return;
-  try { await (await storage.getDirectory()).removeEntry(checkpoint.stagingId); } catch { /* Already removed or storage unavailable. */ }
+  try { await (await storage.getDirectory()).removeEntry(checkpoint.stagingId); }
+  catch (error) { if (error?.name !== 'NotFoundError') throw error; }
 }
 
 /**
@@ -43,7 +44,9 @@ export async function cleanExpiredResumeRecords({ checkpoints, secrets, storage,
     const key = checkpointScan.keys[(checkpointScan.start + step) % checkpointScan.keys.length];
     const checkpoint = await checkpoints.get(key);
     if (!checkpoint || !(checkpoint.expiresAt <= now)) continue;
-    await removeExpiredStage(checkpoint, storage);
+    // A failed deletion must retain the only pointer to the plaintext stage.
+    // Continue this bounded sweep so one locked file cannot starve the rest.
+    try { await removeExpiredStage(checkpoint, storage); } catch { continue; }
     await checkpoints.delete(key);
     await secrets.delete(key);
     removed++;

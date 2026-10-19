@@ -58,6 +58,34 @@ describe('resume retention', () => {
     assert.equal(values.has('receiver:expired'), false);
   });
 
+  it('retains failed stage deletions and retries without blocking other cleanup', async () => {
+    const failedKey = 'receiver:locked';
+    const stagingId = `cd-rx-${'b'.repeat(36)}`;
+    const checkpoints = makeKV([[failedKey, { expiresAt: 1, stagingId }], ['receiver:other', { expiresAt: 1 }]]);
+    const secrets = makeKV([[failedKey, { expiresAt: 1 }]]);
+    let attempts = 0;
+    const storage = { async getDirectory() { return { async removeEntry() {
+      if (++attempts === 1) throw new DOMException('Locked', 'NoModificationAllowedError');
+    } }; } };
+    await cleanExpiredResumeRecords({ checkpoints, secrets, storage, now: 2 });
+    assert.ok(checkpoints.values.has(failedKey), 'keep the only pointer to retained plaintext');
+    assert.equal(checkpoints.values.has('receiver:other'), false);
+    await cleanExpiredResumeRecords({ checkpoints, secrets, storage, now: 2 });
+    assert.equal(checkpoints.values.has(failedKey), false);
+    assert.equal(attempts, 2);
+  });
+
+  it('retains the checkpoint when OPFS is unavailable but treats NotFound as removed', async () => {
+    const key = 'receiver:expired';
+    const checkpoints = makeKV([[key, { expiresAt: 1, stagingId: `cd-rx-${'c'.repeat(36)}` }]]);
+    const secrets = makeKV();
+    await cleanExpiredResumeRecords({ checkpoints, secrets, storage: {}, now: 2 });
+    assert.ok(checkpoints.values.has(key));
+    const storage = { async getDirectory() { return { async removeEntry() { throw new DOMException('Gone', 'NotFoundError'); } }; } };
+    await cleanExpiredResumeRecords({ checkpoints, secrets, storage, now: 2 });
+    assert.equal(checkpoints.values.has(key), false);
+  });
+
   it('keeps an unexpired secret while its checkpoint is being created', async () => {
     const now = 10_000;
     const checkpoints = makeKV();
