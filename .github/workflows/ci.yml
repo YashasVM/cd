@@ -29,5 +29,12 @@ jobs:
       - run: npm run verify:v2
       - run: npm run verify:agent
       - run: npm run verify:browser
+      - name: Verify private v2 restart and browser transfers locally
+        env:
+          CD_V2_VERIFY_CLI: ${{ runner.temp }}/cdx-v2
+        run: |
+          go build -buildvcs=false -trimpath -o "$CD_V2_VERIFY_CLI" ./cmd/cdx
+          npm run verify:v2:cli
+          npm run verify:v2:browser
       - run: npm run deploy:dry
 

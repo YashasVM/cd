@@ -97,6 +97,9 @@ func TestDevicePendingPathCanonicalAliasesAndIsolation(t *testing.T) {
 	pairB := "AAECAwQFBgcICQoLDA0ODw"
 	first := filepath.Join(t.TempDir(), "first.bin")
 	second := filepath.Join(t.TempDir(), "second.bin")
+	// Windows runners keep the checkout and temporary files on different drives.
+	// Relative aliases only exist within one volume, so test from the source directory.
+	t.Chdir(filepath.Dir(first))
 	base, err := devicePendingPath(pairA, []string{first, second})
 	if err != nil {
 		t.Fatal(err)
