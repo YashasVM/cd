@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unsafe"
 
@@ -33,7 +34,13 @@ func Check(path string, info os.FileInfo) error {
 	if !os.SameFile(info, opened) {
 		return errors.New("private storage changed during validation")
 	}
+	return CheckFile(f)
+}
+
+// CheckFile checks the opened object's ACL, not a newly resolved pathname.
+func CheckFile(f *os.File) error {
 	sd, err := windows.GetSecurityInfo(windows.Handle(f.Fd()), windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION|windows.DACL_SECURITY_INFORMATION)
+	runtime.KeepAlive(f)
 	if err != nil {
 		return err
 	}
@@ -151,3 +158,46 @@ func CreateTemp(dir, pattern string) (*os.File, error) {
 // Windows does not support fsync on an os.Open directory handle. File contents
 // are flushed before rename; directory durability remains filesystem-managed.
 func SyncDir(path string) error { return nil }
+
+func SyncRoot(root *os.Root) error { return nil }
+
+// os.Root.OpenFile cannot accept SECURITY_ATTRIBUTES. Create relative to an
+// opened directory handle instead, installing the protected DACL atomically.
+// There is deliberately no absolute-path or create-then-chmod fallback.
+func createRoot(root *os.Root, name string) (*os.File, error) {
+	directory, err := root.Open(".")
+	if err != nil {
+		return nil, err
+	}
+	defer directory.Close()
+	sd, err := descriptor()
+	if err != nil {
+		return nil, err
+	}
+	objectName, err := windows.NewNTUnicodeString(name)
+	if err != nil {
+		return nil, err
+	}
+	attributes := windows.OBJECT_ATTRIBUTES{
+		RootDirectory:      windows.Handle(directory.Fd()),
+		ObjectName:         objectName,
+		Attributes:         windows.OBJ_CASE_INSENSITIVE,
+		SecurityDescriptor: sd,
+	}
+	attributes.Length = uint32(unsafe.Sizeof(attributes))
+	var handle windows.Handle
+	err = windows.NtCreateFile(&handle, windows.FILE_GENERIC_READ|windows.FILE_GENERIC_WRITE,
+		&attributes, &windows.IO_STATUS_BLOCK{}, nil, windows.FILE_ATTRIBUTE_NORMAL,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
+		windows.FILE_CREATE,
+		windows.FILE_NON_DIRECTORY_FILE|windows.FILE_SYNCHRONOUS_IO_NONALERT|windows.FILE_OPEN_REPARSE_POINT,
+		0, 0)
+	runtime.KeepAlive(directory)
+	if err != nil {
+		if status, ok := err.(windows.NTStatus); ok {
+			err = status.Errno()
+		}
+		return nil, &os.PathError{Op: "createtemp", Path: name, Err: err}
+	}
+	return os.NewFile(uintptr(handle), filepath.Join(root.Name(), name)), nil
+}

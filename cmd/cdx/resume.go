@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -620,17 +619,19 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	if offer.ExpiresAt != session.expiresAt {
 		return resumeFailure("offered expiry does not match the fixed relay root expiry")
 	}
-	final, checkpointPath, err := resumeDest(offer.Name, request.out, invite.encodedID())
+	destination, err := resumeDest(offer.Name, request.out, invite.encodedID())
 	if err != nil {
 		return err
 	}
+	defer destination.root.Close()
+	final := destination.final
 	var checkpoint ResumeCheckpoint
-	err = resumeReadJSON(checkpointPath, &checkpoint)
+	err = resumeReadJSONRoot(destination.root, destination.checkpointName, &checkpoint)
 	var stage *os.File
 	if err == nil {
 		if checkpoint.ExpiresAt <= time.Now().UnixMilli() {
 			if verifyResumeCheckpoint(checkpoint, invite.key[:], checkpoint.ExpiresAt-1) == nil {
-				resumeRemove(checkpoint, checkpointPath)
+				resumeRemove(destination.root, checkpoint, destination.checkpointName)
 			}
 			return NewFailure(failureExpired, "resume checkpoint expired after 24 hours; start a new transfer", retryNewTransfer)
 		}
@@ -646,26 +647,30 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		if err = resumeCheckOffer(checkpoint, offer); err != nil {
 			return err
 		}
-		stage, err = resumeStage(checkpoint, checkpointPath)
+		stage, err = resumeStage(destination.root, checkpoint)
 		if err != nil {
 			return err
 		}
 	} else if errors.Is(err, os.ErrNotExist) {
-		if _, err = os.Lstat(final); err == nil {
+		if _, err = destination.root.Lstat(destination.name); err == nil {
 			return NewFailure(failureExists, "resume destination already exists; choose another --out path", retryNever)
 		}
-		stage, err = privatefs.CreateTemp(filepath.Dir(final), ".cd-stage-*.part")
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		var stagingName string
+		stage, stagingName, err = privatefs.CreateTempRoot(destination.root, ".cd-stage-*.part")
 		if err != nil {
 			return err
 		}
-		checkpoint = ResumeCheckpoint{Version: 2, Role: "receiver", RootID: invite.encodedID(), Filename: offer.Name, Size: offer.SizeValue, ChunkSize: chunkSize, WholeSHA256: offer.WholeSHA256, Offset: 0, PrefixSHA256: hex.EncodeToString(sha256.New().Sum(nil)), StagingID: filepath.Base(stage.Name()), Destination: final, ExpiresAt: offer.ExpiresAt, PriorSessionNonce: session.senderNonce}
+		checkpoint = ResumeCheckpoint{Version: 2, Role: "receiver", RootID: invite.encodedID(), Filename: offer.Name, Size: offer.SizeValue, ChunkSize: chunkSize, WholeSHA256: offer.WholeSHA256, Offset: 0, PrefixSHA256: hex.EncodeToString(sha256.New().Sum(nil)), StagingID: stagingName, Destination: final, ExpiresAt: offer.ExpiresAt, PriorSessionNonce: session.senderNonce}
 	} else {
 		return err
 	}
 	defer stage.Close()
 	defer func() {
 		if ctx.Err() != nil {
-			resumeRemove(checkpoint, checkpointPath)
+			resumeRemove(destination.root, checkpoint, destination.checkpointName)
 		}
 	}()
 	resumedBytes := checkpoint.Offset
@@ -688,7 +693,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		if err := signResumeCheckpoint(&checkpoint, invite.key[:]); err != nil {
 			return err
 		}
-		return resumeAtomicJSON(checkpointPath, checkpoint)
+		return resumeAtomicJSONRoot(destination.root, destination.checkpointName, checkpoint)
 	}
 	if err = persist(); err != nil {
 		return err
@@ -732,25 +737,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		if err = stage.Sync(); err != nil {
 			return err
 		}
-		info, err := os.Lstat(stage.Name())
-		if err != nil {
-			return err
-		}
-		opened, _ := stage.Stat()
-		if !os.SameFile(info, opened) {
-			return resumeFailure("resume staging changed before publication")
-		}
-		finalInfo, finalErr := os.Lstat(final)
-		if finalErr == nil {
-			if !os.SameFile(finalInfo, opened) {
-				return NewFailure(failureExists, "destination appeared during transfer; retained staging was kept", retryNever)
-			}
-		} else if !errors.Is(finalErr, os.ErrNotExist) {
-			return finalErr
-		} else if err = os.Link(stage.Name(), final); err != nil {
-			return err
-		}
-		if err = resumeSyncDir(filepath.Dir(final)); err != nil {
+		if err = destination.publish(stage, checkpoint.StagingID); err != nil {
 			return err
 		}
 		if err = session.send(kindComplete, resumeEnd(uint64(checkpoint.Size), checkpoint.WholeSHA256)); err != nil {
@@ -762,7 +749,7 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 		if err = stage.Close(); err != nil {
 			return err
 		}
-		resumeRemove(checkpoint, checkpointPath)
+		resumeRemove(destination.root, checkpoint, destination.checkpointName)
 		if request.jsonOutput {
 			return json.NewEncoder(os.Stdout).Encode(struct {
 				Version      int    `json:"version"`

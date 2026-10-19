@@ -312,12 +312,13 @@ func TestDeviceLocalResumeRecoversDurableProgressAfterNetworkLoss(t *testing.T) 
 	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("interrupted receiver published incomplete file")
 	}
-	_, checkpointPath, err := resumeDest("payload.bin", destination, transferID)
+	resolved, err := resumeDest("payload.bin", destination, transferID)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resolved.root.Close()
 	var checkpoint ResumeCheckpoint
-	if err = resumeReadJSON(checkpointPath, &checkpoint); err != nil {
+	if err = resumeReadJSONRoot(resolved.root, resolved.checkpointName, &checkpoint); err != nil {
 		t.Fatal(err)
 	}
 	if checkpoint.Offset < 2*chunkSize || checkpoint.Offset >= int64(len(want)) {

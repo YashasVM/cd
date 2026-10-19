@@ -18,4 +18,4 @@ jobs:
           go-version: '1.26.9'
           cache: true
       - name: Exercise real Windows ACLs and resumable storage
-        run: go test ./internal/privatefs ./internal/devices ./cmd/cdx -run 'Test(PrivateWindows|Store|ResumeCheckpoint|ResumeRejects|DevicePending|DeviceRetry|RecordLinkCancellation|ReliabilityReceiveFailureNeverPublishes)' -count=1
+        run: go test ./internal/privatefs ./internal/devices ./cmd/cdx -run 'Test(PrivateWindows|CreateTempRoot|Store|ResumeMetadata|ResumeCheckpoint|ResumeRejects|ResumePinsDirectory|DeviceAttempt|DevicePending|DeviceRetry|RecordLinkCancellation|ReliabilityReceiveFailureNeverPublishes)' -count=1

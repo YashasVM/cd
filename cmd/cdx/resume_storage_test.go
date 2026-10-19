@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,11 @@ func checkpointFixture(t *testing.T, dir string) (ResumeCheckpoint, []byte, stri
 }
 func TestResumeCheckpointDurablePrefixAndTailTruncation(t *testing.T) {
 	dir := t.TempDir()
+	root, rootErr := os.OpenRoot(dir)
+	if rootErr != nil {
+		t.Fatal(rootErr)
+	}
+	defer root.Close()
 	checkpoint, master, path := checkpointFixture(t, dir)
 	if err := resumeAtomicJSON(path, checkpoint); err != nil {
 		t.Fatal(err)
@@ -53,7 +59,7 @@ func TestResumeCheckpointDurablePrefixAndTailTruncation(t *testing.T) {
 	stage, _ := os.OpenFile(stagePath, os.O_APPEND|os.O_WRONLY, 0600)
 	stage.Write([]byte("uncommitted tail"))
 	stage.Close()
-	resumed, err := resumeStage(stored, path)
+	resumed, err := resumeStage(root, stored)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +75,12 @@ func TestResumeCheckpointDurablePrefixAndTailTruncation(t *testing.T) {
 }
 func TestResumeRejectsTamperedCheckpointAndStaging(t *testing.T) {
 	dir := t.TempDir()
-	checkpoint, master, path := checkpointFixture(t, dir)
+	root, rootErr := os.OpenRoot(dir)
+	if rootErr != nil {
+		t.Fatal(rootErr)
+	}
+	defer root.Close()
+	checkpoint, master, _ := checkpointFixture(t, dir)
 	changed := checkpoint
 	changed.Offset = 0
 	if verifyResumeCheckpoint(changed, master, time.Now().UnixMilli()) == nil {
@@ -81,7 +92,7 @@ func TestResumeRejectsTamperedCheckpointAndStaging(t *testing.T) {
 	}
 	stage.WriteAt([]byte("tampered"), 0)
 	stage.Close()
-	if _, err = resumeStage(checkpoint, path); err == nil {
+	if _, err = resumeStage(root, checkpoint); err == nil {
 		t.Fatal("accepted changed durable prefix")
 	}
 	if _, err = os.Stat(checkpoint.Destination); !os.IsNotExist(err) {
@@ -90,18 +101,23 @@ func TestResumeRejectsTamperedCheckpointAndStaging(t *testing.T) {
 }
 func TestResumeRejectsStagingSymlinkAndUnsafeMetadata(t *testing.T) {
 	dir := t.TempDir()
+	root, rootErr := os.OpenRoot(dir)
+	if rootErr != nil {
+		t.Fatal(rootErr)
+	}
+	defer root.Close()
 	checkpoint, _, path := checkpointFixture(t, dir)
 	stagePath := filepath.Join(dir, checkpoint.StagingID)
 	os.Remove(stagePath)
 	outside := filepath.Join(t.TempDir(), "outside")
 	os.WriteFile(outside, make([]byte, chunkSize), 0600)
 	if err := os.Symlink(outside, stagePath); err == nil {
-		if _, err = resumeStage(checkpoint, path); err == nil {
+		if _, err = resumeStage(root, checkpoint); err == nil {
 			t.Fatal("accepted staging symlink")
 		}
 	}
 	checkpoint.StagingID = "../outside"
-	if _, err := resumeStage(checkpoint, path); err == nil {
+	if _, err := resumeStage(root, checkpoint); err == nil {
 		t.Fatal("accepted staging path traversal")
 	}
 	os.WriteFile(path, []byte(`{}`), 0644)
@@ -140,5 +156,37 @@ func TestResumeCompletionBindsWholeDigest(t *testing.T) {
 	data[len(data)-1] ^= 1
 	if resumeVerifyEnd(data, 123, digest) == nil {
 		t.Fatal("accepted modified ENDdigest")
+	}
+}
+
+func TestResumeMetadataReadSizeBoundary(t *testing.T) {
+	root, err := os.OpenRoot(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	for _, size := range []int{16384, 16385} {
+		file, name, err := privatefs.CreateTempRoot(root, ".cd-resume-*")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A valid JSON string at the exact byte limit, then one byte over it.
+		data := `"` + strings.Repeat("x", size-2) + `"`
+		if _, err = file.WriteString(data); err != nil {
+			file.Close()
+			t.Fatal(err)
+		}
+		if err = file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		var result string
+		err = resumeReadJSONRoot(root, name, &result)
+		if size == 16384 {
+			if err != nil || len(result) != size-2 {
+				t.Fatalf("bounded metadata rejected: bytes=%d, err=%v", len(result), err)
+			}
+		} else if err == nil {
+			t.Fatal("accepted metadata larger than 16 KiB")
+		}
 	}
 }

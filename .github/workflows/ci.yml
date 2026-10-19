@@ -36,5 +36,6 @@ jobs:
           go build -buildvcs=false -trimpath -o "$CD_V2_VERIFY_CLI" ./cmd/cdx
           npm run verify:v2:cli
           npm run verify:v2:browser
+          node scripts/verify-resume-cleanup.mjs
       - run: npm run deploy:dry
 
