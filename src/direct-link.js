@@ -34,22 +34,32 @@ export function splitRecord(record) {
 }
 
 export function createRecordAssembler() {
-  let buffer = new Uint8Array(0);
+  const header = new Uint8Array(HEADER_BYTES);
+  let buffer = header;
+  let filled = 0;
   return {
+    get bufferedBytes() { return filled; },
     push(piece) {
       const bytes = piece instanceof Uint8Array ? piece : new Uint8Array(piece);
-      const joined = new Uint8Array(buffer.byteLength + bytes.byteLength);
-      joined.set(buffer);
-      joined.set(bytes, buffer.byteLength);
-      buffer = joined;
+      if (bytes.byteLength > DIRECT_PIECE_BYTES) throw new Error('The direct connection exceeded its assembly buffer.');
       const records = [];
-      while (buffer.byteLength >= HEADER_BYTES) {
-        if (buffer[0] !== 0x43 || buffer[1] !== 0x44 || buffer[2] !== 1) throw new Error('The direct connection sent an invalid record.');
-        const length = HEADER_BYTES + new DataView(buffer.buffer, buffer.byteOffset + 8, 4).getUint32(0) + TAG_BYTES;
-        if (length > MAX_RECORD_BYTES) throw new Error('The direct connection sent an oversized record.');
-        if (buffer.byteLength < length) break;
-        records.push(buffer.slice(0, length));
-        buffer = buffer.slice(length);
+      for (let at = 0; at < bytes.byteLength;) {
+        const count = Math.min(buffer.byteLength - filled, bytes.byteLength - at);
+        buffer.set(bytes.subarray(at, at + count), filled);
+        filled += count;
+        at += count;
+        if (filled !== buffer.byteLength) continue;
+        if (buffer === header) {
+          if (header[0] !== 0x43 || header[1] !== 0x44 || header[2] !== 1) throw new Error('The direct connection sent an invalid record.');
+          const length = HEADER_BYTES + new DataView(header.buffer).getUint32(8) + TAG_BYTES;
+          if (length > MAX_RECORD_BYTES) throw new Error('The direct connection sent an oversized record.');
+          buffer = new Uint8Array(length);
+          buffer.set(header);
+        } else {
+          records.push(buffer);
+          buffer = header;
+          filled = 0;
+        }
       }
       return records;
     }
