@@ -1,3 +1,4 @@
+import { agentShareUrlFromInput } from './share-link.js';
 import { cleanCode, codeFromUrl, generateEphemeralId, isValidCode, peerIdFor } from './p2p-code.js';
 import { codeLookupPath, isShortCode, shortCodeFromInput, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { startRelaySend } from './relay-sender.js';
@@ -99,36 +100,6 @@ function peerOptions() {
     debug: 0,
     config: { iceServers },
   };
-}
-
-// Agent-relay links (from `cdx send` or a browser terminal-send) look like
-// https://cd.yash0.in/s/<22 chars>#v1.<43 chars>. The room lives on the
-// sender's origin, so receivers open the pasted link as-is instead of
-// treating it as a P2P word code.
-const AGENT_LINK_PATH = /^\/s\/([A-Za-z0-9_-]{22})\/?$/;
-const AGENT_LINK_KEY = /^v1\.([A-Za-z0-9_-]{43})$/;
-const AGENT_BARE_CODE = /^([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_-]{43})$/;
-
-function agentShareUrlFromInput(value) {
-  const raw = String(value ?? '').trim();
-  if (!raw || !raw.includes('#v1.')) return '';
-  const candidates = [raw];
-  for (const token of raw.split(/[\s"'<>]+/)) {
-    if (token && token !== raw) candidates.push(token);
-  }
-  for (const candidate of candidates) {
-    const bare = AGENT_BARE_CODE.exec(candidate);
-    if (bare) return `${window.location.origin}/s/${bare[1]}#v1.${bare[2]}`;
-    try {
-      const url = new URL(candidate, window.location.href);
-      // Only web links: `javascript:/s/...` would otherwise pass the path check.
-      if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
-      const path = AGENT_LINK_PATH.exec(url.pathname);
-      const key = AGENT_LINK_KEY.exec(url.hash.slice(1));
-      if (path && key) return url.toString();
-    } catch { /* Not a URL; try the next candidate. */ }
-  }
-  return '';
 }
 
 const els = {

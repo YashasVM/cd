@@ -25,7 +25,7 @@ export async function startWorker(work) {
   const port = await availablePort();
   const publicBase = `http://127.0.0.1:${port}`;
   const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
-  const child = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+  const child = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--inspector-port', '0', '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   child.stdout.resume();

@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { clientPrefix, sameOrigin } from './code-security';
+import { ResumeRoomProtocol } from './resume-room';
 
 type Role = 'sender' | 'receiver';
 type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string; prefix?: string } | { kind: 'peer'; role: Role };
@@ -55,6 +56,12 @@ function isSocketAttachment(value: unknown): value is SocketAttachment {
       && (!('transferId' in value) || typeof value.transferId === 'string');
   }
   return value.kind === 'peer' && 'role' in value && (value.role === 'sender' || value.role === 'receiver');
+}
+
+function isResumeSocket(socket: WebSocket): boolean {
+  const attachment: unknown = socket.deserializeAttachment();
+  return !!attachment && typeof attachment === 'object' && 'kind' in attachment
+    && (attachment.kind === 'resume-pending' || attachment.kind === 'resume-peer');
 }
 
 function parseJoin(message: string): Join | null {
@@ -128,9 +135,11 @@ function reject(socket: WebSocket, code: number, reason: string): void {
 export class TransferRoom extends DurableObject<Env> {
   private room: RoomState = { kind: 'empty' };
   private claiming: Promise<ClaimResult> | null = null;
+  private resume: ResumeRoomProtocol;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.resume = new ResumeRoomProtocol(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? { kind: 'empty' };
     });
@@ -138,6 +147,8 @@ export class TransferRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     if (!sameOrigin(request)) return new Response('origin forbidden', { status: 403 });
+    const rootId = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
+    if (rootId) return this.resume.fetch(request, rootId);
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
     if (this.ctx.getWebSockets().length >= 4) return new Response('room connection limit reached', { status: 429 });
     const pair = new WebSocketPair();
@@ -153,6 +164,7 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    if (isResumeSocket(socket)) { await this.resume.message(socket, message); return; }
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
     if (this.isExpired()) {
@@ -188,6 +200,7 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket, code: number, reason: string): Promise<void> {
+    if (isResumeSocket(socket)) { await this.resume.close(socket); return; }
     // Complete the close handshake. Clients wait for this reply to know every
     // frame they sent before it (such as COMPLETE) reached the room; without
     // it they sit out their close timeout.
@@ -205,8 +218,10 @@ export class TransferRoom extends DurableObject<Env> {
   async webSocketError(socket: WebSocket): Promise<void> { await this.webSocketClose(socket, 1011, 'socket error'); }
 
   async alarm(): Promise<void> {
+    await this.resume.alarm();
     const now = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
+      if (isResumeSocket(socket)) continue;
       const attachment: unknown = socket.deserializeAttachment();
       if (!isSocketAttachment(attachment)) reject(socket, 4408, 'join expired');
       else if (attachment.kind === 'pending' && attachment.expiresAt <= now) reject(socket, 4408, 'join expired');
@@ -618,7 +633,7 @@ export default {
     if ((url.pathname.startsWith('/api/codes') || request.headers.get('Upgrade')?.toLowerCase() === 'websocket') && !sameOrigin(request)) {
       return new Response('origin forbidden', { status: 403 });
     }
-    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /api/codes),
+    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /ws/v2, /api/codes),
     // and share pages (/send, /s/*) so every terminal<->browser combination
     // works from one origin.
     // design.yash0.in serves the design-docs list site from /design/.
@@ -662,10 +677,22 @@ export default {
         return new Response('relay temporarily unavailable', { status: 503 });
       }
     }
+    const resumeMatch = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (resumeMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      try {
+        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientPrefix(request) });
+        if (!success) return new Response('connection rate limit reached', { status: 429 });
+        return await env.TRANSFERS.getByName(`v2:${resumeMatch[1]}`).fetch(request);
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'resume_relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
+        return new Response('relay temporarily unavailable', { status: 503 });
+      }
+    }
     if (url.pathname.startsWith('/ws/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/peerjs/')) {
       if (url.pathname === '/api/health' && request.method === 'GET') {
         return Response.json(
-          { service: 'cd-agent-sharing', protocol: 'cd-transfer-v1', status: 'ok' },
+          { service: 'cd-agent-sharing', protocol: 'cd-transfer-v1', protocols: ['cd-transfer-v1', 'cd-transfer-v2'], status: 'ok' },
           { headers: { 'Cache-Control': 'no-store' } },
         );
       }

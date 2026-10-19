@@ -86,6 +86,40 @@ function decodeCounts(value) {
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
 export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
+  if (/^#v2\./.test(new URL(shareUrl, window.location.href).hash)) {
+    let active = null;
+    let db;
+    let settled = false;
+    let stopped = false;
+    container.classList.add('share-panel');
+    container.textContent = 'Opening private transfer...';
+    void (async () => {
+      try {
+        const { openResumeDatabase, createResumeKV, cleanExpiredResumeRecords, mountResumableReceiver } = await import('./resume-browser.js');
+        if (stopped) return;
+        db = await openResumeDatabase();
+        const checkpoints = createResumeKV(db, 'checkpoints');
+        const secrets = createResumeKV(db, 'secrets');
+        await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
+        if (stopped) return;
+        active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets });
+        await active.done;
+      } catch (error) {
+        if (!stopped && !active) container.textContent = error.message || 'Could not open local resume storage.';
+      } finally {
+        settled = true;
+        if (stopped || !active) db?.close();
+      }
+    })();
+    const stop = () => {
+      stopped = true;
+      active?.stop();
+      if (settled) db?.close();
+      window.removeEventListener('pagehide', stop);
+    };
+    window.addEventListener('pagehide', stop, { once: true });
+    return stop;
+  }
   container.classList.add('share-panel');
   container.innerHTML = PANEL_HTML;
   const pick = (name) => container.querySelector(`[data-relay="${name}"]`);

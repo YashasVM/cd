@@ -26,6 +26,7 @@ jobs:
       - run: npm run test:cli
       - run: npm run typecheck
       - run: npm run verify:security
+      - run: npm run verify:v2
       - run: npm run verify:agent
       - run: npm run verify:browser
       - run: npm run deploy:dry

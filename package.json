@@ -10,6 +10,8 @@
     "audit": "npm audit --audit-level=moderate",
     "test": "node --test src/*.test.js",
     "verify:security": "node scripts/verify-code-security.mjs",
+    "verify:v2": "node scripts/verify-v2-relay.mjs",
+    "verify:v2:cli": "node scripts/verify-v2-cli.mjs",
     "test:cli": "go test ./...",
     "typecheck": "tsc",
     "verify:agent": "npm run build && node scripts/verify-agent.mjs",
@@ -17,7 +19,8 @@
     "verify:cli-loop": "node scripts/verify-cli-loop.mjs",
     "bench": "npm run build && node scripts/bench.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run",
-    "verify:browser": "npm run build && node scripts/verify-browser.mjs"
+    "verify:browser": "npm run build && node scripts/verify-browser.mjs",
+    "verify:v2:browser": "npm run build && node scripts/verify-v2-browser.mjs"
   },
   "dependencies": {
     "jsqr": "1.4.0",
