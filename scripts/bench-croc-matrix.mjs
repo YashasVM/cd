@@ -58,9 +58,9 @@ const children = new Set();
 function launch(command, args, env) {
   const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
   children.add(child);
-  const result = { child, stdout: '', stderr: '', done: false };
+  const result = { child, stdout: '', stderr: '', done: false, closedAt: null };
   for (const name of ['stdout', 'stderr']) child[name].on('data', chunk => { result[name] = (result[name] + chunk).slice(-262144); });
-  result.exit = new Promise((resolve, reject) => { child.once('error', error => { result.done = true; reject(error); }); child.once('close', code => { result.done = true; children.delete(child); resolve(code); }); });
+  result.exit = new Promise((resolve, reject) => { child.once('error', error => { result.done = true; reject(error); }); child.once('close', code => { result.closedAt = performance.now(); result.done = true; children.delete(child); resolve(code); }); });
   result.exit.catch(() => {});
   return result;
 }
@@ -101,7 +101,7 @@ async function portReady(port, proc) {
   }
   return false;
 }
-async function trial({ tool, route, input, output, state, executable, croc, worker, relay, timeout, expected }) {
+export async function trial({ tool, route, input, output, state, executable, croc, worker, relay, timeout, expected }) {
   let sender, receiver;
   const started = performance.now();
   try {
@@ -114,24 +114,39 @@ async function trial({ tool, route, input, output, state, executable, croc, work
       sender = launch(executable, ['send', '--wait', input], env);
       code = await ready(sender, text => text.match(/^(\d{4,5})\s*$/m)?.[1], timeout);
     } else {
-      sender = launch(croc, [...flags, 'send', ...(route === 'relay' ? ['--no-local'] : []), input], crocEnv);
+      // croc 11.5.5 can use Tailcat even with --no-local. A forced-relay
+      // diagnostic must disable both paths; auto retains the fastest default.
+      sender = launch(croc, [...flags, 'send', ...(route === 'relay' ? ['--no-local', '--transport', 'relay'] : []), input], crocEnv);
       await ready(sender, text => /Code is:|On the other computer, run:/.test(text), timeout);
     }
     const receiverStarted = performance.now();
     receiver = tool === 'cd' ? launch(executable, ['receive', code, '--out', output], env) : launch(croc, [...flags, '--out', output], crocEnv);
     assert.equal(await bounded(receiver.exit, timeout, 'receiver'), 0, receiver.stderr);
-    const received = performance.now();
+    const received = receiver.closedAt;
     const target = join(output, 'payload.bin');
     // Equalize durable output: file and containing directory fsync for BOTH tools.
     for (const path of [target, output]) { const file = await open(path, 'r'); try { await file.sync(); } finally { await file.close(); } }
     const durable = performance.now();
     assert.equal(await bounded(sender.exit, timeout, 'sender'), 0, sender.stderr);
+    // Capture the lifecycle timestamp, not the time we happen to await it.
+    // The sender may finish either before or after receiver durability.
+    const completed = Math.max(durable, sender.closedAt);
     const verifyStarted = performance.now(), actual = await digest(target);
     assert.equal(actual, expected, 'SHA256 mismatch');
     const text = sender.stderr + '\n' + receiver.stderr;
-    const reports = text.split('\n').flatMap(line => { try { const item = JSON.parse(line); return item.transport ? [item] : []; } catch { return []; } });
-    if (tool === 'cd' && route === 'relay') assert.ok(reports.every(report => report.directBytes === 0), 'forced relay used direct bytes');
-    return { ok: true, routeObserved: reports.length ? [...new Set(reports.map(report => report.transport))].join(',') : 'unconfirmed; see textual route evidence', readyMs: receiverStarted - started, receiverMs: received - receiverStarted, durableMs: durable - receiverStarted, totalMs: durable - started, verificationMs: performance.now() - verifyStarted, sha256: actual, reports,
+    const reports = [];
+    if (tool === 'cd') for (const [endpoint, process] of Object.entries({ sender, receiver })) {
+      const evidence = process.stderr.split('\n').flatMap(line => { try { const item = JSON.parse(line); return item?.transport ? [{ ...item, endpoint }] : []; } catch { return []; } });
+      assert.equal(evidence.length, 1, `${endpoint} transport evidence missing or ambiguous`);
+      const report = evidence[0];
+      assert.ok(['relay', 'direct'].includes(report.transport)
+        && [report.relayBytes, report.directBytes].every(value => Number.isSafeInteger(value) && value >= 0)
+        && (report.relayBytes > 0 || report.directBytes > 0)
+        && (report.transport === 'direct') === (report.directBytes > 0), `${endpoint} transport evidence invalid`);
+      if (route === 'relay') assert.ok(report.transport === 'relay' && report.directBytes === 0, `${endpoint} forced relay used direct bytes`);
+      reports.push(report);
+    }
+    return { ok: true, routeObserved: reports.length ? [...new Set(reports.map(report => report.transport))].join(',') : 'unconfirmed; see textual route evidence', readyMs: receiverStarted - started, receiverMs: received - receiverStarted, durableMs: durable - receiverStarted, senderExitMs: sender.closedAt - started, totalMs: completed - started, verificationMs: performance.now() - verifyStarted, sha256: actual, reports,
       routeEvidence: text.split(/[\r\n]+/).filter(line => /switched to|connecting|connected|local|relay/i.test(line)), diagnostics: { sender: sender.stderr, receiver: receiver.stderr } };
   } catch (error) { return { ok: false, error: error.message, diagnostics: { sender: sender?.stderr, receiver: receiver?.stderr } }; }
   finally { await Promise.all([stopChild(sender?.child), stopChild(receiver?.child)]); }
@@ -156,6 +171,9 @@ NEVER deploy that benchmark config. Hosted Workers retain their own limits.
 Control infrastructure defaults to RAM for BOTH disk and tmpfs output suites.
 Use --control-dir ~/.cache for a separate disk-infrastructure diagnostic.
 SHA256 verification is outside timings; durable timing fsyncs file and directory.
+Total timing includes both process closes and receiver durability, not just receipt.
+Forced relay requires croc send --transport relay (verified with croc 11.5.5).
+Unsupported croc binaries fail rather than silently use a different transport.
 Speed gates in JSON require all metrics against both croc variants.
 Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
     return;
@@ -171,11 +189,11 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
   const sigint = () => { void interrupt('SIGINT'); }, sigterm = () => { void interrupt('SIGTERM'); };
   process.once('SIGINT', sigint); process.once('SIGTERM', sigterm);
   const metadata = command => spawnSync(command[0], command.slice(1), { encoding: 'utf8' }).stdout?.trim();
-  const report = { version: 1, startedAt: new Date().toISOString(), options: opts,
+  const report = { version: 2, startedAt: new Date().toISOString(), options: opts,
     source: { commit: metadata(['git', 'rev-parse', 'HEAD']), dirty: metadata(['git', 'status', '--porcelain']), diffSha256: createHash('sha256').update(spawnSync('git', ['diff', 'HEAD'], { maxBuffer: 64 * 1024 * 1024 }).stdout || '').digest('hex'), note: 'Dirty listing includes untracked files; diff hash includes tracked files only. Binary SHA256 identifies the tested CD executable.' },
     environment: { platform: process.platform, arch: process.arch, release: release(), cpu: cpus()[0]?.model, cores: cpus().length,
       transferFlags: Object.fromEntries(['CD_LAN', 'CD_WEBRTC', 'CD_LARGE_RECORDS', 'CD_LAN_GRACE', 'CD_RELAY_STREAMING'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]])) },
-    method: { topology: 'same-host loopback, local relays; auto allows direct discovery and fallback, actual telemetry determines route', durability: 'receiver exit measured separately; timed durable completion adds file fsync and directory fsync equally to both tools. Internal tool fsync differences remain part of native completion.', verification: 'SHA256 every output outside all reported transfer timings', cache: 'warm input/page cache, output deleted after SHA256; sync before each trial; no privileged cache dropping', limits: 'No WAN, packet-loss, browser, concurrency, directory-tree or cross-host claims. tmpfs fsync does not represent physical persistence. croc auto telemetry is textual and does not prove direct routing.' }, rows };
+    method: { topology: 'same-host loopback, local relays; auto retains default transport selection and allows direct discovery and fallback. Forced relay is a separate diagnostic; croc uses send --no-local --transport relay, verified with 11.5.5. CD requires valid route counters from both endpoints; direct means some encrypted records used that route, not necessarily all payload.', timing: 'readyMs: sender launch to receiver launch; receiverMs: receiver launch to receiver process close; durableMs: receiver launch through file and directory fsync; senderExitMs: sender launch to sender process close; totalMs: sender launch through both process closes and receiver durability. Version 1 totalMs omitted sender tail time.', durability: 'receiver exit measured separately; timed durable completion adds file fsync and directory fsync equally to both tools. Internal tool fsync differences remain part of native completion.', verification: 'SHA256 every output outside all reported transfer timings', cache: 'warm input/page cache, output deleted after SHA256; sync before each trial; no privileged cache dropping; no excluded process or transport warmup trials', limits: 'No WAN, packet-loss, browser, concurrency, directory-tree or cross-host claims. tmpfs fsync does not represent physical persistence. croc auto telemetry is textual and does not prove direct routing.' }, rows };
   try {
     await mkdir(opts['disk-dir'], { recursive: true });
     assert.ok((await stat(opts['control-dir'])).isDirectory(), '--control-dir must be an existing writable directory; default /dev/shm requires RAM storage, or choose another directory explicitly');
