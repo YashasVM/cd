@@ -50,6 +50,14 @@ compression nor encryption is disabled. Thus these are real default workloads,
 not identical durability or cryptographic protocols. A downloaded croc release
 may also use a different Go compiler than the local CD build.
 
+Croc 11.5.4 has no selectable SHA-256 hash mode or fsync/durable-completion flag
+that makes these contracts identical. Its supported hash modes are xxhash, md5,
+highway, imohash, and negotiated imohash-v2; chunk AES-GCM authentication remains
+enabled. See the [accepted hashes](https://github.com/schollz/croc/blob/v11.5.4/src/croc/progressive_hash.go#L12-L31)
+and [receive write/close completion](https://github.com/schollz/croc/blob/v11.5.4/src/croc/croc.go#L3528-L3588).
+The benchmark's external SHA-256 check verifies output; it does not change either
+protocol's runtime guarantees.
+
 A proposed CD receiver batch changes durable progress from each 256 KiB chunk to
 1 MiB when the sender's advertised window supports it. ACK still follows stage
 Sync and signed checkpoint atomic persistence. It adds no payload buffer, retains
@@ -119,3 +127,66 @@ Five interleaved runs, same overlay setup, all 48 transfers SHA-256 verified:
 The 4.1% regression at 64 MiB and 4.9% improvement at 256 MiB have overlapping
 ranges. Reduced syscall count alone is not sufficient reason to ship this change.
 Raw samples are in `croc-buffer-experiment-2026-10-20.json`.
+
+## Bounded reader result
+
+The next isolated change replaces growing binary-message assembly buffers with a
+length-bounded exact allocation. The 12-byte header is not trusted for integrity:
+its length is capped at the existing 1 MiB record limit before allocation, the
+message must contain exactly that record, and the existing AEAD opener still
+checks protocol, direction, sequence, and authentication. Plaintext remains a
+separate owned allocation. Text control-event parsing and durability are unchanged.
+
+Compared with ACK-only `07623c8`, the same paced overlay experiment completed all
+48 transfers with matching SHA-256. Five measured runs per configuration/size:
+
+| Size | ACK-only median ms (range) | Reader median ms (range) | Median elapsed reduction |
+| --- | ---: | ---: | ---: |
+| 64 MiB | 675.8 (612.7–712.3) | 558.9 (533.6–672.4) | 17.3% |
+| 256 MiB | 2445.3 (2293.7–3463.3) | 2231.5 (1995.3–3647.5) | 8.7% |
+
+The larger-file ranges were noisy. These are scoped sample medians, not a universal
+speedup or statistical confidence claim. Croc still completed faster. Full samples
+and croc controls are in `croc-reader-2026-10-20.json`. Do not multiply percentage
+gains from separate sessions to claim a directly measured combined improvement.
+
+### Allocation profiling reproduction (Linux only)
+
+`TestProfileV2LocalTransfer` is opt-in and skips by default. It runs 16 authenticated
+local transfers of one 64 MiB source on the checkout filesystem, with fresh sessions,
+durable checkpoints, streaming output verification, and cleanup checks. It uses
+the real Go transfer functions but not Wrangler. Its sender has a server-side
+WebSocket, so it cannot measure relay-client masking/framing costs.
+
+Copy the identical `cmd/cdx/profile_v2_test.go` into both comparison checkouts if it
+is absent from the baseline, and use the same Go compiler and environment:
+
+```sh
+CD_PROFILE_V2_LOCAL=1 GOMAXPROCS=2 go test -p 2 ./cmd/cdx \
+  -run '^TestProfileV2LocalTransfer$' -count=1 -timeout=3m \
+  -memprofile=/tmp/cd-local.mem -memprofilerate=65536 -o /tmp/cd-local.test
+go tool pprof -top -alloc_space /tmp/cd-local.test /tmp/cd-local.mem
+```
+
+For CPU attribution, run separately with `-cpuprofile=/tmp/cd-local.cpu` instead of
+the memory flags. CPU labels `role=sender` and `role=receiver` separate those paths;
+heap attribution uses allocation stacks, not those CPU labels. Setup and external
+stream verification are included in whole-process profiles. CPU sampling does not
+measure time blocked in fsync or network operations.
+
+Identical 1 GiB workloads with Go 1.26.9 and GOMAXPROCS=2 produced these sampled
+allocation totals (not peak live RAM or RSS):
+
+| Allocation source | Before MiB | After MiB |
+| --- | ---: | ---: |
+| Entire process | 4581.28 | 3154.18 |
+| Binary message assembly | 2483.66 | 1055.07 |
+| AEAD plaintext | approximately 1024 | approximately 1024 |
+
+Total allocated bytes fell approximately 31.15%; binary assembly fell 57.5%.
+The focused full-chunk allocation regression also dropped from 26 to 9 on the
+non-race Linux run. The permanent regression compares old/new assembly over the
+same transport rather than imposing an OS-dependent absolute count. Both profile
+runs streamed and verified the same amount of data; neither disables integrity or
+durability. Profiles preceded the test-driver rename and Linux guard, with identical
+transfer behavior.

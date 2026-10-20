@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -234,8 +235,20 @@ func (s *resumeSession) send(kind messageKind, payload []byte) error {
 func (s *resumeSession) next() (messageKind, []byte, error) {
 	for {
 		s.socket.SetReadDeadline(time.Now().Add(90 * time.Second))
-		kind, data, err := s.socket.ReadMessage()
+		kind, reader, err := s.socket.NextReader()
+		var data []byte
+		if err == nil {
+			if kind == websocket.BinaryMessage {
+				data, err = readResumeRecord(reader, s.open.aead.Overhead())
+			} else {
+				data, err = io.ReadAll(reader)
+			}
+		}
 		if err != nil {
+			var failure *Failure
+			if errors.As(err, &failure) {
+				return 0, nil, err
+			}
 			if websocket.IsCloseError(err, 4410) {
 				return 0, nil, resumeSessionLimitFailure()
 			}
@@ -256,6 +269,42 @@ func (s *resumeSession) next() (messageKind, []byte, error) {
 		}
 	}
 }
+
+// readResumeRecord avoids ReadAll's growing buffers for binary records. The
+// unauthenticated length is only an allocation hint: bound it before allocating,
+// require exactly one record in the message, and leave authentication and
+// sequence advancement to the opener. A malformed message aborts the session;
+// callers must not continue reading after an error.
+func readResumeRecord(reader io.Reader, overhead int) ([]byte, error) {
+	var header [headerBytes]byte
+	if _, err := io.ReadFull(reader, header[:]); err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return nil, resumeFailure("record length is invalid")
+		}
+		return nil, err
+	}
+	length := uint64(binary.BigEndian.Uint32(header[8:12])) + uint64(headerBytes) + uint64(overhead)
+	if overhead < 0 || overhead > maxRecordBytes-headerBytes || length > maxRecordBytes {
+		return nil, resumeFailure("record length is invalid")
+	}
+	record := make([]byte, int(length))
+	copy(record, header[:])
+	if _, err := io.ReadFull(reader, record[headerBytes:]); err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return nil, resumeFailure("record length is invalid")
+		}
+		return nil, err
+	}
+	var extra [1]byte
+	if _, err := io.ReadFull(reader, extra[:]); err != io.EOF {
+		if err == nil {
+			return nil, resumeFailure("record plaintext length is invalid")
+		}
+		return nil, err
+	}
+	return record, nil
+}
+
 func (s *resumeSession) close() {
 	s.closeOnce.Do(func() {
 		s.socket.Close()
