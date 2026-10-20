@@ -1,0 +1,449 @@
+{
+  "scope": "loopback relay, warm source cache; no WAN/device claim",
+  "crocVersion": "11.5.4",
+  "compression": false,
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "affinity": "0-1",
+  "timing": "sender launch through both successful exits; external SHA256 verification excluded",
+  "caveat": "CD v2 authenticates SHA256 and durable resume checkpoints; croc xxhash and write durability differ; Go toolchain versions may differ",
+  "summaries": [
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "runs": 5,
+      "medianTotalMs": 649.8884389999985,
+      "minTotalMs": 637.6008199999997,
+      "maxTotalMs": 705.488793999999,
+      "medianMiBPerSecond": 98.47844054354712
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "runs": 5,
+      "medianTotalMs": 676.2827779999934,
+      "minTotalMs": 634.1022750000047,
+      "maxTotalMs": 728.1768770000017,
+      "medianMiBPerSecond": 94.63496939737334
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "runs": 5,
+      "medianTotalMs": 152.81134200000088,
+      "minTotalMs": 131.2955329999968,
+      "maxTotalMs": 176.132456000003,
+      "medianMiBPerSecond": 418.81707969032584
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "runs": 5,
+      "medianTotalMs": 174.8786149999978,
+      "minTotalMs": 134.80443599999853,
+      "maxTotalMs": 189.19033800000034,
+      "medianMiBPerSecond": 365.9681316666466
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "runs": 5,
+      "medianTotalMs": 2410.719029,
+      "minTotalMs": 2215.5833310000016,
+      "maxTotalMs": 2483.6340330000094,
+      "medianMiBPerSecond": 106.19238365003174
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "runs": 5,
+      "medianTotalMs": 2291.511824999994,
+      "minTotalMs": 2213.359654999993,
+      "maxTotalMs": 2353.576614999998,
+      "medianMiBPerSecond": 111.7166392977268
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "runs": 5,
+      "medianTotalMs": 434.94242200000735,
+      "minTotalMs": 382.49595700000646,
+      "maxTotalMs": 487.5275899999979,
+      "medianMiBPerSecond": 588.5836539531563
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "runs": 5,
+      "medianTotalMs": 512.3539239999955,
+      "minTotalMs": 412.8090039999952,
+      "maxTotalMs": 567.7725140000111,
+      "medianMiBPerSecond": 499.65460984739576
+    }
+  ],
+  "samples": [
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 705.488793999999,
+      "receiveToBothExitMs": 632.6892479999988,
+      "senderLeadMs": 72.79954600000019,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 728.1768770000017,
+      "receiveToBothExitMs": 654.8696789999995,
+      "senderLeadMs": 73.30719800000224,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 176.132456000003,
+      "receiveToBothExitMs": 174.59285900000032,
+      "senderLeadMs": 1.5395970000026864,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 189.19033800000034,
+      "receiveToBothExitMs": 186.34951400000136,
+      "senderLeadMs": 2.8408239999989746,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 702.1519049999988,
+      "receiveToBothExitMs": 634.9072329999981,
+      "senderLeadMs": 67.24467200000072,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 151.58653499999855,
+      "receiveToBothExitMs": 149.9806380000009,
+      "senderLeadMs": 1.6058969999976398,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 174.8786149999978,
+      "receiveToBothExitMs": 173.4208010000002,
+      "senderLeadMs": 1.4578139999975974,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 677.3691389999985,
+      "receiveToBothExitMs": 605.6830709999995,
+      "senderLeadMs": 71.68606799999907,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 156.87412799999947,
+      "receiveToBothExitMs": 155.19844600000215,
+      "senderLeadMs": 1.6756819999973231,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 182.9944910000013,
+      "receiveToBothExitMs": 181.4180379999998,
+      "senderLeadMs": 1.576453000001493,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 649.8884389999985,
+      "receiveToBothExitMs": 581.5319079999972,
+      "senderLeadMs": 68.35653100000127,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 634.1022750000047,
+      "receiveToBothExitMs": 568.0640730000014,
+      "senderLeadMs": 66.03820200000337,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 149.0285689999946,
+      "receiveToBothExitMs": 147.44483599999512,
+      "senderLeadMs": 1.5837329999994836,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 637.6008199999997,
+      "receiveToBothExitMs": 569.8369909999965,
+      "senderLeadMs": 67.76382900000317,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 676.2827779999934,
+      "receiveToBothExitMs": 608.9997149999981,
+      "senderLeadMs": 67.28306299999531,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 131.2955329999968,
+      "receiveToBothExitMs": 129.3910939999987,
+      "senderLeadMs": 1.9044389999980922,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 649.1025969999973,
+      "receiveToBothExitMs": 580.3952959999951,
+      "senderLeadMs": 68.70730100000219,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 637.085669,
+      "receiveToBothExitMs": 568.8150190000015,
+      "senderLeadMs": 68.27064999999857,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 152.81134200000088,
+      "receiveToBothExitMs": 150.7063100000014,
+      "senderLeadMs": 2.1050319999994827,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 134.80443599999853,
+      "receiveToBothExitMs": 132.4218849999961,
+      "senderLeadMs": 2.3825510000024224,
+      "sha256": "983aa7892ddd5d5d8446adba11c8c3c7b750dab97e616bb0421ec13b73709fd8"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 0,
+      "totalMs": 2308.9705130000075,
+      "receiveToBothExitMs": 2100.3345580000023,
+      "senderLeadMs": 208.6359550000052,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": 0,
+      "totalMs": 2353.576614999998,
+      "receiveToBothExitMs": 2140.771483000004,
+      "senderLeadMs": 212.80513199999405,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": 0,
+      "totalMs": 456.2312530000054,
+      "receiveToBothExitMs": 453.5625390000059,
+      "senderLeadMs": 2.6687139999994542,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": 0,
+      "totalMs": 567.7725140000111,
+      "receiveToBothExitMs": 565.1007560000144,
+      "senderLeadMs": 2.671757999996771,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": 1,
+      "totalMs": 2291.511824999994,
+      "receiveToBothExitMs": 2026.4194149999967,
+      "senderLeadMs": 265.09240999999747,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": 1,
+      "totalMs": 382.49595700000646,
+      "receiveToBothExitMs": 380.4467000000004,
+      "senderLeadMs": 2.049257000006037,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": 1,
+      "totalMs": 412.8090039999952,
+      "receiveToBothExitMs": 410.70081700000446,
+      "senderLeadMs": 2.1081869999907212,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 1,
+      "totalMs": 2215.5833310000016,
+      "receiveToBothExitMs": 2015.178786999997,
+      "senderLeadMs": 200.40454400000453,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": 2,
+      "totalMs": 434.94242200000735,
+      "receiveToBothExitMs": 432.8203150000045,
+      "senderLeadMs": 2.1221070000028703,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": 2,
+      "totalMs": 512.3539239999955,
+      "receiveToBothExitMs": 510.04530499999237,
+      "senderLeadMs": 2.308619000003091,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 2,
+      "totalMs": 2410.719029,
+      "receiveToBothExitMs": 2205.119762999995,
+      "senderLeadMs": 205.59926600000472,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": 2,
+      "totalMs": 2295.7857779999904,
+      "receiveToBothExitMs": 2088.9557159999968,
+      "senderLeadMs": 206.83006199999363,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": 3,
+      "totalMs": 466.1646610000025,
+      "receiveToBothExitMs": 464.35989300000074,
+      "senderLeadMs": 1.8047680000017863,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 3,
+      "totalMs": 2428.209944000002,
+      "receiveToBothExitMs": 2229.9479719999945,
+      "senderLeadMs": 198.26197200000752,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": 3,
+      "totalMs": 2267.865961000003,
+      "receiveToBothExitMs": 2054.581535999998,
+      "senderLeadMs": 213.28442500000529,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": 3,
+      "totalMs": 487.5275899999979,
+      "receiveToBothExitMs": 485.18148400000064,
+      "senderLeadMs": 2.346105999997235,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 4,
+      "totalMs": 2483.6340330000094,
+      "receiveToBothExitMs": 2283.2042650000076,
+      "senderLeadMs": 200.4297680000018,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": 4,
+      "totalMs": 2213.359654999993,
+      "receiveToBothExitMs": 2006.4862159999902,
+      "senderLeadMs": 206.8734390000027,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": 4,
+      "totalMs": 428.1235529999976,
+      "receiveToBothExitMs": 426.22673600001144,
+      "senderLeadMs": 1.8968169999861857,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": 4,
+      "totalMs": 520.4358260000008,
+      "receiveToBothExitMs": 518.5762749999994,
+      "senderLeadMs": 1.8595510000013746,
+      "sha256": "476b245be854c9641361e66234c055d02510cf629349104efc9e8772858c4b1c"
+    }
+  ],
+  "filesystem": "container overlay; physical backing durability unknown",
+  "baselineCommit": "07623c884741f2b819e3e61acfafca4c3635d59f",
+  "candidateChange": "deferred sender-only record-sized WebSocket write buffer",
+  "productionChangeRetained": false
+}

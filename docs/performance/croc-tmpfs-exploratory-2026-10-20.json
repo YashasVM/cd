@@ -1,0 +1,270 @@
+{
+  "status": "incomplete exploratory run; 256 MiB series aborted at connection allowance boundary, consistent with rate limiting; original error payload not retained",
+  "filesystem": "tmpfs",
+  "baselineCommit": "7e0a8124eab473459ed72db307d88460f645f317",
+  "candidateCommit": "07623c884741f2b819e3e61acfafca4c3635d59f",
+  "warmupRun": -1,
+  "samples": [
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": -1,
+      "totalMs": 153.32912800000008,
+      "receiveToBothExitMs": 150.28734000000009,
+      "senderLeadMs": 3.041787999999997,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": -1,
+      "totalMs": 636.9015709999999,
+      "receiveToBothExitMs": 565.8976729999997,
+      "senderLeadMs": 71.00389800000016,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": -1,
+      "totalMs": 517.1264780000001,
+      "receiveToBothExitMs": 452.77275099999997,
+      "senderLeadMs": 64.35372700000016,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": -1,
+      "totalMs": 131.8054699999998,
+      "receiveToBothExitMs": 129.38524199999983,
+      "senderLeadMs": 2.420227999999952,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 499.6400429999999,
+      "receiveToBothExitMs": 436.55547499999966,
+      "senderLeadMs": 63.08456800000022,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 555.6832239999999,
+      "receiveToBothExitMs": 496.07122400000026,
+      "senderLeadMs": 59.611999999999625,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 137.58791500000007,
+      "receiveToBothExitMs": 135.25865499999964,
+      "senderLeadMs": 2.3292600000004313,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 0,
+      "totalMs": 126.20832599999994,
+      "receiveToBothExitMs": 123.79065200000059,
+      "senderLeadMs": 2.4176739999993515,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 573.8915489999999,
+      "receiveToBothExitMs": 504.2380029999995,
+      "senderLeadMs": 69.65354600000046,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 144.05239600000004,
+      "receiveToBothExitMs": 141.62310399999933,
+      "senderLeadMs": 2.4292920000007143,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 134.62339499999962,
+      "receiveToBothExitMs": 131.14345500000036,
+      "senderLeadMs": 3.47993999999926,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 1,
+      "totalMs": 561.6853809999993,
+      "receiveToBothExitMs": 499.7896989999999,
+      "senderLeadMs": 61.8956819999994,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 134.40950299999986,
+      "receiveToBothExitMs": 131.69388900000013,
+      "senderLeadMs": 2.715613999999732,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 139.7785329999997,
+      "receiveToBothExitMs": 137.16880899999978,
+      "senderLeadMs": 2.6097239999999147,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 649.112126,
+      "receiveToBothExitMs": 556.4032849999994,
+      "senderLeadMs": 92.70884100000058,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 2,
+      "totalMs": 562.5730549999989,
+      "receiveToBothExitMs": 498.69485899999927,
+      "senderLeadMs": 63.87819599999966,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 159.64261599999918,
+      "receiveToBothExitMs": 157.1409249999997,
+      "senderLeadMs": 2.5016909999994823,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 653.2043810000014,
+      "receiveToBothExitMs": 580.0034750000013,
+      "senderLeadMs": 73.20090600000003,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 606.8763959999997,
+      "receiveToBothExitMs": 543.1809450000001,
+      "senderLeadMs": 63.69545099999959,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 3,
+      "totalMs": 157.11313800000062,
+      "receiveToBothExitMs": 154.8055199999999,
+      "senderLeadMs": 2.30761800000073,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 543.4447390000005,
+      "receiveToBothExitMs": 478.80878700000176,
+      "senderLeadMs": 64.63595199999872,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 588.4215219999987,
+      "receiveToBothExitMs": 524.3267489999998,
+      "senderLeadMs": 64.0947729999989,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 144.86584200000107,
+      "receiveToBothExitMs": 141.08669999999984,
+      "senderLeadMs": 3.7791420000012295,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 64,
+      "run": 4,
+      "totalMs": 150.90896599999905,
+      "receiveToBothExitMs": 148.102895,
+      "senderLeadMs": 2.806070999999065,
+      "sha256": "7e68d9ce40c5531c5b797c568c1e33076e3f037bbe50662bf3da8c15c2850069"
+    },
+    {
+      "tool": "croc-1",
+      "mib": 256,
+      "run": -1,
+      "totalMs": 528.1562979999999,
+      "receiveToBothExitMs": 525.6929639999998,
+      "senderLeadMs": 2.4633340000000317,
+      "sha256": "1a60349bf80b59d7fe93c00185fcb2db9d9a20f717284a19f7349fb8621c8e8d"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": -1,
+      "totalMs": 2371.215925999999,
+      "receiveToBothExitMs": 2160.340461,
+      "senderLeadMs": 210.87546499999917,
+      "sha256": "1a60349bf80b59d7fe93c00185fcb2db9d9a20f717284a19f7349fb8621c8e8d"
+    },
+    {
+      "tool": "cd-v2-candidate",
+      "mib": 256,
+      "run": -1,
+      "totalMs": 2259.407196,
+      "receiveToBothExitMs": 2054.8018059999995,
+      "senderLeadMs": 204.60539000000063,
+      "sha256": "1a60349bf80b59d7fe93c00185fcb2db9d9a20f717284a19f7349fb8621c8e8d"
+    },
+    {
+      "tool": "croc-4",
+      "mib": 256,
+      "run": -1,
+      "totalMs": 471.5311470000015,
+      "receiveToBothExitMs": 469.006271000002,
+      "senderLeadMs": 2.5248759999994945,
+      "sha256": "1a60349bf80b59d7fe93c00185fcb2db9d9a20f717284a19f7349fb8621c8e8d"
+    },
+    {
+      "tool": "cd-v2",
+      "mib": 256,
+      "run": 0,
+      "totalMs": 2261.9756940000007,
+      "receiveToBothExitMs": 2061.5580179999997,
+      "senderLeadMs": 200.41767600000094,
+      "sha256": "1a60349bf80b59d7fe93c00185fcb2db9d9a20f717284a19f7349fb8621c8e8d"
+    }
+  ]
+}

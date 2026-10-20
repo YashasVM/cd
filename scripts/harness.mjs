@@ -16,8 +16,9 @@ export async function buildCLI(work) {
 
 // startWorker runs `wrangler dev` on a free loopback port. CD_VERIFY_URL
 // points the scripts at a deployed Worker instead.
-export async function startWorker(work) {
+export async function startWorker(work, options = {}) {
   const hosted = process.env.CD_VERIFY_URL;
+  if (hosted && options.localOnly) throw new Error('Hosted Worker is disabled for this run');
   if (hosted) {
     const publicBase = new URL(hosted).origin;
     return { publicBase, relayBase: publicBase.replace(/^http/, 'ws') + '/ws/v1', stop: async () => {} };
@@ -25,12 +26,18 @@ export async function startWorker(work) {
   const port = await availablePort();
   const publicBase = `http://127.0.0.1:${port}`;
   const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
-  const child = spawn(process.execPath, [wranglerCli, 'dev', '--port', String(port), '--inspector-port', '0', '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+  const child = spawn(process.execPath, [wranglerCli, 'dev', ...(options.localOnly ? ['--local'] : []), '--port', String(port), '--inspector-port', '0', '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
+    env: options.env ?? process.env,
     stdio: ['ignore', 'pipe', 'pipe']
   });
   child.stdout.resume();
   child.stderr.resume();
-  await waitForHealth(`${publicBase}/api/health`, child);
+  try {
+    await waitForHealth(`${publicBase}/api/health`, child);
+  } catch (error) {
+    await stopChild(child);
+    throw error;
+  }
   return { publicBase, relayBase: publicBase.replace(/^http/, 'ws') + '/ws/v1', stop: () => stopChild(child) };
 }
 
