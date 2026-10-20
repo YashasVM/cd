@@ -406,7 +406,7 @@ export function startRelaySend(source, hooks = {}) {
       }
     };
     const wireChunks = async function* () {
-      for await (const chunk of rechunk(source.stream(), chunkSize)) {
+      for await (const chunk of source.bundle ? rechunk(source.stream(), chunkSize) : source.stream()) {
         // Browser WebSockets perform better with the original frame size.
         // The negotiated value is an upper bound, including after an upgrade.
         const size = direct?.open ? chunkSize : Math.min(CHUNK_SIZE, chunkSize);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { startRelaySend } from './relay-sender.js';
+import { createZipBundle } from './zip-bundle.js';
 import { createOpener, createSealer, decodeBase64Url, KIND_ACCEPT, KIND_ACK, KIND_COMPLETE, KIND_OFFER, KIND_CHUNK, KIND_END, SENDER_DIRECTION, RECEIVER_DIRECTION } from './agent-protocol.js';
 
 function setup(t, payload, { largeChunks = false } = {}) {
@@ -74,6 +75,17 @@ test('relay fallback preserves exact encrypted bytes and drains queued admission
   assert.equal(stats.at(-1).directBytes, 0);
   assert.ok(stats.at(-1).relayBytes > payload.length);
   assert.ok(stats.every((value) => value.retainedBytes === 0 && value.incomingBytes <= 4 * 1024 * 1024));
+});
+
+test('bundled source fragments retain exact archive bytes through negotiated relay records', async (t) => {
+  const bundle = createZipBundle([new File([new Uint8Array(3 * 1024 * 1024 + 17).fill(71)], 'part.bin')]);
+  const parts = [];
+  for await (const part of bundle.stream()) parts.push(Buffer.from(part));
+  const payload = Buffer.concat(parts);
+  const socket = setup(t, payload, { largeChunks: true });
+  await startRelaySend(bundle).done;
+  assert.deepEqual(Buffer.concat(socket().received.map(part => Buffer.from(part))), payload);
+  assert.ok(socket().received.every(part => part.byteLength <= 262144));
 });
 
 test('negotiated limits allow relay-sized frames with cumulative ACKs and an adaptive window', { timeout: 5000 }, async (t) => {

@@ -1,0 +1,20 @@
+✔ relay fallback preserves exact encrypted bytes and drains queued admission events (40.867688ms)
+✔ bundled source fragments retain exact archive bytes through negotiated relay records (28.206001ms)
+✔ negotiated limits allow relay-sized frames with cumulative ACKs and an adaptive window (65.694857ms)
+✔ relay native queue applies backpressure and resumes after drain (35.231877ms)
+✔ unsolicited responses cannot grow the sender queue without limit (2.176052ms)
+✔ ACKs advance progress while the next source read is blocked (3.203054ms)
+✔ source failure stops the concurrent ACK reader (1.301359ms)
+✔ empty source completes without waiting for an ACK (1.12007ms)
+✔ short source fails instead of leaving the ACK reader waiting (1.889612ms)
+✔ crc32 matches the standard check value (0.534105ms)
+✔ zip bundle size is exact and unzip restores every file (13.930746ms)
+✔ rechunk emits fixed-size pieces (1.103668ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 248.207925

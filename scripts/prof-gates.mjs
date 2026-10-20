@@ -49,6 +49,24 @@ export function evaluateProf(native,browser,lan,{threshold=1.5}={}){
   achieved:finished&&scope&&all.every(entry=>entry.pass),
   note:'Browser CD is compared with native croc at the same payload size and RAM output. It is not a croc-browser test. Direct allowed includes successful relay completion before ICE opens. Readiness, native exit, durable completion and total time are separate gates. Actual route evidence and individual verification remain in raw reports.'};
 }
+
+export function evaluateBrowserCroc(report,{threshold=1.5}={}){
+ if(!Number.isFinite(threshold)||threshold<=1)throw new RangeError('threshold must exceed one');
+ const rows=report?.rows||[],runs=report?.runs,bytes=(report?.mib||0)*1048576,comparisons=[];
+ for(const direction of ['browser-browser','browser-cli','cli-browser'])for(const route of ['direct','relay']){
+  const cd=samples(rows.filter(row=>row.tool==='cd'&&row.direction===direction&&row.route===route),runs,bytes);
+  const croc=samples(rows.filter(row=>row.tool==='croc-browser'&&row.direction===direction&&row.route==='relay'),runs,bytes);
+  const complete=cd.complete&&croc.complete;
+  const results=complete?Object.fromEntries(metrics.map(metric=>[metric,{cdMs:cd.medians[metric],crocMs:croc.medians[metric],ratio:croc.medians[metric]/cd.medians[metric],pass:croc.medians[metric]/cd.medians[metric]>=threshold}])):null;
+  comparisons.push({name:direction+'/'+route,complete,groups:{cd,croc},metrics:results,pass:complete&&Object.values(results).every(result=>result.pass)});
+ }
+ const chromium=report?.metadata?.cd?.chromium;
+ const scope=runs>=7&&report?.mib===64&&rows.length===runs*9;
+ const finished=Boolean(report?.finishedAt&&!report.error&&report.contended===false&&typeof chromium==='string'&&chromium.length&&chromium===report?.metadata?.['croc-browser']?.chromium);
+ const complete=finished&&scope&&comparisons.every(row=>row.complete);
+ return {version:1,threshold,finished,scope,complete,achieved:complete&&comparisons.every(row=>row.pass),comparisons,
+  note:'Matching browser/CLI interfaces on the same PC. Croc browser supports relay transport; its same per-direction baseline is shown beside CD direct-allowed and forced-relay modes. Default browser settings. Readiness, receiver, durable and total time are separate gates. Existing native-croc cross-interface acceptance gates are unchanged.'};
+}
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const [nativePath,browserPath,lanPath,output]=process.argv.slice(2);
  if(!nativePath||!browserPath||!lanPath||!output)throw new Error('Usage: node scripts/prof-gates.mjs native.json browser.json lan.json output.json');

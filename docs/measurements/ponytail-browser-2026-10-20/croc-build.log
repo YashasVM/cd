@@ -1,0 +1,32 @@
+
+> croc-web@0.1.0 embed
+> npm run build && node scripts/embed-dist.mjs
+
+
+> croc-web@0.1.0 build
+> npm run wasm && tsc -b && vite build && node scripts/generate-blog-pages.mjs
+
+
+> croc-web@0.1.0 wasm
+> node scripts/build-wasm.mjs
+
+vite v8.1.5 building client environment for production...
+[2Ktransforming...✓ 1818 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2    7.50 kB
+dist/assets/jetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2         9.00 kB
+dist/assets/jetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2     12.10 kB
+dist/assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2    15.19 kB
+dist/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2        40.40 kB
+dist/index.html                                                    93.73 kB │ gzip:  18.92 kB
+dist/assets/SSHPanel-BrP-ENHg.css                                   3.93 kB │ gzip:   1.01 kB
+dist/assets/SSHPanel-ScsOsoGv.js                                  354.12 kB │ gzip:  91.27 kB
+dist/assets/index-DKqUed3E.js                                     532.79 kB │ gzip: 174.92 kB
+
+✓ built in 374ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

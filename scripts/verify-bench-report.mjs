@@ -92,6 +92,36 @@ try{
   const format=value=>value.toLocaleString('en-US',{maximumFractionDigits:1})+' ms';
   assert.equal(cells[1],format(result.before.median));assert.equal(cells[2],format(result.after.median));assert.equal(cells[3],format(result.crocMs));
  }
+ const matching=await (await page.request.get(new URL('browser-matching-browser-summary.json',url).href)).json();
+ const matchingRaw=await (await page.request.get(new URL('browser-matching-browser-paired.json',url).href)).json();
+ assert.equal(matching.complete,true);assert.equal(matchingRaw.rows.length,63);assert.equal(matchingRaw.contended,false);
+ assert.ok(matchingRaw.rows.every(row=>row.ok&&row.bytes===67108864&&/^[a-f0-9]{64}$/.test(row.sha256)));
+ assert.equal(matchingRaw.metadata.cd.chromium,matchingRaw.metadata['croc-browser'].chromium);
+ for(const metric of ['readyMs','receiverMs','durableMs','totalMs']){
+  await page.locator('#matching-metric').selectOption(metric);
+  assert.equal(await page.locator('#matching-results tr').count(),6);assert.equal(await page.locator('#matching-chart>div').count(),6);
+  for(const [index,entry] of matching.cases.entries()){
+   const [direction,route]=entry.name.split('/');
+   const med=tool=>{const rows=matchingRaw.rows.filter(row=>row.tool===tool&&row.direction===direction&&row.route===(tool==='cd'?route:'relay'));assert.equal(rows.length,7);return rows.map(row=>row[metric]).sort((a,b)=>a-b)[3]};
+   const cd=med('cd'),croc=med('croc-browser'),result=entry.metrics[metric];
+   assert.equal(result.cdMs,cd);assert.equal(result.crocMs,croc);assert.equal(result.ratio,croc/cd);
+   const cells=await page.locator('#matching-results tr').nth(index).locator('td').allTextContents();
+   assert.ok(cells[1].startsWith(cd.toLocaleString('en-US',{maximumFractionDigits:1})+' ms'));
+   assert.ok(cells[2].startsWith(croc.toLocaleString('en-US',{maximumFractionDigits:1})+' ms'));
+   assert.equal(cells[3],(croc/cd).toFixed(2)+'×');assert.equal(cells[4],croc/cd>=1.5?'pass':'miss');
+  }
+ }
+ assert.equal(await page.locator('#source-view-results tr').count(),3);
+ for(const [index,entry] of matching.sourceViews.entries()){
+  const trial=await (await page.request.get(new URL('browser-'+entry.file,url).href)).json();
+  assert.ok(trial.finishedAt&&!trial.error);assert.equal(trial.rows.length,14);assert.ok(trial.rows.every(row=>row.ok));
+  const med=variant=>trial.rows.filter(row=>row.variant===variant).map(row=>row.durableMs).sort((a,b)=>a-b)[3];
+  assert.equal(entry.beforeMs,med('before'));assert.equal(entry.afterMs,med('after'));
+  const cells=await page.locator('#source-view-results tr').nth(index).locator('td').allTextContents();
+  assert.equal(cells[1],entry.beforeMs.toLocaleString('en-US',{maximumFractionDigits:1})+' ms');
+  assert.equal(cells[2],entry.afterMs.toLocaleString('en-US',{maximumFractionDigits:1})+' ms');
+  assert.equal(cells[3],(entry.beforeMs/entry.afterMs).toFixed(2)+'×');
+ }
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,relaySchedulingComparisons:4,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,relaySchedulingComparisons:4,matchingBrowserComparisons:24,sourceViewComparisons:3,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}
