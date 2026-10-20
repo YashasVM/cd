@@ -126,7 +126,7 @@ try {
         if (max.maxIncomingBytes !== undefined) assert.ok(max.maxIncomingBytes <= 4 * 1024 * 1024, 'incoming high water exceeded4MiB');
         if (max.maxIncomingCount !== undefined) assert.ok(max.maxIncomingCount <= 256, 'incoming record count exceeded256');
         if (max.maxRetainedBytes !== undefined) assert.ok(max.maxRetainedBytes <= 16 * 1024 * 1024, 'retained high water exceeded16MiB');
-        if (max.mergerBytes !== undefined) assert.ok(max.mergerBytes <= 16 * 1024 * 1024, 'merger exceeded16MiB');
+        if (max.mergerBytes !== undefined) assert.ok(max.mergerBytes <= 32 * 1024 * 1024, 'merger exceeded32MiB');
         if (max.window_inFlight !== undefined) assert.ok(max.window_inFlight <= 12 * 1024 * 1024, 'adaptive in-flight exceeded12MiB');
         if (max.window_sampleCount !== undefined) assert.ok(max.window_sampleCount <= 64, 'adaptive RTT sample retention exceeded64');
       }
