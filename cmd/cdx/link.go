@@ -311,7 +311,8 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		}
 		return nil
 	}
-	if path != nil && !link.switched && !path.isLost() {
+	retained := path != nil && !link.switched && !path.isLost()
+	if retained {
 		link.retained = append(link.retained, retainedRecord{record: record, release: release})
 	} else {
 		link.retained = nil
@@ -323,6 +324,12 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		return err
 	}
 	link.relayBytes.Add(uint64(len(record)))
+	// WriteMessage has synchronously consumed the record. Reuse it only if
+	// this send did not transfer ownership to pending-direct replay storage.
+	// Check capacity too: slices.Grow may allocate beyond the record limit.
+	if !retained && cap(record) <= maxRecordBytes {
+		link.sendBuffer = record
+	}
 	return nil
 }
 
