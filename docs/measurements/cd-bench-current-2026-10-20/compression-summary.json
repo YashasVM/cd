@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "workerBundleSha256": "82050fb4ab19e8966d8548519be16a48f9f8b2887dc9e2c52398762227ab57f2",
+  "sourceCommit": "046d8e5",
+  "cdxSha256": "90cc18ddf508874f3cf3a6ad59a937617f7ceaf7228b11341ce9cb0999a09768",
+  "miniflare": "5.20260930.0-alpha",
+  "verified": 84,
+  "rows": [
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "beforeMs": 3493.273316999999,
+      "afterMs": 3564.916411000002,
+      "ratio": 0.9799032892387213
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "beforeMs": 2250.2511530000047,
+      "afterMs": 1212.6793870000038,
+      "ratio": 1.8556027068018413
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "beforeMs": 1415.252748999992,
+      "afterMs": 1372.3723660000032,
+      "ratio": 1.0312454433376348
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "beforeMs": 1979.8641829999979,
+      "afterMs": 769.802050000013,
+      "ratio": 2.5719133678586132
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "beforeMs": 1443.6309169999986,
+      "afterMs": 972.5930829999998,
+      "ratio": 1.484311313984534
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "beforeMs": 1492.8948019999953,
+      "afterMs": 979.9149120000002,
+      "ratio": 1.523494319474133
+    }
+  ],
+  "note": "Seven trials per case in two sequential suites. Same committed Worker and frontend plus frozen CLI; runtime compression flag is the difference. Random payloads have identical size and entropy class, but different hashes across suites. Frontend preloads through the same local static server and byte-preserving proxy outside timing. Actual routes and WebSocket extension negotiation are in raw rows. These are iteration results, not a new full croc acceptance run."
+}

@@ -12,8 +12,8 @@ import (
 	"strings"
 )
 
-// agentSkill is skills/cd-file-sharing/SKILL.md; TestAgentSkillMatchesRepository
-// keeps the embedded copy in sync.
+// agentSkill is generated from skills/cd-file-sharing/source.md.
+// Run node scripts/generate-sharing-skill.mjs after editing the source.
 //
 //go:embed agentskill/SKILL.md
 var agentSkill string
@@ -32,6 +32,8 @@ const agentBlock = agentBlockBegin + `
 When the user asks to send, share, or hand off a file, run ` + "`cdx send <path>`" + `
 and reply with the link https://cd.yash0.in/#<code>, using the code it prints;
 opening the link starts the download (or they run ` + "`cdx receive <code>`" + `). Prefer it over upload sites: no account, nothing stored.
+For a QR in chat, run ` + "`cdx send --json --qr <fresh-png-path> <path>`" + ` and embed
+the returned qrPath as a Markdown image with an absolute path (works in T3 Code).
 Use ` + "`cdx send --link <path>`" + ` for sensitive files. Details: ` + "`cdx help send`" + `.
 ` + agentBlockEnd + "\n"
 

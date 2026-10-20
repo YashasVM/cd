@@ -1,0 +1,32 @@
+
+> cd@1.0.0 build
+> npm run skill:check && node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build
+
+
+> cd@1.0.0 skill:check
+> node scripts/generate-sharing-skill.mjs --check
+
+design: wrote 1 docs -> public/design/docs.json
+install: synced scripts/install.sh -> public/install.sh
+install: synced scripts/install.ps1 -> public/install.ps1
+vite v8.3.0 building client environment for production...
+transforming...
+✓ 87 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           14.75 kB │ gzip:  3.26 kB
+dist/assets/index-BQNCGYPm.css            24.21 kB │ gzip:  5.97 kB
+dist/assets/share-page-CRS0oiNd.js         0.92 kB │ gzip:  0.54 kB
+dist/assets/agent-send-CMWGPA3I.js         3.49 kB │ gzip:  1.15 kB
+dist/assets/sink-pWzMxfEG.js               3.52 kB │ gzip:  1.44 kB
+dist/assets/index-NFZAE-VP.js              6.30 kB │ gzip:  2.70 kB
+dist/assets/transfer-limits-B8kI2cYe.js    8.94 kB │ gzip:  3.27 kB
+dist/assets/share-CPCfKhXR.js             14.30 kB │ gzip:  5.49 kB
+dist/assets/relay-sender-H7Q2r6mn.js      16.23 kB │ gzip:  6.33 kB
+dist/assets/browser-DmsQW2_n.js           23.46 kB │ gzip:  8.85 kB
+dist/assets/resume-browser-BTkkU9iy.js    30.71 kB │ gzip: 10.34 kB
+dist/assets/main-D2xu9gHS.js              37.67 kB │ gzip: 12.56 kB
+dist/assets/bundler-C33kthNM.js           86.55 kB │ gzip: 23.11 kB
+dist/assets/jsQR-DuGMzDT1.js             129.97 kB │ gzip: 47.49 kB
+
+✓ built in 322ms

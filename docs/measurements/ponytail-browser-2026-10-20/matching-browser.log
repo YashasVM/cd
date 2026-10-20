@@ -1,0 +1,14 @@
+cd round 1: browser-browser/direct 3122.3ms, browser-browser/relay 1164.5ms, browser-cli/direct 1082.1ms, browser-cli/relay 674.4ms, cli-browser/direct 1038.0ms, cli-browser/relay 923.4ms
+croc-browser round 1: browser-browser/relay 4021.5ms, browser-cli/relay 3024.0ms, cli-browser/relay 2752.2ms
+croc-browser round 2: browser-browser/relay 4062.3ms, browser-cli/relay 2965.7ms, cli-browser/relay 2692.5ms
+cd round 2: browser-browser/direct 3106.6ms, browser-browser/relay 1070.8ms, browser-cli/direct 1569.5ms, browser-cli/relay 665.1ms, cli-browser/direct 1135.4ms, cli-browser/relay 979.9ms
+cd round 3: browser-browser/direct 3065.8ms, browser-browser/relay 1504.4ms, browser-cli/direct 1509.4ms, browser-cli/relay 702.2ms, cli-browser/direct 1068.7ms, cli-browser/relay 929.4ms
+croc-browser round 3: browser-browser/relay 4225.8ms, browser-cli/relay 3031.3ms, cli-browser/relay 2750.4ms
+croc-browser round 4: browser-browser/relay 4627.9ms, browser-cli/relay 2978.8ms, cli-browser/relay 2765.1ms
+cd round 4: browser-browser/direct 3529.5ms, browser-browser/relay 1097.3ms, browser-cli/direct 1388.4ms, browser-cli/relay 669.5ms, cli-browser/direct 1023.4ms, cli-browser/relay 984.6ms
+cd round 5: browser-browser/direct 3472.3ms, browser-browser/relay 1306.1ms, browser-cli/direct 1386.9ms, browser-cli/relay 767.1ms, cli-browser/direct 1039.9ms, cli-browser/relay 928.6ms
+croc-browser round 5: browser-browser/relay 4154.6ms, browser-cli/relay 3565.8ms, cli-browser/relay 2834.9ms
+croc-browser round 6: browser-browser/relay 4290.9ms, browser-cli/relay 2812.4ms, cli-browser/relay 2654.9ms
+cd round 6: browser-browser/direct 3758.2ms, browser-browser/relay 1149.3ms, browser-cli/direct 1045.9ms, browser-cli/relay 641.5ms, cli-browser/direct 930.5ms, cli-browser/relay 881.7ms
+cd round 7: browser-browser/direct 3581.0ms, browser-browser/relay 1047.5ms, browser-cli/direct 983.0ms, browser-cli/relay 638.9ms, cli-browser/direct 895.8ms, cli-browser/relay 869.7ms
+croc-browser round 7: browser-browser/relay 4013.6ms, browser-cli/relay 2805.9ms, cli-browser/relay 2913.4ms

@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"mime"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -39,13 +40,16 @@ type relayEvent struct {
 }
 
 type fileOffer struct {
-	Name      string `json:"name"`
-	MediaType string `json:"mediaType"`
-	Size      string `json:"size"`
-	ChunkSize int    `json:"chunkSize"`
+	Name         string `json:"name"`
+	MediaType    string `json:"mediaType"`
+	Size         string `json:"size"`
+	ChunkSize    int    `json:"chunkSize"`
+	MaxChunkSize int    `json:"maxChunkSize,omitempty"`
 	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
 	// that predate it ignore the field.
-	Direct *directOffer `json:"direct,omitempty"`
+	Direct     *directOffer `json:"direct,omitempty"`
+	LAN        *lanOffer    `json:"lan,omitempty"`
+	ReverseLAN bool         `json:"reverseLAN,omitempty"`
 	// Bundle marks a zip that cdx or the browser built from several files.
 	// Receivers that know it unpack the files; older ones keep the .zip.
 	Bundle bool `json:"bundle,omitempty"`
@@ -63,36 +67,36 @@ func endpointBase() (string, string, error) {
 	}
 	parsedRelay, err := url.ParseRequestURI(relay)
 	if err != nil || parsedRelay.Host == "" || parsedRelay.User != nil || parsedRelay.RawQuery != "" || parsedRelay.Fragment != "" {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: use wss://cd.yash0.in/ws/v1", relay)
+		return "", "", failuref(failureProtocol, retryNever, "CD_RELAY_URL %q is invalid: use wss://cd.yash0.in/ws/v1", relay)
 	}
 	if parsedRelay.Scheme != "ws" && parsedRelay.Scheme != "wss" {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: scheme must be wss (ws only for loopback dev)", relay)
+		return "", "", failuref(failureProtocol, retryNever, "CD_RELAY_URL %q is invalid: scheme must be wss (ws only for loopback dev)", relay)
 	}
 	if parsedRelay.Scheme == "ws" && !isLoopbackHost(parsedRelay.Hostname()) {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: plain ws is only allowed for localhost development", relay)
+		return "", "", failuref(failureProtocol, retryNever, "CD_RELAY_URL %q is invalid: plain ws is only allowed for localhost development", relay)
 	}
 	if parsedRelay.Path != "/ws/v1" {
-		return "", "", fmt.Errorf("CD_RELAY_URL %q is invalid: path must be /ws/v1", relay)
+		return "", "", failuref(failureProtocol, retryNever, "CD_RELAY_URL %q is invalid: path must be /ws/v1", relay)
 	}
 	parsedPublic, err := url.ParseRequestURI(public)
 	if err != nil || parsedPublic.Host == "" || parsedPublic.User != nil || parsedPublic.RawQuery != "" || parsedPublic.Fragment != "" {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: use https://cd.yash0.in", public)
+		return "", "", failuref(failureProtocol, retryNever, "CD_PUBLIC_URL %q is invalid: use https://cd.yash0.in", public)
 	}
 	if parsedPublic.Scheme != "http" && parsedPublic.Scheme != "https" {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: scheme must be https (http only for loopback dev)", public)
+		return "", "", failuref(failureProtocol, retryNever, "CD_PUBLIC_URL %q is invalid: scheme must be https (http only for loopback dev)", public)
 	}
 	if parsedPublic.Path != "" && parsedPublic.Path != "/" {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: must be the site origin without a path", public)
+		return "", "", failuref(failureProtocol, retryNever, "CD_PUBLIC_URL %q is invalid: must be the site origin without a path", public)
 	}
 	if parsedPublic.Scheme == "http" && !isLoopbackHost(parsedPublic.Hostname()) {
-		return "", "", fmt.Errorf("CD_PUBLIC_URL %q is invalid: plain http is only allowed for localhost development", public)
+		return "", "", failuref(failureProtocol, retryNever, "CD_PUBLIC_URL %q is invalid: plain http is only allowed for localhost development", public)
 	}
 	expectedPublicScheme := "https"
 	if parsedRelay.Scheme == "ws" {
 		expectedPublicScheme = "http"
 	}
 	if parsedPublic.Scheme != expectedPublicScheme || !strings.EqualFold(parsedRelay.Host, parsedPublic.Host) {
-		return "", "", errors.New("CD_RELAY_URL and CD_PUBLIC_URL must use the same origin (host and matching ws/https scheme)")
+		return "", "", NewFailure(failureProtocol, "CD_RELAY_URL and CD_PUBLIC_URL must use the same origin (host and matching ws/https scheme)", retryNever)
 	}
 	return relay, public, nil
 }
@@ -106,25 +110,21 @@ func isLoopbackHost(host string) bool {
 }
 
 func fileMediaType(name string) string {
-	if value := mime.TypeByExtension(strings.ToLower(filepath.Ext(name))); value != "" {
-		if index := strings.Index(value, ";"); index >= 0 {
-			value = strings.TrimSpace(value[:index])
-		}
-		if value != "" {
-			return value
-		}
+	value, _, _ := strings.Cut(mime.TypeByExtension(strings.ToLower(filepath.Ext(name))), ";")
+	if value = strings.TrimSpace(value); value == "" {
+		return "application/octet-stream"
 	}
-	return "application/octet-stream"
+	return value
 }
 
 func safeFilename(path string) (string, error) {
 	name := filepath.Base(path)
 	if name == "" || name == "." || name == ".." || name == "/" || !utf8.ValidString(name) || len([]byte(name)) > 255 {
-		return "", errors.New("filename is not safe to share")
+		return "", NewFailure(failureLocal, "filename is not safe to share", retryNever)
 	}
 	for _, character := range name {
 		if character == '\\' || character == '/' || character < 0x20 || character == 0x7f {
-			return "", errors.New("filename is not safe to share")
+			return "", NewFailure(failureLocal, "filename is not safe to share", retryNever)
 		}
 	}
 	return name, nil
@@ -186,47 +186,47 @@ func underlyingReason(err error) string {
 // must be rejected without ever calling Open on them.
 func openSharedFile(path string) (*os.File, os.FileInfo, error) {
 	if path == "" {
-		return nil, nil, errors.New("missing file to send")
+		return nil, nil, NewFailure(failureLocal, "missing file to send", retryNever)
 	}
 	if path == "-" {
-		return nil, nil, errors.New(`standard input ("-") is not supported: send files or folders`)
+		return nil, nil, NewFailure(failureLocal, `standard input ("-") is not supported: send files or folders`, retryNever)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
 		reason := underlyingReason(err)
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil, fmt.Errorf("cannot find %q: %s (check the path and try again)", path, reason)
+			return nil, nil, failuref(failureLocal, retryNever, "cannot find %q: %s (check the path and try again)", path, reason)
 		}
 		if errors.Is(err, os.ErrPermission) {
-			return nil, nil, fmt.Errorf("cannot read %q: %s (check file permissions)", path, reason)
+			return nil, nil, failuref(failureLocal, retryNever, "cannot read %q: %s (check file permissions)", path, reason)
 		}
-		return nil, nil, fmt.Errorf("cannot access %q: %s", path, reason)
+		return nil, nil, failuref(failureLocal, retryNever, "cannot access %q: %s", path, reason)
 	}
 	if info.IsDir() {
-		return nil, nil, fmt.Errorf("%q is a folder", path)
+		return nil, nil, failuref(failureLocal, retryNever, "%q is a folder", path)
 	}
 	if !info.Mode().IsRegular() {
-		return nil, nil, fmt.Errorf("%q is not a regular file: send one normal file", path)
+		return nil, nil, failuref(failureLocal, retryNever, "%q is not a regular file: send one normal file", path)
 	}
 	file, err := os.Open(path)
 	if err != nil {
 		reason := underlyingReason(err)
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil, fmt.Errorf("cannot find %q: %s (check the path and try again)", path, reason)
+			return nil, nil, failuref(failureLocal, retryNever, "cannot find %q: %s (check the path and try again)", path, reason)
 		}
 		if errors.Is(err, os.ErrPermission) {
-			return nil, nil, fmt.Errorf("cannot read %q: %s (check file permissions)", path, reason)
+			return nil, nil, failuref(failureLocal, retryNever, "cannot read %q: %s (check file permissions)", path, reason)
 		}
-		return nil, nil, fmt.Errorf("cannot open %q: %s", path, reason)
+		return nil, nil, failuref(failureLocal, retryNever, "cannot open %q: %s", path, reason)
 	}
 	current, err := file.Stat()
 	if err != nil {
 		_ = file.Close()
-		return nil, nil, fmt.Errorf("cannot read %q: %s", path, underlyingReason(err))
+		return nil, nil, failuref(failureLocal, retryNever, "cannot read %q: %s", path, underlyingReason(err))
 	}
 	if current.IsDir() || !current.Mode().IsRegular() {
 		_ = file.Close()
-		return nil, nil, fmt.Errorf("%q changed into a non-regular file while opening it", path)
+		return nil, nil, failuref(failureLocal, retryNever, "%q changed into a non-regular file while opening it", path)
 	}
 	return file, current, nil
 }
@@ -253,12 +253,11 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if source.skipped > 0 {
 		fmt.Fprintf(os.Stderr, "skipped %d symlinks or special files (only regular files and folders are bundled)\n", source.skipped)
 	}
-	filename := source.name
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
 	}
-	invitation, err := newInvitation(rand.Reader)
+	invitation, err := invitationForRequest()
 	if err != nil {
 		return err
 	}
@@ -266,17 +265,9 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	dialCtx, cancelDial := context.WithTimeout(ctx, 10*time.Second)
-	defer cancelDial()
-	connection, response, err := websocket.DefaultDialer.DialContext(dialCtx, relayBase+"/"+invitation.encodedID(), http.Header{})
+	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
 	if err != nil {
-		if dialCtx.Err() != nil && ctx.Err() == nil {
-			return errors.New("connect to CD relay timed out: check your network and try again")
-		}
-		if response != nil {
-			return fmt.Errorf("CD relay rejected the connection (HTTP %d): check CD_RELAY_URL ends in /ws/v1 and matches CD_PUBLIC_URL", response.StatusCode)
-		}
-		return fmt.Errorf("connect to CD relay: %w", friendlyRelayError(err))
+		return err
 	}
 	defer connection.Close()
 	stopOnCancel := context.AfterFunc(ctx, func() { _ = connection.Close() })
@@ -302,15 +293,12 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		return err
 	}
 	ready := readyOutput{
-		Version:  1,
-		URL:      publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
-		Filename: filename, Size: source.size, Files: source.files,
+		Version:    1,
+		TransferID: invitation.encodedID(),
+		URL:        publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
+		Filename:   source.name, Size: source.size, Files: source.files,
 	}
-	if linkMode {
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
-	} else {
+	if !linkMode {
 		code := accepted.Code
 		if !isShortCode(code) {
 			// Relays that predate join-time codes: claim one separately.
@@ -319,26 +307,26 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				return fmt.Errorf("%s (the private-link fallback is `cdx send --link`)", err)
+				return failuref(failureProtocol, retryNever, "%s (the private-link fallback is `cdx send --link`)", err)
 			}
 		}
 		ready.Code = code
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
+	}
+	if err := hooks.ready(ready); err != nil {
+		return err
 	}
 	if !fancyReady {
-		fmt.Fprintf(os.Stderr, "sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+		transferInfo("sharing %s (%s) — share the code above, keep this running\n", source.name, formatBytes(ready.Size))
 	}
 	if ready.Size > 256*1024*1024 {
-		fmt.Fprintln(os.Stderr, "note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
+		transferInfo("note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
 	}
 	if !fancyReady {
-		fmt.Fprintln(os.Stderr, "waiting for receiver (up to 15m; Ctrl-C to cancel)")
+		transferInfo("waiting for receiver (up to 15m; Ctrl-C to cancel)")
 		if ready.Code != "" {
-			fmt.Fprintln(os.Stderr, "browsers: open "+codeLink(ready.Code)+"  ·  terminals: cdx receive "+ready.Code)
+			transferInfo("browsers: open %s  ·  terminals: cdx receive %s\n", codeLink(ready.Code), ready.Code)
 		} else {
-			fmt.Fprintln(os.Stderr, "terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
+			transferInfo("terminal receivers: cdx receive <paste-the-link-above>  ·  browsers: open the link")
 		}
 	}
 	sealer, err := newSealer(invitation, senderDirection)
@@ -349,7 +337,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if err != nil {
 		return err
 	}
-	link := newRecordLink(connection, sealer, opener, errors.New("receiver disconnected (they closed the tab or lost network)"))
+	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "receiver disconnected (they closed the tab or lost network)", retryNewTransfer))
 	link.striping = stripeEnabled()
 	defer link.close()
 	// Gather direct-path candidates while waiting for the receiver.
@@ -367,10 +355,31 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			}()
 		}
 	}
+	var lane *lanListener
+	if directEnabled() && lanEnabled() && source.size >= directMinBytes {
+		if candidate, err := listenLAN(invitation); err == nil {
+			lane = candidate
+			defer lane.close()
+			link.lanOffer = &lane.offer
+			go lane.serve(link.adoptStreamConfirmed)
+		} else {
+			lanDebug("sender-listen-failed", err)
+		}
+		link.reverseLAN = func(offer *lanOffer) <-chan struct{} {
+			// Keep the original listener available if the receiver must fall
+			// back after its own inbound TCP connection is blocked.
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				dialReverseLAN(ctx, link, invitation, offer)
+			}()
+			return done
+		}
+	}
 	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "receiver connected — sending file offer")
+	transferInfo("receiver connected — sending file offer")
 	hooks.report(phaseConnected, 0)
 	reader, err := source.open()
 	if err != nil {
@@ -396,23 +405,23 @@ func friendlyRelayError(err error) error {
 	}
 	switch closeError.Code {
 	case 4400:
-		return errors.New("CD relay rejected the transfer (invalid request): update cdx and try a fresh link")
+		return NewFailure(failureProtocol, "CD relay rejected the transfer (invalid request): update cdx and try a fresh link", retryNever, err)
 	case 4401:
-		return errors.New("CD relay rejected the receiver (link key mismatch): send a fresh link")
+		return NewFailure(failureProtocol, "CD relay rejected the receiver (link key mismatch): send a fresh link", retryNever, err)
 	case 4403:
-		return errors.New("CD relay rejected a transfer frame (protocol mismatch): update cdx and try again")
+		return NewFailure(failureProtocol, "CD relay rejected a transfer frame (protocol mismatch): update cdx and try again", retryNever, err)
 	case 4404:
-		return errors.New("the other side is no longer available (they may have closed the link)")
+		return NewFailure(failureDisconnected, "the other side is no longer available (they may have closed the link)", retryNewTransfer, err)
 	case 4406:
-		return errors.New("CD relay rejected the protocol version: update cdx and try again")
+		return NewFailure(failureProtocol, "CD relay rejected the protocol version: update cdx and try again", retryNever, err)
 	case 4408:
-		return errors.New("this CD link has expired: run `cdx send` again for a fresh link")
+		return NewFailure(failureExpired, "this CD link has expired: run `cdx send` again for a fresh link", retryNewTransfer, err)
 	case 4409:
-		return errors.New("this link is already claimed or expired (one receiver per link): run `cdx send` again")
+		return NewFailure(failureClaimed, "this link is already claimed or expired (one receiver per link): run `cdx send` again", retryNever, err)
 	case 4429:
-		return errors.New("the transfer is too slow for the relay (backpressure): try again on a faster network")
+		return NewFailure(failureStalled, "the transfer is too slow for the relay (backpressure): try again on a faster network", retryNewTransfer, err)
 	default:
-		return err
+		return NewFailure(failureDisconnected, "CD relay disconnected: try a fresh transfer", retryNewTransfer, err)
 	}
 }
 
@@ -431,17 +440,17 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 		if isTimeoutError(err) {
 			switch expected {
 			case "accepted":
-				return relayEvent{}, errors.New("CD relay did not answer within 10s: check your network and try again")
+				return relayEvent{}, NewFailure(failureNetwork, "CD relay did not answer within 10s: check your network and try again", retrySameRequest)
 			case "peer-joined":
-				return relayEvent{}, errors.New("no receiver joined within 15m: the link expired, run `cdx send` again")
+				return relayEvent{}, NewFailure(failureExpired, "no receiver joined within 15m: the link expired, run `cdx send` again", retryNewTransfer)
 			default:
-				return relayEvent{}, fmt.Errorf("timed out waiting for relay %s", expected)
+				return relayEvent{}, failuref(failureProtocol, retryNever, "timed out waiting for relay %s", expected)
 			}
 		}
 		return relayEvent{}, friendlyRelayError(fmt.Errorf("wait for relay %s: %w", expected, err))
 	}
 	if messageType != websocket.TextMessage {
-		return relayEvent{}, errors.New("CD relay sent an invalid response")
+		return relayEvent{}, NewFailure(failureProtocol, "CD relay sent an invalid response", retryNever)
 	}
 	var value relayEvent
 	if err := json.Unmarshal(data, &value); err != nil || value.Protocol != "cd-transfer-v1" || value.Type != expected {
@@ -452,9 +461,77 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 		if actual == "" {
 			actual = "empty response"
 		}
-		return relayEvent{}, fmt.Errorf("CD relay sent %s while waiting for %s", actual, expected)
+		return relayEvent{}, failuref(failureProtocol, retryNever, "CD relay sent %s while waiting for %s", actual, expected)
 	}
 	return value, nil
+}
+
+// Large records are opt-in on the wire; legacy receivers keep the offer's
+// original chunkSize and send an empty ACCEPT as before.
+func largeRecordsEnabled() bool { return os.Getenv("CD_LARGE_RECORDS") != "0" }
+
+type chunkAcceptance struct {
+	ChunkSize int       `json:"chunkSize,omitempty"`
+	LAN       *lanOffer `json:"lan,omitempty"`
+}
+
+func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool) (chunkAcceptance, error) {
+	accepted := chunkAcceptance{ChunkSize: chunkSize}
+	if len(payload) == 0 {
+		return accepted, nil
+	}
+	invalid := func() (chunkAcceptance, error) {
+		return chunkAcceptance{}, NewFailure(failureProtocol, "receiver sent an invalid transfer selection", retryNever)
+	}
+	if len(payload) > 4096 {
+		return invalid()
+	}
+	var selection chunkAcceptance
+	decoder := json.NewDecoder(strings.NewReader(string(payload)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&selection); err != nil {
+		return invalid()
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return invalid()
+	}
+	if selection.LAN != nil {
+		if !reverseOffered || validateLANOffer(selection.LAN) != nil {
+			return invalid()
+		}
+		if selection.ChunkSize == 0 {
+			selection.ChunkSize = chunkSize
+		}
+	}
+	if selection.ChunkSize != chunkSize && !(selection.ChunkSize == largeChunkSize && offeredMax == largeChunkSize) {
+		return invalid()
+	}
+	return selection, nil
+}
+
+func acceptedChunkSize(payload []byte, offeredMax int) (int, error) {
+	selection, err := acceptedTransfer(payload, offeredMax, false)
+	return selection.ChunkSize, err
+}
+
+const reverseLANGrace = 50 * time.Millisecond
+
+// Give a selected local TCP connection a bounded head start before bulk data
+// fills the relay. Failed connections still begin relaying within this limit.
+func waitReverseLAN(ctx context.Context, size uint64, done <-chan struct{}) error {
+	if done == nil || size < 8*1024*1024 || os.Getenv("CD_LAN_GRACE") == "0" {
+		return nil
+	}
+	timer := time.NewTimer(reverseLANGrace)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return ctx.Err()
+	case <-timer.C:
+		return ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // transfer streams one source over a paired link. offerSDP, when not nil,
@@ -468,24 +545,29 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		link.close()
 	})
 	defer stopOnCancel()
-	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files}
+	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files, LAN: link.lanOffer, ReverseLAN: link.reverseLAN != nil}
+	if largeRecordsEnabled() {
+		offer.MaxChunkSize = largeChunkSize
+	}
 	if offerSDP != nil {
+		var sdp string
 		select {
+		case sdp = <-offerSDP:
 		case <-ctx.Done():
 			return ctx.Err()
-		case sdp := <-offerSDP:
-			if sdp != "" {
-				// Include candidates gathered while the recipient entered the code.
-				if path := link.direct.Load(); path != nil {
-					if current := path.connection.LocalDescription(); current != nil {
-						sdp = current.SDP
-					}
+		}
+		if sdp != "" {
+			// Gathering continues while the recipient enters the code. Include
+			// public candidates discovered after the initial bounded wait.
+			if path := link.direct.Load(); path != nil && path.connection != nil {
+				if current := path.connection.LocalDescription(); current != nil {
+					sdp = current.SDP
 				}
-				if len(sdp) > maxSDPBytes {
-					return errors.New("direct offer is too large")
-				}
-				offer.Direct = &directOffer{SDP: sdp}
 			}
+			if len(sdp) > maxSDPBytes {
+				return NewFailure(failureProtocol, "direct offer is too large", retryNever)
+			}
+			offer.Direct = &directOffer{SDP: sdp}
 		}
 	}
 	encoded, err := json.Marshal(offer)
@@ -504,7 +586,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	handleSignal := func(payload []byte) {
 		path := link.direct.Load()
 		var signal directSignal
-		if path == nil || json.Unmarshal(payload, &signal) != nil {
+		if path == nil || path.connection == nil || json.Unmarshal(payload, &signal) != nil {
 			return
 		}
 		if signal.Candidate != nil {
@@ -524,18 +606,19 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		go func() {
 			select {
 			case <-path.opened:
-				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+				transferInfo("switched to a direct connection (%s)\n", path.route())
 			case <-path.lost:
 			}
 		}()
 	}
 
-	fmt.Fprintln(os.Stderr, "waiting for receiver to accept (up to 10m)")
+	selectedChunkSize := chunkSize
+	transferInfo("waiting for receiver to accept (up to 10m)")
 	for {
 		kind, payload, err := link.next(ctx, consentWait)
 		if err != nil {
 			if isTimeoutError(err) {
-				return errors.New("receiver did not accept within 10m: they may have closed the link, run `cdx send` again")
+				return NewFailure(failureExpired, "receiver did not accept within 10m: they may have closed the link, run `cdx send` again", retryNewTransfer)
 			}
 			return err
 		}
@@ -543,19 +626,30 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			handleSignal(payload)
 			continue
 		}
-		if kind != kindAccept || len(payload) != 0 {
-			return errors.New("receiver sent an invalid acceptance")
+		if kind != kindAccept {
+			return NewFailure(failureProtocol, "receiver sent an invalid acceptance", retryNever)
+		}
+		selection, selectionErr := acceptedTransfer(payload, offer.MaxChunkSize, offer.ReverseLAN)
+		if selectionErr != nil {
+			return selectionErr
+		}
+		selectedChunkSize = selection.ChunkSize
+		if selection.LAN != nil {
+			if err := waitReverseLAN(ctx, ready.Size, link.reverseLAN(selection.LAN)); err != nil {
+				return err
+			}
 		}
 		break
 	}
-	fmt.Fprintln(os.Stderr, "receiver accepted — sending file")
+	transferInfo("receiver accepted — sending file")
 	hooks.report(phaseSending, 0)
 
 	terminal := isTerminal(os.Stderr)
 	bar := newProgressBar(os.Stderr, "sending", ready.Size)
-	bar.jsonLines = jsonProgress && !terminal
+	bar.jsonLines = jsonProgress
+	bar.plainLines = !terminal
 	reportProgress := func(acknowledged uint64) {
-		if terminal || bar.jsonLines {
+		if transferProgressEnabled(terminal, jsonProgress, progressRequested) {
 			bar.update(acknowledged)
 		}
 	}
@@ -588,9 +682,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		}
 		if isTimeoutError(err) {
 			if progress.ended {
-				return errors.New("receiver did not verify within 90s: they may have disconnected")
+				return NewFailure(failureStalled, "receiver did not verify within 90s: they may have disconnected", retryNewTransfer)
 			}
-			return errors.New("transfer stalled: no acknowledgement for 90s (network or receiver too slow)")
+			return NewFailure(failureStalled, "transfer stalled: no acknowledgement for 90s (network or receiver too slow)", retryNewTransfer)
 		}
 		return err
 	}
@@ -632,7 +726,11 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	windowOpen := func() bool { return progress.sent-progress.acknowledged < window.size }
 	finishLine := bar.finish
 
-	buffer := make([]byte, chunkSize)
+	var payloadHash hash.Hash
+	if os.Getenv("CD_REQUEST_JOURNAL") != "" {
+		payloadHash = sha256.New()
+	}
+	buffer := make([]byte, selectedChunkSize)
 	for {
 		if err := ctx.Err(); err != nil {
 			finishLine()
@@ -644,6 +742,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return err
 		}
 		if count > 0 {
+			if payloadHash != nil {
+				payloadHash.Write(buffer[:count])
+			}
 			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
 				finishLine()
 				return linkError(friendlyRelayError(fmt.Errorf("send file data: %w", err)))
@@ -661,12 +762,18 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		}
 		if readErr != nil {
 			finishLine()
-			return fmt.Errorf("read file while sending: %w", readErr)
+			return failuref(failureLocal, retryNever, "read file while sending: %w", readErr)
 		}
 	}
 	if progress.sent != ready.Size {
 		finishLine()
-		return errors.New("file changed while it was being sent")
+		return NewFailure(failureLocal, "file changed while it was being sent", retryNever)
+	}
+	if payloadHash != nil {
+		if err := verifyRequestPayload(hex.EncodeToString(payloadHash.Sum(nil))); err != nil {
+			finishLine()
+			return err
+		}
 	}
 	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
@@ -679,10 +786,10 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return err
 	}
 	if !terminal && ready.Size >= 1024*1024 {
-		fmt.Fprintf(os.Stderr, "sent %s\n", formatBytes(progress.sent))
+		transferInfo("sent %s\n", formatBytes(progress.sent))
 	}
 	link.finish(false)
-	fmt.Fprintln(os.Stderr, "receiver verified the file")
+	transferInfo("receiver verified the file")
 	return nil
 }
 
@@ -701,26 +808,26 @@ type senderProgress struct {
 func (p *senderProgress) handle(kind messageKind, payload []byte) error {
 	switch {
 	case p.completed:
-		return errors.New("receiver sent data after verifying the transfer")
+		return NewFailure(failureProtocol, "receiver sent data after verifying the transfer", retryNever)
 	case kind == kindAck:
 		chunks, bytes, err := decodeCounts(payload)
 		if err != nil || chunks > p.chunks || bytes < p.acknowledged || bytes > p.sent {
-			return errors.New("receiver sent invalid progress")
+			return NewFailure(failureProtocol, "receiver sent invalid progress", retryNever)
 		}
 		p.acknowledged = bytes
 		return nil
 	case kind == kindComplete && p.ended:
 		chunks, bytes, err := decodeCounts(payload)
 		if err != nil || chunks != p.chunks || bytes != p.sent {
-			return errors.New("receiver did not verify the transfer")
+			return NewFailure(failureProtocol, "receiver did not verify the transfer", retryNever)
 		}
 		p.acknowledged = bytes
 		p.completed = true
 		return nil
 	case kind == kindComplete:
-		return errors.New("receiver claimed completion before the transfer ended")
+		return NewFailure(failureProtocol, "receiver claimed completion before the transfer ended", retryNever)
 	default:
-		return errors.New("receiver sent an invalid acknowledgement")
+		return NewFailure(failureProtocol, "receiver sent an invalid acknowledgement", retryNever)
 	}
 }
 
@@ -733,7 +840,7 @@ func encodeCounts(chunks uint32, bytes uint64) []byte {
 
 func decodeCounts(value []byte) (uint32, uint64, error) {
 	if len(value) != 12 {
-		return 0, 0, errors.New("invalid counter payload")
+		return 0, 0, NewFailure(failureProtocol, "invalid counter payload", retryNever)
 	}
 	return binary.BigEndian.Uint32(value[:4]), binary.BigEndian.Uint64(value[4:]), nil
 }

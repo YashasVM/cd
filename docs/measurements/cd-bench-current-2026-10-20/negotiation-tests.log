@@ -1,0 +1,22 @@
+✔ browser record codec preserves authenticated bytes (13.818577ms)
+✔ browser record codec rejects a sequence gap without advancing (1.928784ms)
+✔ browser record codec rejects changed ciphertext (1.297074ms)
+✔ capability parser rejects missing and malformed fragments (0.634101ms)
+✔ relay fallback preserves exact encrypted bytes and drains queued admission events (45.796443ms)
+✔ relay native queue applies backpressure and resumes after drain (36.603289ms)
+✔ unsolicited responses cannot grow the sender queue without limit (3.117633ms)
+✔ ACKs advance progress while the next source read is blocked (5.556598ms)
+✔ source failure stops the concurrent ACK reader (2.576711ms)
+✔ empty source completes without waiting for an ACK (2.579133ms)
+✔ short source fails instead of leaving the ACK reader waiting (2.181457ms)
+✔ old senders and receivers retain their original wire chunk sizes (0.974604ms)
+✔ new peers explicitly negotiate 768 KiB records (0.336849ms)
+✔ unknown limits and malformed selections fail closed (0.727951ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 174.29681

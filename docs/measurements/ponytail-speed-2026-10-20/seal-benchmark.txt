@@ -1,0 +1,12 @@
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkRecordSealStorage/allocate-12         	    1551	    210283 ns/op	3739.87 MB/s	  795196 B/op	       3 allocs/op
+BenchmarkRecordSealStorage/allocate-12         	    1708	    211358 ns/op	3720.85 MB/s	  795143 B/op	       3 allocs/op
+BenchmarkRecordSealStorage/allocate-12         	    1659	    238870 ns/op	3292.30 MB/s	  795155 B/op	       3 allocs/op
+BenchmarkRecordSealStorage/reuse-12            	    3230	    112091 ns/op	7016.02 MB/s	     538 B/op	       2 allocs/op
+BenchmarkRecordSealStorage/reuse-12            	    3210	    113818 ns/op	6909.53 MB/s	     541 B/op	       2 allocs/op
+BenchmarkRecordSealStorage/reuse-12            	    2966	    111439 ns/op	7057.09 MB/s	     581 B/op	       2 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	2.253s

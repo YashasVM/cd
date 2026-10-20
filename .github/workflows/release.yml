@@ -73,6 +73,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: cdx-*
@@ -80,4 +81,10 @@ jobs:
       - run: sha256sum cdx-* > checksums.txt
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then
+            gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes
+          fi

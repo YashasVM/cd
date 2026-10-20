@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createSink, createStageSink, createOPFSSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
+import { createSink, createStageSink, createOPFSSink, createBlobSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
 
 const SAFARI_MAC =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
@@ -46,20 +46,16 @@ describe('tier selection', () => {
     }
   });
 
-  it('refuses over-limit blobs on WebKit only, with an exact 256 MiB boundary', () => {
+  it('caps every Blob fallback at 256 MiB while preserving the exact boundary', () => {
     const caps = { filePicker: false, opfs: false };
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT, SAFARI_IOS), 'blob');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, SAFARI_IOS), 'too-large');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, SAFARI_MAC), 'too-large');
     assert.equal(selectSinkTier(caps, WEBKIT_BLOB_LIMIT + 1n, CHROME_IOS), 'too-large');
-  });
-
-  it('leaves blobs uncapped off WebKit', () => {
-    const caps = { filePicker: false, opfs: false };
     const huge = 10n * 1024n * 1024n * 1024n;
-    assert.equal(selectSinkTier(caps, huge, CHROME_ANDROID), 'blob');
-    assert.equal(selectSinkTier(caps, huge, CHROME_DESKTOP), 'blob');
-    assert.equal(selectSinkTier(caps, huge, FIREFOX_DESKTOP), 'blob');
+    for (const ua of [CHROME_ANDROID, CHROME_DESKTOP, FIREFOX_DESKTOP]) {
+      assert.equal(selectSinkTier(caps, huge, ua), 'too-large');
+    }
   });
 
   it('accepts plain numbers as well as bigints for sizes', () => {
@@ -101,6 +97,21 @@ describe('download sink lifecycle', () => {
     });
   });
 
+  it('caps declared no-OPFS fallback offers and enforces the actual cumulative write limit', async (t) => {
+    await withBrowser(t, {}, async () => {
+      await assert.rejects(createSink({ name: 'large.bin', size: WEBKIT_BLOB_LIMIT + 1n }), { message: DOWNLOAD_TOO_LARGE });
+      const sink = await createStageSink({ name: 'unknown.bin', maxBytes: 4 });
+      await sink.write(Uint8Array.of(1, 2, 3));
+      await assert.rejects(sink.write(Uint8Array.of(4, 5)), { message: DOWNLOAD_TOO_LARGE });
+      const staged = await sink.toFile();
+      assert.deepEqual([...new Uint8Array(await staged.file.arrayBuffer())], [1, 2, 3]);
+      const direct = createBlobSink({ name: 'unknown.bin', maxBytes: 4 });
+      await direct.write(Uint8Array.of(1, 2, 3));
+      await assert.rejects(direct.write(Uint8Array.of(4, 5)), { message: DOWNLOAD_TOO_LARGE });
+      await direct.abort();
+    });
+  });
+
   it('removes the staging entry when opening its writable fails', async (t) => {
     const removed = [];
     let created;
@@ -130,26 +141,26 @@ describe('download sink lifecycle', () => {
     }; } }, async () => {
       const sink = await createOPFSSink({ name: 'big.bin' });
       const chunkSize = 64 * 1024;
-      for (let index = 0; index < 10; index++) {
+      for (let index = 0; index < 67; index++) {
         const chunk = new Uint8Array(chunkSize).fill(index);
         // Exercise every accepted input shape across the chunks.
         if (index % 3 === 0) await sink.write(chunk);
         else if (index % 3 === 1) await sink.write(chunk.buffer.slice(0));
         else await sink.write(new DataView(chunk.buffer.slice(0)));
       }
-      // 10 x 64 KiB: the 8th chunk completes 512 KiB and flushes once.
+      // 67 x 64 KiB: flush 4 MiB once and retain three small chunks.
       assert.equal(writes.length, 1);
-      assert.equal(writes[0].byteLength, 512 * 1024);
+      assert.equal(writes[0].byteLength, 4 * 1024 * 1024);
       await sink.file();
       assert.equal(writes.length, 2);
-      assert.equal(writes[1].byteLength, 2 * chunkSize);
+      assert.equal(writes[1].byteLength, 3 * chunkSize);
       assert.equal(closed, 1);
       const total = writes[0].byteLength + writes[1].byteLength;
-      assert.equal(total, 10 * chunkSize);
+      assert.equal(total, 67 * chunkSize);
       const flat = new Uint8Array(total);
       flat.set(writes[0]);
       flat.set(writes[1], writes[0].byteLength);
-      for (let index = 0; index < 10; index++) {
+      for (let index = 0; index < 67; index++) {
         assert.ok(flat.slice(index * chunkSize, (index + 1) * chunkSize).every((byte) => byte === index));
       }
     });
@@ -196,7 +207,7 @@ describe('download sink lifecycle', () => {
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'ordered.bin' });
       const expected = [];
-      for (let index = 0; index < 8; index++) {
+      for (let index = 0; index < 40; index++) {
         const chunk = new Uint8Array(256 * 1024).fill(index + 1);
         expected.push(chunk);
         await sink.write(chunk);
@@ -223,9 +234,9 @@ describe('download sink lifecycle', () => {
     };
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'fail.bin' });
-      await sink.write(new Uint8Array(512 * 1024));
+      await sink.write(new Uint8Array(4 * MiB));
       // Second flush is due while the first is still in flight, so it waits on it.
-      const second = sink.write(new Uint8Array(512 * 1024));
+      const second = sink.write(new Uint8Array(4 * MiB));
       first.reject(new Error('disk full'));
       await assert.rejects(second, { message: 'disk full' });
       assert.equal(calls, 1);
@@ -241,7 +252,7 @@ describe('download sink lifecycle', () => {
     };
     await withBrowser(t, opfsWith(writable), async () => {
       const sink = await createOPFSSink({ name: 'fail-small.bin' });
-      await sink.write(new Uint8Array(512 * 1024));
+      await sink.write(new Uint8Array(4 * MiB));
       first.reject(new Error('disk full'));
       await new Promise((resolve) => setImmediate(resolve));
       await assert.rejects(sink.write(new Uint8Array(10)), { message: 'disk full' });

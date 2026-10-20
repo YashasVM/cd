@@ -2,9 +2,9 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -66,7 +66,8 @@ func TestUnpackBundleRestoresFilesAndFolders(t *testing.T) {
 
 	// A second unpack clashes and writes nothing without --force.
 	_, err = unpackBundle(archivePath, dest, false)
-	if err == nil || !strings.Contains(err.Error(), "already exists") {
+	var failure *Failure
+	if !errors.As(err, &failure) || failure.Kind != failureExists {
 		t.Fatalf("err = %v, want exists", err)
 	}
 	if _, err := unpackBundle(archivePath, dest, true); err != nil {

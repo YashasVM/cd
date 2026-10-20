@@ -252,6 +252,7 @@ func (link *recordLink) writeDirect(path *directPath) {
 			link.deliver(linkItem{err: err, direct: true})
 			return
 		}
+		link.directBytes.Add(uint64(len(record)))
 	}
 }
 
@@ -295,6 +296,7 @@ func (link *recordLink) writeRelay() {
 			link.relayFailed()
 			return
 		}
+		link.relayBytes.Add(uint64(len(item.record)))
 	}
 }
 

@@ -112,7 +112,12 @@ func writeReadyCard(output io.Writer, value readyOutput) {
 		fmt.Fprintln(output, "  "+dim("open it in a browser, or run ")+cmdText("cdx receive '<link>'"))
 	}
 	fmt.Fprintln(output)
-	fmt.Fprintln(output, "  "+accent("●")+" "+dim("waiting for the receiver · expires in 15m · Ctrl-C to cancel"))
+	writeTerminalQR(output, value)
+	fmt.Fprintln(output)
+	if value.QRPath != "" {
+		fmt.Fprintln(output, "  QR saved to "+value.QRPath)
+	}
+	fmt.Fprintln(output, "  "+accent("●")+" "+dim("expires in 15m · one receiver"))
 	fmt.Fprintln(output)
 	fancyReady = true
 }

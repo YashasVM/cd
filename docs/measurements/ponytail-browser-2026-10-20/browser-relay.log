@@ -1,0 +1,14 @@
+before #1: 998.8ms
+after #1: 1133.4ms
+after #2: 1072.4ms
+before #2: 1069.1ms
+before #3: 972.8ms
+after #3: 1006.1ms
+after #4: 1017.8ms
+before #4: 975.7ms
+before #5: 1041.9ms
+after #5: 1021.0ms
+after #6: 1056.5ms
+before #6: 1112.4ms
+before #7: 1052.9ms
+after #7: 1073.1ms

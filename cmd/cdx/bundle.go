@@ -40,7 +40,7 @@ type bundleEntry struct {
 
 func prepareSource(paths []string) (shareSource, error) {
 	if len(paths) == 0 {
-		return shareSource{}, errors.New("missing file to send")
+		return shareSource{}, NewFailure(failureLocal, "missing file to send", retryNever)
 	}
 	if len(paths) == 1 {
 		if info, err := os.Stat(paths[0]); err == nil && info.IsDir() {
@@ -49,6 +49,46 @@ func prepareSource(paths []string) (shareSource, error) {
 		return prepareFile(paths[0])
 	}
 	return prepareBundle(paths)
+}
+
+// validateSourcePaths checks the named inputs without walking their contents.
+// The detached holder performs the full walk and ZIP sizing exactly once.
+func validateSourcePaths(paths []string) error {
+	if len(paths) == 0 {
+		return NewFailure(failureLocal, "missing file to send", retryNever)
+	}
+	topLevel := make(map[string]string, len(paths))
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if path == "-" || path == "" || err != nil || !info.IsDir() {
+			if _, err := prepareFile(path); err != nil {
+				return err
+			}
+		} else {
+			folder, err := os.Open(path)
+			if err != nil {
+				return failuref(failureLocal, retryNever, "cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+			_, err = folder.Readdirnames(1)
+			_ = folder.Close()
+			if err != nil && !errors.Is(err, io.EOF) {
+				return failuref(failureLocal, retryNever, "cannot read %q: %s (check folder permissions)", path, underlyingReason(err))
+			}
+		}
+		absolute, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		base := filepath.Base(absolute)
+		if !utf8.ValidString(base) {
+			return failuref(failureLocal, retryNever, "cannot share %q: its name is not valid UTF-8", path)
+		}
+		if previous, ok := topLevel[base]; ok {
+			return failuref(failureLocal, retryNever, "%q and %q would both be named %q in the bundle: rename one or send its folder", previous, path, base)
+		}
+		topLevel[base] = path
+	}
+	return nil
 }
 
 func prepareFile(path string) (shareSource, error) {
@@ -69,7 +109,7 @@ func prepareFile(path string) (shareSource, error) {
 		}
 		if uint64(current.Size()) != size {
 			_ = file.Close()
-			return nil, errors.New("file changed while it was being sent")
+			return nil, NewFailure(failureLocal, "file changed while it was being sent", retryNever)
 		}
 		return file, nil
 	}}, nil
@@ -81,7 +121,7 @@ func prepareBundle(paths []string) (shareSource, error) {
 	topLevel := map[string]string{}
 	for _, path := range paths {
 		if path == "-" {
-			return shareSource{}, errors.New(`standard input ("-") is not supported: send files or folders`)
+			return shareSource{}, NewFailure(failureLocal, `standard input ("-") is not supported: send files or folders`, retryNever)
 		}
 		absolute, err := filepath.Abs(path)
 		if err != nil {
@@ -93,14 +133,14 @@ func prepareBundle(paths []string) (shareSource, error) {
 			if _, _, openErr := openSharedFile(path); openErr != nil {
 				return shareSource{}, openErr
 			}
-			return shareSource{}, fmt.Errorf("cannot access %q: %s", path, underlyingReason(err))
+			return shareSource{}, failuref(failureLocal, retryNever, "cannot access %q: %s", path, underlyingReason(err))
 		}
 		base := filepath.Base(absolute)
 		if !utf8.ValidString(base) {
-			return shareSource{}, fmt.Errorf("cannot share %q: its name is not valid UTF-8", path)
+			return shareSource{}, failuref(failureLocal, retryNever, "cannot share %q: its name is not valid UTF-8", path)
 		}
 		if previous, ok := topLevel[base]; ok {
-			return shareSource{}, fmt.Errorf("%q and %q would both be named %q in the bundle: rename one or send its folder", previous, path, base)
+			return shareSource{}, failuref(failureLocal, retryNever, "%q and %q would both be named %q in the bundle: rename one or send its folder", previous, path, base)
 		}
 		topLevel[base] = path
 		switch {
@@ -114,7 +154,7 @@ func prepareBundle(paths []string) (shareSource, error) {
 			entries = append(entries, walked...)
 			skipped += walkSkipped
 		default:
-			return shareSource{}, fmt.Errorf("%q is not a regular file or folder", path)
+			return shareSource{}, failuref(failureLocal, retryNever, "%q is not a regular file or folder", path)
 		}
 	}
 	size, err := bundleSize(entries)
@@ -144,7 +184,7 @@ func walkFolder(root, prefix string) ([]bundleEntry, int, error) {
 	skipped := 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("cannot read %q: %s", path, underlyingReason(err))
+			return failuref(failureLocal, retryNever, "cannot read %q: %s", path, underlyingReason(err))
 		}
 		relative, err := filepath.Rel(root, path)
 		if err != nil {
@@ -155,7 +195,7 @@ func walkFolder(root, prefix string) ([]bundleEntry, int, error) {
 			name = prefix + "/" + filepath.ToSlash(relative)
 		}
 		if !utf8.ValidString(name) {
-			return fmt.Errorf("cannot share %q: its name is not valid UTF-8", path)
+			return failuref(failureLocal, retryNever, "cannot share %q: its name is not valid UTF-8", path)
 		}
 		if !entry.IsDir() && !entry.Type().IsRegular() {
 			skipped++
@@ -163,7 +203,7 @@ func walkFolder(root, prefix string) ([]bundleEntry, int, error) {
 		}
 		info, err := entry.Info()
 		if err != nil {
-			return fmt.Errorf("cannot read %q: %s", path, underlyingReason(err))
+			return failuref(failureLocal, retryNever, "cannot read %q: %s", path, underlyingReason(err))
 		}
 		if entry.IsDir() {
 			entries = append(entries, bundleEntry{path: path, name: name + "/", mode: info.Mode(), modified: info.ModTime(), dir: true})
@@ -215,7 +255,7 @@ func writeBundle(output io.Writer, entries []bundleEntry, contents func(bundleEn
 		extra, _ := reader.Read(make([]byte, 1))
 		_ = reader.Close()
 		if copyErr != nil || copied != int64(entry.size) || extra != 0 {
-			return fmt.Errorf("%q changed while it was being sent", entry.path)
+			return failuref(failureLocal, retryNever, "%q changed while it was being sent", entry.path)
 		}
 	}
 	return archive.Close()
@@ -224,32 +264,63 @@ func writeBundle(output io.Writer, entries []bundleEntry, contents func(bundleEn
 func openBundleEntry(entry bundleEntry) (io.ReadCloser, error) {
 	file, err := os.Open(entry.path)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read %q: %s", entry.path, underlyingReason(err))
+		return nil, failuref(failureLocal, retryNever, "cannot read %q: %s", entry.path, underlyingReason(err))
 	}
 	return file, nil
 }
 
-// bundleSize runs writeBundle over zero-filled contents into a counter. Zip
-// headers and sizes do not depend on the bytes, only the CRCs do, so the
-// count is exact.
+// bundleSize counts the Store ZIP emitted by writeBundle without reading or
+// checksumming payload bytes. Keep its layout in step with archive/zip:
+// streamed files have a trailing descriptor, timestamps add a nine-byte extra
+// to both headers, and ZIP64 adds central-directory and end records.
 func bundleSize(entries []bundleEntry) (uint64, error) {
-	var counter countingWriter
-	err := writeBundle(&counter, entries, func(entry bundleEntry) (io.ReadCloser, error) {
-		return io.NopCloser(io.LimitReader(zeroReader{}, int64(entry.size))), nil
-	})
-	return counter.count, err
-}
-
-type countingWriter struct{ count uint64 }
-
-func (writer *countingWriter) Write(data []byte) (int, error) {
-	writer.count += uint64(len(data))
-	return len(data), nil
-}
-
-type zeroReader struct{}
-
-func (zeroReader) Read(data []byte) (int, error) {
-	clear(data)
-	return len(data), nil
+	const max32 = uint64(1<<32 - 1)
+	var local, central uint64
+	add := func(total *uint64, size uint64) error {
+		if size > ^uint64(0)-*total {
+			return errors.New("bundle size exceeds ZIP limits")
+		}
+		*total += size
+		return nil
+	}
+	for _, entry := range entries {
+		if len(entry.name) > 1<<16-1 {
+			return 0, errors.New("zip: FileHeader.Name too long")
+		}
+		extra := uint64(0)
+		if !entry.modified.IsZero() {
+			extra = 9
+		}
+		header := uint64(len(entry.name)) + extra
+		size := entry.size
+		descriptor := uint64(16)
+		if strings.HasSuffix(entry.name, "/") {
+			size, descriptor = 0, 0
+		} else if size >= max32 {
+			descriptor = 24
+		}
+		centralSize := 46 + header
+		if size >= max32 || local >= max32 {
+			centralSize += 28
+		}
+		for _, amount := range []uint64{30 + header, size, descriptor} {
+			if err := add(&local, amount); err != nil {
+				return 0, err
+			}
+		}
+		if err := add(&central, centralSize); err != nil {
+			return 0, err
+		}
+	}
+	end := uint64(22)
+	if len(entries) >= 1<<16-1 || central >= max32 || local >= max32 {
+		end += 56 + 20
+	}
+	if err := add(&local, central); err != nil {
+		return 0, err
+	}
+	if err := add(&local, end); err != nil {
+		return 0, err
+	}
+	return local, nil
 }

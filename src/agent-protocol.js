@@ -139,7 +139,7 @@ export async function createOpener(invitation, direction, { tunnel = false } = {
           name: 'AES-GCM',
           iv: nonce(direction, sequence),
           additionalData: additionalData(header, invitation.id)
-        }, key, record.slice(HEADER_BYTES)));
+        }, key, record.subarray(HEADER_BYTES)));
       } catch {
         throw new Error('Record authentication failed.');
       }

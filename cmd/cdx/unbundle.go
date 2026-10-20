@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -23,15 +22,15 @@ func resolveBundleDir(out string) (string, error) {
 	info, err := os.Stat(out)
 	if err == nil {
 		if !info.IsDir() {
-			return "", fmt.Errorf("%q is a file: several files are coming, so pass a folder to --out", out)
+			return "", failuref(failureExists, retryNever, "%q is a file: several files are coming, so pass a folder to --out", out)
 		}
 		return out, nil
 	}
 	if !errors.Is(err, fs.ErrNotExist) {
-		return "", fmt.Errorf("cannot use %q: %s", out, underlyingReason(err))
+		return "", failuref(failureLocal, retryNever, "cannot use %q: %s", out, underlyingReason(err))
 	}
 	if err := os.MkdirAll(out, 0o755); err != nil {
-		return "", fmt.Errorf("cannot create %q: %s", out, underlyingReason(err))
+		return "", failuref(failureLocal, retryNever, "cannot create %q: %s", out, underlyingReason(err))
 	}
 	return out, nil
 }
@@ -71,7 +70,7 @@ func unpackBundle(archivePath, dir string, force bool) ([]receivedFile, error) {
 	defer archive.Close()
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		return nil, fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(err))
+		return nil, failuref(failureLocal, retryNever, "cannot write to %q: %s", dir, underlyingReason(err))
 	}
 	defer root.Close()
 	return unpackBundleFile(archive, root, dir, force)
@@ -86,10 +85,10 @@ func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]r
 	}
 	archive, err := zip.NewReader(file, info.Size())
 	if err != nil {
-		return nil, errors.New("the sender's files could not be unpacked")
+		return nil, NewFailure(failureProtocol, "the sender's files could not be unpacked", retryNever)
 	}
 	if len(archive.File) > 10_000 {
-		return nil, errors.New("the sender offered too many files")
+		return nil, NewFailure(failureProtocol, "the sender offered too many files", retryNever)
 	}
 
 	type target struct {
@@ -104,7 +103,7 @@ func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]r
 		name, ok := bundleEntryPath(entry.Name)
 		key := strings.ToLower(name)
 		if !ok || seen[key] || strings.Count(name, "/") > 64 {
-			return nil, errors.New("the sender offered an unsafe filename")
+			return nil, NewFailure(failureProtocol, "the sender offered an unsafe filename", retryNever)
 		}
 		seen[key] = true
 		mode := entry.Mode()
@@ -113,23 +112,23 @@ func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]r
 			folders = append(folders, name)
 		case mode.IsRegular():
 			if entry.Method != zip.Store || entry.CompressedSize64 != entry.UncompressedSize64 || entry.UncompressedSize64 > uint64(info.Size())-expanded {
-				return nil, errors.New("the sender's files could not be unpacked")
+				return nil, NewFailure(failureProtocol, "the sender's files could not be unpacked", retryNever)
 			}
 			expanded += entry.UncompressedSize64
 			if !force {
 				if _, err := root.Lstat(filepath.FromSlash(name)); err == nil {
-					return nil, fmt.Errorf("%q already exists in %s: use --out <folder> or --force to overwrite", name, dir)
+					return nil, failuref(failureExists, retryNever, "%q already exists in %s: use --out <folder> or --force to overwrite", name, dir)
 				}
 			}
 			files = append(files, target{file: entry, name: name})
 		default:
-			return nil, errors.New("the sender offered an unsupported file type")
+			return nil, NewFailure(failureProtocol, "the sender offered an unsupported file type", retryNever)
 		}
 	}
 
 	for _, folder := range folders {
 		if err := root.MkdirAll(filepath.FromSlash(folder), 0o755); err != nil {
-			return nil, fmt.Errorf("cannot create %q: %s", folder, underlyingReason(err))
+			return nil, failuref(failureLocal, retryNever, "cannot create %q: %s", folder, underlyingReason(err))
 		}
 	}
 	absolute, _ := filepath.Abs(dir)
@@ -138,7 +137,7 @@ func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]r
 		local := filepath.FromSlash(item.name)
 		if parent := filepath.Dir(local); parent != "." {
 			if err := root.MkdirAll(parent, 0o755); err != nil {
-				return received, fmt.Errorf("cannot create %q: %s", parent, underlyingReason(err))
+				return received, failuref(failureLocal, retryNever, "cannot create %q: %s", parent, underlyingReason(err))
 			}
 		}
 		if err := extractEntry(root, item.file, local, force); err != nil {
@@ -152,7 +151,7 @@ func unpackBundleFile(file *os.File, root *os.Root, dir string, force bool) ([]r
 func extractEntry(root *os.Root, entry *zip.File, local string, force bool) error {
 	source, err := entry.Open()
 	if err != nil {
-		return errors.New("the sender's files could not be unpacked")
+		return NewFailure(failureProtocol, "the sender's files could not be unpacked", retryNever)
 	}
 	defer source.Close()
 	permissions := fs.FileMode(0o644)
@@ -162,7 +161,7 @@ func extractEntry(root *os.Root, entry *zip.File, local string, force bool) erro
 	staging := filepath.Join(filepath.Dir(local), ".cd-"+rand.Text()+".part")
 	output, err := root.OpenFile(staging, os.O_CREATE|os.O_EXCL|os.O_WRONLY, permissions)
 	if err != nil {
-		return fmt.Errorf("cannot write %q: %s", local, underlyingReason(err))
+		return failuref(failureLocal, retryNever, "cannot write %q: %s", local, underlyingReason(err))
 	}
 	// zip's reader checks each entry's size and CRC as it reaches EOF.
 	written, copyErr := io.Copy(output, io.LimitReader(source, int64(entry.UncompressedSize64)+1))
@@ -186,9 +185,9 @@ func extractEntry(root *os.Root, entry *zip.File, local string, force bool) erro
 	if copyErr != nil {
 		_ = root.Remove(staging)
 		if errors.Is(copyErr, zip.ErrChecksum) || errors.Is(copyErr, zip.ErrFormat) {
-			return errors.New("the sender's files could not be unpacked")
+			return NewFailure(failureProtocol, "the sender's files could not be unpacked", retryNever)
 		}
-		return fmt.Errorf("save %q: %s", local, underlyingReason(copyErr))
+		return failuref(failureLocal, retryNever, "save %q: %s", local, underlyingReason(copyErr))
 	}
 	return nil
 }

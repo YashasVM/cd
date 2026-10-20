@@ -1,4 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
+import { ResumeRoomProtocol } from './resume-room';
+export { DeviceRoom } from './device-room';
 import { clientPrefix, sameOrigin } from './code-security';
 
 type Role = 'sender' | 'receiver';
@@ -127,10 +129,12 @@ function reject(socket: WebSocket, code: number, reason: string): void {
 
 export class TransferRoom extends DurableObject<Env> {
   private room: RoomState = { kind: 'empty' };
+  private resume: ResumeRoomProtocol;
   private claiming: Promise<ClaimResult> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.resume = new ResumeRoomProtocol(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? { kind: 'empty' };
     });
@@ -138,6 +142,8 @@ export class TransferRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     if (!sameOrigin(request)) return new Response('origin forbidden', { status: 403 });
+    const resumeRoot = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
+    if (resumeRoot) return this.resume.fetch(request, resumeRoot);
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
     if (this.ctx.getWebSockets().length >= 4) return new Response('room connection limit reached', { status: 429 });
     const pair = new WebSocketPair();
@@ -153,6 +159,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.message(socket, message); return; }
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
     if (this.isExpired()) {
@@ -188,6 +196,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket, code: number, reason: string): Promise<void> {
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.close(socket); return; }
     // Complete the close handshake. Clients wait for this reply to know every
     // frame they sent before it (such as COMPLETE) reached the room; without
     // it they sit out their close timeout.
@@ -205,9 +215,12 @@ export class TransferRoom extends DurableObject<Env> {
   async webSocketError(socket: WebSocket): Promise<void> { await this.webSocketClose(socket, 1011, 'socket error'); }
 
   async alarm(): Promise<void> {
+    await this.resume.alarm();
     const now = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
       const attachment: unknown = socket.deserializeAttachment();
+      if (attachment && typeof attachment === 'object' && 'kind' in attachment
+        && (attachment.kind === 'resume-pending' || attachment.kind === 'resume-peer')) continue;
       if (!isSocketAttachment(attachment)) reject(socket, 4408, 'join expired');
       else if (attachment.kind === 'pending' && attachment.expiresAt <= now) reject(socket, 4408, 'join expired');
     }
@@ -618,7 +631,7 @@ export default {
     if ((url.pathname.startsWith('/api/codes') || request.headers.get('Upgrade')?.toLowerCase() === 'websocket') && !sameOrigin(request)) {
       return new Response('origin forbidden', { status: 403 });
     }
-    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /api/codes),
+    // Single host: cd.yash0.in serves P2P UI, relay (/ws/v1, /ws/v2, /api/codes),
     // and share pages (/send, /s/*) so every terminal<->browser combination
     // works from one origin.
     // design.yash0.in serves the design-docs list site from /design/.
@@ -649,6 +662,28 @@ export default {
         return new Response('signaling temporarily unavailable', { status: 503 });
       }
     }
+    const pushMatch = /^\/api\/devices\/v1\/([A-Za-z0-9_-]{22})\/(push|push-target)$/.exec(url.pathname);
+    if (pushMatch) {
+      if (!['POST', 'DELETE'].includes(request.method) || (request.method === 'DELETE' && pushMatch[2] !== 'push-target')) {
+        return new Response('method not allowed', { status: 405, headers: { Allow: pushMatch[2] === 'push' ? 'POST' : 'POST, DELETE' } });
+      }
+      try {
+        const address = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const { success } = await env.PEER_RATE_LIMITER.limit({ key: `device-push:${address}` });
+        if (!success) return Response.json({ error: 'rate limited' }, { status: 429 });
+        return await env.DEVICES.getByName(pushMatch[1]).fetch(request);
+      } catch {
+        return Response.json({ error: 'device wake-up unavailable' }, { status: 503 });
+      }
+    }
+    const deviceMatch = /^\/ws\/devices\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (deviceMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+      if (!success) return new Response('connection rate limit reached', { status: 429 });
+      return env.DEVICES.getByName(deviceMatch[1]).fetch(request);
+    }
     const match = /^\/ws\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
     if (match) {
       if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
@@ -659,6 +694,19 @@ export default {
         return await env.TRANSFERS.getByName(match[1]).fetch(request);
       } catch (error) {
         console.error(JSON.stringify({ event: 'relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
+        return new Response('relay temporarily unavailable', { status: 503 });
+      }
+    }
+    const resumeMatch = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (resumeMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      try {
+        const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+        if (!success) return new Response('connection rate limit reached', { status: 429 });
+        return await env.TRANSFERS.getByName(`v2:${resumeMatch[1]}`).fetch(request);
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'resume_relay_dispatch_failed', error: error instanceof Error ? error.message : 'unknown' }));
         return new Response('relay temporarily unavailable', { status: 503 });
       }
     }

@@ -1,0 +1,231 @@
+diff --git i/src/agent-protocol.js w/src/agent-protocol.js
+index 5f4d4ca..5f934d3 100644
+--- i/src/agent-protocol.js
++++ w/src/agent-protocol.js
+@@ -19,6 +19,7 @@ export const KIND_TUNNEL_BYTES = 8;
+ export const MAX_RECORD_BYTES = 1024 * 1024;
+
+ const HEADER_BYTES = 12;
++export const RECORD_OVERHEAD_BYTES = HEADER_BYTES + 16;
+ const VERSION = 1;
+ const encoder = new TextEncoder();
+
+diff --git i/src/direct-link.js w/src/direct-link.js
+index 81c016a..956c1e2 100644
+--- i/src/direct-link.js
++++ w/src/direct-link.js
+@@ -2,7 +2,8 @@
+ // The sender offers WebRTC SDP inside its encrypted file offer; this page
+ // answers with a signal record, trickles its ICE candidates, and the two
+ // exchange the same encrypted records over a pre-negotiated data channel
+-// once it opens. Records are split into 64 KiB messages and rebuilt from
++// once it opens. Records use 64 KiB messages, or up to 256 KiB when both
++// browser peers advertise support and the native channel allows it, and rebuild from
+ // their plaintext header; both paths feed one merger that orders records by
+ // sequence number and drops the second copy of any record.
+
+@@ -16,6 +17,13 @@ export const DIRECT_BUFFER_BYTES = 4 * 1024 * 1024;
+ const MAX_CANDIDATES = 64;
+ export const DIRECT_CHANNEL_ID = 1;
+ export const DIRECT_PIECE_BYTES = 64 * 1024;
++export const LARGE_DIRECT_PIECE_BYTES = 256 * 1024;
++
++export function peerDirectPieceBytes(value) {
++  if (value === undefined || value === DIRECT_PIECE_BYTES) return DIRECT_PIECE_BYTES;
++  if (value === LARGE_DIRECT_PIECE_BYTES) return LARGE_DIRECT_PIECE_BYTES;
++  throw new Error('Invalid direct message size limit.');
++}
+ export const DIRECT_ICE_SERVERS = [
+   { urls: 'stun:stun.l.google.com:19302' },
+   { urls: 'stun:global.stun.twilio.com:3478' }
+@@ -27,15 +35,17 @@ export function parseDirectOffer(offer) {
+   return typeof sdp === 'string' && sdp.length > 0 && sdp.length <= MAX_SDP_BYTES ? sdp : null;
+ }
+
+-export function splitRecord(record) {
++export function splitRecord(record, pieceBytes = DIRECT_PIECE_BYTES) {
++  if (!Number.isSafeInteger(pieceBytes) || pieceBytes < 16 * 1024 || pieceBytes > LARGE_DIRECT_PIECE_BYTES) throw new Error('Invalid direct message size limit.');
+   const pieces = [];
+-  for (let start = 0; start < record.byteLength; start += DIRECT_PIECE_BYTES) {
+-    pieces.push(record.subarray(start, Math.min(start + DIRECT_PIECE_BYTES, record.byteLength)));
++  for (let start = 0; start < record.byteLength; start += pieceBytes) {
++    pieces.push(record.subarray(start, Math.min(start + pieceBytes, record.byteLength)));
+   }
+   return pieces;
+ }
+
+-export function createRecordAssembler() {
++export function createRecordAssembler(maxPieceBytes = DIRECT_PIECE_BYTES) {
++  peerDirectPieceBytes(maxPieceBytes);
+   const header = new Uint8Array(HEADER_BYTES);
+   let buffer = header;
+   let filled = 0;
+@@ -43,7 +53,7 @@ export function createRecordAssembler() {
+     get bufferedBytes() { return filled; },
+     push(piece) {
+       const bytes = piece instanceof Uint8Array ? piece : new Uint8Array(piece);
+-      if (bytes.byteLength > DIRECT_PIECE_BYTES) throw new Error('The direct connection exceeded its assembly buffer.');
++      if (bytes.byteLength > maxPieceBytes) throw new Error('The direct connection exceeded its assembly buffer.');
+       const records = [];
+       for (let at = 0; at < bytes.byteLength;) {
+         const count = Math.min(buffer.byteLength - filled, bytes.byteLength - at);
+@@ -101,12 +111,13 @@ export function createRecordMerger() {
+
+ // Both roles use channel ID 1 and the same ciphertext framing as the CLI.
+ // Native buffering is limited independently of the application ACK window.
+-function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerConnectionImpl = globalThis.RTCPeerConnection }) {
++function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, peerMaxPieceBytes, RTCPeerConnectionImpl = globalThis.RTCPeerConnection }) {
++  let peerPieceBytes = peerDirectPieceBytes(peerMaxPieceBytes);
+   const connection = new RTCPeerConnectionImpl({ iceServers: DIRECT_ICE_SERVERS });
+   const channel = connection.createDataChannel('cd-direct', { negotiated: true, id: DIRECT_CHANNEL_ID, ordered: true });
+   channel.binaryType = 'arraybuffer';
+   channel.bufferedAmountLowThreshold = DIRECT_BUFFER_BYTES / 2;
+-  const assembler = createRecordAssembler();
++  const assembler = createRecordAssembler(LARGE_DIRECT_PIECE_BYTES);
+   let lost = false;
+   let sending = Promise.resolve();
+   let queuedSendBytes = 0;
+@@ -130,6 +141,8 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
+   });
+   const path = {
+     connection,
++    maxPieceBytes: LARGE_DIRECT_PIECE_BYTES,
++    setPeerLimits(value) { peerPieceBytes = peerDirectPieceBytes(value); },
+     get open() { return !lost && channel.readyState === 'open'; },
+     get bufferedAmount() { return channel.bufferedAmount; },
+     get queuedSendBytes() { return queuedSendBytes; },
+@@ -139,7 +152,9 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
+       queuedSends += 1; queuedSendBytes += record.byteLength;
+       sending = sending.then(async () => {
+         const started = performance.now();
+-        for (const piece of splitRecord(record)) {
++        const nativeLimit = connection.sctp?.maxMessageSize;
++        const pieceBytes = nativeLimit === Infinity ? peerPieceBytes : Number.isSafeInteger(nativeLimit) && nativeLimit > 0 ? Math.min(peerPieceBytes, nativeLimit) : Math.min(peerPieceBytes, DIRECT_PIECE_BYTES);
++        for (const piece of splitRecord(record, pieceBytes)) {
+           while (channel.bufferedAmount + piece.byteLength > DIRECT_BUFFER_BYTES) {
+             if (!path.open) throw new Error('The direct connection closed while sending.');
+             if (performance.now() - started > 90_000) throw new Error('The direct send buffer stalled. Send again for a fresh transfer.');
+@@ -186,6 +201,7 @@ export async function offerDirect(options) {
+       async signal(value) {
+         if (value?.sdp && !answered) {
+           if (typeof value.sdp !== 'string' || value.sdp.length > MAX_SDP_BYTES) throw new Error('Invalid direct answer.');
++          path.setPeerLimits(value.maxPieceBytes);
+           await path.connection.setRemoteDescription({ type: 'answer', sdp: value.sdp });
+           answered = true;
+         } else if (value?.candidate && answered) {
+@@ -213,7 +229,7 @@ export async function answerDirect({ offerSdp, onSignal, ...options }) {
+   try {
+     await path.connection.setRemoteDescription({ type: 'offer', sdp: offerSdp });
+     await path.connection.setLocalDescription(await path.connection.createAnswer());
+-    signal({ sdp: path.connection.localDescription.sdp });
++    signal({ sdp: path.connection.localDescription.sdp, maxPieceBytes: path.maxPieceBytes });
+     answered = true;
+     for (const value of early.splice(0)) signal(value);
+     return path;
+diff --git i/src/direct-link.test.js w/src/direct-link.test.js
+index 8e7c333..705ee15 100644
+--- i/src/direct-link.test.js
++++ w/src/direct-link.test.js
+@@ -1,6 +1,6 @@
+ import assert from 'node:assert/strict';
+ import test from 'node:test';
+-import { createRecordAssembler, createRecordMerger, parseDirectOffer, splitRecord, offerDirect, DIRECT_BUFFER_BYTES } from './direct-link.js';
++import { createRecordAssembler, createRecordMerger, parseDirectOffer, splitRecord, offerDirect, peerDirectPieceBytes, DIRECT_BUFFER_BYTES } from './direct-link.js';
+
+ function record(sequence, plaintextLength) {
+   const value = new Uint8Array(12 + plaintextLength + 16).fill(sequence & 0xff);
+@@ -128,3 +128,40 @@ test('assembly accepts fragmented headers and coalesced records without aliasing
+     assert.equal(assembler.bufferedBytes, 0);
+   }
+ });
++
++
++test('direct message negotiation defaults to legacy limits and rejects invalid advertisements', () => {
++  assert.equal(peerDirectPieceBytes(undefined), 65536);
++  assert.equal(peerDirectPieceBytes(65536), 65536);
++  assert.equal(peerDirectPieceBytes(262144), 262144);
++  for (const value of [null, 0, -1, 65535, 262145, '262144', NaN, Infinity]) assert.throws(() => peerDirectPieceBytes(value), /message size limit/);
++});
++
++test('direct sends obey the legacy peer limit and the negotiated native message ceiling', async () => {
++  class Channel extends EventTarget {
++    readyState = 'open'; bufferedAmount = 0; records = [];
++    send(bytes) { this.records.push(Uint8Array.from(bytes)); }
++  }
++  class Connection extends EventTarget {
++    iceGatheringState = 'complete'; channel = new Channel(); sctp = { maxMessageSize: 131072 };
++    createDataChannel() { return this.channel; }
++    async createOffer() { return { type: 'offer', sdp: 'v=0' }; }
++    async setLocalDescription(value) { this.localDescription = value; }
++    async setRemoteDescription() {}
++    close() {}
++  }
++  const bytes = record(0, 600000);
++  for (const [advertised, ceiling, pieces] of [[undefined, 65536, 10], [262144, 131072, 5]]) {
++    const path = await offerDirect({ RTCPeerConnectionImpl: Connection, onRecord() {} });
++    assert.equal(path.maxPieceBytes, 262144);
++    await assert.rejects(path.signal({ sdp: 'answer', maxPieceBytes: 0 }), /message size limit/);
++    await path.signal({ sdp: 'answer', maxPieceBytes: advertised });
++    await path.send(bytes);
++    const sent = path.connection.channel.records;
++    assert.equal(sent.length, pieces);
++    assert.equal(sent[0].length, ceiling);
++    const assembler = createRecordAssembler(262144);
++    assert.deepEqual(sent.flatMap(piece => assembler.push(piece)), [bytes]);
++    path.close();
++  }
++});
+diff --git i/src/relay-sender.js w/src/relay-sender.js
+index 907f311..4ffee2f 100644
+--- i/src/relay-sender.js
++++ w/src/relay-sender.js
+@@ -7,6 +7,7 @@ import {
+   KIND_OFFER,
+   KIND_SIGNAL,
+   RECEIVER_DIRECTION,
++  RECORD_OVERHEAD_BYTES,
+   SENDER_DIRECTION,
+   createOpener,
+   createSealer,
+@@ -363,7 +364,7 @@ export function startRelaySend(source, hooks = {}) {
+       chunkSize: CHUNK_SIZE,
+       maxChunkSize: LARGE_CHUNK_SIZE,
+       ...(source.bundle ? { bundle: true, files: source.files } : {}),
+-      ...(direct ? { direct: { sdp: direct.sdp } } : {})
++      ...(direct ? { direct: { sdp: direct.sdp, maxPieceBytes: direct.maxPieceBytes } } : {})
+     })));
+     const acceptance = await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
+     const chunkSize = acceptedSendChunkSize(acceptance.plaintext);
+@@ -406,7 +407,10 @@ export function startRelaySend(source, hooks = {}) {
+       }
+     };
+     const wireChunks = async function* () {
+-      for await (const chunk of rechunk(source.stream(), chunkSize)) {
++      // Large records fit an exact number of 64/256 KiB native messages.
++      // Legacy chunk sizes retain their existing ACK cadence.
++      const readChunkSize = chunkSize === LARGE_CHUNK_SIZE ? chunkSize - RECORD_OVERHEAD_BYTES : chunkSize;
++      for await (const chunk of rechunk(source.stream(), readChunkSize)) {
+         // Browser WebSockets perform better with the original frame size.
+         // The negotiated value is an upper bound, including after an upgrade.
+         const size = direct?.open ? chunkSize : Math.min(CHUNK_SIZE, chunkSize);
+diff --git i/src/share.js w/src/share.js
+index a0b0db1..f784cd4 100644
+--- i/src/share.js
++++ w/src/share.js
+@@ -70,7 +70,7 @@ function parseOffer(plaintext) {
+   // A bundle is several files sent as one zip; it is unpacked on arrival.
+   const bundle = value.bundle === true;
+   const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
+-  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value) };
++  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value), directMaxPieceBytes: value.direct?.maxPieceBytes };
+ }
+
+ function encodeCounts(chunks, bytes) {
+@@ -386,6 +386,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false }
+     function startDirect(offerSdp) {
+       answerDirect({
+         offerSdp,
++        peerMaxPieceBytes: offer.directMaxPieceBytes,
+         onSignal: (signal) => send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))),
+         onRecord: (record) => {
+           directUsed = true;

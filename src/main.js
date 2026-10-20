@@ -107,11 +107,12 @@ function peerOptions() {
 // treating it as a P2P word code.
 const AGENT_LINK_PATH = /^\/s\/([A-Za-z0-9_-]{22})\/?$/;
 const AGENT_LINK_KEY = /^v1\.([A-Za-z0-9_-]{43})$/;
+const RESUME_LINK_KEY = /^v2\.([A-Za-z0-9_-]{43})$/;
 const AGENT_BARE_CODE = /^([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_-]{43})$/;
 
 function agentShareUrlFromInput(value) {
   const raw = String(value ?? '').trim();
-  if (!raw || !raw.includes('#v1.')) return '';
+  if (!raw || (!raw.includes('#v1.') && !raw.includes('#v2.'))) return '';
   const candidates = [raw];
   for (const token of raw.split(/[\s"'<>]+/)) {
     if (token && token !== raw) candidates.push(token);
@@ -125,7 +126,8 @@ function agentShareUrlFromInput(value) {
       if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
       const path = AGENT_LINK_PATH.exec(url.pathname);
       const key = AGENT_LINK_KEY.exec(url.hash.slice(1));
-      if (path && key) return url.toString();
+      const resumeKey = RESUME_LINK_KEY.exec(url.hash.slice(1));
+      if (path && (key || resumeKey)) return url.toString();
     } catch { /* Not a URL; try the next candidate. */ }
   }
   return '';
@@ -143,6 +145,10 @@ const els = {
   senderFileInfo: document.getElementById('sender-file-info'),
   senderCodeSection: document.getElementById('sender-code-section'),
   shareCode: document.getElementById('share-code'),
+  sharePrivateLink: document.getElementById('share-private-link'),
+  shareCodeKicker: document.getElementById('share-code-kicker'),
+  resumableCheck: document.getElementById('resumable-check'),
+  resumeLinkInput: document.getElementById('resume-link-input'),
   shareQr: document.getElementById('share-qr'),
   copyCodeBtn: document.getElementById('copy-code-btn'),
   copyLinkBtn: document.getElementById('copy-link-btn'),
@@ -327,10 +333,20 @@ const Sender = (() => {
   const lastProgressUpdate = { value: 0 };
 
   function init(selectedFiles) {
+    // reset() clears the form for a fresh send, so preserve a pasted private
+    // resume link across that reset before deciding which sender path to use.
+    const resumeLink = els.resumeLinkInput.value.trim();
     reset();
+    els.resumeLinkInput.value = resumeLink;
     files = selectedFiles.filter(Boolean);
     if (files.length === 0) return;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
+
+    const resumable = els.resumableCheck.checked || resumeLink.length > 0;
+    if (resumable && files.length !== 1) {
+      failSend('Resumable sends currently support one named file. Choose one file and try again.');
+      return;
+    }
 
     let source;
     try {
@@ -344,12 +360,20 @@ const Sender = (() => {
     renderSelectionSummary(source);
 
     const current = ++generation;
-    active = startRelaySend(source, {
+    const hooks = {
       onShare(value) {
         if (current !== generation) return;
         share = value;
-        els.shareCode.textContent = value.code;
-        els.receiveCommand.textContent = `cdx receive ${value.code}`;
+        const isResume = value.resumable === true;
+        els.shareCode.textContent = isResume ? 'Private link only' : value.code;
+        els.sharePrivateLink.hidden = !isResume;
+        els.sharePrivateLink.href = isResume ? value.url : '';
+        els.sharePrivateLink.textContent = isResume ? value.url : '';
+        els.shareCodeKicker.textContent = isResume ? 'share this private link' : 'share this code';
+        els.receiveCommand.hidden = isResume;
+        els.copyCodeBtn.hidden = isResume;
+        els.copyCmdBtn.hidden = isResume;
+        if (!isResume) els.receiveCommand.textContent = `cdx receive ${value.code}`;
         els.senderCodeSection.classList.remove('hidden');
         void renderQr(value.url, current);
       },
@@ -369,12 +393,53 @@ const Sender = (() => {
         if (current !== generation) return;
         lastProgressUpdate.value = updateProgress(els.senderProgress, done, total, startedAt || Date.now(), done === total, lastProgressUpdate);
       }
-    });
-    active.done.then(() => {
-      if (current === generation) showComplete();
-    }, (error) => {
-      if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message);
-    });
+    };
+    if (resumable) {
+      startedAt = Date.now();
+      els.senderProgress.classList.remove('hidden');
+      setState('connecting');
+      void (async () => {
+        try {
+          const { openResumeDatabase, createResumeKV, cleanExpiredResumeRecords, startResumableSend } = await import('./resume-browser.js');
+          const db = await openResumeDatabase();
+          const checkpoints = createResumeKV(db, 'checkpoints');
+          const secrets = createResumeKV(db, 'secrets');
+          await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
+          if (current !== generation) return;
+          active = startResumableSend(files[0], {
+            link: resumeLink, checkpoints, secrets,
+            hooks: {
+              onShare(value) { hooks.onShare({ ...value, resumable: true }); },
+              onStatus: hooks.onStatus,
+              onProgress(done, total) { hooks.onProgress(Number(done), Number(total)); },
+              onError(error) { if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message); }
+            }
+          });
+          active.done.then(() => {
+            if (current === generation) {
+              active = null;
+              showComplete();
+            }
+          }, (error) => {
+            if (current === generation) {
+              // A failed connection preserves resume authority. Resetting the
+              // form must not cancel the settled transfer and delete it.
+              active = null;
+              if (error.message !== 'Transfer canceled.') failSend(error.message);
+            }
+          });
+        } catch (error) {
+          if (current === generation) failSend(error.message || 'This browser cannot keep resumable transfer data locally.');
+        }
+      })();
+    } else {
+      active = startRelaySend(source, hooks);
+      active.done.then(() => {
+        if (current === generation) showComplete();
+      }, (error) => {
+        if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message);
+      });
+    }
   }
 
   function renderSelectionSummary(source) {
@@ -442,6 +507,13 @@ const Sender = (() => {
     els.senderComplete.classList.add('hidden');
     els.senderError.classList.add('hidden');
     els.senderStatus.textContent = '';
+    els.sharePrivateLink.hidden = true;
+    els.sharePrivateLink.removeAttribute('href');
+    els.shareCodeKicker.textContent = 'share this code';
+    els.receiveCommand.hidden = false;
+    els.copyCodeBtn.hidden = false;
+    els.copyCmdBtn.hidden = false;
+    els.resumeLinkInput.value = '';
     resetProgress(els.senderProgress);
   }
 
@@ -1355,7 +1427,11 @@ els.codeInput.addEventListener('input', (event) => {
   event.target.value = shortCodeFromInput(raw) || (/[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw));
   els.codeInput.removeAttribute('aria-invalid');
   // Five digits is the longest numeric code, so nothing else is coming.
-  if (/^\d{5}$/.test(event.target.value.trim())) connectEnteredCode();
+  const enteredCode = event.target.value.trim();
+  // A whole code inserted by autofill is complete, like an explicit paste.
+  // Keep the delay for typing four digits, which may become a five-digit code.
+  const insertedWholeCode = typeof event.data === 'string' && event.data.length >= 4 || event.inputType === 'insertReplacementText';
+  if (/^\d{5}$/.test(enteredCode) || /^\d{4}$/.test(enteredCode) && insertedWholeCode) connectEnteredCode();
   else if (/^\d{4}$/.test(event.target.value.trim())) {
     autoConnectTimer = setTimeout(() => {
       if (!els.receiverInputSection.classList.contains('hidden') &&

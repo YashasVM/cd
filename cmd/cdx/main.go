@@ -14,9 +14,9 @@ import (
 
 var version = "dev"
 
-// jsonProgress is set by --json: when stderr is not a terminal, progress is
-// written there as JSON lines instead of a bar.
+// JSON results stay quiet unless progress is explicitly requested.
 var jsonProgress bool
+var progressRequested bool
 
 func displayVersion(buildVersion string, info *debug.BuildInfo) string {
 	if buildVersion != "" && buildVersion != "dev" {
@@ -34,14 +34,17 @@ func cdVersion() string {
 }
 
 type readyOutput struct {
-	Version  int    `json:"version"`
-	URL      string `json:"url"`
-	Code     string `json:"code,omitempty"`
-	Filename string `json:"filename"`
-	Size     uint64 `json:"size"`
+	Version    int    `json:"version"`
+	TransferID string `json:"transferId,omitempty"`
+	URL        string `json:"url"`
+	Code       string `json:"code,omitempty"`
+	Filename   string `json:"filename"`
+	Size       uint64 `json:"size"`
 	// Files counts the files in a multi-file send. The receiver unpacks
 	// them, so each one arrives on its own.
-	Files int `json:"files,omitempty"`
+	Files  int    `json:"files,omitempty"`
+	QRPath string `json:"qrPath,omitempty"`
+	Mode   string `json:"mode,omitempty"`
 }
 
 func writeReady(output io.Writer, value readyOutput, jsonOutput bool) error {
@@ -74,12 +77,12 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
-	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Send files through CD at https://cd.yash0.in, or receive them.")
-	fmt.Fprintln(output, "Send prints one short share code to stdout. In a terminal it then waits")
+	fmt.Fprintln(output, "Send prints a share code and QR in a terminal, then waits")
 	fmt.Fprintln(output, "until the receiver verifies the file; otherwise (agents, scripts, pipes)")
 	fmt.Fprintln(output, "it hands the transfer to a background sender and exits 0 right away.")
 	fmt.Fprintln(output, "The code works in any browser Receive box and in `cdx receive`. Receive")
@@ -88,6 +91,8 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "commands:")
 	fmt.Fprintln(output, "  send <path>...     send one or more files and folders with one code")
 	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
+	fmt.Fprintln(output, "  pair [--name phone]  scan once in CD Android to trust this computer")
+	fmt.Fprintln(output, "  devices [forget name]  list or forget paired devices")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
 	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
@@ -97,17 +102,26 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  update             update cdx to the latest release")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "resumable transfers (foreground, private links):")
+	fmt.Fprintln(output, "  send --resumable <paths> | send --resume <transferID> <paths>")
+	fmt.Fprintln(output, "  receive --resume <private #v2 link> --out <path>")
+	fmt.Fprintln(output, "  v2 uses durable checkpoints; status/wait apply to v1 background sends.")
 	fmt.Fprintln(output, "options for receive:")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show help for receive")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for send:")
+	fmt.Fprintln(output, "  --to <name>    send automatically to a paired Android device (resumable)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
+	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -129,19 +143,25 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "means the transfer failed; exit status 2 means the command was used incorrectly;")
 	fmt.Fprintln(output, "exit status 3 means `cdx wait --timeout` ran out first.")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "With --json, a failure also prints {\"version\",\"error\":{\"kind\",\"message\"}} to")
-	fmt.Fprintln(output, "stdout. kind is one of: canceled, invalid_code, not_found, expired, claimed,")
-	fmt.Fprintln(output, "exists, busy, stalled, disconnected, network, local_file, protocol, failed.")
-	fmt.Fprintln(output, "When stderr is not a terminal, --json also writes progress there as")
+	fmt.Fprintln(output, "With --json, a failure also prints {\"version\",\"error\":{\"kind\",\"message\",\"retry\"}} to")
+	fmt.Fprintln(output, "stdout. Errors also include retry: never, same_request, or new_transfer.")
+	fmt.Fprintln(output, "Kinds include canceled, invalid_code, not_found, expired, claimed, exists, busy,")
+	fmt.Fprintln(output, "stalled, disconnected, network, local_file, protocol, timeout, request_conflict, failed.")
+	fmt.Fprintln(output, "Progress is automatic in human terminals; scripts and --json are quiet.")
+	fmt.Fprintln(output, "Use --progress to opt in; --json --progress writes stderr as")
 	fmt.Fprintln(output, "{\"progress\":{\"phase\",\"done\",\"total\",\"bytesPerSecond\",\"etaSeconds\"}} lines.")
 }
 
 func sendUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--detach|--wait] [--] <file|folder>...")
+	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (they arrive as separate files)")
+	fmt.Fprintln(output, "  --to <name>    send automatically to a paired Android device (resumable)")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"url\",\"code\",\"filename\",\"size\"} instead of the bare code")
+	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
+	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -155,13 +175,14 @@ func sendUsage(output io.Writer) {
 }
 
 func receiveUsage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--] <code>")
+	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
 	fmt.Fprintln(output, "                   (a full share link works too)")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
 	fmt.Fprintln(output, "  -h, --help     show this help")
@@ -173,18 +194,27 @@ func receiveUsage(output io.Writer) {
 
 // sendRequest is the parsed form of send arguments.
 type sendRequest struct {
-	jsonOutput bool
-	linkMode   bool
-	detach     bool
-	wait       bool
-	files      []string
-	help       bool
-	version    bool
+	to            string
+	deviceConnect func(context.Context, invitation, []byte, int64, readyOutput, string) (*resumeSession, error)
+	resumable     bool
+	resumeID      string
+	requestID     string
+	jsonOutput    bool
+	progress      bool
+	linkMode      bool
+	qrPath        string
+	detach        bool
+	wait          bool
+	files         []string
+	help          bool
+	version       bool
 }
 
 // receiveRequest is the parsed form of receive arguments.
 type receiveRequest struct {
+	resume     bool
 	jsonOutput bool
+	progress   bool
 	force      bool
 	out        string
 	code       string
@@ -195,7 +225,8 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	var request sendRequest
 	var files []string
 	endOfFlags := false
-	for _, argument := range args {
+	for index := 0; index < len(args); index++ {
+		argument := args[index]
 		if !endOfFlags && argument == "--" {
 			endOfFlags = true
 			continue
@@ -209,12 +240,80 @@ func parseSendArgs(args []string) (sendRequest, error) {
 		if !endOfFlags && (argument == "--version" || argument == "-v") {
 			return sendRequest{version: true}, nil
 		}
+		if !endOfFlags && (argument == "--to" || strings.HasPrefix(argument, "--to=")) {
+			value, found := strings.CutPrefix(argument, "--to=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --to needs a paired device name")
+				}
+				value = args[index]
+			}
+			if value == "" || strings.HasPrefix(value, "-") {
+				return sendRequest{}, errors.New("cdx: --to needs a paired device name")
+			}
+			request.to = value
+			continue
+		}
+		if !endOfFlags && argument == "--resumable" {
+			request.resumable = true
+			continue
+		}
+		if !endOfFlags && (argument == "--resume" || strings.HasPrefix(argument, "--resume=")) {
+			value, found := strings.CutPrefix(argument, "--resume=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --resume needs a transfer ID")
+				}
+				value = args[index]
+			}
+			if !validTransferID(value) {
+				return sendRequest{}, errors.New("cdx: --resume needs a valid transfer ID")
+			}
+			request.resumeID = value
+			continue
+		}
+		if !endOfFlags && argument == "--progress" {
+			request.progress = true
+			continue
+		}
 		if !endOfFlags && argument == "--json" {
 			request.jsonOutput = true
 			continue
 		}
+		if !endOfFlags && (argument == "--request-id" || strings.HasPrefix(argument, "--request-id=")) {
+			value, found := strings.CutPrefix(argument, "--request-id=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --request-id needs an identifier")
+				}
+				value = args[index]
+			}
+			if !requestIDPattern.MatchString(value) {
+				return sendRequest{}, errors.New("cdx: --request-id needs 1-128 letters, digits, dots, underscores or hyphens")
+			}
+			request.requestID = value
+			continue
+		}
 		if !endOfFlags && argument == "--link" {
 			request.linkMode = true
+			continue
+		}
+		if !endOfFlags && (argument == "--qr" || strings.HasPrefix(argument, "--qr=")) {
+			value, found := strings.CutPrefix(argument, "--qr=")
+			if !found {
+				index++
+				if index >= len(args) || strings.HasPrefix(args[index], "--") {
+					return sendRequest{}, errors.New("cdx: --qr needs a PNG output path")
+				}
+				value = args[index]
+			}
+			if value == "" {
+				return sendRequest{}, errors.New("cdx: --qr needs a PNG output path")
+			}
+			request.qrPath = value
 			continue
 		}
 		if !endOfFlags && argument == "--detach" {
@@ -254,6 +353,17 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	if request.detach && request.wait {
 		return sendRequest{}, errors.New("cdx: --detach and --wait cannot be combined")
 	}
+	if request.requestID != "" && request.wait {
+		return sendRequest{}, errors.New("cdx: --request-id requires a background send; remove --wait")
+	}
+	if request.resumable || request.resumeID != "" {
+		if request.resumable && request.resumeID != "" {
+			return sendRequest{}, errors.New("cdx: choose --resumable or --resume")
+		}
+		if request.detach || request.requestID != "" {
+			return sendRequest{}, errors.New("cdx: resumable transfers run in the foreground; remove --detach and --request-id")
+		}
+	}
 	request.files = files
 	return request, nil
 }
@@ -272,6 +382,16 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 		}
 		if !endOfFlags && (argument == "--help" || argument == "-h") {
 			return receiveRequest{help: true}, nil
+		}
+		if !endOfFlags && argument == "--resume" {
+			request.resume = true
+			index++
+			continue
+		}
+		if !endOfFlags && argument == "--progress" {
+			request.progress = true
+			index++
+			continue
 		}
 		if !endOfFlags && argument == "--json" {
 			request.jsonOutput = true
@@ -363,7 +483,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "status", "wait", "update", "agent", "welcome", "help", "version"}
+	candidates := []string{"send", "receive", "status", "wait", "update", "pair", "devices", "agent", "welcome", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -408,7 +528,17 @@ func runSend(request sendRequest) int {
 		fmt.Fprintln(os.Stdout, cdVersion())
 		return 0
 	}
+	if request.to != "" {
+		return runDeviceSend(request)
+	}
+	if request.resumable || request.resumeID != "" {
+		return runResumableSend(request)
+	}
+	if request.requestID != "" {
+		return runRequestSend(request)
+	}
 	jsonProgress = request.jsonOutput
+	progressRequested = request.progress
 	if shouldDetach(request, isTerminal(os.Stdout)) {
 		return runDetachedSend(request)
 	}
@@ -416,6 +546,9 @@ func runSend(request sendRequest) int {
 	defer stop()
 	card := !request.jsonOutput && isTerminal(os.Stdout)
 	err := sendFile(ctx, request.files, request.linkMode, sendHooks{ready: func(value readyOutput) error {
+		if err := saveReadyQR(&value, request.qrPath); err != nil {
+			return err
+		}
 		if card {
 			writeReadyCard(os.Stdout, value)
 			return nil
@@ -450,7 +583,11 @@ func runReceive(request receiveRequest) int {
 		receiveUsage(os.Stdout)
 		return 0
 	}
+	if request.resume || strings.Contains(request.code, "#v2.") {
+		return runResumableReceive(request)
+	}
 	jsonProgress = request.jsonOutput
+	progressRequested = request.progress
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
 	err := receiveFile(ctx, request.code, request.out, request.force, func(value receiveResult) error {
@@ -512,6 +649,10 @@ func run(argv []string) int {
 		return runStatus(argv[1:])
 	case "wait":
 		return runWait(argv[1:])
+	case "pair":
+		return runPair(argv[1:])
+	case "devices":
+		return runDevices(argv[1:])
 	case "agent":
 		return runAgent(argv[1:])
 	case "welcome":

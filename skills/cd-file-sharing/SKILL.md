@@ -1,42 +1,41 @@
 ---
 name: cd-file-sharing
-description: Send a local file to the user (their phone, browser, or another machine) with CD. Use when asked to send, share, or hand off a file with CD or cdx.
+description: Send a local file to the user with CD. Use when asked to send, share, or hand off a file with CD or cdx.
 ---
 
-# Send a file with CD
+# Share files
 
-Run:
+Run `cdx send <path>...` and reply with `https://cd.yash0.in/#<code>` using the
+printed code. Terminal recipients can run `cdx receive <code>`. To share
+several files, pass them all to one `cdx send` (do not zip them yourself): one
+code delivers them, and they arrive as separate files with folders kept.
+Captured sends return promptly while a
+background sender stays live. No account or stored server copy is needed;
+both devices must be online. A code lasts 15 minutes and admits one receiver.
 
-```bash
-cdx send <path>...
+For sensitive files, run `cdx send --link --json <path>...` and reply with the
+returned `url`, including its fragment. Private links are end-to-end encrypted;
+codes rely on TLS and the live relay. Use the `CD_PUBLIC_URL` origin when set.
+
+For a QR image, add `--json --qr /absolute/fresh.png` (existing directory,
+unused filename). Reply with the returned `url` and embed the actual `qrPath`:
+
+```markdown
+[Receive file](https://cd.yash0.in/#48291)
+![Scan to receive](/absolute/fresh.png)
 ```
 
-To share several files, pass them all to one `cdx send` instead of zipping
-them yourself: one code delivers them, and they arrive as separate files with
-folders kept.
+Keep the PNG available for rendering. If local images cannot be embedded,
+reply with the link and code. JSON results are one compact stdout line;
+progress requires `--progress` and goes to stderr. `--wait` keeps a send in
+the foreground.
 
-It prints one line to stdout, a short share code such as `48291`, and exits 0
-while a background sender keeps the transfer live. Reply to the user with the
-link `https://cd.yash0.in/#<code>` (e.g. `https://cd.yash0.in/#48291`):
-opening it starts the download. Terminal users can run `cdx receive <code>`.
-If `CD_PUBLIC_URL` is set, use that origin instead. The code is valid for 15
-minutes and admits one receiver. Done.
+If delivery confirmation is requested, run `cdx wait --timeout 10m --json <code>`.
+Exit 0 means verified delivery, 1 means failure (`errorKind` explains it), and
+3 means the timeout elapsed while the send remains live. On command failure,
+read the JSON `error.kind` and `error.message`; report actionable details.
+Do not claim delivery just because the send returned a code.
 
-Branches:
-
-- **Sensitive file**: run `cdx send --link <file>` and reply with the full URL
-  on stdout, fragment included. Links are end-to-end encrypted; codes rely on
-  TLS and the live relay.
-- **User wants delivery confirmed**: run `cdx wait --timeout 10m --json <code>`
-  after replying. Exit 0 means the receiver verified every byte; exit 1 means it
-  failed (`errorKind` says why); exit 3 means nobody has finished yet and the
-  send is still live.
-- **A command fails**: with `--json`, stdout carries
-  `{"error":{"kind","message"}}`. Retry `expired`, `disconnected`, `stalled` and
-  `busy` with a fresh `cdx send`; report the others to the user.
-- **`cdx` is not on PATH**: inside the CD repository, run `make cdx` and use
-  `./bin/cdx`. Elsewhere, install it with
-  `curl -fsSL https://cd.yash0.in/install.sh | sh`.
-
-CD is self-contained: the `cdx` command is the whole integration, with its
-own live relay at cd.yash0.in and no stored copies.
+If cdx is unavailable, run `make cdx` in this repository and use `./bin/cdx`.
+Elsewhere install with `curl -fsSL https://cd.yash0.in/install.sh | sh`.
+See `cdx help send` for options.

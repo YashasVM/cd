@@ -206,7 +206,7 @@ func TestReliabilityReceiveFailureNeverPublishes(t *testing.T) {
 				_ = conn.WriteJSON(map[string]string{"type": "accepted", "protocol": "cd-transfer-v1"})
 				seal, _ := newSealer(inv, senderDirection)
 				send := func(kind messageKind, payload []byte, corrupt bool) {
-					record, err := seal.seal(kind, payload)
+					record, err := seal.sealInto(nil, kind, payload)
 					if err != nil {
 						return
 					}
@@ -255,7 +255,7 @@ func TestReliabilityReceiveFailureNeverPublishes(t *testing.T) {
 			if failure == "corrupted-record" && !strings.Contains(err.Error(), "authentication") {
 				t.Fatalf("did not reach authentication check: %v", err)
 			}
-			if failure == "disconnect" && !strings.Contains(err.Error(), "receive from CD") {
+			if failure == "disconnect" && classifyFailure(err) != failureDisconnected {
 				t.Fatalf("did not reach disconnect check: %v", err)
 			}
 			entries, readErr := os.ReadDir(dir)

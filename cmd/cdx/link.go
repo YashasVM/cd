@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
-	"fmt"
+	"io"
 	"math"
+	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,14 +32,21 @@ type recordLink struct {
 	readerDone   chan struct{}
 	stopOnce     sync.Once
 	writeMu      sync.Mutex
-	pending      map[uint32][]byte
+	sendBuffer   []byte
 	pendingBytes int
+	pending      map[uint32][]byte
 	expected     uint32
 
-	direct atomic.Pointer[directPath]
+	direct   atomic.Pointer[directPath]
+	lanOffer *lanOffer
+	// reverseLAN starts dialing a receiver listener selected in ACCEPT.
+	reverseLAN func(*lanOffer) <-chan struct{}
 	// directUsed is set once a record crossed the direct path in either
 	// direction; from then on losing it is fatal and losing the relay is not.
-	directUsed atomic.Bool
+	directUsed  atomic.Bool
+	relayBytes  atomic.Uint64
+	directBytes atomic.Uint64
+	reportOnce  sync.Once
 	// retained holds records sent on the relay while a direct path may
 	// still open (guarded by writeMu). When it opens they are sent again on
 	// it, so the transfer never waits for a slow relay to drain; the peer
@@ -65,6 +73,7 @@ type linkItem struct {
 	record []byte
 	err    error
 	direct bool
+	path   *directPath
 }
 
 // errLinkTimeout reports a read deadline in the net.Error shape callers
@@ -88,11 +97,10 @@ const closeWait = 3 * time.Second
 const relayPingInterval = 20 * time.Second
 
 func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *recordOpener, peerLeft error) *recordLink {
-	link := &recordLink{
+	return &recordLink{
 		connection: connection, sealer: sealer, opener: opener, peerLeft: peerLeft,
 		items: make(chan linkItem, 64), stop: make(chan struct{}), readerDone: make(chan struct{}), pending: map[uint32][]byte{},
 	}
-	return link
 }
 
 // start begins reading the relay WebSocket; call it once the caller no
@@ -116,12 +124,17 @@ func (link *recordLink) deliver(item linkItem) {
 func (link *recordLink) readRelay() {
 	defer close(link.readerDone)
 	for {
-		messageType, data, err := link.connection.ReadMessage()
+		messageType, reader, err := link.connection.NextReader()
 		if err != nil {
-			link.deliver(linkItem{err: friendlyRelayError(fmt.Errorf("receive from CD: %w", err))})
+			link.deliver(linkItem{err: friendlyRelayError(failuref(failureProtocol, retryNever, "receive from CD: %w", err))})
 			return
 		}
 		if messageType == websocket.TextMessage {
+			data, err := io.ReadAll(reader)
+			if err != nil {
+				link.deliver(linkItem{err: friendlyRelayError(failuref(failureProtocol, retryNever, "receive from CD: %w", err))})
+				return
+			}
 			var value relayEvent
 			if json.Unmarshal(data, &value) == nil {
 				switch value.Type {
@@ -132,14 +145,39 @@ func (link *recordLink) readRelay() {
 					return
 				}
 			}
-			link.deliver(linkItem{err: errors.New("CD relay sent unexpected text (transfer aborted)")})
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "CD relay sent unexpected text (transfer aborted)", retryNever)})
 			return
 		}
 		if messageType != websocket.BinaryMessage {
-			link.deliver(linkItem{err: errors.New("CD relay sent an invalid frame")})
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "CD relay sent an invalid frame", retryNever)})
 			return
 		}
-		link.deliver(linkItem{record: data})
+		var header [headerBytes]byte
+		if _, err := io.ReadFull(reader, header[:]); err != nil {
+			link.deliver(linkItem{err: failuref(failureProtocol, retryNever, "receive record header: %w", err)})
+			return
+		}
+		if string(header[:2]) != "CD" || header[2] != protocolVersion {
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "record protocol is invalid", retryNever)})
+			return
+		}
+		length := uint64(headerBytes+recordTagBytes) + uint64(binary.BigEndian.Uint32(header[8:12]))
+		if length > maxRecordBytes {
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "record length is invalid", retryNever)})
+			return
+		}
+		record := make([]byte, int(length))
+		copy(record, header[:])
+		if _, err := io.ReadFull(reader, record[headerBytes:]); err != nil {
+			link.deliver(linkItem{err: failuref(failureProtocol, retryNever, "receive record body: %w", err)})
+			return
+		}
+		var trailing [1]byte
+		if _, err := io.ReadFull(reader, trailing[:]); err != io.EOF {
+			link.deliver(linkItem{err: NewFailure(failureProtocol, "record length is invalid", retryNever)})
+			return
+		}
+		link.deliver(linkItem{record: record})
 	}
 }
 
@@ -157,8 +195,53 @@ func (link *recordLink) pingRelay() {
 }
 
 // attachDirect routes records arriving on path into this link.
-func (link *recordLink) attachDirect(path *directPath) {
+func (link *recordLink) attachDirect(path *directPath) bool {
+	link.writeMu.Lock()
+	defer link.writeMu.Unlock()
+	select {
+	case <-link.stop:
+		path.retire()
+		return false
+	default:
+	}
+	if link.direct.Load() != nil {
+		path.retire()
+		return false
+	}
 	link.direct.Store(path)
+	return true
+}
+
+// adoptStream makes an authenticated same-network connection the direct
+// path, unless a direct path already carries the transfer. A WebRTC path it
+// replaces closes without reporting a failure.
+func (link *recordLink) adoptStream(stream net.Conn) bool {
+	return link.adoptStreamConfirmed(stream, nil)
+}
+
+func (link *recordLink) adoptStreamConfirmed(stream net.Conn, confirm func() error) bool {
+	link.writeMu.Lock()
+	defer link.writeMu.Unlock()
+	select {
+	case <-link.stop:
+		return false
+	default:
+	}
+	if link.switched || link.directUsed.Load() {
+		return false
+	}
+	// Selection is committed while writes are excluded; no payload reader or
+	// writer can run before the peer receives this connection's confirmation.
+	if confirm != nil {
+		if err := confirm(); err != nil {
+			return false
+		}
+	}
+	path := newStreamPath(stream, link.directRecord, link.directLost)
+	if previous := link.direct.Swap(path); previous != nil {
+		previous.retire()
+	}
+	return true
 }
 
 // directRecord and directLost are the callbacks a directPath reports to.
@@ -167,7 +250,11 @@ func (link *recordLink) directRecord(record []byte) {
 }
 
 func (link *recordLink) directLost(err error) {
-	link.deliver(linkItem{err: fmt.Errorf("%w (direct connection)", err), direct: true})
+	item := linkItem{err: failuref(failureProtocol, retryNever, "%w (direct connection)", err), direct: true}
+	if failure, ok := err.(*directPathError); ok {
+		item.path = failure.path
+	}
+	link.deliver(item)
 }
 
 // send seals and writes one record that stays needed until the transfer
@@ -183,7 +270,8 @@ func (link *recordLink) send(kind messageKind, payload []byte) error {
 func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release uint64) error {
 	link.writeMu.Lock()
 	defer link.writeMu.Unlock()
-	record, err := link.sealer.seal(kind, payload)
+	record, err := link.sealer.sealInto(link.sendBuffer, kind, payload)
+	link.sendBuffer = nil
 	if err != nil {
 		return err
 	}
@@ -196,7 +284,7 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		link.directUsed.Store(true)
 		if !link.switched {
 			link.switched = true
-			if link.striping {
+			if link.striping && path.stream == nil {
 				link.startStriping(path)
 			}
 			for _, earlier := range link.retained {
@@ -205,13 +293,23 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 				} else if err := path.send(earlier.record); err != nil {
 					return err
 				}
+				if link.stripe == nil {
+					link.directBytes.Add(uint64(len(earlier.record)))
+				}
 			}
 			link.retained = nil
 		}
 		if link.stripe != nil {
 			return link.sendReleasableStriped(record, release)
 		}
-		return path.send(record)
+		if err := path.send(record); err != nil {
+			return err
+		}
+		link.directBytes.Add(uint64(len(record)))
+		if path.stream != nil {
+			link.sendBuffer = record
+		}
+		return nil
 	}
 	if path != nil && !link.switched && !path.isLost() {
 		link.retained = append(link.retained, retainedRecord{record: record, release: release})
@@ -221,7 +319,11 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 	if err := link.connection.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
 		return err
 	}
-	return link.connection.WriteMessage(websocket.BinaryMessage, record)
+	if err := link.connection.WriteMessage(websocket.BinaryMessage, record); err != nil {
+		return err
+	}
+	link.relayBytes.Add(uint64(len(record)))
+	return nil
 }
 
 // acknowledged drops retained records the peer has confirmed.
@@ -288,7 +390,7 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 	}
 	delete(link.pending, link.expected)
 	link.pendingBytes -= len(record)
-	kind, plaintext, err := link.opener.open(record)
+	kind, plaintext, err := link.opener.consume(record)
 	if err != nil {
 		return 0, nil, false, err
 	}
@@ -300,6 +402,9 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 // whether a path failure ends the transfer.
 func (link *recordLink) accept(item linkItem) error {
 	if item.err != nil {
+		if item.path != nil && item.path != link.direct.Load() {
+			return nil
+		}
 		if item.direct && !link.directUsed.Load() {
 			return nil // an unused direct path failing changes nothing
 		}
@@ -315,7 +420,7 @@ func (link *recordLink) accept(item linkItem) error {
 		link.directUsed.Store(true)
 	}
 	if len(item.record) < headerBytes {
-		return errors.New("the peer sent an invalid record")
+		return NewFailure(failureProtocol, "the peer sent an invalid record", retryNever)
 	}
 	sequence := binary.BigEndian.Uint32(item.record[4:8])
 	if sequence < link.expected || link.pending[sequence] != nil {
@@ -324,7 +429,7 @@ func (link *recordLink) accept(item linkItem) error {
 		return nil
 	}
 	if len(item.record) > maxRecordBytes || len(link.pending) >= maxPendingRecords || link.pendingBytes+len(item.record) > maxPendingBytes {
-		return errors.New("the peer sent too many records out of order")
+		return NewFailure(failureProtocol, "the peer sent too many records out of order", retryNever)
 	}
 	link.pending[sequence] = item.record
 	link.pendingBytes += len(item.record)
@@ -334,8 +439,12 @@ func (link *recordLink) accept(item linkItem) error {
 // close stops the link and the direct path after a failure; the caller's
 // deferred Close drops the WebSocket.
 func (link *recordLink) close() {
+	defer link.reportTransport()
 	link.stopOnce.Do(func() { close(link.stop) })
-	if path := link.direct.Load(); path != nil {
+	link.writeMu.Lock()
+	path := link.direct.Load()
+	link.writeMu.Unlock()
+	if path != nil {
 		path.close()
 	}
 }
@@ -345,9 +454,13 @@ func (link *recordLink) close() {
 // on it is delivered); both sides then do the WebSocket close handshake,
 // whose reply arrives only after the relay processed every earlier frame.
 func (link *recordLink) finish(waitForPeer bool) {
+	defer link.reportTransport()
 	link.stopOnce.Do(func() { close(link.stop) })
 	deadline := time.Now().Add(closeWait)
-	if path := link.direct.Load(); path != nil {
+	link.writeMu.Lock()
+	path := link.direct.Load()
+	link.writeMu.Unlock()
+	if path != nil {
 		if waitForPeer && link.directUsed.Load() {
 			select {
 			case <-path.lost:
@@ -364,4 +477,31 @@ func (link *recordLink) finish(waitForPeer bool) {
 	case <-link.readerDone:
 	case <-time.After(time.Until(deadline) + 100*time.Millisecond):
 	}
+}
+
+func (link *recordLink) reportTransport() {
+	link.reportOnce.Do(func() {
+		if os.Getenv("CD_TRANSPORT_REPORT") != "1" {
+			return
+		}
+		transport := "relay"
+		protocol, route := "", ""
+		if link.directBytes.Load() > 0 {
+			transport = "direct"
+			if path := link.direct.Load(); path != nil {
+				protocol = "webrtc"
+				if path.stream != nil {
+					protocol = "tcp"
+				}
+				route = path.route()
+			}
+		}
+		_ = json.NewEncoder(os.Stderr).Encode(struct {
+			Transport      string `json:"transport"`
+			RelayBytes     uint64 `json:"relayBytes"`
+			DirectBytes    uint64 `json:"directBytes"`
+			DirectProtocol string `json:"directProtocol,omitempty"`
+			Route          string `json:"route,omitempty"`
+		}{transport, link.relayBytes.Load(), link.directBytes.Load(), protocol, route})
+	})
 }

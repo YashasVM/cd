@@ -10,11 +10,14 @@ const ZIP64_END = 0x06064b50;
 const CENTRAL = 0x02014b50;
 const LOCAL = 0x04034b50;
 const MAX_COMMENT = 0xffff;
+// Larger directories remain available as a ZIP download instead of using more heap.
+const MAX_DIRECTORY_BYTES = 8 * 1024 * 1024;
+const MAX_ENTRIES = 10_000;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
 async function bytesAt(blob, start, length) {
   const end = Math.min(blob.size, start + length);
-  if (start < 0 || end - start !== length) throw new Error('bundle is truncated');
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(length) || start < 0 || length < 0 || end - start !== length) throw new Error('bundle is truncated');
   return new DataView(await blob.slice(start, end).arrayBuffer());
 }
 
@@ -52,6 +55,7 @@ export async function readBundle(blob) {
     directorySize = Number(zip64.getBigUint64(40, true));
     directoryOffset = Number(zip64.getBigUint64(48, true));
   }
+  if (!Number.isSafeInteger(count) || !Number.isSafeInteger(directorySize) || !Number.isSafeInteger(directoryOffset) || count > MAX_ENTRIES || directorySize > MAX_DIRECTORY_BYTES) throw new Error('bundle directory exceeds automatic extraction limits');
   const directory = await bytesAt(blob, directoryOffset, directorySize);
   const files = [];
   const seen = new Set();
@@ -87,6 +91,7 @@ export async function readBundle(blob) {
     if (!path || seen.has(path)) throw new Error('bundle has an unsafe filename');
     seen.add(path);
     if (name.endsWith('/')) continue;
+    if (![size, compressed, offset].every(Number.isSafeInteger)) throw new Error('bundle entry is invalid');
     if (method !== 0 || compressed !== size) throw new Error('bundle is compressed');
     const local = await bytesAt(blob, offset, 30);
     if (local.getUint32(0, true) !== LOCAL) throw new Error('bundle entry is invalid');

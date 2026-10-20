@@ -7,6 +7,7 @@ require (
 	github.com/pion/ice/v4 v4.4.7
 	github.com/pion/logging v0.2.4
 	github.com/pion/webrtc/v4 v4.2.23
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 )
 
 require (

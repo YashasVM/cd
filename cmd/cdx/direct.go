@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pion/ice/v4"
@@ -44,7 +44,7 @@ const (
 	maxSDPBytes = 64 * 1024
 )
 
-var errDirectStalled = errors.New("direct connection stalled")
+var errDirectStalled = NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer)
 
 // directICEServers is a variable so tests can run without STUN.
 var directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"}}}
@@ -72,13 +72,22 @@ func directEnabled() bool {
 type directPath struct {
 	connection *webrtc.PeerConnection
 	channel    *webrtc.DataChannel
-	opened     chan struct{}
-	// lost closes when the data channel or the ICE connection fails.
+	// stream, when set, is an authenticated same-network TCP connection
+	// (see lan.go) that carries the records instead of a data channel.
+	stream   net.Conn
+	streamMu sync.Mutex
+	opened   chan struct{}
+	// lost closes when the data channel, the ICE connection, or the stream
+	// fails.
 	lost      chan struct{}
 	lostOnce  sync.Once
 	openOnce  sync.Once
 	drained   chan struct{}
 	assembler recordAssembler
+	onLost    func(error)
+	// retired marks a path another one replaced before it carried data;
+	// its failure is not reported.
+	retired atomic.Bool
 }
 
 // newDirectPath creates the peer connection and its pre-negotiated data
@@ -104,15 +113,10 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 		_ = connection.Close()
 		return nil, err
 	}
-	path := &directPath{connection: connection, channel: channel, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1)}
-	lose := func(err error) {
-		path.lostOnce.Do(func() {
-			close(path.lost)
-			onLost(err)
-		})
-	}
+	path := &directPath{connection: connection, channel: channel, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1), onLost: onLost}
+	lose := path.lose
 	channel.OnOpen(func() { path.openOnce.Do(func() { close(path.opened) }) })
-	channel.OnClose(func() { lose(errors.New("direct connection closed")) })
+	channel.OnClose(func() { lose(NewFailure(failureDisconnected, "direct connection closed", retryNewTransfer)) })
 	channel.SetBufferedAmountLowThreshold(directBufferLow)
 	channel.OnBufferedAmountLow(func() {
 		select {
@@ -133,10 +137,65 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 	})
 	connection.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
-			lose(errors.New("direct connection " + state.String()))
+			lose(NewFailure(failureDisconnected, "direct connection "+state.String(), retryNewTransfer))
 		}
 	})
 	return path, nil
+}
+
+// newStreamPath wraps an authenticated same-network connection as an open
+// direct path. onRecord receives each complete record read from it.
+func newStreamPath(stream net.Conn, onRecord func([]byte), onLost func(error)) *directPath {
+	path := &directPath{stream: stream, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1), onLost: onLost}
+	close(path.opened)
+	go path.readStream(onRecord)
+	return path
+}
+
+func (path *directPath) readStream(onRecord func([]byte)) {
+	for {
+		var header [headerBytes]byte
+		if _, err := io.ReadFull(path.stream, header[:]); err != nil {
+			path.lose(NewFailure(failureDisconnected, "direct connection closed", retryNewTransfer))
+			return
+		}
+		length := uint64(headerBytes) + uint64(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
+		if header[0] != 'C' || header[1] != 'D' || header[2] != path.assembler.protocol() || length > maxRecordBytes {
+			path.lose(NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever))
+			_ = path.stream.Close()
+			return
+		}
+		record := make([]byte, int(length))
+		copy(record, header[:])
+		if _, err := io.ReadFull(path.stream, record[headerBytes:]); err != nil {
+			path.lose(NewFailure(failureDisconnected, "direct connection interrupted", retryNewTransfer))
+			return
+		}
+		onRecord(record)
+	}
+}
+
+type directPathError struct {
+	path *directPath
+	err  error
+}
+
+func (err *directPathError) Error() string { return err.err.Error() }
+func (err *directPathError) Unwrap() error { return err.err }
+
+func (path *directPath) lose(err error) {
+	path.lostOnce.Do(func() {
+		close(path.lost)
+		if !path.retired.Load() {
+			path.onLost(&directPathError{path: path, err: err})
+		}
+	})
+}
+
+// retire closes a path that another one replaced, without reporting it.
+func (path *directPath) retire() {
+	path.retired.Store(true)
+	path.close()
 }
 
 // localDescription waits for ICE gathering (bounded) and returns the SDP.
@@ -161,7 +220,7 @@ func (path *directPath) createOffer() (string, error) {
 
 func (path *directPath) acceptAnswer(sdp string) error {
 	if len(sdp) == 0 || len(sdp) > maxSDPBytes {
-		return errors.New("invalid direct answer")
+		return NewFailure(failureProtocol, "invalid direct answer", retryNever)
 	}
 	return path.connection.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp})
 }
@@ -171,7 +230,7 @@ func (path *directPath) acceptAnswer(sdp string) error {
 // otherwise it waits for gathering and embeds them in the SDP.
 func (path *directPath) answerOffer(sdp string, onCandidate func(webrtc.ICECandidateInit)) (string, error) {
 	if len(sdp) == 0 || len(sdp) > maxSDPBytes {
-		return "", errors.New("invalid direct offer")
+		return "", NewFailure(failureProtocol, "invalid direct offer", retryNever)
 	}
 	if err := path.connection.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: sdp}); err != nil {
 		return "", err
@@ -198,7 +257,7 @@ func (path *directPath) answerOffer(sdp string, onCandidate func(webrtc.ICECandi
 
 func (path *directPath) addCandidate(candidate webrtc.ICECandidateInit) error {
 	if len(candidate.Candidate) > 1024 {
-		return errors.New("invalid direct candidate")
+		return NewFailure(failureProtocol, "invalid direct candidate", retryNever)
 	}
 	return path.connection.AddICECandidate(candidate)
 }
@@ -226,13 +285,29 @@ func (path *directPath) isOpen() bool {
 // send writes one record as 64 KiB messages, waiting while the channel's
 // send buffer is full.
 func (path *directPath) send(record []byte) error {
+	if path.stream != nil {
+		path.streamMu.Lock()
+		defer path.streamMu.Unlock()
+		if err := path.stream.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
+			return err
+		}
+		if n, err := path.stream.Write(record); err != nil {
+			if isTimeoutError(err) {
+				return NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer)
+			}
+			return err
+		} else if n != len(record) {
+			return io.ErrShortWrite
+		}
+		return nil
+	}
 	for path.channel.BufferedAmount() > directBufferHigh {
 		select {
 		case <-path.drained:
 		case <-path.lost:
-			return errors.New("direct connection lost")
+			return NewFailure(failureDisconnected, "direct connection lost", retryNewTransfer)
 		case <-time.After(transferIdle):
-			return errDirectStalled
+			return NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer, errDirectStalled)
 		}
 	}
 	for start := 0; start < len(record); start += directPieceSize {
@@ -246,25 +321,48 @@ func (path *directPath) send(record []byte) error {
 // route names the network path ICE chose, for the progress log. A private,
 // loopback, or link-local remote address means both ends share a network.
 func (path *directPath) route() string {
-	pair, err := path.connection.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
-	if err != nil || pair == nil {
+	var remote string
+	if path.stream != nil {
+		remote, _, _ = net.SplitHostPort(path.stream.RemoteAddr().String())
+	} else if pair, err := path.connection.SCTP().Transport().ICETransport().GetSelectedCandidatePair(); err == nil && pair != nil {
+		remote = pair.Remote.Address
+	}
+	address := net.ParseIP(remote)
+	if address == nil {
 		return "direct"
 	}
-	address := net.ParseIP(pair.Remote.Address)
-	if address != nil && (address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast()) {
+	if address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() || isInterfaceAddress(address) {
 		return "same network"
 	}
 	return "direct internet path"
 }
 
+func isInterfaceAddress(address net.IP) bool {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return false
+	}
+	for _, candidate := range addresses {
+		if network, ok := candidate.(*net.IPNet); ok && network.IP.Equal(address) {
+			return true
+		}
+	}
+	return false
+}
+
 func (path *directPath) close() {
+	if path.stream != nil {
+		_ = path.stream.Close()
+		return
+	}
 	_ = path.connection.Close()
 }
 
 // recordAssembler rebuilds records from data-channel messages using each
 // record's plaintext header: 12 header bytes, the plaintext, a 16-byte tag.
 type recordAssembler struct {
-	buffer []byte
+	version byte
+	buffer  []byte
 }
 
 func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
@@ -272,12 +370,12 @@ func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
 	var records [][]byte
 	for len(assembler.buffer) >= headerBytes {
 		header := assembler.buffer[:headerBytes]
-		if header[0] != 'C' || header[1] != 'D' || header[2] != protocolVersion {
-			return nil, errors.New("direct connection sent an invalid record")
+		if header[0] != 'C' || header[1] != 'D' || header[2] != assembler.protocol() {
+			return nil, NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever)
 		}
 		length := headerBytes + int(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
 		if length > maxRecordBytes {
-			return nil, errors.New("direct connection sent an oversized record")
+			return nil, NewFailure(failureProtocol, "direct connection sent an oversized record", retryNever)
 		}
 		if len(assembler.buffer) < length {
 			break
@@ -291,4 +389,11 @@ func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
 		assembler.buffer = nil
 	}
 	return records, nil
+}
+
+func (assembler *recordAssembler) protocol() byte {
+	if assembler.version == 0 {
+		return protocolVersion
+	}
+	return assembler.version
 }

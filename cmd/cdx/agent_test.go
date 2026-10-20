@@ -8,12 +8,19 @@ import (
 )
 
 func TestAgentSkillMatchesRepository(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "..", "skills", agentSkillName, "source.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(source) != agentSkill {
+		t.Fatal("generated sharing skill is stale; run node scripts/generate-sharing-skill.mjs")
+	}
 	repository, err := os.ReadFile(filepath.Join("..", "..", "skills", agentSkillName, "SKILL.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(repository) != agentSkill {
-		t.Fatal("cmd/cdx/agentskill/SKILL.md differs from skills/cd-file-sharing/SKILL.md; copy it over")
+		t.Fatal("cmd/cdx/agentskill/SKILL.md differs from skills/cd-file-sharing/SKILL.md; run node scripts/generate-sharing-skill.mjs")
 	}
 }
 

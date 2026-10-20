@@ -1,0 +1,33 @@
+{
+  "protocol": "cd-device-v1",
+  "pair": {
+    "version": 1,
+    "pairId": "AAECAwQFBgcICQoLDA0ODw",
+    "secret": "EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8",
+    "name": "Fixture laptop",
+    "relayUrl": "wss://cd.yash0.in/ws/devices/v1/AAECAwQFBgcICQoLDA0ODw",
+    "localUrls": [],
+    "expiresAt": 1792330300000
+  },
+  "now": 1792330000000,
+  "senderToken": "qiNfJi885JN4vso6KYKgCXW1Y6xBgYeF1piR3uRmXds",
+  "receiverToken": "Cq_WkLMJiMzwiP7y2quBMwkwIdrFPbWkaCAD12ocfww",
+  "senderKey": "FklKdu4EnsXK_DL4nLqIKh45Yma4ccp9fWl8hTjWM9U",
+  "receiverKey": "tjhg3WkW7JjG8_9fYH_eqYPRdZGSK2ZxufuIGEkWU2I",
+  "offer": {
+    "version": 1,
+    "type": "offer",
+    "messageId": "QEFCQ0RFRkdISUpLTE1OTw",
+    "expiresAt": 1792330300000,
+    "transferId": "AAECAwQFBgcICQoLDA0ODw",
+    "url": "https://cd.yash0.in/s/AAECAwQFBgcICQoLDA0ODw#v2.EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8",
+    "localUrl": "ws://192.168.1.2:4000/ws/v2/AAECAwQFBgcICQoLDA0ODw",
+    "filename": "fixture.bin",
+    "size": "3",
+    "wholeSha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  },
+  "frame": "MDEyMzQ1Njc4OTo7uKKzk81Gse108jFwTYQypqGYBQyOZFnWKsX9s9P7pMFl37jlOxT5RsdLK7RfGHfU-hfJFjDU2WUih1ldKHTto6jn5zOlCL2DPUBmeFpCB13tj39N4Nbq2aD0wumovuwyB0FhKZPVUy2jS-kMCW5rcK5V1fMquyFk2dODu-YjLXkQLB3iJQEvwFHyBnChiTObm-8hogTYCldMPuGr6Ob304f67uRt9jQBbai1zPwYrnhj8GdsJkFy7y8xqv1pusXPIMP3n7KRDxPZljavZY77S1eLW4yKXGuGkEQoCXCyfoTrM1ussKsokYLepZ6qZDD6W7yrNT9ZdCRypWPXdC8mnICM-baafZ0GnI1Q2N03rOsZGuz7LFYn5-LvW3fq-NwhQi48fKTw53Pe37YH_Uz-_O2c-_zT7NfqOmkWvhWuv2MbIVaXiLAReYJcq5743hBfOe7MRqUzY6RwX_CzuEDuHBuk45PytOWvqeOjMVzQUB6qlYUnk21aMBWjbfIO3Jd3WlIX0DOc97q1NoLmPLDe4RlzUeX4muvDTnJcKUEJnPK_qBCfv5-zQhjS",
+  "localChallenge": "UFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm8",
+  "senderLocalProof": "U1A61kqmQ59sDACAKqi5u6FcWcAijegbCBWzomcbY8E",
+  "receiverLocalProof": "pXWFY2X1enlZ30G2zSAfQ98sm5Jmpcilmdu1SQNwKSE"
+}
