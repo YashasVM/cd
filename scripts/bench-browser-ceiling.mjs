@@ -46,7 +46,7 @@ try{
  if(process.env.CD_CEILING_NO_EXTENSION==='1'){
   const upstream=new URL(worker.publicBase),connections=new Set();
   const target=req=>{const url=new URL(req.url,'http://localhost');return {protocol:upstream.protocol,hostname:upstream.hostname,port:upstream.port,path:url.pathname+url.search}};
-  const headers=req=>{const result={...req.headers,host:upstream.host};delete result['sec-websocket-extensions'];return result};
+  const headers=req=>{const result={...req.headers};delete result['sec-websocket-extensions'];return result};
   proxy=createServer((req,res)=>{const outgoing=httpRequest({...target(req),method:req.method,headers:headers(req)},incoming=>{res.writeHead(incoming.statusCode,incoming.headers);incoming.pipe(res)});outgoing.on('error',()=>res.destroy());req.pipe(outgoing)});
   proxy.on('connection',socket=>{connections.add(socket);socket.on('close',()=>connections.delete(socket))});
   proxy.on('upgrade',(req,socket,head)=>{
