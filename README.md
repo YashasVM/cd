@@ -92,9 +92,9 @@ One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code direc
 Each transfer gets its own Durable Object room. Rooms hold one sender and one receiver, limit memory use,
 expire on their own, and keep no file data.
 
-## Android development preview
+## Paired-device development preview
 
-A native receiver is available in [`android/`](android/README.md). Build the APK and a CLI from this checkout, then run:
+This checkout includes experimental CLI pairing and the device relay. A compatible native receiver is required; Android app sources and an APK are not included here. With a receiver available, build the CLI and run:
 
 ```bash
 go build -o ./bin/cdx-dev ./cmd/cdx
@@ -105,7 +105,7 @@ go build -o ./bin/cdx-dev ./cmd/cdx
 
 Approve the pairing QR in CD on the phone and enable receiving. Targeted sends keep resumable progress automatically. After an interruption, rerun the same command with the same files. Changed source bytes fail verification. Use `cdx devices forget phone` to remove the local credential, and **Revoke** in Android to stop trusting the laptop.
 
-This is a development preview. The new device relay endpoint must run from this checkout for internet fallback. No production deployment is included. Local handoffs use authenticated encrypted WebSockets and mDNS discovery. Remote transfers start on the resumable relay and upgrade to native WebRTC when reachable. Optional Firebase wake-up is implemented and needs a project configuration; follow the [Firebase setup guide](docs/guides/firebase-setup.md). The targeted sender still runs in the foreground. Files and folders selected together currently arrive as a ZIP in Android. See [Android setup](android/README.md) and [verification](docs/implementation/android-verification.md).
+This is a development preview. The new device relay endpoint must run from this checkout for internet fallback. No production deployment is included. Local handoffs use authenticated encrypted WebSockets and mDNS discovery. Remote transfers start on the resumable relay and upgrade to native WebRTC when reachable. Optional Firebase wake-up is implemented and needs a project configuration; follow the [Firebase setup guide](docs/guides/firebase-setup.md). The targeted sender still runs in the foreground. Files and folders selected together currently arrive as a ZIP in Android. See the [Android receiver contract](docs/implementation/android-contract.md) and [verification notes](docs/implementation/android-verification.md).
 
 See [the pairing decision](docs/adr/0002-paired-android-receiving.md) for protocol and lifecycle limits. Run `node scripts/verify-devices.mjs` to verify real CLI pairing through a local Worker, admission checks, reconnects, and credential privacy.
 
