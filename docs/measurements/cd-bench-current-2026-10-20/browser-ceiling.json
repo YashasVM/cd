@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 3,
+  "startedAt": "2026-10-20T10:21:26.531Z",
+  "rows": [
+    {
+      "run": 0,
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1721.874676,
+      "mibPerSecond": 37.16879102297687,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 144
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1798.5007300000002,
+      "mibPerSecond": 35.58519545332628,
+      "senderStats": {
+        "maxBuffered": 4096981,
+        "polls": 147
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1601.377563,
+      "mibPerSecond": 39.965590550740096,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 131
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1715.6231640000005,
+      "mibPerSecond": 37.30422935697782,
+      "senderStats": {
+        "maxBuffered": 4096981,
+        "polls": 141
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1642.2457579999991,
+      "mibPerSecond": 38.97102470092057,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 137
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1999.586265,
+      "mibPerSecond": 32.00662112969655,
+      "senderStats": {
+        "maxBuffered": 4093957,
+        "polls": 165
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.",
+  "finishedAt": "2026-10-20T10:21:39.885Z"
+}

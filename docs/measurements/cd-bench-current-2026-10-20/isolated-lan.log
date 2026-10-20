@@ -1,0 +1,9 @@
+cd #1: 15453.7 ms durable
+croc #1: 13739.6 ms durable
+croc-no-compress #1: 13824.5 ms durable
+croc #2: 13994.0 ms durable
+croc-no-compress #2: 14271.1 ms durable
+cd #2: 15099.2 ms durable
+croc-no-compress #3: 13696.1 ms durable
+cd #3: 14862.7 ms durable
+croc #3: 13346.8 ms durable

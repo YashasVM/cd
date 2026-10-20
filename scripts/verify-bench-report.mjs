@@ -21,6 +21,15 @@ try{
   assert.equal(await page.locator('#croc-kpi').textContent(),format(expected.croc));
   combinations++;
  }
+ const acceptance=await (await page.request.get(new URL('isolated-gates.json',url).href)).json();
+ assert.equal(acceptance.complete,true);assert.equal(acceptance.achieved,false);
+ assert.equal(await page.locator('#browser-results tr').count(),6);
+ for(let index=0;index<acceptance.browserCases.length;index++){
+  const result=acceptance.browserCases[index].metrics.durableMs;
+  const cells=await page.locator('#browser-results tr').nth(index).locator('td').allTextContents();
+  const format=n=>n.toLocaleString('en-US',{maximumFractionDigits:1});
+  assert.equal(cells[1],format(result.cdMs));assert.equal(cells[2],format(result.crocMs));assert.equal(cells[3],result.ratio.toFixed(2)+'×');assert.equal(cells[4],'7 / 7');
+ }
  await page.locator('#compare summary').click();assert.equal(await page.locator('#spreads tr').count(),3);
  for(const width of [1440,768,390]){
   await page.setViewportSize({width,height:900});
