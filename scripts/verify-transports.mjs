@@ -59,7 +59,7 @@ try {
         const context = await browser.newContext({ acceptDownloads: true });
         contexts.push(context);
         await context.addInitScript(browserTransportProbe, {
-          blockDirect: Boolean(testCase.blocked), directDelayMs: receiver ? 0 : testCase.directDelayMs,
+          blockDirect: Boolean(testCase.blocked), directDelayMs: receiver ? testCase.directDelayMs : 0,
           decryptDelayMs: receiver ? testCase.decryptDelayMs : 0
         });
         const page = await context.newPage();

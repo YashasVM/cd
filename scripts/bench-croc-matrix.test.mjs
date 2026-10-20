@@ -19,7 +19,7 @@ test('failed, missing or incomplete repetitions never pass', () => {
   assert.equal(summarize([...rows.slice(0, 2), row('croc-no-compress', 9, { ok: false })], 1)[0].pass1_5, false);
 });
 test('matrix includes random and compressible small, medium and bulk payloads', () => {
-  assert.deepEqual(Object.keys(cases), ['random-4k', 'random-1m', 'random-256m', 'compressible-4k', 'compressible-1m', 'compressible-256m']);
+  assert.deepEqual(Object.keys(cases), ['random-4k', 'random-1m', 'random-64m', 'random-256m', 'compressible-4k', 'compressible-1m', 'compressible-64m', 'compressible-256m']);
 });
 test('summary exposes spread while gating median results', () => {
   const rows = ['cd', 'croc', 'croc-no-compress'].flatMap(tool => [row(tool, tool === 'cd' ? 2 : 8), row(tool, tool === 'cd' ? 4 : 12)]);

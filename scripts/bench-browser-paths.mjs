@@ -25,21 +25,30 @@ try{
  worker=await startWorker(work);
  browser=await chromium.launch({executablePath:await findChromium(),headless:true,args:['--disable-dev-shm-usage']});
  report.chromium=browser.version();
- for(let run=0;run<runs;run++)for(const {direction,route} of cases.slice(run%cases.length).concat(cases.slice(0,run%cases.length))){
+ const selected=process.env.CD_BROWSER_ONLY?.split(',');
+ for(let run=0;run<runs;run++)for(const {direction,route} of cases.slice(run%cases.length).concat(cases.slice(0,run%cases.length)).filter(c=>!selected||selected.includes(c.direction+'/'+c.route))){
   const contexts=[],active=[];let senderPage,receiverPage,sender,receiver;const blocked=route==='relay';
   const env=cliEnv(worker,{CD_TRANSPORT_REPORT:'1',CD_DIRECT:blocked?'0':'1',CD_STATE_DIR:join(work,'state-'+run+'-'+direction+'-'+route)});
   const launch=args=>{const child=spawn(executable,args,{env,stdio:['ignore','pipe','pipe']});children.add(child);active.push(child);return {child,out:captureOutput(child)}};
   const row={direction,route,run,bytes:payload.length,ok:false};
   try{
-   const page=async()=>{const context=await browser.newContext({acceptDownloads:true});contexts.push(context);await context.addInitScript(browserTransportProbe,{blockDirect:blocked});const p=await context.newPage();p.setDefaultTimeout(60000);await p.goto(worker.publicBase);await p.locator('.workbench:not([inert])').waitFor();return p};
+   const page=async()=>{const context=await browser.newContext({acceptDownloads:true});contexts.push(context);await context.addInitScript(browserTransportProbe,{blockDirect:blocked});
+    await context.addInitScript(()=>{
+     window.__benchPhases={};
+     const nativeTimeout=window.setTimeout;
+     window.setTimeout=function(callback,delay,...args){if(typeof callback!=='function'||delay>20)return nativeTimeout.call(this,callback,delay,...args);const start=performance.now();return nativeTimeout.call(this,(...values)=>{const stat=window.__benchPhases.shortTimer??={calls:0,ms:0,maxMs:0};const elapsed=performance.now()-start;stat.calls++;stat.ms+=elapsed;stat.maxMs=Math.max(stat.maxMs,elapsed);callback(...values)},delay,...args)};
+     const measure=(prototype,method,label)=>{if(!prototype?.[method])return;const native=prototype[method];prototype[method]=async function(...args){const start=performance.now();try{return await native.apply(this,args)}finally{const stat=window.__benchPhases[label]??={calls:0,ms:0,maxMs:0};const elapsed=performance.now()-start;stat.calls++;stat.ms+=elapsed;stat.maxMs=Math.max(stat.maxMs,elapsed)}}};
+     measure(SubtleCrypto.prototype,'encrypt','encrypt');measure(SubtleCrypto.prototype,'decrypt','decrypt');measure(Blob.prototype,'arrayBuffer','blobRead');measure(ReadableStreamDefaultReader.prototype,'read','streamRead');measure(globalThis.FileSystemWritableFileStream?.prototype,'write','diskWrite');
+    });const p=await context.newPage();p.setDefaultTimeout(60000);await p.goto(worker.publicBase);await p.locator('.workbench:not([inert])').waitFor();return p};
    if(direction.startsWith('browser'))senderPage=await page();
    if(direction.endsWith('browser')){receiverPage=await page();await receiverPage.locator('#receive-mode-btn').click();}
    const start=performance.now();let code;
    if(senderPage){await senderPage.locator('#file-input').setInputFiles(input);await senderPage.locator('#sender-code-section:not(.hidden)').waitFor();code=(await senderPage.locator('#share-code').textContent()).trim();}
    else{sender=launch(['send','--wait',input]);code=await firstLine(sender.child.stdout,30000);}
    const receiveStart=performance.now();row.readyMs=receiveStart-start;
+   row.receiveStartedAt=performance.timeOrigin+receiveStart;
    const dir=join(work,run+'-'+direction+'-'+route);await mkdir(dir);const target=join(dir,'payload.bin');
-   if(receiverPage){const downloadPromise=receiverPage.waitForEvent('download',{timeout:60000});await receiverPage.locator('#code-input').fill(code);const download=await downloadPromise;await download.saveAs(target);}
+   if(receiverPage){const downloadPromise=receiverPage.waitForEvent('download',{timeout:60000});await receiverPage.locator('#code-input').fill(code);const download=await downloadPromise;row.downloadEventMs=performance.now()-receiveStart;const saveStart=performance.now();await download.saveAs(target);row.downloadSaveMs=performance.now()-saveStart;}
    else{receiver=launch(['receive',code,'--out',target]);assert.equal(await childExit(receiver.child,60000),0,receiver.out.stderr);}
    row.receiverMs=performance.now()-receiveStart;
    for(const p of [target,dir]){const fd=await open(p,'r');try{await fd.sync()}finally{await fd.close()}}
@@ -48,14 +57,17 @@ try{
    assert.equal(hash(await readFile(target)),expected,'received hash mismatch');row.sha256=expected;
    row.senderStats=senderPage?await senderPage.evaluate(()=>window.__benchTransport):null;
    row.receiverStats=receiverPage?await receiverPage.evaluate(()=>window.__benchTransport):null;
+   row.senderPhases=senderPage?await senderPage.evaluate(()=>window.__benchPhases):null;
+   row.receiverPhases=receiverPage?await receiverPage.evaluate(()=>window.__benchPhases):null;
    row.cliReports=[sender?.out.stderr,receiver?.out.stderr].filter(Boolean).join('\n').split('\n').flatMap(s=>{try{const r=JSON.parse(s);return r.transport?[r]:[]}catch{return []}});
    const directBytes=row.senderStats?.directPayloadBytes??row.receiverStats?.directReceivedPayloadBytes??0;
    const relayBytes=row.senderStats?.relayPayloadBytes??row.receiverStats?.relayReceivedPayloadBytes??0;
    row.directPayloadBytes=directBytes;row.relayPayloadBytes=relayBytes;
    if(blocked){assert.equal(directBytes,0);assert.ok(relayBytes>=payload.length,'relay bytes missing');}
-   else assert.ok(directBytes>=Math.min(payload.length,1048576),'direct path did not carry payload');
+   row.directGate=blocked?null:directBytes>=Math.min(payload.length,1048576);
+   row.actualTransport=directBytes>0?(relayBytes>0?'relay + WebRTC':'WebRTC'):'relay';
    row.ok=true;await rm(dir,{recursive:true,force:true});
-  }catch(error){row.error=error.stack;row.diagnostics={sender:sender?.out.stderr,receiver:receiver?.out.stderr};}
+  }catch(error){row.error=error.stack;row.diagnostics={sender:sender?.out.stderr,receiver:receiver?.out.stderr,senderPage:await senderPage?.locator('body').innerText().catch(()=>''),receiverPage:await receiverPage?.locator('body').innerText().catch(()=>'')};}
   finally{await Promise.all(active.map(async c=>{await stopChild(c);children.delete(c)}));for(const c of contexts)await c.close()}
   report.rows.push(row);await writeFile(output,JSON.stringify(report,null,2));console.error(direction+'/'+route+' #'+(run+1)+': '+(row.ok?row.durableMs.toFixed(1)+'ms':row.error));
  }

@@ -17,6 +17,7 @@ import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
 import { createRecordMerger, offerDirect, DIRECT_BUFFER_BYTES } from './direct-link.js';
 import { createSendWindow } from './send-window.js';
+import { CHUNK_SIZE, LARGE_CHUNK_SIZE, acceptedSendChunkSize } from './transfer-limits.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -24,7 +25,6 @@ import { createSendWindow } from './send-window.js';
 // startRelaySend is the engine (used by the main page); mountRelaySender
 // wires it to the standalone `/send` page.
 
-const CHUNK_SIZE = 256 * 1024;
 const MAX_INCOMING_BYTES = 4 * 1024 * 1024;
 const MAX_INCOMING_RECORDS = 256;
 const MAX_RETAINED_BYTES = 16 * 1024 * 1024;
@@ -361,10 +361,12 @@ export function startRelaySend(source, hooks = {}) {
       mediaType: source.type || 'application/octet-stream',
       size: String(source.size),
       chunkSize: CHUNK_SIZE,
+      maxChunkSize: LARGE_CHUNK_SIZE,
       ...(source.bundle ? { bundle: true, files: source.files } : {}),
       ...(direct ? { direct: { sdp: direct.sdp } } : {})
     })));
-    await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
+    const acceptance = await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
+    const chunkSize = acceptedSendChunkSize(acceptance.plaintext);
     releaseRetained(0n);
 
     onState('transferring');
@@ -373,7 +375,8 @@ export function startRelaySend(source, hooks = {}) {
     let sent = 0n;
     let acknowledged = 0n;
     let chunks = 0;
-    windowController = createSendWindow();
+    // Two negotiated chunks must fit before the receiver's 1 MiB ACK.
+    windowController = createSendWindow({ minBytes: Math.max(1024 * 1024, 2 * chunkSize) });
     onProgress(0, source.size);
     const awaitAck = async () => {
       const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
@@ -402,9 +405,17 @@ export function startRelaySend(source, hooks = {}) {
         throw error;
       }
     };
+    const wireChunks = async function* () {
+      for await (const chunk of rechunk(source.stream(), chunkSize)) {
+        // Browser WebSockets perform better with the original frame size.
+        // The negotiated value is an upper bound, including after an upgrade.
+        const size = direct?.open ? chunkSize : Math.min(CHUNK_SIZE, chunkSize);
+        for (let offset = 0; offset < chunk.byteLength; offset += size) yield chunk.subarray(offset, offset + size);
+      }
+    };
     const sendSource = async () => {
       try {
-        for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
+        for await (const chunk of wireChunks()) {
           if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
           while (!windowController.canSend(chunk.byteLength)) {
             if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');

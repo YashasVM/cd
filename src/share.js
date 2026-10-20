@@ -18,6 +18,7 @@ import {
 import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
 import { downloadNames, readBundle } from './zip-unbundle.js';
 import { answerDirect, createRecordMerger, parseDirectOffer, DIRECT_BUFFER_BYTES } from './direct-link.js';
+import { selectReceiveChunkSize } from './transfer-limits.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
@@ -64,11 +65,12 @@ function parseOffer(plaintext) {
   if (typeof mediaType !== 'string' || mediaType.length > 127 || !/^[\x20-\x7e]+$/.test(mediaType)) throw new Error('The sender offered an invalid file type.');
   if (typeof size !== 'string' || !/^(0|[1-9][0-9]{0,19})$/.test(size)) throw new Error('The sender offered an invalid file size.');
   const byteSize = BigInt(size);
-  if (byteSize > 0xffffffffffffffffn || (chunkSize !== 64 * 1024 && chunkSize !== 256 * 1024)) throw new Error('The sender uses unsupported transfer limits.');
+  if (byteSize > 0xffffffffffffffffn) throw new Error('The sender uses unsupported transfer limits.');
+  const selectedChunkSize = selectReceiveChunkSize(value);
   // A bundle is several files sent as one zip; it is unpacked on arrival.
   const bundle = value.bundle === true;
   const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
-  return { name, mediaType, size: byteSize, bundle, files, directSdp: parseDirectOffer(value) };
+  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value) };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -425,10 +427,11 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
         state = 'receiving';
         renderProgress(0n, offer.size, true);
-        await send(KIND_ACCEPT);
+        await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
         return;
       }
       if (state === 'receiving' && kind === KIND_CHUNK) {
+        if (plaintext.byteLength === 0 || plaintext.byteLength > offer.chunkSize) throw new Error('The sender exceeded the agreed chunk size.');
         if (received + BigInt(plaintext.byteLength) > offer.size) throw new Error('The sender sent more data than promised.');
         await sink.write(plaintext);
         received += BigInt(plaintext.byteLength);

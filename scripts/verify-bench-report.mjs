@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright-core';
+import {findChromium} from './harness.mjs';
+const url=process.argv[2]||'https://a.yash0.in/cd-bench/';
+const browser=await chromium.launch({executablePath:await findChromium(),headless:true});
+try{
+ const page=await browser.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ const response=await page.goto(url);assert.equal(response.status(),200);
+ await page.locator('#chart .chart-row').first().waitFor();
+ const scenarios=await page.locator('#scenario option').evaluateAll(options=>options.map(option=>option.value));
+ const metrics=await page.locator('#metric option').evaluateAll(options=>options.map(option=>option.value));
+ let combinations=0;
+ for(const scenario of scenarios)for(const metric of metrics){
+  await page.locator('#scenario').selectOption(scenario);await page.locator('#metric').selectOption(metric);
+  assert.equal(await page.locator('#chart .chart-row').count(),3);
+  const expected=await page.evaluate(({scenario,metric})=>{
+   const current=data.scenarios.find(s=>s.id===scenario);return {cd:current.tools.cd[metric],croc:Math.min(current.tools.croc[metric],current.tools['croc-no-compress'][metric])};
+  },{scenario,metric});
+  const format=n=>n.toLocaleString('en-US',{maximumFractionDigits:1})+' ms';
+  assert.equal(await page.locator('#cd-kpi').textContent(),format(expected.cd));
+  assert.equal(await page.locator('#croc-kpi').textContent(),format(expected.croc));
+  combinations++;
+ }
+ await page.locator('#compare summary').click();assert.equal(await page.locator('#spreads tr').count(),3);
+ for(const width of [1440,768,390]){
+  await page.setViewportSize({width,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'page overflows at '+width);
+ }
+ for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+}finally{await browser.close()}

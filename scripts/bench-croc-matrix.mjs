@@ -13,7 +13,7 @@ import { connect } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { availablePort, buildCLI, cliEnv, startWorker, stopChild } from './harness.mjs';
 
-export const cases = Object.fromEntries(['random', 'compressible'].flatMap(kind => [['4k', 4096], ['1m', 1048576], ['256m', 268435456]].map(([size, bytes]) => [`${kind}-${size}`, { kind, bytes }])));
+export const cases = Object.fromEntries(['random', 'compressible'].flatMap(kind => [['4k', 4096], ['1m', 1048576], ['64m', 67108864], ['256m', 268435456]].map(([size, bytes]) => [`${kind}-${size}`, { kind, bytes }])));
 export function median(values) {
   assert.ok(values.length > 0);
   const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
@@ -151,6 +151,7 @@ export async function main(argv = process.argv.slice(2)) {
   --timeout MS       Per-process/readiness timeout, default 120000
   --output PATH      JSON report, default ./cd-croc-matrix.json
 Without CD_VERIFY_URL this uses scripts/bench-worker.wrangler.jsonc locally.
+CD_VERIFY_WRANGLER_CONFIG selects a different explicit local experiment config.
 NEVER deploy that benchmark config. Hosted Workers retain their own limits.
 Control infrastructure defaults to RAM for BOTH disk and tmpfs output suites.
 Use --control-dir ~/.cache for a separate disk-infrastructure diagnostic.
@@ -172,7 +173,8 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
   const metadata = command => spawnSync(command[0], command.slice(1), { encoding: 'utf8' }).stdout?.trim();
   const report = { version: 1, startedAt: new Date().toISOString(), options: opts,
     source: { commit: metadata(['git', 'rev-parse', 'HEAD']), dirty: metadata(['git', 'status', '--porcelain']), diffSha256: createHash('sha256').update(spawnSync('git', ['diff', 'HEAD'], { maxBuffer: 64 * 1024 * 1024 }).stdout || '').digest('hex'), note: 'Dirty listing includes untracked files; diff hash includes tracked files only. Binary SHA256 identifies the tested CD executable.' },
-    environment: { platform: process.platform, arch: process.arch, release: release(), cpu: cpus()[0]?.model, cores: cpus().length },
+    environment: { platform: process.platform, arch: process.arch, release: release(), cpu: cpus()[0]?.model, cores: cpus().length,
+      transferFlags: Object.fromEntries(['CD_LAN', 'CD_WEBRTC', 'CD_LARGE_RECORDS', 'CD_LAN_GRACE', 'CD_RELAY_STREAMING'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]])) },
     method: { topology: 'same-host loopback, local relays; auto allows direct discovery and fallback, actual telemetry determines route', durability: 'receiver exit measured separately; timed durable completion adds file fsync and directory fsync equally to both tools. Internal tool fsync differences remain part of native completion.', verification: 'SHA256 every output outside all reported transfer timings', cache: 'warm input/page cache, output deleted after SHA256; sync before each trial; no privileged cache dropping', limits: 'No WAN, packet-loss, browser, concurrency, directory-tree or cross-host claims. tmpfs fsync does not represent physical persistence. croc auto telemetry is textual and does not prove direct routing.' }, rows };
   try {
     await mkdir(opts['disk-dir'], { recursive: true });
@@ -192,7 +194,7 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
     }
     report.binary = { cdx: executable, sha256: await digest(executable), croc: metadata([opts.croc, '--version']) };
     const previousConfig = process.env.CD_VERIFY_WRANGLER_CONFIG;
-    if (!process.env.CD_VERIFY_URL) process.env.CD_VERIFY_WRANGLER_CONFIG = fileURLToPath(new URL('./bench-worker.wrangler.jsonc', import.meta.url));
+    if (!process.env.CD_VERIFY_URL && !previousConfig) process.env.CD_VERIFY_WRANGLER_CONFIG = fileURLToPath(new URL('./bench-worker.wrangler.jsonc', import.meta.url));
     report.worker = { hosted: Boolean(process.env.CD_VERIFY_URL), config: process.env.CD_VERIFY_URL ? null : process.env.CD_VERIFY_WRANGLER_CONFIG };
     try { worker = await startWorker(control); }
     finally {

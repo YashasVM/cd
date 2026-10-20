@@ -36,6 +36,8 @@ export function browserTransportProbe(options = {}) {
   const sampleHeap = () => { if (globalThis.performance?.memory) stats.maxJSHeapBytes = Math.max(stats.maxJSHeapBytes ?? 0, globalThis.performance.memory.usedJSHeapSize); };
   const streams = new WeakMap();
   const inboundStreams = new WeakMap();
+  let sawRelayPayload;
+  const firstRelayPayload = new Promise(resolve => { sawRelayPayload = resolve; });
   function countRecord(target, data, route, inbound = false) {
     const parserStates = inbound ? inboundStreams : streams;
     const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
@@ -60,6 +62,9 @@ export function browserTransportProbe(options = {}) {
       cursor += copied;
       if (!state.remaining && state.payload) {
         stats[`${route}PayloadBytes`] += state.payload;
+        stats[`${route}FirstPayloadAt`] ??= Date.now();
+        stats[`${route}LastPayloadAt`] = Date.now();
+        if (route === 'relay' || route === 'relayReceived') sawRelayPayload();
         stats.firstPayloadRoute ??= route;
         if (stats.routes.at(-1) !== route) stats.routes.push(route);
       }
@@ -126,10 +131,13 @@ export function browserTransportProbe(options = {}) {
   if (options.blockDirect) {
     window.RTCPeerConnection = function() { throw new Error('Direct connections blocked by verification'); };
   } else if (options.directDelayMs) {
-    const nativeOffer = RTCPeerConnection.prototype.createOffer;
-    RTCPeerConnection.prototype.createOffer = async function(...args) {
+    // Hold the receiver's answer until real relay payload has arrived.
+    // An offer-time delay can finish before acceptance and never test upgrade.
+    const nativeAnswer = RTCPeerConnection.prototype.createAnswer;
+    RTCPeerConnection.prototype.createAnswer = async function(...args) {
+      await firstRelayPayload;
       await new Promise((resolve) => setTimeout(resolve, options.directDelayMs));
-      return nativeOffer.apply(this, args);
+      return nativeAnswer.apply(this, args);
     };
   }
   if (options.decryptDelayMs) {

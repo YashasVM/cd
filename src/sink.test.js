@@ -141,26 +141,26 @@ describe('download sink lifecycle', () => {
     }; } }, async () => {
       const sink = await createOPFSSink({ name: 'big.bin' });
       const chunkSize = 64 * 1024;
-      for (let index = 0; index < 10; index++) {
+      for (let index = 0; index < 67; index++) {
         const chunk = new Uint8Array(chunkSize).fill(index);
         // Exercise every accepted input shape across the chunks.
         if (index % 3 === 0) await sink.write(chunk);
         else if (index % 3 === 1) await sink.write(chunk.buffer.slice(0));
         else await sink.write(new DataView(chunk.buffer.slice(0)));
       }
-      // 10 x 64 KiB: the 8th chunk completes 512 KiB and flushes once.
+      // 67 x 64 KiB: flush 4 MiB once and retain three small chunks.
       assert.equal(writes.length, 1);
-      assert.equal(writes[0].byteLength, 512 * 1024);
+      assert.equal(writes[0].byteLength, 4 * 1024 * 1024);
       await sink.file();
       assert.equal(writes.length, 2);
-      assert.equal(writes[1].byteLength, 2 * chunkSize);
+      assert.equal(writes[1].byteLength, 3 * chunkSize);
       assert.equal(closed, 1);
       const total = writes[0].byteLength + writes[1].byteLength;
-      assert.equal(total, 10 * chunkSize);
+      assert.equal(total, 67 * chunkSize);
       const flat = new Uint8Array(total);
       flat.set(writes[0]);
       flat.set(writes[1], writes[0].byteLength);
-      for (let index = 0; index < 10; index++) {
+      for (let index = 0; index < 67; index++) {
         assert.ok(flat.slice(index * chunkSize, (index + 1) * chunkSize).every((byte) => byte === index));
       }
     });

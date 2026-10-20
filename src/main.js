@@ -1427,7 +1427,11 @@ els.codeInput.addEventListener('input', (event) => {
   event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
   els.codeInput.removeAttribute('aria-invalid');
   // Five digits is the longest numeric code, so nothing else is coming.
-  if (/^\d{5}$/.test(event.target.value.trim())) connectEnteredCode();
+  const enteredCode = event.target.value.trim();
+  // A whole code inserted by autofill is complete, like an explicit paste.
+  // Keep the delay for typing four digits, which may become a five-digit code.
+  const insertedWholeCode = typeof event.data === 'string' && event.data.length >= 4 || event.inputType === 'insertReplacementText';
+  if (/^\d{5}$/.test(enteredCode) || /^\d{4}$/.test(enteredCode) && insertedWholeCode) connectEnteredCode();
   else if (/^\d{4}$/.test(event.target.value.trim())) {
     autoConnectTimer = setTimeout(() => {
       if (!els.receiverInputSection.classList.contains('hidden') &&

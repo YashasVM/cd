@@ -91,9 +91,9 @@ export async function createOPFSSink({ name }) {
     throw error;
   }
   // Every write() is an IPC round-trip to the storage thread. Coalescing
-  // small network chunks (16-64 KiB) into ~512 KiB flushes cuts the syscall
+  // small network chunks into ~4 MiB flushes cuts the syscall
   // count by an order of magnitude; the copy is one fast memmove.
-  const FLUSH_BYTES = 512 * 1024;
+  const FLUSH_BYTES = 4 * 1024 * 1024;
   let pending = [];
   let pendingBytes = 0;
   const flush = async () => {
