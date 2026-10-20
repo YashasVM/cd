@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "806bb373c156c38f67d1c29028be073459809672",
+  "trackedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "trackedStatus": "",
+  "cdxSha256": "73313494f5f9cd0e97a029b2d079dafd2011b1491bd2e42ec9bd55521d7515ff",
+  "crocSha256": "6683a1fbaada19b4b48bcb92244722d7b8a11eb617558e67ee493417214a051c",
+  "workerBundleSha256": "82050fb4ab19e8966d8548519be16a48f9f8b2887dc9e2c52398762227ab57f2",
+  "runtime": "direct workerd, Miniflare 5.20260930.0-alpha",
+  "webSocketCompression": false,
+  "streamingRelayPrototype": false,
+  "frontendAssets": {
+    "assets/agent-send-DWWUuP-i.js": "a00f4246f2d8091b174d6e357ec8bf43efb02ec26202f6ff59a31527219eee0c",
+    "assets/browser-BzCeUqQk.js": "55455ed7548ac038813bfab81a47a82dec45e9e27f6b293855e02251c1ad853d",
+    "assets/bundler-BxU-Klky.js": "592156605b66a23595ffb17465b1967b0b9abd510ee8f35a4dbca62d016e3a78",
+    "assets/index-BQNCGYPm.css": "30cd7aa905d0c424e17f636f6b30c0f9c0fa05fdc88ca064cf4f0d75bec263e4",
+    "assets/index-DGG4KxtM.js": "b4e3c0b7f6da0703c2fd773a1c9978f101f74cf993e2b73d6ca272d655516a35",
+    "assets/jsQR-Bb57wsEY.js": "6f6a0d85991bef38c1eb2d03f2627fecdaaa16b0125c2a6998e7019c03f1cb8d",
+    "assets/main-Dueg18ut.js": "4f2b9671a0e9c47c35753ef6ee736efb23d5a26cea0be24a178b09cb82366e01",
+    "assets/relay-sender-CYU4l_Xb.js": "e39a6ff5764219dccb6f87331484d864aeeb61dd6ee42943d3881220185361ab",
+    "assets/resume-browser-BTkkU9iy.js": "ce163cc064d9c77bbaeec4b70003c930007277b1b2984f5b531b639b40b8dacf",
+    "assets/share-e-Ak_ho4.js": "cea66f21885de827fec6c3ab7da00b1420b4071c4d95ea45da1d21fb8e77c7a5",
+    "assets/share-page-CfpaecLT.js": "81c5297c24f124cdb3a12eb04dc69d77256d2a51d8e7d46449e861fcb7337948",
+    "assets/sink-pWzMxfEG.js": "3264b8b2556178e769fbda213fde8cc0c9bd4cb758fd415263df6fcd15f8114d",
+    "assets/transfer-limits-B8kI2cYe.js": "92fef140bb863eda79be96dd25fac679d0636cb31a908675aadba5dc11ec5fef"
+  },
+  "checks": {
+    "javascriptTests": 113,
+    "goTests": true,
+    "typescript": true,
+    "workerDryRun": true
+  },
+  "note": "Built before timings from an unchanged detached checkout. Static assets are served by the benchmark HTTP server; API and WebSocket requests go to the same direct workerd bundle for CLI and browser suites. No Wrangler development compression proxy. Private benchmark rate limits only. No production CD deployment.",
+  "executionNote": "Launcher comments were edited while Bash was reading the script, interrupting it after the completed LAN suite. The remaining TCP-disabled diagnostic and acceptance evaluation were run separately with identical frozen source and environment. No completed suite was overwritten or excluded.",
+  "infrastructureNote": "In direct-runtime mode Miniflare uses ephemeral local RAM state. The legacy raw infrastructure.localWorkerPersistence path describes the Wrangler mode and is not used in this run."
+}

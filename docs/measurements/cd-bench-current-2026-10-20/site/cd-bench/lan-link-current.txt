@@ -1,3 +1,4 @@
+Tue Oct 20 12:11:44 PM UTC 2026
 Settings for enx14ebb61959f3:
 	Supported ports: [ TP	 MII ]
 	Supported link modes:   10baseT/Half 10baseT/Full
@@ -24,3 +25,14 @@ Settings for enx14ebb61959f3:
         Current message level: 0x00007fff (32767)
                                drv probe link timer ifdown ifup rx_err tx_err tx_queued intr tx_done rx_status pktdata hw wol
 	Link detected: yes
+netlink error: Operation not permitted
+driver: r8152
+version: 7.0.0-38-generic
+firmware-version:
+expansion-rom-version:
+bus-info: usb-0000:00:10.0-2
+supports-statistics: yes
+supports-test: no
+supports-eeprom-access: no
+supports-register-dump: no
+supports-priv-flags: no

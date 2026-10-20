@@ -2,7 +2,7 @@
 
 The question is which CLI completes the same transfer sooner, and why the answer differs by payload and path.
 
-This report measures the existing checkout without changing transfer code. The checkout already contains uncommitted TCP and chunk-size improvements. A private built executable freezes the tested implementation. Installed tools are left intact.
+The main report now measures committed Prof snapshot 806bb37 from a clean detached checkout. It includes the retained transfer improvements. A private executable and Worker bundle freeze the tested implementation, and installed tools are left intact. Earlier snapshots and rejected candidates remain available as historical evidence.
 
 Data objects: one row per transfer, with tool, payload bytes, storage, allowed route, observed route, trial index, readiness, native receiver completion, completion with file and directory flush, total completion, SHA-256, and failure details.
 
@@ -88,3 +88,14 @@ Route metadata excludes addresses. Early address-equality fields lacked a presen
 A fresh SSH check on 20 October confirms the Ubuntu adapter uses r8152 and reports 100 Mb/s full duplex. Both adapter and link partner advertise only 10/100 modes. The saved ethtool output is `lan-link-current.txt`.
 
 The measured fastest croc durable median for 128 MiB random input is 13739.6 ms. Even a zero-overhead transfer at 100 Mb/s requires 10737.4 ms, limiting the ideal gain to 1.280×. The requested 1.5× would require 9159.7 ms, below that line-rate lower bound. This calculation ignores overhead and assumes no meaningful compression advantage for random input. A faster physical link is required to meet that part of the original target. The user has been asked whether gigabit hardware can be connected; no hardware change or narrower target is assumed.
+
+
+## Fresh retained-code acceptance
+
+The final-* reports measure clean committed snapshot 806bb37, including compression disabled and 4 MiB browser source reads. The latest upstream release was rechecked as croc v11.5.5. The source, binary, Worker bundle and frontend asset hashes are recorded in final-source.json. This run uses a direct local workerd runtime for both native and browser suites, avoiding Wrangler's separate development compression proxy. Worker state is ephemeral RAM. The legacy raw infrastructure persistence path describes Wrangler mode and is unused here.
+
+All 489 transfers verified: 420 CLI, 42 browser, 9 physical LAN and 18 TCP-disabled diagnostics. The full evidence is complete, but the acceptance target remains unmet. No required scenario passes every readiness, receiver, durable and total-time gate. At 64 MiB, disk direct-allowed CLI durable completion is 3.93× faster than the faster croc mode. RAM forced-relay completion is only 1.09× faster, and readiness is slower. Every browser direction remains slower than its native-croc reference. These cross-interface references do not imply that croc has a browser client.
+
+Fresh physical LAN medians are 14.42 s for CD and 13.06 s for the faster croc mode. Both Ubuntu adapter and link partner still advertise only 10/100 modes. For 128 MiB, the zero-overhead 100 Mb/s limit is 10.74 s; beating measured croc by 1.5× would require 8.71 s. The ideal gain is therefore at most 1.216× on this link. Hardware replacement remains pending, and the goal's target is unchanged.
+
+The launcher was interrupted after LAN completion because its comments were edited while Bash was reading the script. Completed suite files were intact. The remaining diagnostic and acceptance evaluator ran separately with the same frozen code and environment. The saved reproduction script passes bash syntax checking.

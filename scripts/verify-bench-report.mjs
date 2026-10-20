@@ -21,7 +21,7 @@ try{
   assert.equal(await page.locator('#croc-kpi').textContent(),format(expected.croc));
   combinations++;
  }
- const acceptance=await (await page.request.get(new URL('isolated-gates.json',url).href)).json();
+ const acceptance=await (await page.request.get(new URL('final-gates.json',url).href)).json();
  assert.equal(acceptance.complete,true);assert.equal(acceptance.achieved,false);
  assert.equal(await page.locator('#browser-results tr').count(),6);
  for(let index=0;index<acceptance.browserCases.length;index++){
