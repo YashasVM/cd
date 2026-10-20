@@ -26,6 +26,7 @@ try{
  browser=await chromium.launch({executablePath:await findChromium(),headless:true,args:['--disable-dev-shm-usage']});
  report.chromium=browser.version();
  const selected=process.env.CD_BROWSER_ONLY?.split(',');
+ if(selected)assert.ok(selected.every(name=>cases.some(c=>c.direction+'/'+c.route===name)),'unknown browser benchmark case');
  for(let run=0;run<runs;run++)for(const {direction,route} of cases.slice(run%cases.length).concat(cases.slice(0,run%cases.length)).filter(c=>!selected||selected.includes(c.direction+'/'+c.route))){
   const contexts=[],active=[];let senderPage,receiverPage,sender,receiver;const blocked=route==='relay';
   const env=cliEnv(worker,{CD_TRANSPORT_REPORT:'1',CD_DIRECT:blocked?'0':'1',CD_STATE_DIR:join(work,'state-'+run+'-'+direction+'-'+route)});
@@ -33,7 +34,7 @@ try{
   const row={direction,route,run,bytes:payload.length,ok:false};
   try{
    const page=async()=>{const context=await browser.newContext({acceptDownloads:true});contexts.push(context);await context.addInitScript(browserTransportProbe,{blockDirect:blocked});
-    await context.addInitScript(()=>{
+    if(process.env.CD_BROWSER_PROFILE==='1')await context.addInitScript(()=>{
      window.__benchPhases={};
      const nativeTimeout=window.setTimeout;
      window.setTimeout=function(callback,delay,...args){if(typeof callback!=='function'||delay>20)return nativeTimeout.call(this,callback,delay,...args);const start=performance.now();return nativeTimeout.call(this,(...values)=>{const stat=window.__benchPhases.shortTimer??={calls:0,ms:0,maxMs:0};const elapsed=performance.now()-start;stat.calls++;stat.ms+=elapsed;stat.maxMs=Math.max(stat.maxMs,elapsed);callback(...values)},delay,...args)};
