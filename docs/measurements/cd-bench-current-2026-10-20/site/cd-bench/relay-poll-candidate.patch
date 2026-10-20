@@ -1,0 +1,13 @@
+diff --git i/src/relay-sender.js w/src/relay-sender.js
+index 907f311..ffcc85e 100644
+--- i/src/relay-sender.js
++++ w/src/relay-sender.js
+@@ -152,7 +152,7 @@ export function startRelaySend(source, hooks = {}) {
+       if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
+       if (direct?.open) return;
+       if (socket.readyState !== 1 || performance.now() - started > TRANSFER_IDLE_MS) throw new RelaySendError('The relay send buffer stalled. Check your connection and send again.');
+-      await new Promise((resolve) => setTimeout(resolve, 10));
++      await new Promise((resolve) => setTimeout(resolve, 1));
+     }
+     if (!direct?.open && socket.readyState !== 1) throw new RelaySendError('Lost the connection to CD. Send again for a fresh transfer.');
+   }

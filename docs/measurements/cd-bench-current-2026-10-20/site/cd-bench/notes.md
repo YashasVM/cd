@@ -99,3 +99,10 @@ All 489 transfers verified: 420 CLI, 42 browser, 9 physical LAN and 18 TCP-disab
 Fresh physical LAN medians are 14.42 s for CD and 13.06 s for the faster croc mode. Both Ubuntu adapter and link partner still advertise only 10/100 modes. For 128 MiB, the zero-overhead 100 Mb/s limit is 10.74 s; beating measured croc by 1.5× would require 8.71 s. The ideal gain is therefore at most 1.216× on this link. Hardware replacement remains pending, and the goal's target is unchanged.
 
 The launcher was interrupted after LAN completion because its comments were edited while Bash was reading the script. Completed suite files were intact. The remaining diagnostic and acceptance evaluator ran separately with the same frozen code and environment. The saved reproduction script passes bash syntax checking.
+
+
+## Relay scheduling candidates
+
+Seven alternating before/after trials per browser path tested two isolated changes. 128 KiB relay records improved browser-to-CLI by 1.067× but regressed browser-to-browser to 0.961×. Reducing only the relay send-buffer poll from 10 ms to 1 ms improved browser-to-CLI by 1.029× but regressed browser-to-browser to 0.835×. All 56 transfers verified, and neither candidate is retained. Raw data, frontend asset identities and candidate patches are linked in relay-scheduling-summary.json.
+
+Splitting a larger encrypted record across relay WebSocket messages cannot be introduced without negotiation. Existing browser receivers pass each relay message straight to createRecordMerger, which requires exact complete record length. Compatibility was preserved.

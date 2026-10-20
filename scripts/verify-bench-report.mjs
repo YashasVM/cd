@@ -50,6 +50,14 @@ try{
   const cells=await page.locator('#read-block-results tr').nth(index).locator('td').allTextContents();
   assert.equal(cells[1],medians[0].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],medians[1].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],(medians[0]/medians[1]).toFixed(2)+'×');
  }
+ const scheduling=await (await page.request.get(new URL('relay-scheduling-summary.json',url).href)).json();
+ assert.equal(scheduling.productionChangeRetained,false);assert.equal(scheduling.rows.length,4);assert.equal(await page.locator('#relay-scheduling-results tr').count(),4);
+ for(const [index,row] of scheduling.rows.entries()){
+  const raw=await (await page.request.get(new URL(row.file,url).href)).json();assert.ok(raw.finishedAt&&!raw.error);assert.equal(raw.rows.length,14);
+  const medians=['before','after'].map(variant=>{const rows=raw.rows.filter(r=>r.variant===variant);assert.equal(rows.length,7);assert.ok(rows.every(r=>r.ok&&r.bytes===67108864&&/^[a-f0-9]{64}$/.test(r.sha256)));return rows.map(r=>r.durableMs).sort((a,b)=>a-b)[3]});
+  assert.equal(row.beforeMs,medians[0]);assert.equal(row.afterMs,medians[1]);assert.equal(row.ratio,medians[0]/medians[1]);
+  const cells=await page.locator('#relay-scheduling-results tr').nth(index).locator('td').allTextContents();const format=n=>n.toLocaleString('en-US',{maximumFractionDigits:1});assert.equal(cells[1],format(row.beforeMs));assert.equal(cells[2],format(row.afterMs));assert.equal(cells[3],row.ratio.toFixed(2)+'×');
+ }
  const rejected=await (await page.request.get(new URL('rejected-dispatch-summary.json',url).href)).json();
  assert.equal(rejected.productionChangeRetained,false);assert.equal(await page.locator('#rejected-results tr').count(),3);
  for(const [index,result] of rejected.rows.entries()){
@@ -72,5 +80,5 @@ try{
  }
  for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,relaySchedulingComparisons:4,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}

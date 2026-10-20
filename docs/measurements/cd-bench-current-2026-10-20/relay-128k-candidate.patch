@@ -1,0 +1,13 @@
+diff --git i/src/relay-sender.js w/src/relay-sender.js
+index 907f311..89c207a 100644
+--- i/src/relay-sender.js
++++ w/src/relay-sender.js
+@@ -409,7 +409,7 @@ export function startRelaySend(source, hooks = {}) {
+       for await (const chunk of rechunk(source.stream(), chunkSize)) {
+         // Browser WebSockets perform better with the original frame size.
+         // The negotiated value is an upper bound, including after an upgrade.
+-        const size = direct?.open ? chunkSize : Math.min(CHUNK_SIZE, chunkSize);
++        const size = direct?.open ? chunkSize : Math.min(128 * 1024, chunkSize);
+         for (let offset = 0; offset < chunk.byteLength; offset += size) yield chunk.subarray(offset, offset + size);
+       }
+     };
