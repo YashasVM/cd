@@ -43,6 +43,13 @@ try{
   const cells=await page.locator('#compression-results tr').nth(rowIndex++).locator('td').allTextContents();
   assert.equal(cells[1],groups[0].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],groups[1].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],(groups[0]/groups[1]).toFixed(2)+'×');assert.equal(cells[4],'7 / 7');
  }
+ const readReports=await Promise.all(['read-block-before-browser.json','read-block-after-browser.json'].map(async name=>(await page.request.get(new URL(name,url).href)).json()));
+ assert.equal(await page.locator('#read-block-results tr').count(),2);
+ for(const [index,direction] of ['browser-browser','browser-cli'].entries()){
+  const medians=readReports.map(report=>{assert.ok(report.finishedAt&&!report.error);const rows=report.rows.filter(row=>row.direction===direction);assert.equal(rows.length,7);assert.ok(rows.every(row=>row.ok));return rows.map(row=>row.durableMs).sort((a,b)=>a-b)[3]});
+  const cells=await page.locator('#read-block-results tr').nth(index).locator('td').allTextContents();
+  assert.equal(cells[1],medians[0].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],medians[1].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],(medians[0]/medians[1]).toFixed(2)+'×');
+ }
  await page.locator('#compare summary').click();assert.equal(await page.locator('#spreads tr').count(),3);
  for(const width of [1440,768,390]){
   await page.setViewportSize({width,height:900});
@@ -50,5 +57,5 @@ try{
  }
  for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}

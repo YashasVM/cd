@@ -143,8 +143,8 @@ export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 10
   return { name: bundleName(now), type: 'application/zip', size, stream, bundle: true, files: files.length };
 }
 
-// fileSource streams one file as-is.
-export function fileSource(file, { chunkBytes = 256 * 1024 } = {}) {
+// Read in bounded blocks; the transfer engine separately sets wire record sizes.
+export function fileSource(file, { chunkBytes = 4 * 1024 * 1024 } = {}) {
   return {
     name: file.name,
     type: file.type || 'application/octet-stream',

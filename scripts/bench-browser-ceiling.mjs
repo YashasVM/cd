@@ -14,6 +14,8 @@ const modes=(process.env.CD_CEILING_MODES||'default').split(',');
 assert.ok(modes.length>0&&modes.every(mode=>['default','0','1'].includes(mode)));
 const chunks=(process.env.CD_CEILING_CHUNKS||'262144,786432').split(',').map(Number);
 assert.ok(chunks.length>0&&chunks.every(size=>Number.isInteger(size)&&size>0&&size<=1048576));
+const drainDelays=(process.env.CD_CEILING_DRAIN_MS||'10').split(',').map(Number);
+assert.ok(drainDelays.length>0&&drainDelays.every(delay=>Number.isInteger(delay)&&delay>=0&&delay<=100));
 const output=resolve(process.env.CD_CEILING_OUTPUT||'/tmp/cd-browser-ceiling.json');
 const work=await mkdtemp('/dev/shm/cd-ceiling-');
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -21,7 +23,7 @@ const payload=randomBytes(mib*1048576),source=join(work,'payload.bin');await wri
 let browser,worker,proxy;const sockets=new Set();
 let interrupted=false;
 for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{interrupted=true;void browser?.close().catch(()=>{})});
-const report={version:1,mib,runs,modes,chunks,requestedRuntimeCompressionOff:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION==='1',startedAt:new Date().toISOString(),rows:[],method:'Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.'};
+const report={version:1,mib,runs,modes,chunks,drainDelays,requestedRuntimeCompressionOff:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION==='1',startedAt:new Date().toISOString(),rows:[],method:'Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.'};
 function client(url){
  const socket=new WebSocket(url);sockets.add(socket);socket.binaryType='arraybuffer';
  const queue=[],waiters=[];let failure=null;
@@ -60,8 +62,8 @@ try{
   report.noExtensionProxy=true;
  }
  browser=await chromium.launch({executablePath:await findChromium(),headless:true});
- const cases=modes.flatMap(mode=>chunks.map(chunkBytes=>({mode,chunkBytes})));
- for(let run=0;run<runs;run++)for(const {mode,chunkBytes} of cases.slice(run%cases.length).concat(cases.slice(0,run%cases.length))){
+ const cases=modes.flatMap(mode=>chunks.flatMap(chunkBytes=>drainDelays.map(drainMs=>({mode,chunkBytes,drainMs}))));
+ for(let run=0;run<runs;run++)for(const {mode,chunkBytes,drainMs} of cases.slice(run%cases.length).concat(cases.slice(0,run%cases.length))){
   if(interrupted)throw new Error('benchmark interrupted');
   const context=await browser.newContext();
   let receiver;
@@ -82,17 +84,17 @@ try{
    const received=[];let bytes=0;
    const receive=(async()=>{while(bytes<payload.byteLength){const frame=await receiver.next();if(!(frame instanceof Uint8Array))continue;received.push(frame);bytes+=frame.byteLength;assert.ok(bytes<=payload.byteLength,'unexpected bytes')}})();
    const started=performance.now();
-   const sending=page.evaluate(async({chunkBytes})=>{
+   const sending=page.evaluate(async({chunkBytes,drainMs})=>{
     let maxBuffered=0,polls=0;
-    for(let offset=0;offset<payload.byteLength;offset+=chunkBytes){const chunk=payload.subarray(offset,offset+chunkBytes);while(sender.bufferedAmount+chunk.byteLength>4*1048576){polls++;await new Promise(resolve=>setTimeout(resolve,10))}sender.send(chunk);maxBuffered=Math.max(maxBuffered,sender.bufferedAmount)}
+    for(let offset=0;offset<payload.byteLength;offset+=chunkBytes){const chunk=payload.subarray(offset,offset+chunkBytes);while(sender.bufferedAmount+chunk.byteLength>4*1048576){polls++;await new Promise(resolve=>setTimeout(resolve,drainMs))}sender.send(chunk);maxBuffered=Math.max(maxBuffered,sender.bufferedAmount)}
     return {maxBuffered,polls};
-   },{chunkBytes});
+   },{chunkBytes,drainMs});
    await receive;const milliseconds=performance.now()-started;const senderStats=await sending;
    assert.equal(digest(Buffer.concat(received)),digest(payload));
    const extensions=await page.evaluate(()=>sender.extensions);
    if(report.noExtensionProxy){assert.equal(extensions,'');assert.equal(receiver.socket.extensions,'')}
-   report.rows.push({run,mode,chunkBytes,extensions,receiverExtensions:receiver.socket.extensions,bytes,milliseconds,mibPerSecond:mib/(milliseconds/1000),senderStats,ok:true});
-   console.error(mode+'/'+chunkBytes+' #'+(run+1)+': '+milliseconds.toFixed(1)+'ms');
+   report.rows.push({run,mode,chunkBytes,drainMs,extensions,receiverExtensions:receiver.socket.extensions,bytes,milliseconds,mibPerSecond:mib/(milliseconds/1000),senderStats,ok:true});
+   console.error(mode+'/'+chunkBytes+'/'+drainMs+' #'+(run+1)+': '+milliseconds.toFixed(1)+'ms');
   }finally{receiver?.socket.close();await context.close()}
   await writeFile(output,JSON.stringify(report,null,2));
  }

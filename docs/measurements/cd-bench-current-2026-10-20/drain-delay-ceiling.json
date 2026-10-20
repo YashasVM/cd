@@ -1,0 +1,471 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 7,
+  "modes": [
+    "default"
+  ],
+  "chunks": [
+    262144,
+    786432
+  ],
+  "drainDelays": [
+    0,
+    10
+  ],
+  "requestedRuntimeCompressionOff": true,
+  "startedAt": "2026-10-20T11:01:54.312Z",
+  "rows": [
+    {
+      "run": 0,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 308.999646,
+      "mibPerSecond": 207.11997838340568,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 290.60911699999997,
+      "mibPerSecond": 220.2270894343621,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 16
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 397.3327069999998,
+      "mibPerSecond": 161.07407941123768,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 482.7193269999998,
+      "mibPerSecond": 132.58221997811168,
+      "senderStats": {
+        "maxBuffered": 4081429,
+        "polls": 32
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 292.57642499999974,
+      "mibPerSecond": 218.74626433076435,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 16
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 401.10390899999993,
+      "mibPerSecond": 159.55965166123576,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 464.43666399999984,
+      "mibPerSecond": 137.80135153154063,
+      "senderStats": {
+        "maxBuffered": 4063592,
+        "polls": 30
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 306.677463,
+      "mibPerSecond": 208.68830521139404,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 396.474209,
+      "mibPerSecond": 161.4228581511591,
+      "senderStats": {
+        "maxBuffered": 3932160,
+        "polls": 39
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 468.81884399999944,
+      "mibPerSecond": 136.51328400954822,
+      "senderStats": {
+        "maxBuffered": 4063592,
+        "polls": 30
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 292.2627570000004,
+      "mibPerSecond": 218.98103151062764,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 39
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 318.15848899999946,
+      "mibPerSecond": 201.15760607600856,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 18
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 462.19868999999926,
+      "mibPerSecond": 138.46858804381316,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 30
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 294.0603310000006,
+      "mibPerSecond": 217.64241297817173,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 292.26543200000015,
+      "mibPerSecond": 218.97902725629203,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 16
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 387.80108499999915,
+      "mibPerSecond": 165.0330606991472,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 300.0367449999994,
+      "mibPerSecond": 213.30720675562628,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 309.76892600000065,
+      "mibPerSecond": 206.60561672993586,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 17
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 407.573934,
+      "mibPerSecond": 157.0267248739219,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 465.4516390000008,
+      "mibPerSecond": 137.50085860155255,
+      "senderStats": {
+        "maxBuffered": 4063592,
+        "polls": 30
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 309.9117270000006,
+      "mibPerSecond": 206.51041707756954,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 17
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 398.79369600000064,
+      "mibPerSecond": 160.48398117105617,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 474.4515649999994,
+      "mibPerSecond": 134.89258908862504,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 30
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 289.3527789999989,
+      "mibPerSecond": 221.18329127919054,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 406.7920580000009,
+      "mibPerSecond": 157.32853860190127,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "mode": "default",
+      "chunkBytes": 786432,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 495.5870900000009,
+      "mibPerSecond": 129.1397643146836,
+      "senderStats": {
+        "maxBuffered": 4063592,
+        "polls": 32
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 0,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 298.2345639999985,
+      "mibPerSecond": 214.59618610806066,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 37
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "mode": "default",
+      "chunkBytes": 262144,
+      "drainMs": 10,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 312.9093749999993,
+      "mibPerSecond": 204.5320629974738,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 18
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.",
+  "directRuntime": true,
+  "finishedAt": "2026-10-20T11:02:12.224Z"
+}

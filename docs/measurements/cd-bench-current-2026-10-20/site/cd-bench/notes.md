@@ -47,3 +47,16 @@ The PR disables WebSocket compression in wrangler.jsonc. Ciphertext framing, enc
 
 
 Validation for this increment: 113 unit tests passed; type checking passed; Wrangler generated types record the new flag; the isolated test-environment dry-run packaged successfully. All ten 64 MiB transport cases passed with compression disabled, including mixed browser/CLI directions, forced relay, slow decrypt and relay-to-WebRTC upgrade. The verification artifact records empty extension strings for every browser relay socket. See [Cloudflare's compatibility flag documentation](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#websocket-compression) for the runtime setting.
+
+
+## Bounded source reads
+
+After disabling compression, diagnostic profiling measured about 300 ms across 256 file-slice reads for a 64 MiB browser send, compared with about 60 ms for encryption. The accepted change makes fileSource read bounded 4 MiB blocks by default, and removes the standalone sender's explicit small-read override. The transfer engine still rechunks these bytes into negotiated records and retains 256 KiB relay frames. Both main and standalone senders use the same read policy.
+
+Seven uninstrumented trials per affected relay path changed browser-to-browser median receiver-plus-flush completion from 1151.2 to 1062.4 ms, and browser-to-CLI from 700.0 to 635.3 ms. These are 1.08× and 1.10× improvements against the preceding CD setting. All 28 paired-suite transfers verified their bytes. Fourteen additional direct-allowed candidate transfers passed, with medians 3367.2 ms for browser-to-browser and 1314.2 ms for browser-to-CLI; there is no new paired direct baseline for this iteration.
+
+A diagnostic after the final shared-default change confirms 16 source reads for 64 MiB. Profiles have overhead and are explicitly excluded from speed claims. The first attempted edit changed only the standalone sender while the benchmark exercised the main page. Its unused-entry result is marked excluded and preserved. The corrected experiment changes the measured main-page source path.
+
+The independent raw frame/timer sweep verified 28 transfers. At 256 KiB frames, median transport times were 298.2 ms with zero-delay polling and 309.8 ms with 10 ms polling, too small a gain to justify a production timer change. At 768 KiB frames both settings were slower, so relay frame size stays unchanged.
+
+Validation: 113 unit tests pass. All ten real 64 MiB transport cases pass after the shared-default change, including slow receive and actual relay-to-WebRTC upgrade. The terminal-flow verifier also passes CLI-to-CLI and standalone browser-to-CLI bytes, share-code lifecycle and the legacy code-claim endpoint. The croc target remains unmet; production CD has not been deployed.

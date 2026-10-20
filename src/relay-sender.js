@@ -490,7 +490,7 @@ export function mountRelaySender(els) {
     els.cancelBtn.hidden = false;
     els.againBtn.hidden = true;
     els.fileLine.textContent = `${file.name} · ${formatSize(file.size)}`;
-    active = startRelaySend(fileSource(file, { chunkBytes: CHUNK_SIZE }), {
+    active = startRelaySend(fileSource(file), {
       onShare({ code, url }) {
         shareCode = code;
         shareUrl = url;
