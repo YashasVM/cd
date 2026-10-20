@@ -24,9 +24,27 @@ export function browserTransportProbe(options = {}) {
     firstPayloadRoute: null, routes: [], successfulDirectPieces: 0, webSocketExtensions: []
   };
   stats.engineMaxima = {};
+  const channels = [];
+  let lastWindowSample = -Infinity;
+  if (options.profile) stats.windowSamples = [];
+  const captureRoute = peer => {
+    if (!options.profile || stats.selectedRoute) return;
+    stats.selectedRoute = { pending: true };
+    void peer.getStats().then(report => {
+      const transport = [...report.values()].find(item => item.type === 'transport' && item.selectedCandidatePairId);
+      const pair = transport && report.get(transport.selectedCandidatePairId);
+      if (!pair) { stats.selectedRoute = { unavailable: true }; return; }
+      const local = report.get(pair.localCandidateId), remote = report.get(pair.remoteCandidateId);
+      stats.selectedRoute = { localType: local?.candidateType, remoteType: remote?.candidateType, protocol: local?.protocol, sameAddress: typeof local?.address === 'string' && typeof remote?.address === 'string' ? local.address === remote.address : null, currentRoundTripTime: pair.currentRoundTripTime };
+    }).catch(() => { stats.selectedRoute = { unavailable: true }; });
+  };
   window.__CD_TRANSFER_TEST_OBSERVER__ = (snapshot) => {
     for (const [key, value] of Object.entries(snapshot)) {
       if (typeof value === 'number' && Number.isFinite(value)) stats.engineMaxima[key] = Math.max(stats.engineMaxima[key] ?? 0, value);
+    }
+    if (options.profile && snapshot.window && stats.windowSamples.length < 128 && performance.now() - lastWindowSample >= 25) {
+      lastWindowSample = performance.now();
+      stats.windowSamples.push({ at: Date.now(), size: snapshot.window.size, inFlight: snapshot.window.inFlight, capacity: snapshot.window.capacity, minRTT: snapshot.window.minRTT, ackBytes: Number(snapshot.window.acknowledged), nativeBuffered: channels.reduce((sum, channel) => sum + channel.bufferedAmount, 0) });
     }
     if (snapshot.window) for (const [key, value] of Object.entries(snapshot.window)) {
       if (typeof value === 'number' && Number.isFinite(value)) stats.engineMaxima[`window_${key}`] = Math.max(stats.engineMaxima[`window_${key}`] ?? 0, value);
@@ -80,6 +98,7 @@ export function browserTransportProbe(options = {}) {
       stats.successfulDirectPieces += 1;
       stats.maxDirectBufferedBytes = Math.max(stats.maxDirectBufferedBytes, this.bufferedAmount);
       countRecord(this, data, 'direct');
+      if (stats.directPayloadBytes > 0 && this.__benchPeer) captureRoute(this.__benchPeer);
     } else stats.legacyBytes += size;
     return result;
   };
@@ -100,6 +119,7 @@ export function browserTransportProbe(options = {}) {
     RTCPeerConnection.prototype.createDataChannel = function(...args) {
       const channel = nativeCreateChannel.apply(this, args);
       const peer = this;
+      if (options.profile) { channels.push(channel); channel.__benchPeer = peer; }
       const state = { label: channel.label, connection: peer.connectionState, ice: peer.iceConnectionState, channel: channel.readyState };
       stats.peerStates.push(state);
       const update = () => { state.connection = peer.connectionState; state.ice = peer.iceConnectionState; state.channel = channel.readyState; };
@@ -111,6 +131,7 @@ export function browserTransportProbe(options = {}) {
         sampleHeap();
         stats.directReceivedBytes += event.data.byteLength ?? event.data.size ?? 0;
         countRecord(channel, event.data, 'directReceived', true);
+        if (stats.directReceivedPayloadBytes > 0) captureRoute(peer);
       });
       return channel;
     };

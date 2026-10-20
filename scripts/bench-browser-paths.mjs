@@ -33,7 +33,7 @@ try{
   const launch=args=>{const child=spawn(executable,args,{env,stdio:['ignore','pipe','pipe']});children.add(child);active.push(child);return {child,out:captureOutput(child)}};
   const row={direction,route,run,bytes:payload.length,ok:false};
   try{
-   const page=async()=>{const context=await browser.newContext({acceptDownloads:true});contexts.push(context);await context.addInitScript(browserTransportProbe,{blockDirect:blocked});
+   const page=async()=>{const context=await browser.newContext({acceptDownloads:true});contexts.push(context);await context.addInitScript(browserTransportProbe,{blockDirect:blocked,profile:process.env.CD_BROWSER_PROFILE==='1'});
     if(process.env.CD_BROWSER_PROFILE==='1')await context.addInitScript(()=>{
      window.__benchPhases={};
      const nativeTimeout=window.setTimeout;

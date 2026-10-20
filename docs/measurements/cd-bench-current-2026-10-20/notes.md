@@ -71,3 +71,20 @@ With compression disabled, seven interleaved raw trials each measured hibernatin
 The raw ordered/reliable WebRTC diagnostic measured 4, 16 and 64 KiB messages with three trials per size. Median times were 826.6, 779.9 and 735.4 ms. One 64 KiB trial was slower at 1192.7 ms, illustrating the warmup/run variation. The diagnostic places both peers in one page and excludes CD framing, encryption, storage, application flow control and connection setup. It does not establish that a product frame-size change would improve actual transfers. No production change was made.
 
 All 51 transfer trials in these experiments passed payload verification. The 1.5×-over-croc target remains unmet. These results redirect the next investigation toward the difference between raw WebRTC throughput and the complete direct transfer, rather than disk-write overlap or a relay socket API change.
+
+
+## Separate-context direct transport and alternating comparisons
+
+The new raw WebRTC benchmark matches the product's separate browser contexts. Seven 64 MiB trials had a median of 2700.4 ms, versus about 735 ms in the earlier same-page diagnostic. Selected pairs use UDP host candidates. Changing Chromium's shared-memory flag did not remove the delay; both /tmp and /dev/shm are tmpfs on this PC. The trace of a complete CD direct transfer shows a large early pause and only a few hundred milliseconds in decryption and storage. System-wide UDP receive-buffer errors did not increase during the profiled transfers. These observations identify a transport-startup effect in this setup; they do not establish its internal Chromium cause.
+
+Separate-context 16 KiB messages were slower than 64 KiB messages, with seven-trial medians 3695.4 and 2631.6 ms. A larger-message/startup-delay sweep found 256 KiB raw messages faster, while a 100 ms wait did not help when counted in the result. The product candidate therefore advertised a bounded optional direct-message capability, respected the native maximum, kept legacy peers at 64 KiB, and aligned large encrypted records to avoid tiny trailing messages. Eleven direct-link tests passed, including legacy defaults, invalid capability rejection and native message limits.
+
+Sequential product cohorts suggested a gain, but an alternating seven-round comparison showed 2952.3 ms for the current build and 2936.8 ms for the candidate, only 1.005×. Both builds used the same Worker, CLI and measurement scripts, and every one of the 14 transfers verified its bytes. The protocol extension and alignment changes were removed. Their patch is preserved. No production change is retained from this investigation.
+
+Route metadata excludes addresses. Early address-equality fields lacked a presence check, so those fields are explicitly null and marked unreliable in the diagnostic files. Candidate classes, protocol, timings and payload checks remain available. Profiling is opt-in and its window history is bounded to 128 samples; it is excluded from final speed comparisons.
+
+## Physical link dependency
+
+A fresh SSH check on 20 October confirms the Ubuntu adapter uses r8152 and reports 100 Mb/s full duplex. Both adapter and link partner advertise only 10/100 modes. The saved ethtool output is `lan-link-current.txt`.
+
+The measured fastest croc durable median for 128 MiB random input is 13739.6 ms. Even a zero-overhead transfer at 100 Mb/s requires 10737.4 ms, limiting the ideal gain to 1.280×. The requested 1.5× would require 9159.7 ms, below that line-rate lower bound. This calculation ignores overhead and assumes no meaningful compression advantage for random input. A faster physical link is required to meet that part of the original target. The user has been asked whether gigabit hardware can be connected; no hardware change or narrower target is assumed.

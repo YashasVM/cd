@@ -56,6 +56,15 @@ try{
   const cells=await page.locator('#rejected-results tr').nth(index).locator('td').allTextContents();
   assert.equal(cells[1],result.beforeMs.toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],result.afterMs.toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],result.ratio.toFixed(2)+'×');
  }
+ const framing=await (await page.request.get(new URL('direct-framing-paired.json',url).href)).json();
+ assert.ok(framing.finishedAt&&!framing.error);assert.equal(framing.rows.length,14);
+ for(const [index,variant] of ['before','after'].entries()){
+  const rows=framing.rows.filter(row=>row.variant===variant);assert.equal(rows.length,7);assert.ok(rows.every(row=>row.ok));
+  const median=rows.map(row=>row.durableMs).sort((a,b)=>a-b)[3];assert.equal(await page.locator('#direct-framing-results tr').nth(index).locator('td').nth(1).textContent(),median.toLocaleString('en-US',{maximumFractionDigits:1}));
+ }
+ const hardware=await (await page.request.get(new URL('lan-hardware-limit.json',url).href)).json();
+ assert.equal(hardware.speedMbps,100);assert.equal(hardware.hardwareTargetPossible,false);assert.ok(hardware.idealMaximumSpeedup<1.5);assert.ok(hardware.idealLineRateMs>hardware.requiredDurationMs);
+ for(const [index,value] of [hardware.crocDurableMs,hardware.idealLineRateMs,hardware.requiredDurationMs].entries())assert.equal(await page.locator('#hardware-values tr').nth(index).locator('td').nth(1).textContent(),value.toLocaleString('en-US',{maximumFractionDigits:1}));
  await page.locator('#compare summary').click();assert.equal(await page.locator('#spreads tr').count(),3);
  for(const width of [1440,768,390]){
   await page.setViewportSize({width,height:900});
@@ -63,5 +72,5 @@ try{
  }
  for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}

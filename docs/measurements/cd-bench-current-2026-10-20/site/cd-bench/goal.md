@@ -9,3 +9,6 @@ Pass criterion: every required complete scenario and timing metric is at least 1
 The goal is active. Current browser cases miss the target. Do not describe the target as achieved until the comparison data passes. Preserve encryption, authentication, sequence validation, byte limits, completion integrity, supported legacy peers, and bounded memory. Test and commit each retained improvement. Publish misses alongside wins at a.yash0.in/cd-bench.
 
 The initial PR commit preserves the extensive preexisting sharing, transport and device implementation on which the current build depends. No Android application source is part of this PR. New performance commits are separate.
+
+
+A fresh hardware check confirms a 100 Mb/s full-duplex LAN, with only 10/100 modes advertised by both the Ubuntu adapter and link partner. `lan-hardware-limit.json` computes an ideal maximum gain of 1.280× over measured croc for the random 128 MiB case. The 1.5× acceptance requirement is unchanged; meeting it requires a faster physical link. A user decision on gigabit hardware is pending.

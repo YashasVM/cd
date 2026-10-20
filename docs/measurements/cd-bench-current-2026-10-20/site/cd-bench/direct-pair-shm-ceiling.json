@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "nativeSharedMemory": true,
+  "runs": 7,
+  "mib": 64,
+  "startedAt": "2026-10-20T11:30:27.337Z",
+  "rows": [
+    {
+      "run": 0,
+      "milliseconds": 3118.0767720000003,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 303
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "milliseconds": 2307.8052,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 223
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0.004
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "milliseconds": 3132.3839550000002,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 304
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0.001
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "milliseconds": 1888.1173159999998,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 182
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "milliseconds": 2656.8281910000005,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 258
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0.002
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "milliseconds": 3099.0053080000016,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 302
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "milliseconds": 3073.0656819999967,
+      "bytes": 67108864,
+      "hash": "67ea4b24fe6b8072e8acda556ddca7c3967316724dfbb519a3e411e132ed4c20",
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 299
+      },
+      "route": {
+        "localType": "host",
+        "remoteType": "host",
+        "protocol": "udp",
+        "sameAddress": null,
+        "currentRoundTripTime": 0
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw ordered reliable WebRTC across separate browser contexts, negotiated channel 1, 64 KiB messages, 4 MiB native buffer and 10 ms drain polling. Host ICE only. Connection setup, payload preload, selected-route stats and SHA256 outside timing. No CD framing, encryption, storage or application ACK window. Diagnostic, not a product speed claim.",
+  "finishedAt": "2026-10-20T11:30:50.045Z",
+  "addressEqualityReliable": false
+}
