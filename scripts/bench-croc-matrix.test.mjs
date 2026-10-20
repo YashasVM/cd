@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 // Real child-process lifecycles, but synthetic local file copies only: no
 // network, relays, installed binaries, or benchmark results are involved.
-async function fakeTrial(t, settings = {}) {
+async function fakeTrial(t, settings = {}, lifecycle = {}) {
   const root = await mkdtemp(join(tmpdir(), 'cd-matrix-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const input = join(root, 'source.bin'), output = join(root, 'out');
@@ -16,7 +16,8 @@ async function fakeTrial(t, settings = {}) {
   const data = Buffer.from('synthetic benchmark regression fixture');
   await writeFile(input, data);
   await mkdir(output);
-  const config = { input, output, senderDelayMs: 0, senderReport: true, receiverReport: true, ...settings };
+  const releaseSender = join(root, 'release-sender');
+  const config = { input, output, releaseSender, senderReport: true, receiverReport: true, ...settings };
   await writeFile(executable, `#!${process.execPath}
 const fs = require('node:fs');
 const path = require('node:path');
@@ -37,36 +38,53 @@ if (sending) {
   }
   console.log(config.tool?.startsWith('croc') ? 'Code is:' : '12345');
   const poll = setInterval(() => {
-    if (!fs.existsSync(target)) return;
+    if (!fs.existsSync(config.waitForDurable ? config.releaseSender : target)) return;
     clearInterval(poll);
-    setTimeout(() => report('sender'), config.senderDelayMs);
+    report('sender');
   }, 2);
 } else {
   fs.copyFileSync(config.input, target);
   report('receiver');
-  if (config.receiverExitDelayMs) setTimeout(() => {}, config.receiverExitDelayMs);
 }
 `);
   await chmod(executable, 0o700);
   return trial({ tool: settings.tool || 'cd', route: settings.route || 'relay', input, output,
     state: join(root, 'state'), executable, croc: executable,
     worker: { relayBase: 'ws://127.0.0.1:1/ws/v1', publicBase: 'http://127.0.0.1:1' },
-    relay: '127.0.0.1:1', timeout: 3000, expected: createHash('sha256').update(data).digest('hex') });
+    relay: '127.0.0.1:1', timeout: 3000, expected: createHash('sha256').update(data).digest('hex') }, {
+      ...lifecycle,
+      ...(settings.waitForDurable ? { afterDurable: () => writeFile(releaseSender, '') } : {}),
+    });
 }
 
-test('total completion waits for a delayed sender after receiver durability', async t => {
-  const result = await fakeTrial(t, { senderDelayMs: 160 });
+test('total completion waits for sender released after receiver durability', async t => {
+  // The sender cannot close until the real fsyncs and durability timestamp
+  // have completed, regardless of filesystem latency or CI scheduling.
+  const result = await fakeTrial(t, { waitForDurable: true });
   assert.equal(result.ok, true, result.error);
-  assert.ok(result.totalMs >= result.readyMs + result.durableMs + 100, JSON.stringify(result));
-  assert.ok(result.senderExitMs >= result.readyMs + result.durableMs + 100);
-  assert.equal(result.totalMs, Math.max(result.readyMs + result.durableMs, result.senderExitMs));
+  assert.ok(result.senderExitMs > result.readyMs + result.durableMs, JSON.stringify(result));
+  assert.equal(result.totalMs, result.senderExitMs);
 });
-test('total completion retains receiver durability when sender closes first', async t => {
-  const result = await fakeTrial(t, { receiverExitDelayMs: 160 });
+test('slow durability retains its later completion when sender has already closed', async t => {
+  // Reproduce the failing CI event order deterministically: let the sender
+  // actually close before permitting filesystem durability to complete.
+  let senderClosed = false;
+  const result = await fakeTrial(t, {}, { beforeDurable: async ({ senderExit }) => {
+    assert.equal(await senderExit, 0);
+    senderClosed = true;
+  } });
   assert.equal(result.ok, true, result.error);
-  assert.ok(result.totalMs >= result.senderExitMs + 100, JSON.stringify(result));
+  assert.equal(senderClosed, true);
+  assert.ok(result.totalMs > result.senderExitMs, JSON.stringify(result));
   assert.ok(Math.abs(result.totalMs - result.readyMs - result.durableMs) < 1e-6);
   assert.deepEqual(result.reports.map(report => report.endpoint), ['sender', 'receiver']);
+});
+test('hanging lifecycle barriers respect the trial timeout', async t => {
+  for (const [hook, label] of [['beforeDurable', 'before'], ['afterDurable', 'after']]) {
+    const result = await fakeTrial(t, {}, { [hook]: () => new Promise(() => {}) });
+    assert.equal(result.ok, false);
+    assert.equal(result.error, `${label} durability hook timed out`);
+  }
 });
 test('CD route evidence cannot pass when both endpoint reports are missing', async t => {
   const result = await fakeTrial(t, { senderReport: false, receiverReport: false });

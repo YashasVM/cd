@@ -101,7 +101,7 @@ async function portReady(port, proc) {
   }
   return false;
 }
-export async function trial({ tool, route, input, output, state, executable, croc, worker, relay, timeout, expected }) {
+export async function trial({ tool, route, input, output, state, executable, croc, worker, relay, timeout, expected }, lifecycle = {}) {
   let sender, receiver;
   const started = performance.now();
   try {
@@ -124,9 +124,13 @@ export async function trial({ tool, route, input, output, state, executable, cro
     assert.equal(await bounded(receiver.exit, timeout, 'receiver'), 0, receiver.stderr);
     const received = receiver.closedAt;
     const target = join(output, 'payload.bin');
+    // Optional barriers let offline tests order real process closes against
+    // durability without replacing the monotonic clock or guessing fsync time.
+    if (lifecycle.beforeDurable) await bounded(lifecycle.beforeDurable({ senderExit: sender.exit }), timeout, 'before durability hook');
     // Equalize durable output: file and containing directory fsync for BOTH tools.
     for (const path of [target, output]) { const file = await open(path, 'r'); try { await file.sync(); } finally { await file.close(); } }
     const durable = performance.now();
+    if (lifecycle.afterDurable) await bounded(lifecycle.afterDurable(), timeout, 'after durability hook');
     assert.equal(await bounded(sender.exit, timeout, 'sender'), 0, sender.stderr);
     // Capture the lifecycle timestamp, not the time we happen to await it.
     // The sender may finish either before or after receiver durability.
