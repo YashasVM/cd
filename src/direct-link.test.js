@@ -128,3 +128,10 @@ test('assembly accepts fragmented headers and coalesced records without aliasing
     assert.equal(assembler.bufferedBytes, 0);
   }
 });
+
+test('the merger releases its byte budget after ordered records drain', () => {
+  const merger = createRecordMerger();
+  for (let sequence = 1; sequence <= 15; sequence += 1) merger.push(record(sequence, 1024 * 1024 - 28));
+  assert.equal(merger.push(record(0, 1)).length, 16);
+  for (let sequence = 17; sequence <= 32; sequence += 1) assert.deepEqual(merger.push(record(sequence, 1024 * 1024 - 28)), []);
+});

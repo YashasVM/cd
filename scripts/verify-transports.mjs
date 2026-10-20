@@ -135,6 +135,9 @@ try {
         mibPerSecond: Number((mib / seconds).toFixed(3)), bytesVerified: payload.length, directPayloadBytes, relayPayloadBytes,
         senderStats, receiverStats, cliReports: reports, totalMs: Number((performance.now() - started).toFixed(3)) });
       console.error(`${testCase.name}: ${directPayloadBytes} direct, ${relayPayloadBytes} relay payload bytes, ${seconds.toFixed(3)}s`);
+    } catch (error) {
+      const status = receiverPage ? await receiverPage.locator('#receiver-status, [data-relay="status"]').allTextContents().catch(() => []) : [];
+      throw new Error(`${testCase.name}: ${error.message}\nReceiver status: ${status.join('; ')}\nCLI diagnostics: ${cliSender?.output.stderr ?? cliReceiver?.output.stderr ?? ''}`, { cause: error });
     } finally {
       await stopChild(cliSender?.child);
       await stopChild(cliReceiver?.child);
