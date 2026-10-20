@@ -6,6 +6,28 @@ const browser=await chromium.launch({executablePath:await findChromium(),headles
 try{
  const page=await browser.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
  const response=await page.goto(url);assert.equal(response.status(),200);
+ const disclosures=page.locator('details.report-group');
+ assert.equal(await disclosures.count(),4);assert.equal(await page.locator('details.report-group[open]').count(),0);
+ const browserSummary=await (await page.request.get(new URL('browser-matching-browser-summary.json',url).href)).json();
+ for(const route of ['relay','direct']){
+  await page.locator('#overview-route').selectOption(route);
+  const panel=page.locator('[data-overview-route="'+route+'"]');assert.equal(await panel.isVisible(),true);
+  for(const [index,direction] of ['browser-cli','cli-browser'].entries()){
+   const result=browserSummary.cases.find(row=>row.name===direction+'/'+route).metrics.durableMs;
+   const card=panel.locator('article').nth(index);
+   assert.equal(await card.locator('.result').textContent(),'CD is '+result.ratio.toFixed(2)+'× faster');
+   assert.deepEqual(await card.locator('.mini-row b').allTextContents(),[result.cdMs,result.crocMs].map(value=>(value/1000).toFixed(2)+' s'));
+  }
+ }
+ await page.locator('#overview-route').selectOption('relay');
+ for(const width of [1440,768,390]){
+  await page.setViewportSize({width,height:900});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overview overflows at '+width);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollHeight)<1500,'overview is too long at '+width);
+  await page.screenshot({path:'/tmp/cd-bench-compact-'+width+'.png',fullPage:true});
+ }
+ await page.setViewportSize({width:1440,height:900});
+ for(const item of await disclosures.all()){await item.locator(':scope > summary').click();assert.equal(await item.getAttribute('open'),'');}
  await page.locator('#chart .chart-row').first().waitFor();
  const scenarios=await page.locator('#scenario option').evaluateAll(options=>options.map(option=>option.value));
  const metrics=await page.locator('#metric option').evaluateAll(options=>options.map(option=>option.value));
