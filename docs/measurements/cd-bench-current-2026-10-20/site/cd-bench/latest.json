@@ -1,0 +1,2253 @@
+{
+  "version": 1,
+  "startedAt": "2026-10-20T09:31:40.151Z",
+  "options": {
+    "cdx": "/tmp/cdx-benchmark-current",
+    "croc": "/tmp/croc-bench-latest/croc",
+    "runs": 3,
+    "cases": [
+      "random-4k",
+      "random-256m",
+      "compressible-256m"
+    ],
+    "routes": [
+      "auto",
+      "relay"
+    ],
+    "storage": [
+      "tmpfs"
+    ],
+    "disk-dir": "/home/yvm/.cache",
+    "tmpfs-dir": "/dev/shm",
+    "control-dir": "/dev/shm",
+    "timeout": 120000,
+    "output": "docs/measurements/cd-bench-current-2026-10-20/latest-smoke.json"
+  },
+  "source": {
+    "commit": "57232025406c6b86e688ffa598319cab7ffd60e8",
+    "dirty": "M .gitignore\n M AGENTS.md\n M CONTEXT.md\n M README.md\n M cmd/cdx/README.md\n M cmd/cdx/agent.go\n M cmd/cdx/agent_test.go\n M cmd/cdx/agentskill/SKILL.md\n M cmd/cdx/bundle.go\n M cmd/cdx/bundle_test.go\n M cmd/cdx/codes.go\n M cmd/cdx/detach.go\n M cmd/cdx/detach_test.go\n M cmd/cdx/direct.go\n M cmd/cdx/failure.go\n M cmd/cdx/failure_test.go\n M cmd/cdx/join_code_test.go\n M cmd/cdx/link.go\n M cmd/cdx/main.go\n M cmd/cdx/main_test.go\n M cmd/cdx/progress.go\n M cmd/cdx/progress_test.go\n M cmd/cdx/protocol.go\n M cmd/cdx/receive.go\n M cmd/cdx/sender.go\n M cmd/cdx/style.go\n M go.mod\n M go.sum\n M index.html\n M package.json\n M scripts/bench.mjs\n M scripts/harness.mjs\n M scripts/verify-agent.mjs\n M skills/cd-file-sharing/SKILL.md\n M src/direct-link.js\n M src/direct-link.test.js\n M src/main.js\n M src/relay-sender.js\n M src/share.js\n M src/sink.js\n M src/sink.test.js\n M src/style.css\n M src/zip-bundle.js\n M worker-configuration.d.ts\n M worker/index.ts\n M wrangler.jsonc\n?? .taste-skill/\n?? android/\n?? cmd/cdx/bundle_bench_test.go\n?? cmd/cdx/bundle_size_test.go\n?? cmd/cdx/device_pending.go\n?? cmd/cdx/device_pending_test.go\n?? cmd/cdx/device_push.go\n?? cmd/cdx/device_push_test.go\n?? cmd/cdx/device_transport.go\n?? cmd/cdx/device_transport_test.go\n?? cmd/cdx/devices.go\n?? cmd/cdx/devices_test.go\n?? cmd/cdx/direct_candidates_test.go\n?? cmd/cdx/lan.go\n?? cmd/cdx/lan_test.go\n?? cmd/cdx/large_chunks_test.go\n?? cmd/cdx/profile_goal_test.go\n?? cmd/cdx/protocol_consume_test.go\n?? cmd/cdx/qr.go\n?? cmd/cdx/qr_test.go\n?? cmd/cdx/relay_read_test.go\n?? cmd/cdx/request.go\n?? cmd/cdx/request_test.go\n?? cmd/cdx/requestlock_unix.go\n?? cmd/cdx/requestlock_windows.go\n?? cmd/cdx/resume.go\n?? cmd/cdx/resume_direct.go\n?? cmd/cdx/resume_direct_test.go\n?? cmd/cdx/resume_limits_test.go\n?? cmd/cdx/resume_protocol.go\n?? cmd/cdx/resume_protocol_test.go\n?? cmd/cdx/resume_storage.go\n?? cmd/cdx/resume_storage_test.go\n?? cmd/cdx/resume_test.go\n?? cmd/cdx/retry.go\n?? cmd/cdx/retry_integration_test.go\n?? cmd/cdx/retry_test.go\n?? cmd/cdx/reverse_lan_fallback_test.go\n?? cmd/cdx/reverse_lan_test.go\n?? cmd/cdx/state.go\n?? cmd/cdx/state_test.go\n?? cmd/cdx/unbundle.go\n?? cmd/cdx/unbundle_test.go\n?? disk-usage.html\n?? docs/adr/\n?? docs/guides/\n?? docs/implementation/\n?? docs/measurements/\n?? fixtures/\n?? internal/\n?? scripts/bench-assembly.mjs\n?? scripts/bench-browser-paths.mjs\n?? scripts/bench-croc-lan.mjs\n?? scripts/bench-croc-matrix.mjs\n?? scripts/bench-croc-matrix.test.mjs\n?? scripts/bench-metrics.mjs\n?? scripts/bench-metrics.test.mjs\n?? scripts/bench-worker.wrangler.jsonc\n?? scripts/firebase-config.mjs\n?? scripts/firebase-config.test.mjs\n?? scripts/generate-sharing-skill.mjs\n?? scripts/perf-audit.mjs\n?? scripts/profile-cd-transfer.mjs\n?? scripts/setup-firebase.sh\n?? scripts/verify-android-transfer.mjs\n?? scripts/verify-device-push.mjs\n?? scripts/verify-devices.mjs\n?? scripts/verify-multi-file.mjs\n?? scripts/verify-resume-auth.mjs\n?? scripts/verify-resume-limits.mjs\n?? scripts/verify-resume.mjs\n?? scripts/verify-retries.mjs\n?? scripts/verify-transports.mjs\n?? skills/cd-file-sharing/source.md\n?? src/incremental-sha256.js\n?? src/incremental-sha256.test.js\n?? src/relay-sender.test.js\n?? src/resume-browser.js\n?? src/resume-browser.test.js\n?? src/resume-cancel.test.js\n?? src/resume-protocol.js\n?? src/resume-protocol.test.js\n?? src/resume-retention.js\n?? src/resume-retention.test.js\n?? src/send-window.js\n?? src/send-window.test.js\n?? src/zip-unbundle.js\n?? src/zip-unbundle.test.js\n?? videos/\n?? worker/device-push.ts\n?? worker/device-room.ts\n?? worker/resume-room.ts",
+    "diffSha256": "56e23c5354490cb6cfa1c1e21ff2dec7f1395d04ebd49912c1d29c002b9c3032",
+    "note": "Dirty listing includes untracked files; diff hash includes tracked files only. Binary SHA256 identifies the tested CD executable."
+  },
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "7.2.8-9-omarchy",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "cores": 12
+  },
+  "method": {
+    "topology": "same-host loopback, local relays; auto allows direct discovery and fallback, actual telemetry determines route",
+    "durability": "receiver exit measured separately; timed durable completion adds file fsync and directory fsync equally to both tools. Internal tool fsync differences remain part of native completion.",
+    "verification": "SHA256 every output outside all reported transfer timings",
+    "cache": "warm input/page cache, output deleted after SHA256; sync before each trial; no privileged cache dropping",
+    "limits": "No WAN, packet-loss, browser, concurrency, directory-tree or cross-host claims. tmpfs fsync does not represent physical persistence. croc auto telemetry is textual and does not prove direct routing."
+  },
+  "rows": [
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 19.298633999999993,
+      "receiverMs": 22.545008000000053,
+      "durableMs": 22.764090000000124,
+      "totalMs": 42.06272400000012,
+      "verificationMs": 0.3051269999998567,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.849089000000049,
+      "receiverMs": 524.9811480000001,
+      "durableMs": 525.2413840000002,
+      "totalMs": 533.0904730000002,
+      "verificationMs": 0.3814350000000104,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 7fee4db765c5da13-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 7fee4db765c5da13-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=7fee4db765c5da13-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 36 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 7.3 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.346715000000131,
+      "receiverMs": 525.3858810000002,
+      "durableMs": 525.7017639999999,
+      "totalMs": 533.048479,
+      "verificationMs": 0.364669000000049,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 bbb2041ace942c08-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 bbb2041ace942c08-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=bbb2041ace942c08-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 43 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 8.9 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.706396000000041,
+      "receiverMs": 522.427831,
+      "durableMs": 522.7922670000003,
+      "totalMs": 530.4986630000003,
+      "verificationMs": 0.32093099999974584,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 d701951d90821c3c-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 d701951d90821c3c-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=d701951d90821c3c-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 53 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 6.0 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.783622999999807,
+      "receiverMs": 524.8268580000004,
+      "durableMs": 525.0644400000001,
+      "totalMs": 531.8480629999999,
+      "verificationMs": 0.26946399999997084,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 ee1e6bdd82c6beee-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 ee1e6bdd82c6beee-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=ee1e6bdd82c6beee-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 17 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 5.7 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 21.590014999999767,
+      "receiverMs": 25.433156000000054,
+      "durableMs": 25.66440700000021,
+      "totalMs": 47.25442199999998,
+      "verificationMs": 0.4355289999998604,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.29302800000005,
+      "receiverMs": 521.565744,
+      "durableMs": 521.7067659999998,
+      "totalMs": 529.9997939999998,
+      "verificationMs": 0.3037589999994452,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 51130c49cf4d14e1-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 51130c49cf4d14e1-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=51130c49cf4d14e1-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 66 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 16 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 15.983824999999342,
+      "receiverMs": 21.33592200000021,
+      "durableMs": 21.602328000000853,
+      "totalMs": 37.586153000000195,
+      "verificationMs": 0.6397190000006958,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 5.762700000000223,
+      "receiverMs": 524.03496,
+      "durableMs": 524.1814720000002,
+      "totalMs": 529.9441720000004,
+      "verificationMs": 0.34243100000003324,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 0ceee4c01f171a87-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 0ceee4c01f171a87-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=0ceee4c01f171a87-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 22 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 6.2 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.116503999999622,
+      "receiverMs": 19.702440000000024,
+      "durableMs": 19.94720899999993,
+      "totalMs": 36.06371299999955,
+      "verificationMs": 0.34194600000046194,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.114700000000084,
+      "receiverMs": 89.87561000000005,
+      "durableMs": 90.01696300000003,
+      "totalMs": 96.13166300000012,
+      "verificationMs": 0.20349299999998038,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 983749f14b23d1d4-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 983749f14b23d1d4-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=983749f14b23d1d4-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 75 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 25 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 5.815556999999899,
+      "receiverMs": 91.3888909999996,
+      "durableMs": 91.540884,
+      "totalMs": 97.3564409999999,
+      "verificationMs": 0.19744100000025355,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 521b0801dcc00696-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 521b0801dcc00696-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=521b0801dcc00696-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 52 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 20 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.1072290000001885,
+      "receiverMs": 89.69930300000033,
+      "durableMs": 90.19395299999996,
+      "totalMs": 96.30118200000015,
+      "verificationMs": 0.501404999999977,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 6ed4bcc21f56bc03-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 6ed4bcc21f56bc03-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=6ed4bcc21f56bc03-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 66 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 22 MB/s)\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.260127000000466,
+      "receiverMs": 94.652016,
+      "durableMs": 94.85847699999977,
+      "totalMs": 102.11860400000023,
+      "verificationMs": 0.37228699999923265,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 48d47cbf86897d1a-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 48d47cbf86897d1a-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=48d47cbf86897d1a-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 49 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 18 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.440027000000555,
+      "receiverMs": 23.847890000000007,
+      "durableMs": 24.094516000000112,
+      "totalMs": 41.53454300000067,
+      "verificationMs": 0.23261300000012852,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 9.740883999999824,
+      "receiverMs": 93.57869300000038,
+      "durableMs": 93.7151329999997,
+      "totalMs": 103.45601699999952,
+      "verificationMs": 0.2332619999997405,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 824d81b57261edee-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 824d81b57261edee-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=824d81b57261edee-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 47 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 12 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 13.686666000000514,
+      "receiverMs": 19.546754999999393,
+      "durableMs": 20.11448500000006,
+      "totalMs": 33.80115100000057,
+      "verificationMs": 0.324174999999741,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 4308,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":4308,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":128,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-4k",
+      "bytes": 4096,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.780569000000469,
+      "receiverMs": 93.85531600000013,
+      "durableMs": 93.99342999999953,
+      "totalMs": 100.773999,
+      "verificationMs": 0.21503500000017084,
+      "sha256": "850c4855121a7a7bc663d69f981ca8ef28319a47c39c84838d5256ecc78e5877",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 f1e11a251703e46e-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 f1e11a251703e46e-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=f1e11a251703e46e-matrix-148620\n\r                                 \rSending 0 files (4.0 kB)\r                                 \rSending 'payload.bin' (4.0 kB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (4.1/4.1 kB, 41 MB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (4.0 kB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/4.1 kB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (4.1/4.1 kB, 13 MB/s)\n"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 13.299301999999443,
+      "receiverMs": 302.2028559999999,
+      "durableMs": 302.3893170000001,
+      "totalMs": 315.68861899999956,
+      "verificationMs": 168.07145599999967,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 788832,
+          "directBytes": 268447444,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":788832,\"directBytes\":268447444,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":788832,\"directBytes\":268447444,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.50872900000013,
+      "receiverMs": 1014.8768099999998,
+      "durableMs": 1015.0250809999998,
+      "totalMs": 1021.5338099999999,
+      "verificationMs": 163.92876500000057,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 b412f66513a27424-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 b412f66513a27424-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=b412f66513a27424-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.8 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.208073999999215,
+      "receiverMs": 1018.8931750000002,
+      "durableMs": 1019.1372590000001,
+      "totalMs": 1027.3453329999993,
+      "verificationMs": 168.19376700000066,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 79b2eeae6e6ec98e-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 79b2eeae6e6ec98e-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=79b2eeae6e6ec98e-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.9 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  99% |███████████████████ | (266/268 MB, 2.7 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.6 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.826984999999695,
+      "receiverMs": 1017.3537480000014,
+      "durableMs": 1017.6006910000015,
+      "totalMs": 1025.4276760000012,
+      "verificationMs": 168.29019699999844,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 56151f56a19f719d-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 56151f56a19f719d-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=56151f56a19f719d-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.8 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.36323799999991,
+      "receiverMs": 1007.3417500000014,
+      "durableMs": 1007.585806000001,
+      "totalMs": 1015.9490440000009,
+      "verificationMs": 148.45238400000017,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 bdbc21ea2126a32f-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 bdbc21ea2126a32f-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=bdbc21ea2126a32f-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 14.17886499999986,
+      "receiverMs": 1119.8936299999987,
+      "durableMs": 1120.0514210000001,
+      "totalMs": 1134.230286,
+      "verificationMs": 145.91104000000087,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 2370,
+          "directBytes": 268447442,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":2370,\"directBytes\":268447442,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":2370,\"directBytes\":268447442,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.269298000001072,
+      "receiverMs": 1024.9573149999997,
+      "durableMs": 1025.1924070000005,
+      "totalMs": 1032.4617050000015,
+      "verificationMs": 180.0253929999999,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 40a11895825c830c-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 40a11895825c830c-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=40a11895825c830c-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.7 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  94% |██████████████████  | (253/268 MB, 2.5 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.5 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 14.082737999999154,
+      "receiverMs": 2800.2353540000004,
+      "durableMs": 2800.4292510000014,
+      "totalMs": 2814.5119890000005,
+      "verificationMs": 152.69370699999854,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 787951,
+          "directBytes": 268446563,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":787951,\"directBytes\":268446563,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":787951,\"directBytes\":268446563,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.950876999999309,
+      "receiverMs": 1002.5247189999973,
+      "durableMs": 1002.7490199999993,
+      "totalMs": 1010.6998969999986,
+      "verificationMs": 142.29535899999973,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 721109240039b13c-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 721109240039b13c-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=721109240039b13c-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.3 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.333904999999504,
+      "receiverMs": 692.6524890000001,
+      "durableMs": 692.7906600000024,
+      "totalMs": 710.1245650000019,
+      "verificationMs": 147.2188950000018,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.965277999999671,
+      "receiverMs": 586.0151769999975,
+      "durableMs": 586.1477699999996,
+      "totalMs": 593.1130479999993,
+      "verificationMs": 148.49320799999987,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 b3c3da5f1a17063c-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 b3c3da5f1a17063c-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=b3c3da5f1a17063c-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.1 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.8 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.461534999998548,
+      "receiverMs": 583.3672420000003,
+      "durableMs": 583.9119969999992,
+      "totalMs": 591.3735319999978,
+      "verificationMs": 162.66858099999808,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 5c009b2438484418-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 5c009b2438484418-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=5c009b2438484418-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.3 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.054231999998592,
+      "receiverMs": 563.5112929999996,
+      "durableMs": 563.6597680000013,
+      "totalMs": 571.7139999999999,
+      "verificationMs": 148.88509300000078,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 39e638af30b9c2a9-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 39e638af30b9c2a9-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=39e638af30b9c2a9-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.8 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.5 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.382168000000092,
+      "receiverMs": 568.152141999999,
+      "durableMs": 568.288370000002,
+      "totalMs": 575.6705380000021,
+      "verificationMs": 149.4014819999975,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 ce4c568cb1de9b5f-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 ce4c568cb1de9b5f-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=ce4c568cb1de9b5f-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.8 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.4 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.386585000000196,
+      "receiverMs": 765.7078529999999,
+      "durableMs": 765.8803030000017,
+      "totalMs": 780.2668880000019,
+      "verificationMs": 157.15300800000114,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.529232999997475,
+      "receiverMs": 590.5477490000012,
+      "durableMs": 590.9685970000028,
+      "totalMs": 599.4978300000002,
+      "verificationMs": 165.53467799999999,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 77ca32cc38a07a59-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 77ca32cc38a07a59-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=77ca32cc38a07a59-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.9 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 12.750191999999515,
+      "receiverMs": 570.1336899999988,
+      "durableMs": 570.3184550000005,
+      "totalMs": 583.068647,
+      "verificationMs": 146.71386200000052,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "random-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 6.407449999998789,
+      "receiverMs": 567.6925059999994,
+      "durableMs": 567.924887000001,
+      "totalMs": 574.3323369999998,
+      "verificationMs": 150.87023099999715,
+      "sha256": "62ceb4060384ea6c37e9780b2dbba8e4584813bb66e0123467c4325f9dd245f8",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 f36a75f4592b6263-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 f36a75f4592b6263-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=f36a75f4592b6263-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.6 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.3 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 18.45874399999957,
+      "receiverMs": 1195.2184049999996,
+      "durableMs": 1195.4149560000005,
+      "totalMs": 1213.8737,
+      "verificationMs": 166.50853899999856,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 787953,
+          "directBytes": 268446565,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":787953,\"directBytes\":268446565,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":787953,\"directBytes\":268446565,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.449059999999008,
+      "receiverMs": 1255.3818059999976,
+      "durableMs": 1255.5554730000003,
+      "totalMs": 1264.0045329999994,
+      "verificationMs": 156.69879600000058,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 7ba46a2b77696092-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 7ba46a2b77696092-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=7ba46a2b77696092-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  45% |█████████           | (123/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  92% |██████████████████  | (248/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  25% |█████               | (69/268 MB, 690 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  54% |██████████          | (146/268 MB, 727 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  88% |█████████████████   | (238/268 MB, 794 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 805 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 10.117048000000068,
+      "receiverMs": 1022.3129870000012,
+      "durableMs": 1022.5215239999998,
+      "totalMs": 1032.6385719999998,
+      "verificationMs": 155.8456249999981,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 c272f97b54da84be-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 c272f97b54da84be-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=c272f97b54da84be-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.8 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  97% |███████████████████ | (261/268 MB, 2.6 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.6 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 10.142949000000954,
+      "receiverMs": 1264.7279600000002,
+      "durableMs": 1265.0803989999986,
+      "totalMs": 1275.2233479999995,
+      "verificationMs": 164.2208410000021,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 7d46369420e21cea-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 7d46369420e21cea-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=7d46369420e21cea-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  45% |█████████           | (123/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  92% |██████████████████  | (249/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  28% |█████               | (76/268 MB, 760 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  55% |███████████         | (150/268 MB, 750 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  90% |██████████████████  | (244/268 MB, 813 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 788 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 7.923556000001554,
+      "receiverMs": 1027.2106619999977,
+      "durableMs": 1027.3926619999984,
+      "totalMs": 1035.316218,
+      "verificationMs": 156.1361489999981,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 32c855a6613b0304-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 32c855a6613b0304-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=32c855a6613b0304-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.9 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  98% |███████████████████ | (266/268 MB, 2.7 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.6 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 18.41281400000298,
+      "receiverMs": 526.8680339999992,
+      "durableMs": 527.0624499999976,
+      "totalMs": 545.4752640000006,
+      "verificationMs": 150.35943399999815,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 788832,
+          "directBytes": 268447444,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":788832,\"directBytes\":268447444,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":788832,\"directBytes\":268447444,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.47551399999793,
+      "receiverMs": 997.8857690000004,
+      "durableMs": 998.185682000003,
+      "totalMs": 1006.6611960000009,
+      "verificationMs": 168.1807700000063,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 f9130d99aa015d09-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 f9130d99aa015d09-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=f9130d99aa015d09-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.6 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.4 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "direct",
+      "readyMs": 19.28328699999838,
+      "receiverMs": 617.858275999999,
+      "durableMs": 618.1207480000012,
+      "totalMs": 637.4040349999996,
+      "verificationMs": 162.34268000000156,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1575291,
+          "directBytes": 268447443,
+          "directProtocol": "tcp",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 93,
+          "directBytes": 6880,
+          "directProtocol": "tcp",
+          "route": "same network"
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"direct\",\"relayBytes\":1575291,\"directBytes\":268447443,\"directProtocol\":\"tcp\",\"route\":\"same network\"}",
+        "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":1575291,\"directBytes\":268447443,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":93,\"directBytes\":6880,\"directProtocol\":\"tcp\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "auto",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.886657999995805,
+      "receiverMs": 1301.989803000004,
+      "durableMs": 1302.2535239999997,
+      "totalMs": 1311.1401819999955,
+      "verificationMs": 154.85864700000093,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 7125bb676c9393ae-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 7125bb676c9393ae-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=7125bb676c9393ae-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (127.0.0.1->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  41% |████████            | (112/268 MB, 1.1 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  81% |████████████████    | (219/268 MB, 1.1 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.1 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (192.168.1.5<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  21% |████                | (57/268 MB, 568 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  47% |█████████           | (129/268 MB, 642 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  78% |███████████████     | (210/268 MB, 699 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 701 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.276666000005207,
+      "receiverMs": 767.1139479999983,
+      "durableMs": 767.4857009999978,
+      "totalMs": 783.762367000003,
+      "verificationMs": 160.94541400000162,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 9.135642000001098,
+      "receiverMs": 848.2287219999998,
+      "durableMs": 848.4495210000023,
+      "totalMs": 857.5851630000034,
+      "verificationMs": 163.83550699999614,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 dd1dcce24b1e3306-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 dd1dcce24b1e3306-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=dd1dcce24b1e3306-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  44% |████████            | (120/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  91% |██████████████████  | (245/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  23% |████                | (63/268 MB, 631 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  49% |█████████           | (133/268 MB, 663 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  84% |████████████████    | (226/268 MB, 753 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 755 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.357690000004368,
+      "receiverMs": 594.0902949999945,
+      "durableMs": 594.2486599999975,
+      "totalMs": 602.6063500000018,
+      "verificationMs": 159.47436500000185,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 c302dae410ade706-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 c302dae410ade706-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=c302dae410ade706-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.8 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  96% |███████████████████ | (258/268 MB, 2.6 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.6 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.962763999996241,
+      "receiverMs": 842.4964650000038,
+      "durableMs": 842.6464590000032,
+      "totalMs": 851.6092229999995,
+      "verificationMs": 157.2511830000003,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 2448bd59effe657e-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 2448bd59effe657e-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=2448bd59effe657e-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  44% |████████            | (120/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  87% |█████████████████   | (236/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.2 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  30% |██████              | (82/268 MB, 816 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  58% |███████████         | (157/268 MB, 785 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  91% |██████████████████  | (246/268 MB, 818 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 772 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 8.02516900000046,
+      "receiverMs": 580.5287020000032,
+      "durableMs": 580.7393620000003,
+      "totalMs": 588.7645310000007,
+      "verificationMs": 144.4340069999962,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 65e01e546fbfab18-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 65e01e546fbfab18-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=65e01e546fbfab18-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin 100% |████████████████████| (268/268 MB, 3.3 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin 100% |████████████████████| (268/268 MB, 3.0 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 13.540707000000111,
+      "receiverMs": 685.6602340000027,
+      "durableMs": 685.9822060000006,
+      "totalMs": 699.5229130000007,
+      "verificationMs": 159.32628699999623,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 9.245066000003135,
+      "receiverMs": 613.9270759999999,
+      "durableMs": 614.1604589999988,
+      "totalMs": 623.405525000002,
+      "verificationMs": 165.21685799999977,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 10969c5fce76a01e-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 10969c5fce76a01e-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=10969c5fce76a01e-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  95% |███████████████████ | (255/268 MB, 2.5 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 2.5 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  83% |████████████████    | (224/268 MB, 2.2 GB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 2.3 GB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    },
+    {
+      "tool": "cd",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.85611500000232,
+      "receiverMs": 1132.2035340000002,
+      "durableMs": 1132.5921769999986,
+      "totalMs": 1150.448292000001,
+      "verificationMs": 184.40046400000574,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0
+        }
+      ],
+      "routeEvidence": [
+        "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}",
+        "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}"
+      ],
+      "diagnostics": {
+        "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+        "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "route": "relay",
+      "storage": "tmpfs",
+      "case": "compressible-256m",
+      "bytes": 268435456,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "unconfirmed; see textual route evidence",
+      "readyMs": 13.195034000003943,
+      "receiverMs": 887.0046030000012,
+      "durableMs": 887.9893669999947,
+      "totalMs": 901.1844009999986,
+      "verificationMs": 153.43729300000268,
+      "sha256": "f333d79a407c53df810df7153e4c674afb4ecf3c4a9401ea831ddf4e2a4b1ec9",
+      "reports": [],
+      "routeEvidence": [
+        "  croc --relay 127.0.0.1:40687 71684da55dd44c7e-matrix-148620",
+        "connecting..."
+      ],
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 127.0.0.1:40687 71684da55dd44c7e-matrix-148620\n\nOr open:\n  https://getcroc.com/?code=71684da55dd44c7e-matrix-148620\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r\r                                 \rSending 0 files (256.0 MB)\r                                 \rSending 'payload.bin' (256.0 MB)\n\nSending (->2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\rpayload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                             \r\rpayload.bin  45% |█████████           | (122/268 MB, 1.2 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin  85% |█████████████████   | (229/268 MB, 1.1 GB/s) [0s:0s]\r                                                                      \r\rpayload.bin 100% |████████████████████| (268/268 MB, 1.1 GB/s)\n",
+        "receiver": "connecting...\rlooking for sender...\rwaiting for sender...\rauthenticating code...\ropening transfer channels...\rwaiting for file list...    \r                        \r\rReceiving 'payload.bin' (256.0 MB) \n\nReceiving (<-2401:4900:8f4e:52d0:b335:7458:af33:2bda)\n\r payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                              \r\r payload.bin  21% |████                | (57/268 MB, 566 MB/s) [0s:0s]\r                                                                      \r\r payload.bin  43% |████████            | (116/268 MB, 580 MB/s) [0s:0s]\r                                                                       \r\r payload.bin  72% |██████████████      | (194/268 MB, 646 MB/s) [0s:0s]\r                                                                       \r\r payload.bin 100% |████████████████████| (268/268 MB, 684 MB/s)\n\rHashing payload.bin   0% |                    | ( 0 B/268 MB) [0s:0s]\r                                                                     \r"
+      }
+    }
+  ],
+  "infrastructure": {
+    "controlParent": "/dev/shm",
+    "filesystem": "tmpfs",
+    "storage": "RAM",
+    "localWorkerPersistence": "/dev/shm/cd-matrix-control-BaZsz9/wrangler-state",
+    "note": "Local Worker SQLite persistence uses this infrastructure directory for both disk and tmpfs payload suites. Disk output remains on --disk-dir. Compare --control-dir on disk as a separate infrastructure diagnostic."
+  },
+  "binary": {
+    "cdx": "/tmp/cdx-benchmark-current",
+    "sha256": "421a79d730c9c05afbef8feafc63a9705fbff9261283c62c4292a9ea264d82fe",
+    "croc": "croc version 11.5.5"
+  },
+  "worker": {
+    "hosted": false,
+    "config": "/home/yvm/code/cd/scripts/bench-worker.wrangler.jsonc"
+  },
+  "summary": [
+    {
+      "case": "tmpfs/auto/random-4k",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 19.298633999999993,
+          "receiverMs": 22.545008000000053,
+          "durableMs": 22.764090000000124,
+          "totalMs": 42.06272400000012,
+          "spread": {
+            "readyMs": {
+              "min": 15.983824999999342,
+              "max": 21.590014999999767
+            },
+            "receiverMs": {
+              "min": 21.33592200000021,
+              "max": 25.433156000000054
+            },
+            "durableMs": {
+              "min": 21.602328000000853,
+              "max": 25.66440700000021
+            },
+            "totalMs": {
+              "min": 37.586153000000195,
+              "max": 47.25442199999998
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 7.706396000000041,
+          "receiverMs": 524.03496,
+          "durableMs": 524.1814720000002,
+          "totalMs": 530.4986630000003,
+          "spread": {
+            "readyMs": {
+              "min": 5.762700000000223,
+              "max": 7.849089000000049
+            },
+            "receiverMs": {
+              "min": 522.427831,
+              "max": 524.9811480000001
+            },
+            "durableMs": {
+              "min": 522.7922670000003,
+              "max": 525.2413840000002
+            },
+            "totalMs": {
+              "min": 529.9441720000004,
+              "max": 533.0904730000002
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 7.346715000000131,
+          "receiverMs": 524.8268580000004,
+          "durableMs": 525.0644400000001,
+          "totalMs": 531.8480629999999,
+          "spread": {
+            "readyMs": {
+              "min": 6.783622999999807,
+              "max": 8.29302800000005
+            },
+            "receiverMs": {
+              "min": 521.565744,
+              "max": 525.3858810000002
+            },
+            "durableMs": {
+              "min": 521.7067659999998,
+              "max": 525.7017639999999
+            },
+            "totalMs": {
+              "min": 529.9997939999998,
+              "max": 533.048479
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.39932339252612614,
+          "receiverMs": 23.243946509134027,
+          "durableMs": 23.02668246347635,
+          "totalMs": 12.612085299088067
+        },
+        "croc-no-compress": {
+          "readyMs": 0.38068575216256934,
+          "receiverMs": 23.279071712904212,
+          "durableMs": 23.06547022086089,
+          "totalMs": 12.644165960340525
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    },
+    {
+      "case": "tmpfs/relay/random-4k",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 16.116503999999622,
+          "receiverMs": 19.702440000000024,
+          "durableMs": 20.11448500000006,
+          "totalMs": 36.06371299999955,
+          "spread": {
+            "readyMs": {
+              "min": 13.686666000000514,
+              "max": 17.440027000000555
+            },
+            "receiverMs": {
+              "min": 19.546754999999393,
+              "max": 23.847890000000007
+            },
+            "durableMs": {
+              "min": 19.94720899999993,
+              "max": 24.094516000000112
+            },
+            "totalMs": {
+              "min": 33.80115100000057,
+              "max": 41.53454300000067
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 6.114700000000084,
+          "receiverMs": 89.87561000000005,
+          "durableMs": 90.19395299999996,
+          "totalMs": 96.30118200000015,
+          "spread": {
+            "readyMs": {
+              "min": 6.1072290000001885,
+              "max": 6.780569000000469
+            },
+            "receiverMs": {
+              "min": 89.69930300000033,
+              "max": 93.85531600000013
+            },
+            "durableMs": {
+              "min": 90.01696300000003,
+              "max": 93.99342999999953
+            },
+            "totalMs": {
+              "min": 96.13166300000012,
+              "max": 100.773999
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 7.260127000000466,
+          "receiverMs": 93.57869300000038,
+          "durableMs": 93.7151329999997,
+          "totalMs": 102.11860400000023,
+          "spread": {
+            "readyMs": {
+              "min": 5.815556999999899,
+              "max": 9.740883999999824
+            },
+            "receiverMs": {
+              "min": 91.3888909999996,
+              "max": 94.652016
+            },
+            "durableMs": {
+              "min": 91.540884,
+              "max": 94.85847699999977
+            },
+            "totalMs": {
+              "min": 97.3564409999999,
+              "max": 103.45601699999952
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.3794061044504582,
+          "receiverMs": 4.561648709499937,
+          "durableMs": 4.484029941606742,
+          "totalMs": 2.6703069093301997
+        },
+        "croc-no-compress": {
+          "readyMs": 0.45047778351934364,
+          "receiverMs": 4.749599186699732,
+          "durableMs": 4.659086871973079,
+          "totalMs": 2.831616478314407
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    },
+    {
+      "case": "tmpfs/auto/random-256m",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 14.082737999999154,
+          "receiverMs": 1119.8936299999987,
+          "durableMs": 1120.0514210000001,
+          "totalMs": 1134.230286,
+          "spread": {
+            "readyMs": {
+              "min": 13.299301999999443,
+              "max": 14.17886499999986
+            },
+            "receiverMs": {
+              "min": 302.2028559999999,
+              "max": 2800.2353540000004
+            },
+            "durableMs": {
+              "min": 302.3893170000001,
+              "max": 2800.4292510000014
+            },
+            "totalMs": {
+              "min": 315.68861899999956,
+              "max": 2814.5119890000005
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 7.826984999999695,
+          "receiverMs": 1014.8768099999998,
+          "durableMs": 1015.0250809999998,
+          "totalMs": 1021.5338099999999,
+          "spread": {
+            "readyMs": {
+              "min": 6.50872900000013,
+              "max": 7.950876999999309
+            },
+            "receiverMs": {
+              "min": 1002.5247189999973,
+              "max": 1017.3537480000014
+            },
+            "durableMs": {
+              "min": 1002.7490199999993,
+              "max": 1017.6006910000015
+            },
+            "totalMs": {
+              "min": 1010.6998969999986,
+              "max": 1025.4276760000012
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 8.208073999999215,
+          "receiverMs": 1018.8931750000002,
+          "durableMs": 1019.1372590000001,
+          "totalMs": 1027.3453329999993,
+          "spread": {
+            "readyMs": {
+              "min": 7.269298000001072,
+              "max": 8.36323799999991
+            },
+            "receiverMs": {
+              "min": 1007.3417500000014,
+              "max": 1024.9573149999997
+            },
+            "durableMs": {
+              "min": 1007.585806000001,
+              "max": 1025.1924070000005
+            },
+            "totalMs": {
+              "min": 1015.9490440000009,
+              "max": 1032.4617050000015
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.555785742800879,
+          "receiverMs": 0.9062260761318921,
+          "durableMs": 0.9062307872381152,
+          "totalMs": 0.900640568858871
+        },
+        "croc-no-compress": {
+          "readyMs": 0.5828464606811338,
+          "receiverMs": 0.909812456920575,
+          "durableMs": 0.9099022061773715,
+          "totalMs": 0.9057643281798238
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    },
+    {
+      "case": "tmpfs/relay/random-256m",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 14.386585000000196,
+          "receiverMs": 692.6524890000001,
+          "durableMs": 692.7906600000024,
+          "totalMs": 710.1245650000019,
+          "spread": {
+            "readyMs": {
+              "min": 12.750191999999515,
+              "max": 17.333904999999504
+            },
+            "receiverMs": {
+              "min": 570.1336899999988,
+              "max": 765.7078529999999
+            },
+            "durableMs": {
+              "min": 570.3184550000005,
+              "max": 765.8803030000017
+            },
+            "totalMs": {
+              "min": 583.068647,
+              "max": 780.2668880000019
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 6.965277999999671,
+          "receiverMs": 567.6925059999994,
+          "durableMs": 567.924887000001,
+          "totalMs": 574.3323369999998,
+          "spread": {
+            "readyMs": {
+              "min": 6.407449999998789,
+              "max": 8.054231999998592
+            },
+            "receiverMs": {
+              "min": 563.5112929999996,
+              "max": 586.0151769999975
+            },
+            "durableMs": {
+              "min": 563.6597680000013,
+              "max": 586.1477699999996
+            },
+            "totalMs": {
+              "min": 571.7139999999999,
+              "max": 593.1130479999993
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 7.461534999998548,
+          "receiverMs": 583.3672420000003,
+          "durableMs": 583.9119969999992,
+          "totalMs": 591.3735319999978,
+          "spread": {
+            "readyMs": {
+              "min": 7.382168000000092,
+              "max": 8.529232999997475
+            },
+            "receiverMs": {
+              "min": 568.152141999999,
+              "max": 590.5477490000012
+            },
+            "durableMs": {
+              "min": 568.288370000002,
+              "max": 590.9685970000028
+            },
+            "totalMs": {
+              "min": 575.6705380000021,
+              "max": 599.4978300000002
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.48415089473975764,
+          "receiverMs": 0.8195920970696163,
+          "durableMs": 0.8197640640825024,
+          "totalMs": 0.8087768897277878
+        },
+        "croc-no-compress": {
+          "readyMs": 0.5186453213183286,
+          "receiverMs": 0.8422221117579788,
+          "durableMs": 0.8428404577509708,
+          "totalMs": 0.8327743626218539
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    },
+    {
+      "case": "tmpfs/auto/compressible-256m",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 18.45874399999957,
+          "receiverMs": 617.858275999999,
+          "durableMs": 618.1207480000012,
+          "totalMs": 637.4040349999996,
+          "spread": {
+            "readyMs": {
+              "min": 18.41281400000298,
+              "max": 19.28328699999838
+            },
+            "receiverMs": {
+              "min": 526.8680339999992,
+              "max": 1195.2184049999996
+            },
+            "durableMs": {
+              "min": 527.0624499999976,
+              "max": 1195.4149560000005
+            },
+            "totalMs": {
+              "min": 545.4752640000006,
+              "max": 1213.8737
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 8.886657999995805,
+          "receiverMs": 1264.7279600000002,
+          "durableMs": 1265.0803989999986,
+          "totalMs": 1275.2233479999995,
+          "spread": {
+            "readyMs": {
+              "min": 8.449059999999008,
+              "max": 10.142949000000954
+            },
+            "receiverMs": {
+              "min": 1255.3818059999976,
+              "max": 1301.989803000004
+            },
+            "durableMs": {
+              "min": 1255.5554730000003,
+              "max": 1302.2535239999997
+            },
+            "totalMs": {
+              "min": 1264.0045329999994,
+              "max": 1311.1401819999955
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 8.47551399999793,
+          "receiverMs": 1022.3129870000012,
+          "durableMs": 1022.5215239999998,
+          "totalMs": 1032.6385719999998,
+          "spread": {
+            "readyMs": {
+              "min": 7.923556000001554,
+              "max": 10.117048000000068
+            },
+            "receiverMs": {
+              "min": 997.8857690000004,
+              "max": 1027.2106619999977
+            },
+            "durableMs": {
+              "min": 998.185682000003,
+              "max": 1027.3926619999984
+            },
+            "totalMs": {
+              "min": 1006.6611960000009,
+              "max": 1035.316218
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.4814335146527853,
+          "receiverMs": 2.046954793885454,
+          "durableMs": 2.0466557757417263,
+          "totalMs": 2.000651514545245
+        },
+        "croc-no-compress": {
+          "readyMs": 0.4591598431614918,
+          "receiverMs": 1.6546075802665186,
+          "durableMs": 1.6542423584849442,
+          "totalMs": 1.6200690853800455
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    },
+    {
+      "case": "tmpfs/relay/compressible-256m",
+      "tools": {
+        "cd": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 16.276666000005207,
+          "receiverMs": 767.1139479999983,
+          "durableMs": 767.4857009999978,
+          "totalMs": 783.762367000003,
+          "spread": {
+            "readyMs": {
+              "min": 13.540707000000111,
+              "max": 17.85611500000232
+            },
+            "receiverMs": {
+              "min": 685.6602340000027,
+              "max": 1132.2035340000002
+            },
+            "durableMs": {
+              "min": 685.9822060000006,
+              "max": 1132.5921769999986
+            },
+            "totalMs": {
+              "min": 699.5229130000007,
+              "max": 1150.448292000001
+            }
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 9.135642000001098,
+          "receiverMs": 848.2287219999998,
+          "durableMs": 848.4495210000023,
+          "totalMs": 857.5851630000034,
+          "spread": {
+            "readyMs": {
+              "min": 8.962763999996241,
+              "max": 13.195034000003943
+            },
+            "receiverMs": {
+              "min": 842.4964650000038,
+              "max": 887.0046030000012
+            },
+            "durableMs": {
+              "min": 842.6464590000032,
+              "max": 887.9893669999947
+            },
+            "totalMs": {
+              "min": 851.6092229999995,
+              "max": 901.1844009999986
+            }
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 3,
+          "successful": 3,
+          "readyMs": 8.357690000004368,
+          "receiverMs": 594.0902949999945,
+          "durableMs": 594.2486599999975,
+          "totalMs": 602.6063500000018,
+          "spread": {
+            "readyMs": {
+              "min": 8.02516900000046,
+              "max": 9.245066000003135
+            },
+            "receiverMs": {
+              "min": 580.5287020000032,
+              "max": 613.9270759999999
+            },
+            "durableMs": {
+              "min": 580.7393620000003,
+              "max": 614.1604589999988
+            },
+            "totalMs": {
+              "min": 588.7645310000007,
+              "max": 623.405525000002
+            }
+          }
+        }
+      },
+      "speedup": {
+        "croc": {
+          "readyMs": 0.5612723146127208,
+          "receiverMs": 1.1057401892006813,
+          "durableMs": 1.1054922846047979,
+          "totalMs": 1.0941902789777607
+        },
+        "croc-no-compress": {
+          "readyMs": 0.5134767771238713,
+          "receiverMs": 0.7744485634095077,
+          "durableMs": 0.7742797803603629,
+          "totalMs": 0.7688635935744023
+        }
+      },
+      "pass1_5": false,
+      "pass2": false
+    }
+  ],
+  "finishedAt": "2026-10-20T09:32:25.998Z",
+  "pass1_5": false,
+  "pass2": false
+}

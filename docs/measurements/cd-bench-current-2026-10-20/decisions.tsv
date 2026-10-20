@@ -1,0 +1,13 @@
+Decision	Reason	Evidence	Result
+Use upstream croc 11.5.5	Installed 10.7.0 is an older reference	Upstream release and staged archive checksum	Verified latest reference; installed binaries unchanged
+Raise private relay admission limits and randomize code prefix	Rapid serial tests hit source and room join limits	latest-admission-limited.json; latest-room-limited.json	Invalid early comparisons excluded; latest-smoke.json completed 54/54
+Negotiate larger browser records	CLI already supports 768 KiB but browser only accepts 64/256 KiB	transfer-limits tests; browser-chunks.json	Compatibility retained; end-to-end effects are mixed
+Keep two chunks in the minimum sender window	A 768 KiB chunk plus a 1 MiB ACK interval can deadlock a 1 MiB window	browser-chunks-window-deadlock.json; encrypted sender regression	Fixed and regression tested
+Revert native File.stream experiment	No consistent end-to-end gain	browser-stream.json	Removed from production change
+Revert synchronous OPFS worker	Removing async storage calls did not improve total completion enough	browser-opfs-smoke.json	Prototype removed
+Batch OPFS writes near 4 MiB	Probe measured 86 writes costing 773–1138 ms	browser-profile.json; browser-batch-smoke.json	15 writes costing 225–233 ms; full transfer target still open
+Retain 256 KiB browser relay frames	768 KiB browser-sender frames regressed forced-relay medians	browser-after.json; browser-relay-frames.json	Large frames used when direct is open, negotiated upper bound unchanged
+Revert larger send window experiment	No clear end-to-end gain for the extra in-flight memory	browser-window.json	Existing 12 MiB maximum retained
+Delay test answer until actual relay payload	An offer-time delay could expire before acceptance and never test path upgrade	initial transport-verification.log; upgrade-verification.json	Strict upgrade verified actual relay and direct payload
+Publish misses alongside wins	The all-path 1.5× goal is not reached	Published report and raw data	Goal and PR remain open
+Isolate future code work	Another interrupted task continues editing this checkout	Concurrent worker/index.ts and cmd/cdx changes	Next goal iteration must use a dedicated worktree

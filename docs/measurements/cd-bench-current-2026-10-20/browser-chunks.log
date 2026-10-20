@@ -1,0 +1,19 @@
+browser-browser/direct #1: 3723.2ms
+browser-browser/relay #1: 2236.7ms
+browser-cli/direct #1: 1583.6ms
+browser-cli/relay #1: 1814.9ms
+cli-browser/direct #1: 1491.7ms
+cli-browser/relay #1: 1450.2ms
+browser-browser/relay #2: 2741.9ms
+browser-cli/direct #2: 1300.1ms
+browser-cli/relay #2: 1784.4ms
+cli-browser/direct #2: AssertionError [ERR_ASSERTION]: direct path did not carry payload
+    at file:///home/yvm/code/cd/scripts/bench-browser-paths.mjs:57:16
+cli-browser/relay #2: 1390.9ms
+browser-browser/direct #2: 3479.0ms
+browser-cli/direct #3: 1726.7ms
+browser-cli/relay #3: 1992.5ms
+cli-browser/direct #3: 1850.9ms
+cli-browser/relay #3: 1931.7ms
+browser-browser/direct #3: 8722.2ms
+browser-browser/relay #3: 3736.4ms
