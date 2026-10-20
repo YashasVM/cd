@@ -1,0 +1,1020 @@
+{
+  "scope": "Paired loopback relay diagnostic; not croc or WAN comparison",
+  "source": "405551b3",
+  "warmups": 1,
+  "runs": 7,
+  "rows": [
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": -1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 23.686885000000984,
+      "receiverMs": 294.37105299999894,
+      "durableMs": 295.3902760000001,
+      "senderExitMs": 318.00797299999977,
+      "totalMs": 319.07716100000107,
+      "verificationMs": 124.36931299999924,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": -1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 19.13918299999932,
+      "receiverMs": 217.0035829999997,
+      "durableMs": 218.6386569999995,
+      "senderExitMs": 236.99856100000034,
+      "totalMs": 237.77783999999883,
+      "verificationMs": 149.01950800000122,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 15.39152500000273,
+      "receiverMs": 189.42823999999746,
+      "durableMs": 190.36060899999939,
+      "senderExitMs": 204.73568700000033,
+      "totalMs": 205.75213400000212,
+      "verificationMs": 120.80372100000022,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.322955999999976,
+      "receiverMs": 242.7101509999993,
+      "durableMs": 244.63988799999788,
+      "senderExitMs": 257.02331299999787,
+      "totalMs": 258.96284399999786,
+      "verificationMs": 132.97444800000085,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.37707799999771,
+      "receiverMs": 205.42270100000314,
+      "durableMs": 206.73743100000138,
+      "senderExitMs": 221.78691499999695,
+      "totalMs": 223.1145089999991,
+      "verificationMs": 138.63663400000223,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.839796000000206,
+      "receiverMs": 185.3637400000007,
+      "durableMs": 187.72246499999892,
+      "senderExitMs": 200.19372499999736,
+      "totalMs": 202.56226099999913,
+      "verificationMs": 144.47162299999763,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 13.769616000005044,
+      "receiverMs": 188.17169399999693,
+      "durableMs": 189.00231299999723,
+      "senderExitMs": 201.93465900000592,
+      "totalMs": 202.77192900000227,
+      "verificationMs": 120.86519199999748,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.267972000001464,
+      "receiverMs": 227.13020099999994,
+      "durableMs": 230.3241149999958,
+      "senderExitMs": 244.68990499999927,
+      "totalMs": 247.59208699999726,
+      "verificationMs": 154.90086500000325,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 3,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 19.857687999996415,
+      "receiverMs": 266.8180990000037,
+      "durableMs": 268.01510500000586,
+      "senderExitMs": 286.4415729999964,
+      "totalMs": 287.8727930000023,
+      "verificationMs": 136.98376099999587,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 3,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.877459000003,
+      "receiverMs": 199.12713999999687,
+      "durableMs": 200.28432099999918,
+      "senderExitMs": 213.93979599999875,
+      "totalMs": 215.16178000000218,
+      "verificationMs": 141.22901700000511,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 4,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.8992009999929,
+      "receiverMs": 202.23367800000415,
+      "durableMs": 205.28124900000694,
+      "senderExitMs": 218.65492099999392,
+      "totalMs": 220.18044999999984,
+      "verificationMs": 126.1938780000055,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 4,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 13.805500999995274,
+      "receiverMs": 240.61775699999998,
+      "durableMs": 243.23918000000413,
+      "senderExitMs": 255.37483800000336,
+      "totalMs": 257.0446809999994,
+      "verificationMs": 88.67607999999018,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 5,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 14.390127999999095,
+      "receiverMs": 245.59356500000285,
+      "durableMs": 246.55112000000372,
+      "senderExitMs": 259.9736069999926,
+      "totalMs": 260.9412480000028,
+      "verificationMs": 129.2124080000067,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 5,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 15.30339100000856,
+      "receiverMs": 222.27468599998974,
+      "durableMs": 223.99908699998923,
+      "senderExitMs": 237.56495600000198,
+      "totalMs": 239.3024779999978,
+      "verificationMs": 138.5316290000046,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 64,
+      "run": 6,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 15.549202000009245,
+      "receiverMs": 205.85419099999126,
+      "durableMs": 206.78968699999677,
+      "senderExitMs": 221.3942900000111,
+      "totalMs": 222.33888900000602,
+      "verificationMs": 158.11877200000163,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 64,
+      "run": 6,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.275001999994856,
+      "receiverMs": 256.87577100000635,
+      "durableMs": 260.39380099999835,
+      "senderExitMs": 273.5894879999978,
+      "totalMs": 277.6688029999932,
+      "verificationMs": 152.4795460000023,
+      "sha256": "36ac3f7e25ebfa593972c905babd7370bc475a8d987286fe7bdbaa42ccb45a28",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": -1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 15.530187999989721,
+      "receiverMs": 1017.6036820000008,
+      "durableMs": 1018.7183790000126,
+      "senderExitMs": 1033.2751329999883,
+      "totalMs": 1034.2485670000024,
+      "verificationMs": 447.8484119999921,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": -1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 21.117849999995087,
+      "receiverMs": 779.1919559999951,
+      "durableMs": 780.6690260000032,
+      "senderExitMs": 800.4297949999891,
+      "totalMs": 801.7868759999983,
+      "verificationMs": 426.4413520000089,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.572630999988178,
+      "receiverMs": 832.869623000006,
+      "durableMs": 833.7321440000087,
+      "senderExitMs": 849.4263319999882,
+      "totalMs": 850.3047749999969,
+      "verificationMs": 375.6920669999963,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 0,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.55699500000628,
+      "receiverMs": 887.7390020000021,
+      "durableMs": 889.2630630000058,
+      "senderExitMs": 904.7125809999998,
+      "totalMs": 906.8200580000121,
+      "verificationMs": 490.82050800000434,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 18.32587699999567,
+      "receiverMs": 903.1642270000011,
+      "durableMs": 904.1063879999856,
+      "senderExitMs": 921.4750099999947,
+      "totalMs": 922.4322649999813,
+      "verificationMs": 529.5649560000165,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 1,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.503873000008753,
+      "receiverMs": 806.4196469999733,
+      "durableMs": 807.3810929999745,
+      "senderExitMs": 823.0449990000052,
+      "totalMs": 823.8849659999833,
+      "verificationMs": 454.68015000000014,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 40.15972199998214,
+      "receiverMs": 1177.8393740000029,
+      "durableMs": 1179.2986690000107,
+      "senderExitMs": 1218.1303060000064,
+      "totalMs": 1219.4583909999928,
+      "verificationMs": 868.3677779999853,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 2,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 20.889891999977408,
+      "receiverMs": 1634.041863999999,
+      "durableMs": 1635.8634280000115,
+      "senderExitMs": 1652.3927829999884,
+      "totalMs": 1656.753319999989,
+      "verificationMs": 539.7981449999788,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 3,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 18.14879600002314,
+      "receiverMs": 875.0433970000013,
+      "durableMs": 876.5824179999763,
+      "senderExitMs": 891.763197000022,
+      "totalMs": 894.7312139999995,
+      "verificationMs": 504.93881599997985,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 3,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.102532999997493,
+      "receiverMs": 779.6363690000144,
+      "durableMs": 780.7026710000064,
+      "senderExitMs": 795.8581290000002,
+      "totalMs": 796.8052040000039,
+      "verificationMs": 397.03464999998687,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 4,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 18.729955999995582,
+      "receiverMs": 744.7167849999969,
+      "durableMs": 746.8273909999989,
+      "senderExitMs": 764.2119210000092,
+      "totalMs": 765.5573469999945,
+      "verificationMs": 347.6238050000102,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 4,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 19.35566500001005,
+      "receiverMs": 887.4949180000112,
+      "durableMs": 888.4163769999868,
+      "senderExitMs": 906.0654410000134,
+      "totalMs": 907.7720419999969,
+      "verificationMs": 432.9086580000003,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 5,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 16.062118000001647,
+      "receiverMs": 870.3365690000064,
+      "durableMs": 871.8248080000049,
+      "senderExitMs": 886.3886800000037,
+      "totalMs": 887.8869260000065,
+      "verificationMs": 448.00686600001063,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 5,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 18.35237999999663,
+      "receiverMs": 723.905637000018,
+      "durableMs": 724.8889900000067,
+      "senderExitMs": 741.6053919999977,
+      "totalMs": 743.2413700000034,
+      "verificationMs": 542.6516969999939,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "candidate",
+      "mib": 256,
+      "run": 6,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 17.431351000006543,
+      "receiverMs": 742.913509999984,
+      "durableMs": 746.2790649999806,
+      "senderExitMs": 761.3187019999896,
+      "totalMs": 763.7104159999872,
+      "verificationMs": 473.96284600000945,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    },
+    {
+      "which": "baseline",
+      "mib": 256,
+      "run": 6,
+      "ok": true,
+      "routeObserved": "relay",
+      "readyMs": 21.11856799997622,
+      "receiverMs": 989.4148419999983,
+      "durableMs": 990.4680650000228,
+      "senderExitMs": 1009.0441159999755,
+      "totalMs": 1011.586632999999,
+      "verificationMs": 473.7128570000059,
+      "sha256": "832a333703c539d5045ace7aa54ac380318075a5a380c46c3448de79db3a797a",
+      "reports": [
+        {
+          "transport": "relay",
+          "relayBytes": 268445221,
+          "directBytes": 0,
+          "endpoint": "sender"
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 6928,
+          "directBytes": 0,
+          "endpoint": "receiver"
+        }
+      ]
+    }
+  ],
+  "environment": {
+    "cpu": "Intel Xeon Platinum 8573C",
+    "cpuAffinity": "0-1",
+    "gomaxprocs": 2,
+    "node": "24.19.0",
+    "go": "1.26.10",
+    "filesystem": "container overlay; physical backing unknown",
+    "runtime": "local Miniflare/workerd, WebSocket compression disabled",
+    "pacingMs": 5500,
+    "pacingIncludedInTimings": false
+  },
+  "baselineCommit": "405551b3ee74b8d650965cc2c29dea7fa7ff3010",
+  "candidatePatchSha256": "69f360e7a029d6682c67420c8c3b904797e56f6d8f9df3507ad82f6efcd1b7ba",
+  "binarySha256": {
+    "baseline": "cb565501269b4469fe456414a54c6c8d66cb5560fa1c5f55073f1293c146c56d",
+    "candidate": "626ccc365a82557bc47538949893acc1ee04915ed927a336aa7eb817c9f6f843"
+  },
+  "interruptedAttempt": {
+    "failure": "local share-code lookup HTTP 429 after rapid unpaced transfers",
+    "action": "stopped and reran whole matrix with 5500 ms spacing outside timing; admission limits unchanged",
+    "samplesNotUsedInCompletedComparison": true,
+    "recordedRows": [
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": -1,
+        "ok": true,
+        "totalMs": 332.0293929999998
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": -1,
+        "ok": true,
+        "totalMs": 255.99051400000008
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": 0,
+        "ok": true,
+        "totalMs": 215.49773000000005
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 0,
+        "ok": true,
+        "totalMs": 251.9941490000001
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 1,
+        "ok": true,
+        "totalMs": 264.39447999999993
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": 1,
+        "ok": true,
+        "totalMs": 217.2630050000007
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": 2,
+        "ok": true,
+        "totalMs": 208.64889700000003
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 2,
+        "ok": true,
+        "totalMs": 273.0412269999997
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 3,
+        "ok": true,
+        "totalMs": 284.6393309999994
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": 3,
+        "ok": true,
+        "totalMs": 216.81133500000033
+      },
+      {
+        "which": "candidate",
+        "mib": 64,
+        "run": 4,
+        "ok": true,
+        "totalMs": 234.03752799999984
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 4,
+        "ok": true,
+        "totalMs": 232.4922319999996
+      },
+      {
+        "which": "baseline",
+        "mib": 64,
+        "run": 5,
+        "ok": false,
+        "error": "cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again\n\n\n1 !== 0\n"
+      }
+    ],
+    "recordingLimit": "Initial driver logged attempt status and total time only; it terminated before writing full rows. Per-attempt hashes and endpoint diagnostics from that run are unavailable. These partial records are not used for comparison."
+  }
+}
