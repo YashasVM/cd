@@ -25,6 +25,8 @@ import (
 
 const resumeProtocol = "cd-transfer-v2"
 
+const resumeAckBatchBytes = 1024 * 1024
+
 var errResumeSessionLimit = errors.New("resume session budget exhausted")
 
 func resumeSessionLimitFailure() error {
@@ -685,20 +687,38 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	if _, err = io.CopyN(whole, stage, checkpoint.Offset); err != nil {
 		return err
 	}
+	// Keep written progress separate from the authenticated durable prefix.
+	// The batch starts at the accepted resume offset, not an absolute MiB
+	// boundary, and does not retain any additional payload in memory.
+	written := checkpoint.Offset
+	ackEvery := int64(chunkSize)
+	if offer.WindowBytes >= resumeAckBatchBytes {
+		ackEvery = resumeAckBatchBytes
+	}
 	persist := func() error {
 		if err := stage.Sync(); err != nil {
 			return err
 		}
-		checkpoint.PrefixSHA256 = hex.EncodeToString(whole.Sum(nil))
-		if err := signResumeCheckpoint(&checkpoint, invite.key[:]); err != nil {
+		next := checkpoint
+		next.Offset = written
+		next.PrefixSHA256 = hex.EncodeToString(whole.Sum(nil))
+		if err := signResumeCheckpoint(&next, invite.key[:]); err != nil {
 			return err
 		}
-		return resumeAtomicJSONRoot(destination.root, destination.checkpointName, checkpoint)
+		if err := resumeAtomicJSONRoot(destination.root, destination.checkpointName, next); err != nil {
+			return err
+		}
+		checkpoint = next
+		return nil
 	}
 	if err = persist(); err != nil {
 		return err
 	}
-	accept, _ := json.Marshal(map[string]string{"offset": strconv.FormatInt(checkpoint.Offset, 10), "prefixSha256": checkpoint.PrefixSHA256})
+	acceptFields := map[string]any{"offset": strconv.FormatInt(checkpoint.Offset, 10), "prefixSha256": checkpoint.PrefixSHA256}
+	if ackEvery != chunkSize {
+		acceptFields["ackEveryBytes"] = ackEvery
+	}
+	accept, _ := json.Marshal(acceptFields)
 	if err = session.send(kindAccept, accept); err != nil {
 		return err
 	}
@@ -708,14 +728,19 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 			return err
 		}
 		if kind == kindChunk {
-			if len(data) == 0 || len(data) > chunkSize || checkpoint.Offset+int64(len(data)) > checkpoint.Size || (len(data) != chunkSize && checkpoint.Offset+int64(len(data)) != checkpoint.Size) {
+			if len(data) == 0 || len(data) > chunkSize || written+int64(len(data)) > checkpoint.Size || (len(data) != chunkSize && written+int64(len(data)) != checkpoint.Size) {
 				return resumeFailure("sender sent invalid resumable chunk bounds")
 			}
 			if _, err = stage.Write(data); err != nil {
 				return err
 			}
 			whole.Write(data)
-			checkpoint.Offset += int64(len(data))
+			written += int64(len(data))
+			// Flush the final partial batch before waiting for END: senders
+			// wait for all durable ACKs before sending completion records.
+			if written-checkpoint.Offset < ackEvery && written != checkpoint.Size {
+				continue
+			}
 			if err = persist(); err != nil {
 				return err
 			}
