@@ -33,7 +33,7 @@ export function shortCodeFromInput(value) {
 export function codeLookupPath(code) {
   const cleaned = cleanShortCode(code);
   if (!isShortCode(cleaned)) throw new Error('invalid share code');
-  return `/api/codes/${cleaned}`;
+  return `/api/codes/${encodeURIComponent(cleaned)}`;
 }
 
 export function shareUrlFromCapability(origin, transferId, key) {
