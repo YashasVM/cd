@@ -17,6 +17,10 @@ export async function buildCLI(work) {
 // startWorker runs `wrangler dev` on a free loopback port. CD_VERIFY_URL
 // points the scripts at a deployed Worker instead.
 export async function startWorker(work) {
+  if (process.env.CD_BENCH_RUNTIME_BUNDLE) {
+    const { startDirectRuntime } = await import('./bench-direct-runtime.mjs');
+    return startDirectRuntime(process.env.CD_BENCH_RUNTIME_BUNDLE, { compression: process.env.CD_BENCH_NO_COMPRESSION !== '1', assets: true });
+  }
   const hosted = process.env.CD_VERIFY_URL;
   if (hosted) {
     const publicBase = new URL(hosted).origin;

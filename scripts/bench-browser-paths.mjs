@@ -13,7 +13,7 @@ const output=resolve(process.env.CD_BROWSER_OUTPUT||'/tmp/cd-browser-bench.json'
 const runs=Number(process.env.CD_BROWSER_RUNS||3),mib=Number(process.env.CD_BROWSER_MIB||64);
 assert.ok(Number.isInteger(runs)&&runs>0);assert.ok(Number.isInteger(mib)&&mib>0);
 const work=await mkdtemp('/dev/shm/cd-browser-bench-');
-const report={version:1,startedAt:new Date().toISOString(),runs,mib,rows:[],method:'Preload both pages outside transfer timing. Sender readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and ends after browser download save or CLI exit. File and directory fsync added to both; SHA256 checked after timing. Local Worker control and output in tmpfs; not physical persistence. No artificial CPU/decrypt delays.'};
+const report={version:1,runtime:process.env.CD_BENCH_RUNTIME_BUNDLE?'direct workerd':'wrangler dev',webSocketCompression:process.env.CD_BENCH_NO_COMPRESSION!=='1',startedAt:new Date().toISOString(),runs,mib,rows:[],method:'Preload both pages outside transfer timing. Sender readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and ends after browser download save or CLI exit. File and directory fsync added to both; SHA256 checked after timing. Local Worker control and output in tmpfs; not physical persistence. No artificial CPU/decrypt delays.'};
 const hash=b=>createHash('sha256').update(b).digest('hex');
 let worker,browser;const children=new Set();
 const cases=['browser-browser','browser-cli','cli-browser'].flatMap(direction=>['direct','relay'].map(route=>({direction,route})));
@@ -60,6 +60,7 @@ try{
    row.receiverStats=receiverPage?await receiverPage.evaluate(()=>window.__benchTransport):null;
    row.senderPhases=senderPage?await senderPage.evaluate(()=>window.__benchPhases):null;
    row.receiverPhases=receiverPage?await receiverPage.evaluate(()=>window.__benchPhases):null;
+   if(process.env.CD_BENCH_RUNTIME_BUNDLE)for(const stats of [row.senderStats,row.receiverStats].filter(Boolean)){assert.ok(stats.webSocketExtensions.length>0,'missing relay handshake evidence');assert.ok(stats.webSocketExtensions.every(extension=>process.env.CD_BENCH_NO_COMPRESSION==='1'?extension==='':extension.includes('permessage-deflate')),'unexpected WebSocket compression negotiation')}
    row.cliReports=[sender?.out.stderr,receiver?.out.stderr].filter(Boolean).join('\n').split('\n').flatMap(s=>{try{const r=JSON.parse(s);return r.transport?[r]:[]}catch{return []}});
    const directBytes=row.senderStats?.directPayloadBytes??row.receiverStats?.directReceivedPayloadBytes??0;
    const relayBytes=row.senderStats?.relayPayloadBytes??row.receiverStats?.relayReceivedPayloadBytes??0;

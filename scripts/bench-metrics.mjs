@@ -21,7 +21,7 @@ export function browserTransportProbe(options = {}) {
     directBytes: 0, directPayloadBytes: 0, relayBytes: 0, relayPayloadBytes: 0,
     directReceivedBytes: 0, directReceivedPayloadBytes: 0, relayReceivedBytes: 0, relayReceivedPayloadBytes: 0,
     legacyBytes: 0, maxDirectBufferedBytes: 0, maxRelayBufferedBytes: 0,
-    firstPayloadRoute: null, routes: [], successfulDirectPieces: 0
+    firstPayloadRoute: null, routes: [], successfulDirectPieces: 0, webSocketExtensions: []
   };
   stats.engineMaxima = {};
   window.__CD_TRANSFER_TEST_OBSERVER__ = (snapshot) => {
@@ -119,6 +119,7 @@ export function browserTransportProbe(options = {}) {
   window.WebSocket = class extends NativeSocket {
     constructor(...args) {
       super(...args);
+      if (new URL(this.url).pathname.startsWith('/ws/v1/')) this.addEventListener('open',()=>stats.webSocketExtensions.push(this.extensions),{once:true});
       if (new URL(this.url).pathname.startsWith('/ws/v1/')) this.addEventListener('message', (event) => {
         if (typeof event.data === 'string') return;
         sampleHeap();

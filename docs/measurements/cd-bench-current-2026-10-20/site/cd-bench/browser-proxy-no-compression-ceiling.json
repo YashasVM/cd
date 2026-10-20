@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 3,
+  "modes": [
+    "0"
+  ],
+  "chunks": [
+    262144
+  ],
+  "startedAt": "2026-10-20T10:48:56.633Z",
+  "rows": [
+    {
+      "run": 0,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 394.9156599999999,
+      "mibPerSecond": 162.05991932555932,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 22
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 352.9517860000001,
+      "mibPerSecond": 181.327882556741,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 19
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "",
+      "receiverExtensions": "",
+      "bytes": 67108864,
+      "milliseconds": 334.61284799999976,
+      "mibPerSecond": 191.26581774289807,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 17
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.",
+  "noExtensionProxy": true,
+  "finishedAt": "2026-10-20T10:48:59.489Z"
+}
