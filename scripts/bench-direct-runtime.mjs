@@ -39,11 +39,12 @@ async function frontend(upstreamBase){
  await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));
  return {publicBase:'http://127.0.0.1:'+proxy.address().port,stop:async()=>{for(const socket of connections)socket.destroy();await new Promise(resolve=>proxy.close(resolve))}};
 }
-export async function startDirectRuntime(bundle,{compression=true,assets=false}={}){
+export async function startDirectRuntime(bundle,{compression=true,assets=false,streaming=false}={}){
  const scriptPath=resolve(bundle);
  const runtime=new Miniflare(convertV4MiniflareOptions({
   modules:true,modulesRoot:dirname(scriptPath),scriptPath,compatibilityDate:'2026-09-12',
   compatibilityFlags:compression?[]:['no_web_socket_compression'],
+  bindings:streaming?{CD_RELAY_STREAMING:'1'}:{},
   unsafeDirectSockets:[{entrypoint:'default',host:'127.0.0.1',port:0}],
   durableObjects:Object.fromEntries(Object.entries({TRANSFERS:'TransferRoom',PEERS:'PeerSignal',CODES:'CodeDirectory',DEVICES:'DeviceRoom'}).map(([binding,className])=>[binding,{className,useSQLite:true}])),
   ratelimits:Object.fromEntries(['CONNECTION_RATE_LIMITER','PEER_RATE_LIMITER'].map((name,index)=>[name,{namespace_id:String(9237491+index),simple:{limit:1000000,period:60}}]))

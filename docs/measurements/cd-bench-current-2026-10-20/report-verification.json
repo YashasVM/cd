@@ -1,1 +1,1 @@
-{"url":"https://a.yash0.in/cd-bench/","scenarios":23,"combinations":92,"browserComparisons":6,"compressionComparisons":6,"readBlockComparisons":2,"viewports":[1440,768,390],"javascriptErrors":0,"passed":true}
+{"url":"https://a.yash0.in/cd-bench/","scenarios":23,"combinations":92,"browserComparisons":6,"compressionComparisons":6,"readBlockComparisons":2,"rejectedComparisons":3,"viewports":[1440,768,390],"javascriptErrors":0,"passed":true,"diagnosticArtifactHashesVerified":4}

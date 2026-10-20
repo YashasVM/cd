@@ -23,7 +23,7 @@ const payload=randomBytes(mib*1048576),source=join(work,'payload.bin');await wri
 let browser,worker,proxy;const sockets=new Set();
 let interrupted=false;
 for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>{interrupted=true;void browser?.close().catch(()=>{})});
-const report={version:1,mib,runs,modes,chunks,drainDelays,requestedRuntimeCompressionOff:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION==='1',startedAt:new Date().toISOString(),rows:[],method:'Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.'};
+const report={version:1,streamingEnabled:process.env.CD_CEILING_STREAMING==='1',mib,runs,modes,chunks,drainDelays,requestedRuntimeCompressionOff:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION==='1',startedAt:new Date().toISOString(),rows:[],method:'Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.'};
 function client(url){
  const socket=new WebSocket(url);sockets.add(socket);socket.binaryType='arraybuffer';
  const queue=[],waiters=[];let failure=null;
@@ -40,7 +40,7 @@ try{
  process.env.CD_VERIFY_WRANGLER_CONFIG=process.env.CD_CEILING_CONFIG||fileURLToPath(new URL('./bench-worker.wrangler.jsonc',import.meta.url));
  if(process.env.CD_CEILING_BUNDLE){
   const {startDirectRuntime}=await import('./bench-direct-runtime.mjs');
-  worker=await startDirectRuntime(process.env.CD_CEILING_BUNDLE,{compression:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION!=='1'});report.directRuntime=true;
+  worker=await startDirectRuntime(process.env.CD_CEILING_BUNDLE,{compression:process.env.CD_CEILING_RUNTIME_NO_COMPRESSION!=='1',streaming:process.env.CD_CEILING_STREAMING==='1'});report.directRuntime=true;
 
  }else worker=await startWorker(work);
  if(process.env.CD_CEILING_NO_EXTENSION==='1'){

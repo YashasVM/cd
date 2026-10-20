@@ -60,3 +60,14 @@ A diagnostic after the final shared-default change confirms 16 source reads for 
 The independent raw frame/timer sweep verified 28 transfers. At 256 KiB frames, median transport times were 298.2 ms with zero-delay polling and 309.8 ms with 10 ms polling, too small a gain to justify a production timer change. At 768 KiB frames both settings were slower, so relay frame size stays unchanged.
 
 Validation: 113 unit tests pass. All ten real 64 MiB transport cases pass after the shared-default change, including slow receive and actual relay-to-WebRTC upgrade. The terminal-flow verifier also passes CLI-to-CLI and standalone browser-to-CLI bytes, share-code lifecycle and the legacy code-claim endpoint. The croc target remains unmet; production CD has not been deployed.
+
+
+## Rejected storage and dispatch experiments
+
+A bounded OPFS candidate kept one disk write in flight while assembling the next batch, and waited for every write before publishing a download. A controlled test failed on the original implementation and passed on the candidate. Tests also proved deferred write errors block publication, and cancellation releases a blocked batch without starting another disk write. All 16 sink tests passed. Seven real trials per affected path verified all bytes. Browser-to-browser medians changed 991.3 to 977.1 ms, while CLI-to-browser changed 898.8 to 914.8 ms. This is no useful consistent end-to-end gain, so both production code and candidate tests were removed. The patch remains downloadable for review.
+
+With compression disabled, seven interleaved raw trials each measured hibernating relay dispatch at 309.2 ms and the preserved standard-WebSocket prototype at 323.8 ms for 64 MiB. Standard dispatch was slower, so it remains unadopted. Its complete Worker patch and bundle identity are recorded. This prototype was exercised only in a separate local checkout.
+
+The raw ordered/reliable WebRTC diagnostic measured 4, 16 and 64 KiB messages with three trials per size. Median times were 826.6, 779.9 and 735.4 ms. One 64 KiB trial was slower at 1192.7 ms, illustrating the warmup/run variation. The diagnostic places both peers in one page and excludes CD framing, encryption, storage, application flow control and connection setup. It does not establish that a product frame-size change would improve actual transfers. No production change was made.
+
+All 51 transfer trials in these experiments passed payload verification. The 1.5×-over-croc target remains unmet. These results redirect the next investigation toward the difference between raw WebRTC throughput and the complete direct transfer, rather than disk-write overlap or a relay socket API change.

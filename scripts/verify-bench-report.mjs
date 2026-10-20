@@ -50,6 +50,12 @@ try{
   const cells=await page.locator('#read-block-results tr').nth(index).locator('td').allTextContents();
   assert.equal(cells[1],medians[0].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],medians[1].toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],(medians[0]/medians[1]).toFixed(2)+'×');
  }
+ const rejected=await (await page.request.get(new URL('rejected-dispatch-summary.json',url).href)).json();
+ assert.equal(rejected.productionChangeRetained,false);assert.equal(await page.locator('#rejected-results tr').count(),3);
+ for(const [index,result] of rejected.rows.entries()){
+  const cells=await page.locator('#rejected-results tr').nth(index).locator('td').allTextContents();
+  assert.equal(cells[1],result.beforeMs.toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[2],result.afterMs.toLocaleString('en-US',{maximumFractionDigits:1}));assert.equal(cells[3],result.ratio.toFixed(2)+'×');
+ }
  await page.locator('#compare summary').click();assert.equal(await page.locator('#spreads tr').count(),3);
  for(const width of [1440,768,390]){
   await page.setViewportSize({width,height:900});
@@ -57,5 +63,5 @@ try{
  }
  for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
+ console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}
