@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"hash"
 	"io"
+	"slices"
 )
 
 const (
@@ -155,7 +156,7 @@ func recordAAD(header []byte, id [16]byte) []byte {
 	return append(aad, id[:]...)
 }
 
-func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, error) {
+func (value *recordSealer) sealInto(buffer []byte, kind messageKind, plaintext []byte) ([]byte, error) {
 	if !validKind(value.direction, kind) {
 		return nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
@@ -166,7 +167,7 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 	if headerBytes+ciphertextLength > maxRecordBytes {
 		return nil, NewFailure(failureProtocol, "record is too large", retryNever)
 	}
-	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
+	header := slices.Grow(buffer[:0], headerBytes+ciphertextLength)[:headerBytes]
 	copy(header, []byte("CD"))
 	header[2] = protocolVersion
 	header[3] = byte(kind)

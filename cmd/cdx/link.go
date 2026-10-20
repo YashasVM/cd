@@ -32,6 +32,7 @@ type recordLink struct {
 	readerDone chan struct{}
 	stopOnce   sync.Once
 	writeMu    sync.Mutex
+	sendBuffer []byte
 	pending    map[uint32][]byte
 	expected   uint32
 
@@ -87,11 +88,10 @@ const closeWait = 3 * time.Second
 const relayPingInterval = 20 * time.Second
 
 func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *recordOpener, peerLeft error) *recordLink {
-	link := &recordLink{
+	return &recordLink{
 		connection: connection, sealer: sealer, opener: opener, peerLeft: peerLeft,
 		items: make(chan linkItem, 64), stop: make(chan struct{}), readerDone: make(chan struct{}), pending: map[uint32][]byte{},
 	}
-	return link
 }
 
 // start begins reading the relay WebSocket; call it once the caller no
@@ -257,7 +257,8 @@ func (link *recordLink) send(kind messageKind, payload []byte) error {
 func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release uint64) error {
 	link.writeMu.Lock()
 	defer link.writeMu.Unlock()
-	record, err := link.sealer.seal(kind, payload)
+	record, err := link.sealer.sealInto(link.sendBuffer, kind, payload)
+	link.sendBuffer = nil
 	if err != nil {
 		return err
 	}
@@ -278,6 +279,9 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 			return err
 		}
 		link.directBytes.Add(uint64(len(record)))
+		if path.stream != nil {
+			link.sendBuffer = record
+		}
 		return nil
 	}
 	if path != nil && !link.switched && !path.isLost() {

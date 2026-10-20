@@ -110,15 +110,11 @@ func isLoopbackHost(host string) bool {
 }
 
 func fileMediaType(name string) string {
-	if value := mime.TypeByExtension(strings.ToLower(filepath.Ext(name))); value != "" {
-		if index := strings.Index(value, ";"); index >= 0 {
-			value = strings.TrimSpace(value[:index])
-		}
-		if value != "" {
-			return value
-		}
+	value, _, _ := strings.Cut(mime.TypeByExtension(strings.ToLower(filepath.Ext(name))), ";")
+	if value = strings.TrimSpace(value); value == "" {
+		return "application/octet-stream"
 	}
-	return "application/octet-stream"
+	return value
 }
 
 func safeFilename(path string) (string, error) {
@@ -257,7 +253,6 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if source.skipped > 0 {
 		fmt.Fprintf(os.Stderr, "skipped %d symlinks or special files (only regular files and folders are bundled)\n", source.skipped)
 	}
-	filename := source.name
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -301,13 +296,9 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		Version:    1,
 		TransferID: invitation.encodedID(),
 		URL:        publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
-		Filename:   filename, Size: source.size, Files: source.files,
+		Filename:   source.name, Size: source.size, Files: source.files,
 	}
-	if linkMode {
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
-	} else {
+	if !linkMode {
 		code := accepted.Code
 		if !isShortCode(code) {
 			// Relays that predate join-time codes: claim one separately.
@@ -320,12 +311,12 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			}
 		}
 		ready.Code = code
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
+	}
+	if err := hooks.ready(ready); err != nil {
+		return err
 	}
 	if !fancyReady {
-		transferInfo("sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+		transferInfo("sharing %s (%s) — share the code above, keep this running\n", source.name, formatBytes(ready.Size))
 	}
 	if ready.Size > 256*1024*1024 {
 		transferInfo("note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
@@ -373,8 +364,6 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		} else {
 			lanDebug("sender-listen-failed", err)
 		}
-	}
-	if directEnabled() && lanEnabled() && source.size >= directMinBytes {
 		link.reverseLAN = func(offer *lanOffer) <-chan struct{} {
 			// Keep the original listener available if the receiver must fall
 			// back after its own inbound TCP connection is blocked.

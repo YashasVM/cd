@@ -79,6 +79,19 @@ try{
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'page overflows at '+width);
  }
  for(const link of await page.locator('.links a').evaluateAll(links=>links.map(link=>link.href).filter(href=>new URL(href).origin===location.origin))){const result=await page.request.get(link);assert.equal(result.status(),200,link);}
+ const iteration=await (await page.request.get(new URL('ponytail-iteration.json',url).href)).json();
+ const paired=await (await page.request.get(new URL('ponytail-tcp-reuse-steady.json',url).href)).json();
+ assert.equal(iteration.goalAchieved,false);assert.ok(iteration.codeSize.lineDelta<0&&iteration.codeSize.byteDelta<0);
+ assert.equal(paired.contended,false);assert.equal(paired.rows.length,42);assert.ok(paired.rows.every(row=>row.ok&&row.sha256));
+ assert.equal(await page.locator('#ponytail-results tr').count(),4);
+ for(const [index,result] of iteration.rows.entries()){
+  const med=(variant,tool)=>paired.rows.filter(row=>row.variant===variant&&row.tool===tool).map(row=>row[result.metric]).sort((a,b)=>a-b)[3];
+  assert.equal(result.before.median,med('before','cd'));assert.equal(result.after.median,med('after','cd'));
+  assert.equal(result.crocMs,Math.min(med('after','croc'),med('after','croc-no-compress')));
+  const cells=await page.locator('#ponytail-results tr').nth(index).locator('td').allTextContents();
+  const format=value=>value.toLocaleString('en-US',{maximumFractionDigits:1})+' ms';
+  assert.equal(cells[1],format(result.before.median));assert.equal(cells[2],format(result.after.median));assert.equal(cells[3],format(result.crocMs));
+ }
  assert.deepEqual(errors,[]);
  console.log(JSON.stringify({url,scenarios:scenarios.length,combinations,browserComparisons:6,compressionComparisons:6,readBlockComparisons:2,rejectedComparisons:3,directFramingComparisons:2,hardwareLimitChecked:true,relaySchedulingComparisons:4,viewports:[1440,768,390],javascriptErrors:errors.length,passed:true}));
 }finally{await browser.close()}

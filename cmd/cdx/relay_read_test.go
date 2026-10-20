@@ -35,9 +35,9 @@ func relayReadSockets(t testing.TB, writeBuffer int) (*websocket.Conn, *websocke
 
 func TestRelayExactRecordRead(t *testing.T) {
 	sealer, _ := newSealer(testInvitation(), senderDirection)
-	record, _ := sealer.seal(kindChunk, bytes.Repeat([]byte("fragment"), 300))
+	record, _ := sealer.sealInto(nil, kindChunk, bytes.Repeat([]byte("fragment"), 300))
 	emptySealer, _ := newSealer(testInvitation(), receiverDirection)
-	empty, _ := emptySealer.seal(kindAccept, nil)
+	empty, _ := emptySealer.sealInto(nil, kindAccept, nil)
 	for _, test := range []struct {
 		name  string
 		data  []byte
@@ -127,7 +127,7 @@ func BenchmarkRelayRecordRead(b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			client, peer := relayReadSockets(b, 4096)
 			sealer, _ := newSealer(testInvitation(), senderDirection)
-			record, err := sealer.seal(kindChunk, make([]byte, 768<<10))
+			record, err := sealer.sealInto(nil, kindChunk, make([]byte, 768<<10))
 			if err != nil {
 				b.Fatal(err)
 			}

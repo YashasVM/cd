@@ -1,0 +1,6 @@
+{"event":"sender_admitted"}
+{"event":"code_claimed","code":"00814"}
+{"event":"code_resolved","code":"00814"}
+{"event":"room_paired"}
+{"event":"room_terminal"}
+{"output":"/home/yvm/code/cd/docs/measurements/ponytail-speed-2026-10-20/heap","mib":256,"sha256Verified":true}

@@ -11,7 +11,7 @@ func TestRecordConsumeUsesOwnedCiphertext(t *testing.T) {
 		sealer, _ := newSealer(testInvitation(), senderDirection)
 		opener, _ := newOpener(testInvitation(), senderDirection)
 		want := bytes.Repeat([]byte{0x91}, size)
-		record, err := sealer.seal(kindChunk, want)
+		record, err := sealer.sealInto(nil, kindChunk, want)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -35,7 +35,7 @@ func TestRecordConsumeUsesOwnedCiphertext(t *testing.T) {
 func TestRecordOpenPreservesCiphertext(t *testing.T) {
 	sealer, _ := newSealer(testInvitation(), senderDirection)
 	opener, _ := newOpener(testInvitation(), senderDirection)
-	record, _ := sealer.seal(kindChunk, []byte("original ciphertext stays available"))
+	record, _ := sealer.sealInto(nil, kindChunk, []byte("original ciphertext stays available"))
 	original := bytes.Clone(record)
 	_, plaintext, err := opener.open(record)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestRecordConsumeRejectsInvalidRecordsWithoutAdvancing(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			sealer, _ := newSealer(testInvitation(), senderDirection)
 			opener, _ := newOpener(testInvitation(), senderDirection)
-			original, _ := sealer.seal(kindChunk, []byte("authenticated payload"))
+			original, _ := sealer.sealInto(nil, kindChunk, []byte("authenticated payload"))
 			if _, _, err := opener.consume(test.change(bytes.Clone(original))); err == nil {
 				t.Fatal("accepted invalid record")
 			}
@@ -81,7 +81,7 @@ func TestRecordConsumeRejectsInvalidRecordsWithoutAdvancing(t *testing.T) {
 
 func TestRecordConsumeRejectsReplayAndWrongTransfer(t *testing.T) {
 	sealer, _ := newSealer(testInvitation(), senderDirection)
-	record, _ := sealer.seal(kindChunk, []byte("bound to one transfer"))
+	record, _ := sealer.sealInto(nil, kindChunk, []byte("bound to one transfer"))
 	opener, _ := newOpener(testInvitation(), senderDirection)
 	if _, _, err := opener.consume(bytes.Clone(record)); err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func BenchmarkRecordOpenStorage(b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			sealer, _ := newSealer(testInvitation(), senderDirection)
 			opener, _ := newOpener(testInvitation(), senderDirection)
-			record, err := sealer.seal(kindChunk, make([]byte, 768<<10))
+			record, err := sealer.sealInto(nil, kindChunk, make([]byte, 768<<10))
 			if err != nil {
 				b.Fatal(err)
 			}
