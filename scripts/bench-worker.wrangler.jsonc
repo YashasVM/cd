@@ -1,0 +1,39 @@
+{
+  // LOCAL BENCHMARK ONLY. NEVER DEPLOY THIS CONFIGURATION.
+  // Elevated limits prevent sequential local trials exhausting a shared IP quota.
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "cd-benchmark-local-only",
+  "main": "../worker/index.ts",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": false,
+  "routes": [],
+  "durable_objects": {
+    "bindings": [
+      { "name": "TRANSFERS", "class_name": "TransferRoom" },
+      { "name": "PEERS", "class_name": "PeerSignal" },
+      { "name": "CODES", "class_name": "CodeDirectory" },
+      { "name": "DEVICES", "class_name": "DeviceRoom" }
+    ]
+  },
+  "ratelimits": [
+    { "name": "CONNECTION_RATE_LIMITER", "namespace_id": "9237491", "simple": { "limit": 1000000, "period": 60 } },
+    { "name": "PEER_RATE_LIMITER", "namespace_id": "9237492", "simple": { "limit": 1000000, "period": 60 } }
+  ],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["TransferRoom"] },
+    { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] },
+    { "tag": "v3", "new_sqlite_classes": ["CodeDirectory"] },
+    { "tag": "v4", "new_sqlite_classes": ["DeviceRoom"] }
+  ],
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/ws/*", "/api/*", "/peerjs/*", "/", "/docs.json", "/app.js", "/style.css"]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  }
+}

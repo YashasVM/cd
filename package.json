@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/sync-install.mjs && vite --host 127.0.0.1",
-    "build": "node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build",
+    "build": "npm run skill:check && node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "audit": "npm audit --audit-level=moderate",
-    "test": "node --test src/*.test.js",
+    "test": "npm run skill:check && node --test src/*.test.js scripts/bench-metrics.test.mjs scripts/firebase-config.test.mjs",
     "test:cli": "go test ./...",
     "typecheck": "tsc",
     "verify:agent": "npm run build && node scripts/verify-agent.mjs",
@@ -16,7 +16,17 @@
     "verify:cli-loop": "node scripts/verify-cli-loop.mjs",
     "bench": "npm run build && node scripts/bench.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run",
-    "verify:browser": "npm run build && node scripts/verify-browser.mjs"
+    "verify:browser": "npm run build && node scripts/verify-browser.mjs",
+    "skill:generate": "node scripts/generate-sharing-skill.mjs",
+    "skill:check": "node scripts/generate-sharing-skill.mjs --check",
+    "verify:retries": "npm run build && node scripts/verify-retries.mjs",
+    "verify:transports": "npm run build && node scripts/verify-transports.mjs",
+    "verify:resume-auth": "npm run build && node scripts/verify-resume-auth.mjs",
+    "verify:resume": "npm run build && node scripts/verify-resume.mjs",
+    "verify:devices": "node scripts/verify-devices.mjs",
+    "verify:android": "node scripts/verify-android-transfer.mjs",
+    "verify:device-push": "node scripts/verify-device-push.mjs",
+    "verify:resume-limits": "node scripts/verify-resume-limits.mjs"
   },
   "dependencies": {
     "jsqr": "1.4.0",

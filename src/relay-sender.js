@@ -5,6 +5,7 @@ import {
   KIND_CHUNK,
   KIND_END,
   KIND_OFFER,
+  KIND_SIGNAL,
   RECEIVER_DIRECTION,
   SENDER_DIRECTION,
   createOpener,
@@ -14,6 +15,8 @@ import {
 } from './agent-protocol.js';
 import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
+import { createRecordMerger, offerDirect, DIRECT_BUFFER_BYTES } from './direct-link.js';
+import { createSendWindow } from './send-window.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -22,7 +25,10 @@ import { fileSource, rechunk } from './zip-bundle.js';
 // wires it to the standalone `/send` page.
 
 const CHUNK_SIZE = 256 * 1024;
-const SEND_WINDOW_BYTES = 8 * 1024 * 1024;
+const MAX_INCOMING_BYTES = 4 * 1024 * 1024;
+const MAX_INCOMING_RECORDS = 256;
+const MAX_RETAINED_BYTES = 16 * 1024 * 1024;
+const MAX_RETAINED_RECORDS = 128;
 const ADMISSION_WAIT_MS = 10_000;
 const PEER_WAIT_MS = 15 * 60_000;
 const CONSENT_WAIT_MS = 10 * 60_000;
@@ -78,6 +84,46 @@ export function startRelaySend(source, hooks = {}) {
   const onProgress = hooks.onProgress || (() => {});
   let socket = null;
   let cancelled = false;
+  let direct = null;
+  let directUsed = false;
+  let switched = false;
+  let complete = false;
+  let retainedBytes = 0;
+  let incomingBytes = 0;
+  const retained = [];
+  const merger = createRecordMerger();
+  let sendChain = Promise.resolve();
+  let windowController = null;
+  const stats = { relayBytes: 0, directBytes: 0, maxRetainedBytes: 0, maxIncomingBytes: 0, maxIncomingCount: 0 };
+  function reportTransport() {
+    const snapshot = { ...stats, transport: directUsed ? 'direct' : 'relay', retainedBytes, incomingBytes, incomingCount: incoming.length, mergerBytes: merger.pendingBytes, window: windowController?.snapshot() };
+    hooks.onTransport?.(snapshot);
+    if (typeof globalThis.__CD_TRANSFER_TEST_OBSERVER__ === 'function') globalThis.__CD_TRANSFER_TEST_OBSERVER__(snapshot);
+  }
+  function failPump(error) {
+    closedError = error;
+    for (const waiter of waiters.splice(0)) waiter(null);
+  }
+  function deliver(event) {
+    if (closedError || cancelled) return;
+    const size = typeof event.data === 'string' ? encoder.encode(event.data).byteLength : event.data.byteLength;
+    const waiter = waiters.shift();
+    if (waiter) waiter(event);
+    else {
+      if (incoming.length >= MAX_INCOMING_RECORDS || incomingBytes + size > MAX_INCOMING_BYTES) {
+        failPump(new RelaySendError('The receiver exceeded the safe response buffer. Send again for a fresh transfer.'));
+        return;
+      }
+      incoming.push({ event, size }); incomingBytes += size;
+      stats.maxIncomingBytes = Math.max(stats.maxIncomingBytes, incomingBytes);
+      stats.maxIncomingCount = Math.max(stats.maxIncomingCount, incoming.length);
+    }
+    reportTransport();
+  }
+  function receiveRecord(record) {
+    try { for (const ordered of merger.push(record)) deliver({ data: ordered }); reportTransport(); }
+    catch (error) { failPump(new RelaySendError(error.message)); }
+  }
 
   // Single persistent pump: every socket message is buffered exactly once and
   // handed to waiters in arrival order. Attaching a fresh message listener per
@@ -87,13 +133,37 @@ export function startRelaySend(source, hooks = {}) {
   const waiters = [];
   let closedError = null;
 
+  function releaseRetained(acknowledged) {
+    while (retained.length && retained[0].endingBytes <= acknowledged) retainedBytes -= retained.shift().record.byteLength;
+  }
+  async function switchDirect() {
+    if (switched || !direct?.open) return;
+    switched = true;
+    const replay = retained.splice(0);
+    for (const item of replay) {
+      await direct.send(item.record); directUsed = true; stats.directBytes += item.record.byteLength;
+      retainedBytes -= item.record.byteLength;
+    }
+    reportTransport();
+  }
+  async function waitForSocketDrain(size) {
+    const started = performance.now();
+    while (socket.bufferedAmount + size > DIRECT_BUFFER_BYTES) {
+      if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
+      if (direct?.open) return;
+      if (socket.readyState !== 1 || performance.now() - started > TRANSFER_IDLE_MS) throw new RelaySendError('The relay send buffer stalled. Check your connection and send again.');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    if (!direct?.open && socket.readyState !== 1) throw new RelaySendError('Lost the connection to CD. Send again for a fresh transfer.');
+  }
+
   function attachPump() {
     socket.addEventListener('message', (event) => {
-      const waiter = waiters.shift();
-      if (waiter) waiter(event);
-      else incoming.push(event);
+      if (typeof event.data === 'string') deliver(event);
+      else receiveRecord(event.data);
     });
     socket.addEventListener('close', (event) => {
+      if (directUsed || complete) return;
       closedError = new RelaySendError(event.code === 4408
         ? 'The code expired before anyone used it. Send again for a fresh code.'
         : 'Lost the connection to CD. Check your network and try again.');
@@ -132,16 +202,20 @@ export function startRelaySend(source, hooks = {}) {
           .then((result) => {
             if (result === null || result === undefined) {
               // Not what this wait wanted; keep waiting for the next message.
-              if (!settled) waiters.push(entry);
+              if (!settled) next();
               return;
             }
             finish(null, result);
           })
           .catch((error) => finish(error));
       };
-      if (incoming.length > 0) entry(incoming.shift());
-      else if (closedError) entry(null);
-      else waiters.push(entry);
+      const next = () => {
+        if (closedError) { entry(null); return; }
+        if (incoming.length > 0) {
+          const item = incoming.shift(); incomingBytes -= item.size; entry(item.event);
+        } else waiters.push(entry);
+      };
+      next();
     });
   }
 
@@ -161,10 +235,21 @@ export function startRelaySend(source, hooks = {}) {
       if (typeof event.data === 'string') {
         let value;
         try { value = JSON.parse(event.data); } catch { return null; }
-        if (value?.type === 'peer-left') throw new RelaySendError('The receiver left.');
+        if (value?.type === 'peer-left' && !directUsed) throw new RelaySendError('The receiver left.');
         return null;
       }
       const { kind, plaintext } = await opener.open(event.data);
+      if (kind === KIND_SIGNAL) {
+        if (plaintext.byteLength > 64 * 1024) throw new RelaySendError('The receiver sent oversized direct signaling.');
+        if (direct && !switched) {
+          try { await direct.signal(JSON.parse(new TextDecoder().decode(plaintext))); }
+          catch (error) {
+            if (directUsed) throw new RelaySendError('The direct connection failed. Send again for a fresh transfer.');
+            direct.close(); direct = null; retained.length = 0; retainedBytes = 0;
+          }
+        }
+        return null;
+      }
       if (!kinds.includes(kind)) throw new RelaySendError('The receiver sent a message out of order.');
       return { kind, plaintext };
     }, timeoutMessage);
@@ -185,6 +270,7 @@ export function startRelaySend(source, hooks = {}) {
   }
 
   const onPageHide = () => {
+    direct?.close();
     try { socket?.close(1000, 'sender left'); } catch { /* Best effort. */ }
   };
 
@@ -224,15 +310,48 @@ export function startRelaySend(source, hooks = {}) {
     onShare({ code, url: shareUrl });
     onState('waiting');
     onStatus('Waiting for the receiver. The code works for 15 minutes.');
+    const offerPromise = typeof RTCPeerConnection === 'function' ? offerDirect({
+      onRecord: (record) => { directUsed = true; receiveRecord(record); },
+      onOpen: () => {
+        sendChain = sendChain.then(() => switchDirect()).catch((error) => failPump(new RelaySendError(error.message)));
+      },
+      onLost: (error) => {
+        if (directUsed && !complete) failPump(new RelaySendError(error.message));
+        else if (!complete) { direct?.close(); direct = null; retained.length = 0; retainedBytes = 0; }
+      }
+    }).then((path) => {
+      if (cancelled || closedError || complete) { path.close(); return null; }
+      direct = path;
+      return path;
+    }).catch(() => null) : Promise.resolve(null);
     await waitForText('peer-joined', PEER_WAIT_MS, 'Nobody used the code within 15 minutes. Send again for a fresh code.');
 
+    direct = await offerPromise;
+    if (cancelled) { direct?.close(); throw new RelaySendError('Transfer canceled.'); }
     const [sealer, opener] = await Promise.all([
       createSealer(invitation, SENDER_DIRECTION),
       createOpener(invitation, RECEIVER_DIRECTION)
     ]);
-    const send = async (kind, payload = new Uint8Array()) => {
-      if (cancelled) throw new RelaySendError('Transfer canceled.');
-      socket.send(await sealer.seal(kind, payload));
+    const send = (kind, payload = new Uint8Array(), endingBytes = 0n) => {
+      sendChain = sendChain.then(async () => {
+        if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
+        const record = await sealer.seal(kind, payload);
+        if (direct?.open) {
+          await switchDirect();
+          await direct.send(record); directUsed = true; stats.directBytes += record.byteLength;
+        } else {
+          if (direct && !switched) {
+            if (retained.length >= MAX_RETAINED_RECORDS || retainedBytes + record.byteLength > MAX_RETAINED_BYTES) throw new RelaySendError('The direct replay buffer is full. Send again for a fresh transfer.');
+            retained.push({ record, endingBytes }); retainedBytes += record.byteLength;
+            stats.maxRetainedBytes = Math.max(stats.maxRetainedBytes, retainedBytes);
+          }
+          await waitForSocketDrain(record.byteLength);
+          if (direct?.open) { await switchDirect(); }
+          else { socket.send(record); stats.relayBytes += record.byteLength; }
+        }
+        reportTransport();
+      });
+      return sendChain;
     };
 
     onState('connecting');
@@ -241,9 +360,12 @@ export function startRelaySend(source, hooks = {}) {
       name: source.name,
       mediaType: source.type || 'application/octet-stream',
       size: String(source.size),
-      chunkSize: CHUNK_SIZE
+      chunkSize: CHUNK_SIZE,
+      ...(source.bundle ? { bundle: true, files: source.files } : {}),
+      ...(direct ? { direct: { sdp: direct.sdp } } : {})
     })));
     await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
+    releaseRetained(0n);
 
     onState('transferring');
     onStatus('Sending...');
@@ -251,6 +373,7 @@ export function startRelaySend(source, hooks = {}) {
     let sent = 0n;
     let acknowledged = 0n;
     let chunks = 0;
+    windowController = createSendWindow();
     onProgress(0, source.size);
     const awaitAck = async () => {
       const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');
@@ -259,31 +382,64 @@ export function startRelaySend(source, hooks = {}) {
         throw new RelaySendError('The receiver sent invalid progress.');
       }
       acknowledged = ack.bytes;
+      try { windowController.acked(acknowledged); } catch { throw new RelaySendError('The receiver sent invalid progress.'); }
+      releaseRetained(acknowledged);
       onProgress(Number(acknowledged), source.size);
     };
-    for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
-      if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
-      await send(KIND_CHUNK, chunk);
-      sent += BigInt(chunk.byteLength);
-      chunks += 1;
-      while (sent - acknowledged >= BigInt(SEND_WINDOW_BYTES)) await awaitAck();
-    }
-    if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
-    while (acknowledged < sent) await awaitAck();
+    let wakeSender;
+    let progressChanged = new Promise(resolve => { wakeSender = resolve; });
+    const readAcknowledgements = async () => {
+      try {
+        while (acknowledged < total) {
+          await awaitAck();
+          const wake = wakeSender;
+          progressChanged = new Promise(resolve => { wakeSender = resolve; });
+          wake();
+        }
+      } catch (error) {
+        failPump(error);
+        wakeSender();
+        throw error;
+      }
+    };
+    const sendSource = async () => {
+      try {
+        for await (const chunk of rechunk(source.stream(), CHUNK_SIZE)) {
+          if (sent + BigInt(chunk.byteLength) > total) throw new RelaySendError('A file changed while it was being sent.');
+          while (!windowController.canSend(chunk.byteLength)) {
+            if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
+            await progressChanged;
+          }
+          // Account before yielding to the transport: an ACK can arrive during send.
+          sent += BigInt(chunk.byteLength);
+          chunks += 1;
+          windowController.sent(sent);
+          await send(KIND_CHUNK, chunk, sent);
+        }
+        if (sent !== total) throw new RelaySendError('A file changed while it was being sent.');
+      } catch (error) {
+        failPump(error);
+        throw error;
+      }
+    };
+    await Promise.all([sendSource(), readAcknowledgements()]);
 
     await send(KIND_END, encodeCounts(chunks, sent));
     const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');
     const done = decodeCounts(plaintext);
     if (done.bytes !== sent || done.chunks !== chunks) throw new RelaySendError('The receiver did not verify the transfer.');
     onProgress(source.size, source.size);
+    complete = true;
     onState('complete');
     onStatus('The receiver has every byte.');
     window.removeEventListener('pagehide', onPageHide);
+    direct?.close();
     socket.close(1000, 'complete');
   }
 
   const done = run().catch((error) => {
     window.removeEventListener('pagehide', onPageHide);
+    direct?.close();
     try { socket?.close(cancelled ? 1000 : 4400, cancelled ? 'sender canceled' : 'sender failed'); } catch { /* Best effort. */ }
     if (cancelled) throw new RelaySendError('Transfer canceled.');
     throw error instanceof RelaySendError ? error : new RelaySendError('The transfer failed. Try again.');
@@ -294,6 +450,7 @@ export function startRelaySend(source, hooks = {}) {
     cancel() {
       if (cancelled) return;
       cancelled = true;
+      direct?.close();
       try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
       for (const waiter of waiters.splice(0)) waiter(null);
     }

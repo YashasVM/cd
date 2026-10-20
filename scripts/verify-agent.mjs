@@ -63,7 +63,8 @@ try {
     env: {
       ...process.env,
       CD_RELAY_URL: relayBase,
-      CD_PUBLIC_URL: publicBase
+      CD_PUBLIC_URL: publicBase,
+      CD_TRANSPORT_REPORT: '1'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -112,8 +113,12 @@ try {
   assert.equal(exitCode, 0, senderLog);
   // The direct path is opportunistic: on a slow runner the relay can finish
   // this small file before WebRTC connects. link_test.go covers the switch.
-  const direct = /switched to a direct connection/.test(senderLog);
-  console.log(`sender ${direct ? 'switched to the direct path' : 'finished on the relay'}`);
+  const reports = senderLog.split('\n').flatMap((line) => {
+    try { const value = JSON.parse(line); return value.transport ? [value] : []; } catch { return []; }
+  });
+  assert.equal(reports.length, 1, 'sender did not report actual transport bytes');
+  const direct = reports[0].directBytes > 0;
+  console.log(`sender ${direct ? 'carried encrypted records directly' : 'finished on the relay'}: ${reports[0].directBytes} direct, ${reports[0].relayBytes} relay bytes`);
   assert.deepEqual(Uint8Array.from(received), source);
   await verifyFolderBundle(context);
   if (!hosted) await verifyPeerRegistrationBurst(port);

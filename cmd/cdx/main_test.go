@@ -165,3 +165,26 @@ func TestRunReportsTheInvalidOptionAfterJSON(t *testing.T) {
 		t.Fatalf("status = %d, stderr = %q", status, output)
 	}
 }
+
+func TestProgressArguments(t *testing.T) {
+	for _, args := range [][]string{{"file.txt"}, {"--json", "file.txt"}, {"--progress", "file.txt"}, {"--json", "--progress", "file.txt"}} {
+		request, err := parseSendArgs(args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := strings.Contains(strings.Join(args, " "), "--progress")
+		if request.progress != want {
+			t.Fatalf("send %v: progress = %v", args, request.progress)
+		}
+	}
+	for _, args := range [][]string{{"48291"}, {"--json", "48291"}, {"--progress", "48291"}, {"--json", "--progress", "48291"}} {
+		request, err := parseReceiveArgs(args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := strings.Contains(strings.Join(args, " "), "--progress")
+		if request.progress != want {
+			t.Fatalf("receive %v: progress = %v", args, request.progress)
+		}
+	}
+}

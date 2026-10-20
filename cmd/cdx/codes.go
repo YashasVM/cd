@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -66,19 +65,19 @@ func claimShareCode(ctx context.Context, publicBase, transferID, key string) (st
 	defer response.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1024))
 	if err != nil {
-		return "", errors.New("reserve a share code: the relay sent an unreadable response")
+		return "", NewFailure(failureProtocol, "reserve a share code: the relay sent an unreadable response", retryNever)
 	}
 	switch {
 	case response.StatusCode == http.StatusTooManyRequests:
-		return "", errors.New("share codes are busy right now: wait a moment and try again")
+		return "", NewFailure(failureBusy, "share codes are busy right now: wait a moment and try again", retrySameRequest)
 	case response.StatusCode == http.StatusServiceUnavailable:
-		return "", errors.New("share codes are busy right now: wait a moment and try again")
+		return "", NewFailure(failureBusy, "share codes are busy right now: wait a moment and try again", retrySameRequest)
 	case response.StatusCode < 200 || response.StatusCode >= 300:
-		return "", fmt.Errorf("reserve a share code: the relay rejected the request (HTTP %d)", response.StatusCode)
+		return "", failuref(failureProtocol, retryNever, "reserve a share code: the relay rejected the request (HTTP %d)", response.StatusCode)
 	}
 	var claimed codeClaimResponse
 	if err := json.Unmarshal(body, &claimed); err != nil || !isShortCode(claimed.Code) {
-		return "", errors.New("reserve a share code: the relay sent an invalid code")
+		return "", NewFailure(failureProtocol, "reserve a share code: the relay sent an invalid code", retryNever)
 	}
 	return strings.TrimSpace(claimed.Code), nil
 }
@@ -87,33 +86,48 @@ func claimShareCode(ctx context.Context, publicBase, transferID, key string) (st
 func lookupShareCode(ctx context.Context, publicBase, code string) (invitation, error) {
 	cleaned := strings.TrimSpace(code)
 	if !isShortCode(cleaned) {
-		return invitation{}, errors.New("this CD code is invalid: type the 4-5 digit code from the sender")
+		return invitation{}, NewFailure(failureInvalidCode, "this CD code is invalid: type the 4-5 digit code from the sender", retryNever)
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, codesEndpoint(publicBase)+"/"+cleaned, nil)
+	var response *http.Response
+	err := retrySetup(ctx, func() error {
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, codesEndpoint(publicBase)+"/"+cleaned, nil)
+		if err != nil {
+			return err
+		}
+		response, err = codeHTTPClient().Do(request)
+		if err != nil {
+			return fmt.Errorf("look up the share code: %w", err)
+		}
+		if response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+			response.Body.Close()
+			return failuref(failureBusy, retrySameRequest, "share code lookup temporarily unavailable (HTTP %d): wait a moment and try again", response.StatusCode)
+		}
+		return nil
+	})
 	if err != nil {
 		return invitation{}, err
-	}
-	response, err := codeHTTPClient().Do(request)
-	if err != nil {
-		return invitation{}, fmt.Errorf("look up the share code: %w", friendlyRelayError(err))
 	}
 	defer response.Body.Close()
 	switch response.StatusCode {
 	case http.StatusNotFound:
-		return invitation{}, errors.New("bad code, or the sender is no longer available")
+		return invitation{}, NewFailure(failureNotFound, "bad code, or the sender is no longer available", retryNever)
 	case http.StatusTooManyRequests:
-		return invitation{}, errors.New("too many attempts: wait a moment and try again")
+		return invitation{}, NewFailure(failureBusy, "too many attempts: wait a moment and try again", retrySameRequest)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return invitation{}, fmt.Errorf("look up the share code: the relay rejected the request (HTTP %d)", response.StatusCode)
+		return invitation{}, failuref(failureProtocol, retryNever, "look up the share code: the relay rejected the request (HTTP %d)", response.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1024))
 	if err != nil {
-		return invitation{}, errors.New("look up the share code: the relay sent an unreadable response")
+		return invitation{}, NewFailure(failureProtocol, "look up the share code: the relay sent an unreadable response", retryNever)
 	}
 	var found codeLookupResponse
 	if err := json.Unmarshal(body, &found); err != nil {
-		return invitation{}, errors.New("look up the share code: the relay sent an invalid response")
+		return invitation{}, NewFailure(failureProtocol, "look up the share code: the relay sent an invalid response", retryNever)
 	}
-	return parseInvitationParts(found.TransferID, found.Key)
+	value, err := parseInvitationParts(found.TransferID, found.Key)
+	if err != nil {
+		return invitation{}, NewFailure(failureProtocol, "look up the share code: the relay sent invalid transfer details", retryNever, err)
+	}
+	return value, nil
 }
