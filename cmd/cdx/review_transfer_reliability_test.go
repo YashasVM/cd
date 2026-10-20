@@ -137,7 +137,7 @@ func TestReliabilityCancelledDirectTransferStopsReadingSource(t *testing.T) {
 		}
 	}()
 	source := &reliabilityReader{total: 64, ack: acks, cancel: cancel}
-	err := transfer(ctx, sender, source, readyOutput{Filename: "cancel.bin", Size: 64 * chunkSize}, nil, sendHooks{})
+	err := transfer(ctx, sender, source, readyOutput{Filename: "cancel.bin", Size: 64 * chunkSize}, nil, nil, sendHooks{})
 	t.Logf("cancelled in first Read: source_reads=%d bytes=%d transfer_error=%v", source.reads, source.reads*chunkSize, err)
 	if source.reads > 2 {
 		t.Errorf("continued consuming source after cancellation: %d chunks", source.reads)

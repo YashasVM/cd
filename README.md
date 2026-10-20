@@ -44,7 +44,8 @@ To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in
 **Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
 receiver verifies the file. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
 the code is live. Codes expire after 15 minutes and admit one receiver.
-Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
+Files of 1 MiB or more switch to a direct path mid-transfer when the network allows it: a TCP lane when
+both ends run cdx on the same network, WebRTC otherwise.
 
 **Security:** a 5-digit code lets the relay hold the transfer key so the code is easy to type, so anyone who
 guesses a live code can receive the file. For sensitive files, use `--link`: the key stays in the URL fragment,
@@ -62,6 +63,7 @@ Or install just the skill with `npx skills add YashasVM/cd`.
 ```text
 Browser / cdx ── encrypted WebSocket ── CD relay (Durable Object) ── Browser / cdx
                 └─ direct WebRTC upgrade for large files from cdx ─┘
+cdx ─────────── same-network TCP lane (cdx to cdx) ─────────────── cdx
 ```
 
 One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code directory (`/api/codes`).

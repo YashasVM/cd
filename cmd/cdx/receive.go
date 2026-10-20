@@ -318,10 +318,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err := link.send(kindAccept, nil); err != nil {
 		return friendlyRelayError(fmt.Errorf("accept file offer: %w", err))
 	}
-	// Data starts on the relay right away; answer a direct-path offer in the
-	// background and the sender moves over when the data channel opens.
-	if offer.Direct != nil && directEnabled() {
-		go answerDirectPath(link, offer.Direct.SDP)
+	// Data starts on the relay right away; open a direct path in the
+	// background and the sender moves over when it opens.
+	if directEnabled() && (offer.Direct != nil || offer.LAN != nil) {
+		go openDirectPath(ctx, link, invitation, offer)
 	}
 
 	terminal := isTerminal(os.Stderr)
@@ -457,6 +457,23 @@ func publishReceivedFile(root *os.Root, staging, final string, force bool) error
 		return err
 	}
 	return root.Remove(staging)
+}
+
+// openDirectPath tries the same-network lane first and otherwise answers
+// the WebRTC offer.
+func openDirectPath(ctx context.Context, link *recordLink, value invitation, offer fileOffer) {
+	if offer.LAN != nil && lanEnabled() {
+		if stream, err := dialLAN(ctx, offer.LAN, value); err == nil {
+			if link.adoptStream(stream) {
+				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", link.direct.Load().route())
+				return
+			}
+			_ = stream.Close()
+		}
+	}
+	if offer.Direct != nil {
+		answerDirectPath(link, offer.Direct.SDP)
+	}
 }
 
 // answerDirectPath answers the sender's direct-path offer with a signal

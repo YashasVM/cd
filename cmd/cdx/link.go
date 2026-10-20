@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -161,6 +162,22 @@ func (link *recordLink) attachDirect(path *directPath) {
 	link.direct.Store(path)
 }
 
+// adoptStream makes an authenticated same-network connection the direct
+// path, unless a direct path already carries the transfer. A WebRTC path it
+// replaces closes without reporting a failure.
+func (link *recordLink) adoptStream(stream net.Conn) bool {
+	link.writeMu.Lock()
+	defer link.writeMu.Unlock()
+	if link.switched || link.directUsed.Load() {
+		return false
+	}
+	path := newStreamPath(stream, link.directRecord, link.directLost)
+	if previous := link.direct.Swap(path); previous != nil {
+		previous.retire()
+	}
+	return true
+}
+
 // directRecord and directLost are the callbacks a directPath reports to.
 func (link *recordLink) directRecord(record []byte) {
 	link.deliver(linkItem{record: record, direct: true})
@@ -196,7 +213,9 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		link.directUsed.Store(true)
 		if !link.switched {
 			link.switched = true
-			if link.striping {
+			// Striped beside a same-network stream, the relay's slower
+			// records would hold back delivery, so the stream goes alone.
+			if link.striping && path.stream == nil {
 				link.startStriping(path)
 			}
 			for _, earlier := range link.retained {

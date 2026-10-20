@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "date": "2026-10-20T07:25:20.484Z",
+  "mib": 1024,
+  "runs": 5,
+  "croc": "croc version 10.7.0",
+  "route": "loopback; cdx through local wrangler dev relay (direct WebRTC allowed in \"cdx\"), croc through a local croc relay",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "7.2.8-9-omarchy",
+    "node": "v26.10.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "cores": 12
+  },
+  "summary": {
+    "cdx": {
+      "runs": 5,
+      "medianTotalSeconds": 0.772,
+      "medianTransferSeconds": 0.754,
+      "medianMibPerSecond": 1358.09,
+      "trials": [
+        {
+          "totalSeconds": 0.767,
+          "transferSeconds": 0.748,
+          "readySeconds": 0.018,
+          "mibPerSecond": 1368.984,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 0.757,
+          "transferSeconds": 0.74,
+          "readySeconds": 0.017,
+          "mibPerSecond": 1383.784,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 0.772,
+          "transferSeconds": 0.754,
+          "readySeconds": 0.017,
+          "mibPerSecond": 1358.09,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 1.005,
+          "transferSeconds": 0.993,
+          "readySeconds": 0.012,
+          "mibPerSecond": 1031.219,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 1.705,
+          "transferSeconds": 1.688,
+          "readySeconds": 0.017,
+          "mibPerSecond": 606.635,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        }
+      ]
+    },
+    "cdx-webrtc": {
+      "runs": 5,
+      "medianTotalSeconds": 3.224,
+      "medianTransferSeconds": 3.212,
+      "medianMibPerSecond": 318.804,
+      "trials": [
+        {
+          "totalSeconds": 3.03,
+          "transferSeconds": 3.017,
+          "readySeconds": 0.013,
+          "mibPerSecond": 339.41,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 3.131,
+          "transferSeconds": 3.118,
+          "readySeconds": 0.013,
+          "mibPerSecond": 328.416,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 4.587,
+          "transferSeconds": 4.575,
+          "readySeconds": 0.012,
+          "mibPerSecond": 223.825,
+          "routes": [
+            "switched to a direct connection (direct internet path)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 3.224,
+          "transferSeconds": 3.212,
+          "readySeconds": 0.013,
+          "mibPerSecond": 318.804,
+          "routes": [
+            "switched to a direct connection (direct internet path)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 4.522,
+          "transferSeconds": 4.51,
+          "readySeconds": 0.012,
+          "mibPerSecond": 227.051,
+          "routes": [
+            "switched to a direct connection (direct internet path)",
+            "switched to a direct connection (same network)"
+          ]
+        }
+      ]
+    },
+    "croc": {
+      "runs": 5,
+      "medianTotalSeconds": 4.348,
+      "medianTransferSeconds": 4.187,
+      "medianMibPerSecond": 244.567,
+      "trials": [
+        {
+          "totalSeconds": 4.348,
+          "transferSeconds": 4.184,
+          "readySeconds": 0.163,
+          "mibPerSecond": 244.742
+        },
+        {
+          "totalSeconds": 4.295,
+          "transferSeconds": 4.131,
+          "readySeconds": 0.164,
+          "mibPerSecond": 247.882
+        },
+        {
+          "totalSeconds": 4.347,
+          "transferSeconds": 4.187,
+          "readySeconds": 0.161,
+          "mibPerSecond": 244.567
+        },
+        {
+          "totalSeconds": 4.649,
+          "transferSeconds": 4.488,
+          "readySeconds": 0.16,
+          "mibPerSecond": 228.164
+        },
+        {
+          "totalSeconds": 4.556,
+          "transferSeconds": 4.396,
+          "readySeconds": 0.16,
+          "mibPerSecond": 232.939
+        }
+      ]
+    },
+    "croc-no-compress": {
+      "runs": 5,
+      "medianTotalSeconds": 1.705,
+      "medianTransferSeconds": 1.533,
+      "medianMibPerSecond": 667.971,
+      "trials": [
+        {
+          "totalSeconds": 1.754,
+          "transferSeconds": 1.594,
+          "readySeconds": 0.16,
+          "mibPerSecond": 642.409
+        },
+        {
+          "totalSeconds": 1.649,
+          "transferSeconds": 1.477,
+          "readySeconds": 0.172,
+          "mibPerSecond": 693.297
+        },
+        {
+          "totalSeconds": 1.658,
+          "transferSeconds": 1.499,
+          "readySeconds": 0.159,
+          "mibPerSecond": 683.122
+        },
+        {
+          "totalSeconds": 1.705,
+          "transferSeconds": 1.546,
+          "readySeconds": 0.159,
+          "mibPerSecond": 662.354
+        },
+        {
+          "totalSeconds": 1.78,
+          "transferSeconds": 1.533,
+          "readySeconds": 0.247,
+          "mibPerSecond": 667.971
+        }
+      ]
+    }
+  }
+}

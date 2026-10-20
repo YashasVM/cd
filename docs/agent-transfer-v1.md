@@ -241,3 +241,39 @@ underneath. Once a record has crossed the direct path, losing the relay
 WebSocket is harmless and losing the direct path is fatal. Before that, a
 direct path that fails or never connects changes nothing. `CD_DIRECT=0`
 forces the relay.
+
+## Same-network lane (TCP) between two cdx
+
+Alongside the WebRTC offer, `cdx send` listens on an ephemeral TCP port and
+adds `"lan": {"port": <port>, "hosts": ["<address>", ...]}` to the encrypted
+file offer. Hosts are up to eight of the sender's private (RFC 1918, unique
+local) and carrier-grade NAT (100.64.0.0/10, used by overlays such as
+Tailscale) addresses. Browsers and receivers that predate the field ignore
+it.
+
+`cdx receive` validates the offer (port 1-65535, one to eight hosts, each an
+address of those kinds, never a name), connects to every host at once for up
+to one second, keeps the first connection that opens, and closes the rest
+before any handshake. Both sides then prove they hold the transfer key, with
+a two-second deadline:
+
+1. Receiver → sender: `CDL1` and a 32-byte random nonce `Nr`.
+2. Sender → receiver: a 32-byte random nonce `Ns` and
+   `HMAC-SHA-256(K, "sender" ‖ id ‖ Nr ‖ Ns)`.
+3. Receiver → sender: `HMAC-SHA-256(K, "receiver" ‖ id ‖ Nr ‖ Ns)`.
+
+`K` is HKDF-SHA-256 of the master key with the transfer id as salt and info
+`cd-transfer-v1 lan handshake`; `id` is the 16-byte transfer id. Each side
+verifies the other's HMAC in constant time and closes the connection on any
+mismatch. The roles are bound into the HMAC, so neither proof can be
+reflected.
+
+After the handshake the connection carries whole records back to back, with
+the same framing, encryption, sequence numbers and merge rules as the data
+channel. The sender accepts only connections that arrive on an offered
+address, handshakes at most eight at a time, and stops listening after the
+first success or when the transfer ends. Once the lane is adopted the sender
+does not stripe data onto the relay and closes its unanswered WebRTC offer.
+If no host answers or the handshake fails, the receiver answers the WebRTC
+offer as before, about a second later than it otherwise would. `CD_LAN=0`
+disables the lane on either side.

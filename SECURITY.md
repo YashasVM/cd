@@ -35,6 +35,17 @@ for the limits and availability tradeoff.
 Use codes for everyday one-time shares between friends; use `--link` mode for
 anything sensitive.
 
+When both ends run `cdx` and the file is 1 MiB or larger, the sender also
+listens on an ephemeral TCP port and lists up to eight of its private-network
+addresses inside the encrypted file offer, so the relay learns them only for
+code transfers, whose key it already holds. Before any record moves, both
+ends prove they hold the transfer key with HMACs over fresh nonces; the
+sender accepts only connections that arrive on an offered address and stops
+listening after the first authenticated one or when the transfer ends. Records
+keep their end-to-end encryption on the connection. Firewalls may ask to
+allow `cdx` the first time; declining leaves the WebRTC and relay paths.
+`CD_LAN=0` turns the lane off.
+
 This model does not hide traffic metadata, protect a compromised endpoint, or
 provide resumable/offline storage. See [the protocol](docs/agent-transfer-v1.md)
 for exact limits and wire behavior.

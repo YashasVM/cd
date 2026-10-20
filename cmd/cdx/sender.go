@@ -46,6 +46,9 @@ type fileOffer struct {
 	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
 	// that predate it ignore the field.
 	Direct *directOffer `json:"direct,omitempty"`
+	// LAN, when present, offers a same-network TCP lane (see lan.go).
+	// Receivers that predate it, and browsers, ignore the field.
+	LAN *lanOffer `json:"lan,omitempty"`
 	// Bundle marks a zip that cdx or the browser built from several files.
 	// Receivers that know it unpack the files; older ones keep the .zip.
 	Bundle bool `json:"bundle,omitempty"`
@@ -367,6 +370,20 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			}()
 		}
 	}
+	var lan *lanOffer
+	if directEnabled() && lanEnabled() && source.size >= directMinBytes {
+		if lane, err := listenLAN(invitation); err == nil {
+			defer lane.close()
+			lan = &lane.offer
+			go lane.serve(func(stream net.Conn) bool {
+				if !link.adoptStream(stream) {
+					return false
+				}
+				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", link.direct.Load().route())
+				return true
+			})
+		}
+	}
 	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
 		return err
 	}
@@ -378,7 +395,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	}
 	defer reader.Close()
 	link.start()
-	return transfer(ctx, link, reader, ready, offerSDP, hooks)
+	return transfer(ctx, link, reader, ready, offerSDP, lan, hooks)
 }
 
 // isTimeoutError reports whether err is a network deadline timeout.
@@ -458,8 +475,9 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 }
 
 // transfer streams one source over a paired link. offerSDP, when not nil,
-// yields the direct-path offer to embed in the file offer.
-func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
+// yields the direct-path offer to embed in the file offer; lan, when not
+// nil, is the same-network lane to offer.
+func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, lan *lanOffer, hooks sendHooks) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -468,7 +486,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		link.close()
 	})
 	defer stopOnCancel()
-	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files}
+	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files, LAN: lan}
 	if offerSDP != nil {
 		select {
 		case <-ctx.Done():
@@ -476,7 +494,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		case sdp := <-offerSDP:
 			if sdp != "" {
 				// Include candidates gathered while the recipient entered the code.
-				if path := link.direct.Load(); path != nil {
+				if path := link.direct.Load(); path != nil && path.connection != nil {
 					if current := path.connection.LocalDescription(); current != nil {
 						sdp = current.SDP
 					}
@@ -504,7 +522,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	handleSignal := func(payload []byte) {
 		path := link.direct.Load()
 		var signal directSignal
-		if path == nil || json.Unmarshal(payload, &signal) != nil {
+		if path == nil || path.connection == nil || json.Unmarshal(payload, &signal) != nil {
 			return
 		}
 		if signal.Candidate != nil {

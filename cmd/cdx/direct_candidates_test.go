@@ -77,7 +77,7 @@ func TestTransferIncludesCandidatesDiscoveredWhileWaitingForReceiver(t *testing.
 	defer cancel()
 	done := make(chan error, 1)
 	go func() {
-		done <- transfer(ctx, sender, bytes.NewReader(nil), readyOutput{Filename: "empty.bin"}, offers, sendHooks{})
+		done <- transfer(ctx, sender, bytes.NewReader(nil), readyOutput{Filename: "empty.bin"}, offers, nil, sendHooks{})
 	}()
 	kind, payload, err := receiver.next(ctx, 2*time.Second)
 	cancel()

@@ -8,11 +8,11 @@ import { fileURLToPath } from 'node:url';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { chromium } from 'playwright-core';
-import { availablePort, childExit, collect, findChromium, run, stopChild, waitForHealth, withTimeout } from './verify-helpers.mjs';
+import { availablePort, childExit, collect, findChromium, firstLine, run, stopChild, waitForHealth, withTimeout } from './verify-helpers.mjs';
 
 // The main page's Send tab: a numeric code that a browser Receive box,
-// `cdx receive`, and a scanned QR code all accept. Runs against a local
-// Worker. Set CHROMIUM_PATH if Chromium lives outside the common paths.
+// `cdx receive`, and a scanned QR code all accept; and a `cdx send` code
+// typed into the browser. Runs against a local Worker. Set CHROMIUM_PATH if Chromium lives outside the common paths.
 const port = await availablePort();
 const publicBase = `http://127.0.0.1:${port}`;
 const childEnv = { ...process.env, CD_RELAY_URL: `ws://127.0.0.1:${port}/ws/v1`, CD_PUBLIC_URL: publicBase };
@@ -141,6 +141,22 @@ try {
     await page.locator('#sender-complete:not(.hidden)').waitFor();
     console.log('verified browser->terminal: three files arrive as separate exact files');
     await context.close();
+  }
+
+  // cdx send -> browser by typed code. The offer carries the same-network
+  // lane, which the browser ignores.
+  {
+    const sender = spawn(executable, ['send', '--wait', singlePath], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+    const stderr = collect(sender.stderr);
+    const exited = childExit(sender);
+    const code = await withTimeout(firstLine(sender.stdout), 30_000, 'cdx send printed no code');
+    assert.match(code, /^\d{4,5}$/, `cdx send code ${code} is not numeric`);
+    senderStatus = async () => 'cdx send';
+    const received = await receiveInBrowser(browser, (receiver) => receiver.locator('#code-input').fill(code));
+    assert.equal(received.name, 'holiday video.mp4');
+    assert.equal(sha(received.bytes), sha(single));
+    assert.equal(await exited, 0, await stderr);
+    console.log(`verified terminal->browser by typed code: ${received.bytes.length} exact bytes`);
   }
 
   // 3. Browser -> browser by scanning the QR code with a (fake) camera.

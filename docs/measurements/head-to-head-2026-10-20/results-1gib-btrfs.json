@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "date": "2026-10-20T07:23:29.684Z",
+  "mib": 1024,
+  "runs": 5,
+  "croc": "croc version 10.7.0",
+  "route": "loopback; cdx through local wrangler dev relay (direct WebRTC allowed in \"cdx\"), croc through a local croc relay",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "7.2.8-9-omarchy",
+    "node": "v26.10.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "cores": 12
+  },
+  "summary": {
+    "cdx": {
+      "runs": 5,
+      "medianTotalSeconds": 1.851,
+      "medianTransferSeconds": 1.797,
+      "medianMibPerSecond": 569.839,
+      "trials": [
+        {
+          "totalSeconds": 1.7,
+          "transferSeconds": 1.616,
+          "readySeconds": 0.084,
+          "mibPerSecond": 633.663,
+          "reports": []
+        },
+        {
+          "totalSeconds": 1.851,
+          "transferSeconds": 1.797,
+          "readySeconds": 0.054,
+          "mibPerSecond": 569.839,
+          "reports": []
+        },
+        {
+          "totalSeconds": 5.434,
+          "transferSeconds": 5.375,
+          "readySeconds": 0.059,
+          "mibPerSecond": 190.512,
+          "reports": []
+        },
+        {
+          "totalSeconds": 51.857,
+          "transferSeconds": 51.803,
+          "readySeconds": 0.054,
+          "mibPerSecond": 19.767,
+          "reports": []
+        },
+        {
+          "totalSeconds": 1.061,
+          "transferSeconds": 1.011,
+          "readySeconds": 0.049,
+          "mibPerSecond": 1012.859,
+          "reports": []
+        }
+      ]
+    },
+    "cdx-webrtc": {
+      "runs": 5,
+      "medianTotalSeconds": 5.498,
+      "medianTransferSeconds": 5.455,
+      "medianMibPerSecond": 187.718,
+      "trials": [
+        {
+          "totalSeconds": 8.934,
+          "transferSeconds": 8.472,
+          "readySeconds": 0.463,
+          "mibPerSecond": 120.869,
+          "reports": []
+        },
+        {
+          "totalSeconds": 5.498,
+          "transferSeconds": 5.455,
+          "readySeconds": 0.043,
+          "mibPerSecond": 187.718,
+          "reports": []
+        },
+        {
+          "totalSeconds": 6.08,
+          "transferSeconds": 6.026,
+          "readySeconds": 0.054,
+          "mibPerSecond": 169.93,
+          "reports": []
+        },
+        {
+          "totalSeconds": 5.455,
+          "transferSeconds": 5.401,
+          "readySeconds": 0.054,
+          "mibPerSecond": 189.595,
+          "reports": []
+        },
+        {
+          "totalSeconds": 5.288,
+          "transferSeconds": 5.241,
+          "readySeconds": 0.048,
+          "mibPerSecond": 195.383,
+          "reports": []
+        }
+      ]
+    },
+    "croc": {
+      "runs": 5,
+      "medianTotalSeconds": 4.433,
+      "medianTransferSeconds": 4.174,
+      "medianMibPerSecond": 245.328,
+      "trials": [
+        {
+          "totalSeconds": 4.433,
+          "transferSeconds": 4.174,
+          "readySeconds": 0.259,
+          "mibPerSecond": 245.328
+        },
+        {
+          "totalSeconds": 4.319,
+          "transferSeconds": 4.173,
+          "readySeconds": 0.146,
+          "mibPerSecond": 245.387
+        },
+        {
+          "totalSeconds": 4.635,
+          "transferSeconds": 4.495,
+          "readySeconds": 0.141,
+          "mibPerSecond": 227.809
+        },
+        {
+          "totalSeconds": 4.503,
+          "transferSeconds": 4.162,
+          "readySeconds": 0.34,
+          "mibPerSecond": 246.036
+        },
+        {
+          "totalSeconds": 4.424,
+          "transferSeconds": 4.286,
+          "readySeconds": 0.138,
+          "mibPerSecond": 238.917
+        }
+      ]
+    },
+    "croc-no-compress": {
+      "runs": 5,
+      "medianTotalSeconds": 1.908,
+      "medianTransferSeconds": 1.769,
+      "medianMibPerSecond": 578.858,
+      "trials": [
+        {
+          "totalSeconds": 9.687,
+          "transferSeconds": 9.546,
+          "readySeconds": 0.141,
+          "mibPerSecond": 107.27
+        },
+        {
+          "totalSeconds": 8.343,
+          "transferSeconds": 7.205,
+          "readySeconds": 1.138,
+          "mibPerSecond": 142.124
+        },
+        {
+          "totalSeconds": 1.753,
+          "transferSeconds": 1.614,
+          "readySeconds": 0.139,
+          "mibPerSecond": 634.449
+        },
+        {
+          "totalSeconds": 1.908,
+          "transferSeconds": 1.769,
+          "readySeconds": 0.138,
+          "mibPerSecond": 578.858
+        },
+        {
+          "totalSeconds": 1.8,
+          "transferSeconds": 1.66,
+          "readySeconds": 0.14,
+          "mibPerSecond": 616.867
+        }
+      ]
+    }
+  }
+}

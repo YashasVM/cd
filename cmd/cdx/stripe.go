@@ -206,7 +206,7 @@ func (link *recordLink) directHasRoom(path *directPath) bool {
 	link.stripe.mu.Lock()
 	limit := link.stripe.directCap
 	link.stripe.mu.Unlock()
-	return path.channel.BufferedAmount() < limit
+	return path.hasRoom(limit)
 }
 
 func (link *recordLink) writeDirect(path *directPath) {
