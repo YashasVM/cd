@@ -7,6 +7,34 @@ import (
 	"time"
 )
 
+func TestLinkNextCancellationPrecedesAvailableRecords(t *testing.T) {
+	for _, placement := range []string{"queued", "ready"} {
+		t.Run(placement, func(t *testing.T) {
+			sealer, _ := newSealer(testInvitation(), receiverDirection)
+			opener, _ := newOpener(testInvitation(), receiverDirection)
+			record, err := sealer.sealInto(nil, kindAccept, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			link := &recordLink{opener: opener, items: make(chan linkItem, 1), pending: map[uint32][]byte{}}
+			if placement == "queued" {
+				link.items <- linkItem{record: record}
+			} else {
+				link.pending[0] = record
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			kind, payload, err := link.next(ctx, time.Second)
+			if !errors.Is(err, context.Canceled) || kind != 0 || payload != nil {
+				t.Fatalf("canceled read = %v, %v, %v", kind, payload, err)
+			}
+			if link.expected != 0 || opener.sequence != 0 || len(link.items)+len(link.pending) != 1 {
+				t.Fatal("canceled read consumed an available record")
+			}
+		})
+	}
+}
+
 func TestLinkNextDeliversReadyRecordBeforeQueuedError(t *testing.T) {
 	sealer, _ := newSealer(testInvitation(), receiverDirection)
 	opener, _ := newOpener(testInvitation(), receiverDirection)
