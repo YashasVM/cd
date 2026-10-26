@@ -24,6 +24,7 @@
     "verify:transports": "npm run build && node scripts/verify-transports.mjs",
     "verify:resume-auth": "npm run build && node scripts/verify-resume-auth.mjs",
     "verify:resume": "npm run build && node scripts/verify-resume.mjs",
+    "verify:browser-resume": "npm run build && node scripts/verify-browser-resume.mjs",
     "verify:devices": "node scripts/verify-devices.mjs",
     "verify:android": "node scripts/verify-android-transfer.mjs",
     "verify:device-push": "node scripts/verify-device-push.mjs",
@@ -40,5 +41,8 @@
     "typescript": "7.0.2",
     "vite": "8.3.4",
     "wrangler": "^4.151.0"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   }
 }

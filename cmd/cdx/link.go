@@ -345,6 +345,22 @@ func (link *recordLink) acknowledged(bytes uint64) {
 
 // next returns the next record in sequence order, waiting up to timeout.
 func (link *recordLink) next(ctx context.Context, timeout time.Duration) (messageKind, []byte, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, nil, err
+	}
+	if kind, plaintext, ok, err := link.ready(); ok || err != nil {
+		return kind, plaintext, err
+	}
+	select {
+	case item := <-link.items:
+		if err := link.accept(item); err != nil {
+			return 0, nil, err
+		}
+		if kind, plaintext, ok, err := link.ready(); ok || err != nil {
+			return kind, plaintext, err
+		}
+	default:
+	}
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
