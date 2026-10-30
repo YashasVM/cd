@@ -64,6 +64,7 @@ dependencies {
         constraints { implementation("androidx.fragment:fragment:1.8.6") { because("Play services requests Fragment 1.1; Activity Result APIs require 1.3 or newer") } }
     }
     implementation("io.github.webrtc-sdk:android:150.7871.01")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
