@@ -95,7 +95,7 @@ class ReceiverService: Service() {
             "pause" -> stopReceiving(startId)
             "pause-task", "cancel-task" -> intent.getStringExtra("taskId")?.let { pauseTask(it, intent.action == "cancel-task") }
             "refresh" -> { store.pairs().forEach { PushBridge.disconnected(it.id) }; NativeNetworkDetector.refreshPolicy(); sockets.values.forEach { it.cancel() }; sockets.clear(); admitted.clear(); lastPing.clear(); transferSocket?.cancel() }
-            else -> if (intent != null) { store.enabled(!stopping.get()); store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) } }
+            else -> if (intent != null) { background = false; store.enabled(!stopping.get()); store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) } }
         }
         if (intent == null && !store.enabled()) stopSelf()
         return if (stopping.get()) START_NOT_STICKY else START_STICKY
@@ -108,6 +108,12 @@ class ReceiverService: Service() {
         if (cancel) store.state(id, "cancelled")
         if (activeTaskId == id) transferSocket?.cancel()
         if (cancel) TransferFiles.discard(this, store, id)
+    private fun stopIfIdle(): Boolean {
+        if (receiving || transferActive || ControlHub.busy || store.tasks().any { it.getString("state") in listOf("queued", "connecting", "receiving", "verifying", "retrying") }) return false
+        // stopSelfResult ignores the stop if a newer start (connect) arrived meanwhile.
+        handler.post { if (background) stopSelfResult(lastStartId) }
+        return true
+    }
     }
     private fun stopReceiving(startId: Int) {
         if (!stopping.compareAndSet(false, true)) return
