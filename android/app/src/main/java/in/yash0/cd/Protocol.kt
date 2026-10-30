@@ -61,6 +61,7 @@ data class Pairing(val json: JSONObject) {
     }
     fun open(frame: ByteArray, now: Long = System.currentTimeMillis()): JSONObject {
         require(frame.size in 29..16384) { "Invalid control frame length" }
+    /** Opens a computer-sent message: an offer to the phone, or a reply to a [TrustedSend] share. */
         val msg = JSONObject(String(Crypto.cipher(false, key("sender messages"), frame.copyOfRange(0, 12), "cd-device-v1 sender $id".toByteArray(), frame.copyOfRange(12, frame.size))))
         require(msg.getInt("version") == 1 && msg.getLong("expiresAt") in (now + 1)..(now + 330000)) { "Expired control message" }
         Crypto.decode(msg.getString("messageId"), 16)
