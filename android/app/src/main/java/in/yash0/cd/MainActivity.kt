@@ -145,8 +145,8 @@ class MainActivity: ComponentActivity(), CdActions {
         if (lookup == null) { submitLink(input); return }
         lifecycleScope.launch {
             runCatching { withContext(Dispatchers.IO) { ShareCodes.resolve(lookup) } }
-                .onSuccess { submitLink(it) }
-                .onFailure { ui.inputError = it.message ?: "Could not look up code" }
+                .onSuccess { ui.resolving = false; submitLink(it) }
+                .onFailure { returnAfterReceive = false; ui.resolving = false; ui.inputError = it.message ?: "Could not look up code" }
         }
     }
 
