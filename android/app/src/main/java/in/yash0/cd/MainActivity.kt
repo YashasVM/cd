@@ -153,7 +153,7 @@ class MainActivity: ComponentActivity(), CdActions {
     private fun submitLink(raw: String) {
         if (raw.isBlank()) return
         runCatching {
-            if (raw.startsWith("cdpair:")) ui.pending = Pairing.parse(raw)
+            if (raw.startsWith("cdpair:", ignoreCase = true)) ui.pending = Pairing.parse(raw)
             else {
                 val invitation = runCatching { Invitation.parse(raw) }.getOrElse { e -> throw IllegalArgumentException(if (e.message?.contains("v2") == true) e.message else "That isn’t a CD link. Paste the sender’s private link.") }
                 val id = invitation.id
@@ -227,6 +227,8 @@ class MainActivity: ComponentActivity(), CdActions {
         ui.toast("$label copied")
     }
 
+                    returnAfterReceive = false
+                    downloadLink = null
     override fun share(text: String) { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share")) }
 
     override fun paste(): String? = getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
