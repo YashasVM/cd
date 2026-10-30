@@ -219,7 +219,9 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
         known[id] = Known(phase, expiry, state.optLong("done"))
         val accepted = SendStatus.accepted(state.optBoolean("accepted"), expiry)
         val link = if (state.has("digest") && SendStatus.linkVisible(accepted, phase, expiry, now)) "${state.getString("publicBase")}/s/$id#v2.${state.getString("key")}" else null
-        TransferBus.publish(TransferView(id, Direction.SEND, state.getString("name"), state.getLong("size"), state.optLong("done"), rate, phase, route, link = link, message = message, expiresAt = expiry))
+        val code = state.optString("code").takeIf { it.isNotEmpty() && state.optLong("codeExpiresAt") > now && phase in listOf(TransferPhase.WAITING, TransferPhase.PAUSED, TransferPhase.CONNECTING) && !state.optBoolean("codeSpent") }
+        val shareLink = code?.let { "${state.getString("publicBase")}/#$it" } ?: link.takeIf { state.optBoolean("private", true) }
+        TransferBus.publish(TransferView(id, Direction.SEND, state.getString("name"), state.getLong("size"), state.optLong("done"), rate, phase, route, link = shareLink, code = code, privateLink = link, isPrivate = state.optBoolean("private", true), message = message, expiresAt = expiry, codeExpiresAt = state.optLong("codeExpiresAt"), codeSpent = state.optBoolean("codeSpent")))
         if (phase in listOf(TransferPhase.COMPLETE, TransferPhase.CANCELLED, TransferPhase.FAILED)) expiryWatch.remove(id)?.cancel()
         else if (accepted && expiry > now) watchExpiry(id, expiry)
     }
