@@ -99,7 +99,7 @@ data class Invitation(val id: String, val key: ByteArray, val relay: String, val
             val fragment = requireNotNull(u.rawFragment) { "Paste the complete CD link, including its key" }
             val version = if (fragment.startsWith("v2.")) 2 else 1
             Crypto.decode(id, 16)
-            val key = Crypto.decode(if (version == 2) fragment.substring(3) else fragment, 32)
+            val key = Crypto.decode(if (version == 2 || fragment.startsWith("v1.")) fragment.substring(3) else fragment, 32)
             val relay = "${if (u.scheme == "https") "wss" else "ws"}://${u.rawAuthority}/ws/v$version/$id"
             require(validEndpoint(relay))
             return Invitation(id, key, relay, version)
