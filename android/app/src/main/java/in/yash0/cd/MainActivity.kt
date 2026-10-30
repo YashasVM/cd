@@ -39,6 +39,7 @@ import `in`.yash0.cd.ui.Screen
 import `in`.yash0.cd.ui.UiState
 import `in`.yash0.cd.ui.active
 import org.json.JSONObject
+import `in`.yash0.cd.ui.TrustedOffers
 
 class MainActivity: ComponentActivity(), CdActions {
     private lateinit var store: Store
@@ -49,6 +50,9 @@ class MainActivity: ComponentActivity(), CdActions {
         if (!granted) ui.toast("Progress won’t show in notifications")
         if (returnAfterPermission) moveTaskToBack(true)
         returnAfterPermission = false
+    private var downloadLink by mutableStateOf<String?>(null)
+    private var returnAfterReceive = false
+    private var returnAfterPermission = false
         refresh()
     }
     private val pushNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) PushBridge.setEnabled(this, true) else TransferBus.status("Allow notifications to enable trusted wake-up"); refresh() }
