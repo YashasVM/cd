@@ -98,6 +98,9 @@ class ReceiverService: Service() {
             else -> if (intent != null) { background = false; store.enabled(!stopping.get()); store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) } }
         }
         if (intent == null && !store.enabled()) stopSelf()
+            // CD left the foreground: drop idle control links, but never interrupt or pause a transfer.
+            // With a transfer queued or running, stop once it finishes instead (see the loop).
+            "idle" -> { background = true; if (stopIfIdle()) return START_NOT_STICKY }
         return if (stopping.get()) START_NOT_STICKY else START_STICKY
     }
     private fun pauseTask(id: String, cancel: Boolean) {
