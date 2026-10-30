@@ -64,7 +64,9 @@ data class Pairing(val json: JSONObject) {
         val msg = JSONObject(String(Crypto.cipher(false, key("sender messages"), frame.copyOfRange(0, 12), "cd-device-v1 sender $id".toByteArray(), frame.copyOfRange(12, frame.size))))
         require(msg.getInt("version") == 1 && msg.getLong("expiresAt") in (now + 1)..(now + 330000)) { "Expired control message" }
         Crypto.decode(msg.getString("messageId"), 16)
-        require(msg.getString("type") == "offer") { "Unexpected sender control message" }
+        val type = msg.getString("type")
+        require(type in SENDER_TYPES) { "Unexpected sender control message" }
+        if (type != "offer") Crypto.decode(msg.getString("transferId"), 16)
         return msg
     }
     companion object {
@@ -73,6 +75,14 @@ data class Pairing(val json: JSONObject) {
             require(text.length <= 16384)
             val j = if (text.startsWith("cdpair://", ignoreCase = true)) {
                 val u = URI(text)
+        const val DEFAULT_RELAY = "wss://cd.yash0.in"
+        const val MAX_COMPACT_NAME = 40
+        private val SENDER_TYPES = setOf("offer", "receiving", "received", "paused")
+
+        /** Matches Go devices.PairIDFromSecret: compact codes carry only the 256-bit secret. */
+        fun pairIdFromSecret(secret: ByteArray): String = Crypto.encode(Crypto.sha("cd-device-v1 pair id ".toByteArray() + secret).copyOfRange(0, 16))
+
+        /** Accepts the compact numeric `cdpair:<digits>` code and the legacy `cdpair://v1#<base64 JSON>`. */
                 require(u.scheme.equals("cdpair", ignoreCase = true) && u.host == "v1" && u.rawQuery == null)
                 JSONObject(String(Base64.getUrlDecoder().decode(u.rawFragment)))
             } else compact(text)
