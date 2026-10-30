@@ -79,6 +79,7 @@ class ReceiverService: Service() {
                 try { Thread.sleep(2500) } catch (_: InterruptedException) { break }
             }
         }
+                if (background) stopIfIdle()
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!foregroundReady) return START_NOT_STICKY
@@ -86,6 +87,7 @@ class ReceiverService: Service() {
             "push-wake" -> {
                 if (stopping.get() || !PushBridge.canWake(this, intent.getStringExtra("pairId").orEmpty())) { stopSelf(); return START_NOT_STICKY }
                 // Replace a potentially half-open control transport without cancelling file data.
+        lastStartId = startId
                 val pairId = intent.getStringExtra("pairId").orEmpty()
                 sockets.keys.filter { it.startsWith("$pairId|") }.forEach { key ->
                     sockets.remove(key)?.cancel(); admitted.remove(key); lastPing.remove(key)
