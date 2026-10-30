@@ -279,7 +279,7 @@ class ReceiverService: Service() {
                     }.onFailure { webSocket.cancel() }
                 }
             }
-            private fun remove(webSocket: WebSocket) { sockets.remove(key, webSocket); if (admitted.remove(key, webSocket)) { lastPing.remove(key); if (!localTransport) PushBridge.disconnected(pair.id) } }
+            private fun remove(webSocket: WebSocket) { ControlHub.removed(pair.id, webSocket); sockets.remove(key, webSocket); if (admitted.remove(key, webSocket)) { lastPing.remove(key); if (!localTransport) PushBridge.disconnected(pair.id) } }
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) { remove(webSocket) }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { remove(webSocket); webSocket.close(code, "") }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { remove(webSocket) }
