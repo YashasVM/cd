@@ -42,8 +42,12 @@ data class TransferView(
     // accepted this root at least once; kept across pause/interruption, null once expired,
     // cancelled, completed or rejected. Never a short code.
     val link: String? = null,
-    val code: String? = null,   // send: short share code; always null for private v2 sends (no directory)
+    val code: String? = null,
     val message: String? = null,// human-readable status / error; never contains keys or raw URLs
+    val privateLink: String? = null,
+    val isPrivate: Boolean = true,
+    val codeExpiresAt: Long = 0,
+    val codeSpent: Boolean = false,
     val openUri: String? = null,// receive: published MediaStore uri when COMPLETE
     val updatedAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = 0,    // send: unix ms when the invitation expires; 0 when unknown
