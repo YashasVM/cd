@@ -34,6 +34,8 @@ class ReceiverService: Service() {
     private lateinit var nsd: NsdManager
     private val client = OkHttpClient.Builder().pingInterval(25, TimeUnit.SECONDS).connectTimeout(4, TimeUnit.SECONDS).readTimeout(0, TimeUnit.SECONDS).build()
     @Volatile private var receiving = false
+    @Volatile private var background = false
+    @Volatile private var lastStartId = 0
     @Volatile private var transferActive = false
     private var lastProgressAt = 0L
     private var wake: PowerManager.WakeLock? = null
@@ -42,6 +44,7 @@ class ReceiverService: Service() {
     override fun onBind(intent: Intent?) = null
     override fun onCreate() {
         super.onCreate(); store = StoreRegistry.get(this); network = ReceiverNetwork(this, store); ReceiveViews.load(this)
+    companion object { @Volatile var alive = false; private set }
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("receiving", "File receiving", NotificationManager.IMPORTANCE_LOW))
         try {
             ServiceCompat.startForeground(this, 1, notification("Ready to receive", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
