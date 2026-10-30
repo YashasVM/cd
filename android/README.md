@@ -61,6 +61,4 @@ For emulator integration, forward the CLI/Worker port with `adb reverse` and use
 
 Use `-PcdPreview=true` to build **CD Preview** (`in.yash0.cd.preview`) alongside an existing CD installation. This uses separate app data and does not migrate pairings, history, or retained transfers. Its provider authority and external link filters are distinct, so it does not claim CD's normal web/pairing links. Paste a private link into Receive or scan it inside CD Preview. This avoids uninstalling the original app when the preview uses a different debug signing key.
 
-Example: `./gradlew :app:assembleDebug -PcdPreview=true -PcdAbi=arm64-v8a`.
-
-The emulator-only `SendInstrumentation` exports its accessibility tree directly, so waiting-screen animations do not make UI verification depend on global idle. `scripts/verify-android-send.py` checks scrolling, Activity recreation, waiting and mid-data process interruption, retained-prefix resume, and final exact bytes. Set `CD_VERIFY_PACKAGE=in.yash0.cd.preview` for side-by-side builds.
+Pair without an account using `cdx pair --name phone`. Scan the QR in CD Beta and approve the laptop, then use `cdx send --to phone <file>`. Pairing credentials stay private on both devices. Review and revoke trusted devices in the app. No login is required.
