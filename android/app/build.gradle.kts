@@ -25,13 +25,11 @@ if (cdFcm && !cdFcmCompileOnly) {
 }
 val cdAbi = providers.gradleProperty("cdAbi").orNull
 require(cdAbi == null || cdAbi in setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")) { "cdAbi must be arm64-v8a, armeabi-v7a, x86, or x86_64" }
-val cdPreview = providers.gradleProperty("cdPreview").orNull == "true"
-val cdBeta = providers.gradleProperty("cdBeta").orNull == "true"
-val cdApplicationId = if (cdBeta) "in.yash0.cd.beta" else if (cdPreview) "in.yash0.cd.preview" else "in.yash0.cd"
+val cdApplicationId = "in.yash0.cd.beta"
 android {
     namespace = "in.yash0.cd"
     compileSdk = 35
-    defaultConfig { applicationId = cdApplicationId; manifestPlaceholders["cdTargetPackage"] = cdApplicationId; manifestPlaceholders["cdAppLabel"] = "CD Beta"; manifestPlaceholders["cdPairScheme"] = if (cdBeta) "cdpair-beta" else if (cdPreview) "cdpair-preview" else "cdpair"; manifestPlaceholders["cdWebHost"] = if (cdBeta) "cd-beta.invalid" else if (cdPreview) "cd-preview.invalid" else "cd.yash0.in"; minSdk = 29; targetSdk = 35; versionCode = 2; versionName = "0.1.1-beta.1"; if (cdAbi != null) ndk { abiFilters += cdAbi } }
+    defaultConfig { applicationId = cdApplicationId; manifestPlaceholders["cdTargetPackage"] = cdApplicationId; manifestPlaceholders["cdAppLabel"] = "CD Beta"; manifestPlaceholders["cdPairScheme"] = "cdpair-beta"; manifestPlaceholders["cdWebHost"] = "cd.yash0.in"; minSdk = 29; targetSdk = 35; versionCode = 6; versionName = "0.1.5-beta"; if (cdAbi != null) ndk { abiFilters += cdAbi } }
     buildFeatures { compose = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
