@@ -125,6 +125,9 @@ class MainActivity: ComponentActivity(), CdActions {
         askNotifications()
         ReceiveMode.startTransfer(this)
         if (returnAfterReceive) {
+        pickTarget?.let { outState.putString("cd.pickTarget", it) }
+        outState.putString("cd.downloadLink", downloadLink)
+        outState.putBoolean("cd.returnAfterPermission", returnAfterPermission)
             downloadLink = null
             if (!returnAfterPermission) moveTaskToBack(true)
             returnAfterReceive = false
