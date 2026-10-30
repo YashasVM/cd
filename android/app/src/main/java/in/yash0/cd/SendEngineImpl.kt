@@ -246,7 +246,9 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
             lateinit var paired: JSONObject
             while (true) {
                 run.active()
-                val event = try { wire.json(if (expiry == 0L) 30 else 15 * 60) } catch (e: WireTimeout) { throw SendProblem(if (expiry == 0L) SendFailureKind.TIMEOUT else SendFailureKind.NO_RECEIVER, e) }
+                val remaining = if (!state.optBoolean("private", true) && !state.optBoolean("codeSpent") && state.optLong("codeExpiresAt") > 0)
+                    ((state.optLong("codeExpiresAt") - System.currentTimeMillis() + 999) / 1000).coerceIn(1L, 900L) else 15L * 60
+                val event = try { wire.json(if (expiry == 0L) 30 else remaining) } catch (e: WireTimeout) { throw SendProblem(if (expiry == 0L) SendFailureKind.TIMEOUT else SendFailureKind.NO_RECEIVER, e) }
                 if (event.getString("type") == "accepted") {
                     expiry = event.getLong("expiresAt")
                     require(expiry > System.currentTimeMillis() && expiry <= System.currentTimeMillis() + 86430000L)
@@ -254,7 +256,20 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
                     require(Crypto.decode(event.getString("sessionNonce"), 32).contentEquals(nonce))
                     require(MessageDigest.isEqual(Crypto.decode(event.getString("senderNonceProof"), 32), invitation.proof("sender", nonce)))
                     synchronized(this) { run.active(); state.put("expiresAt", expiry).put("accepted", true).put("phase", TransferPhase.WAITING.name); store.save(state) }
-                    publish(run, state, TransferPhase.WAITING)
+                    // The relay may have admitted a receiver just before this phone lost its socket.
+                    // Carry that fact across reconnects even when peer-joined was never read locally.
+                    if (event.optBoolean("codeSpent")) {
+                        synchronized(this) { run.active(); state.put("codeSpent", true); state.remove("code"); store.save(state) }
+                    }
+                    if (!state.optBoolean("private", true) && !state.optBoolean("codeSpent")) {
+                        val (code, codeExpiry) = ShareCodes.claim(client, state.getString("publicBase"), id, state.getString("key"), state.getString("senderToken"))
+                        synchronized(this) { run.active(); state.put("code", code).put("codeExpiresAt", codeExpiry); store.save(state) }
+                    }
+                    publish(run, state, TransferPhase.WAITING, message = if (!state.optBoolean("private", true) && state.optBoolean("codeSpent")) "Waiting for the same receiver to resume. The code has already been used." else null)
+                }
+                if (event.optString("receiverNonce").isNotEmpty()) {
+                    synchronized(this) { run.active(); state.put("codeSpent", true); state.remove("code"); store.save(state) }
+                    paired = event; break
                 }
             }
             require(paired.getLong("expiresAt") == expiry && Crypto.decode(paired.getString("sessionNonce"), 32).contentEquals(nonce)) { "Relay changed sender session" }
