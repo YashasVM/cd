@@ -173,7 +173,7 @@ class MainActivity: ComponentActivity(), CdActions {
                 ui.open(Screen.Transfer(id, Direction.RECEIVE))
             }
             ui.inputError = ""
-        }.onFailure { ui.inputError = it.message ?: "Invalid link" }
+        }.onFailure { returnAfterReceive = false; returnAfterPermission = false; ui.inputError = it.message ?: "Invalid link" }
         refresh()
     }
 
