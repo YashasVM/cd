@@ -301,18 +301,44 @@ class ReceiverService: Service() {
             override fun onStartDiscoveryFailed(type: String, code: Int) { Status.text = "Local discovery unavailable ($code). Relay available." }
             override fun onStopDiscoveryFailed(type: String, code: Int) {}
             override fun onServiceLost(info: NsdServiceInfo) {}
-            @Suppress("DEPRECATION") override fun onServiceFound(info: NsdServiceInfo) {
-                if (info.serviceType != "_cdx._tcp.") return
-                nsd.resolveService(info, object: NsdManager.ResolveListener {
-                    override fun onResolveFailed(info: NsdServiceInfo, code: Int) {}
-                    override fun onServiceResolved(found: NsdServiceInfo) {
-                        val id = found.attributes["pairId"]?.toString(Charsets.UTF_8) ?: return
-                        val pair = store.pairs().firstOrNull { it.id == id } ?: return
-                        val host = found.host?.hostAddress?.substringBefore('%') ?: return
+            override fun onServiceFound(info: NsdServiceInfo) {
+                if (info.serviceType.trimEnd('.') != "_cdx._tcp") return
+                // Only resolve services for pairings this phone trusts (instance name is the pair id).
+                if (store.pairs().none { it.id == info.serviceName }) return
+                enqueueResolve(info)
+    // NsdManager resolves one service at a time before Android 14 and fails concurrent resolves with
+    // FAILURE_ALREADY_ACTIVE. Resolving every found service at once dropped all but the first, so
+    // LAN control waited for the 2.5 s loop on stale addresses. Resolve them one after another.
+    private val resolveQueue = ArrayDeque<NsdServiceInfo>()
+    private var resolving = false
+    private fun enqueueResolve(info: NsdServiceInfo) = handler.post {
+        if (resolveQueue.none { it.serviceName == info.serviceName }) resolveQueue.addLast(info)
+        resolveNext()
+    }
+    @Suppress("DEPRECATION") private fun resolveNext() {
+        if (resolving || !running.get()) return
+        val info = resolveQueue.removeFirstOrNull() ?: return
+        resolving = true
+        fun done() = handler.post { resolving = false; resolveNext() }
+        runCatching {
+            nsd.resolveService(info, object: NsdManager.ResolveListener {
+                override fun onResolveFailed(info: NsdServiceInfo, code: Int) {
+                    if (code == NsdManager.FAILURE_ALREADY_ACTIVE) handler.postDelayed({ enqueueResolve(info) }, 250)
+                    done()
+                }
+                override fun onServiceResolved(found: NsdServiceInfo) {
+                    runCatching {
+                        val id = found.attributes["pairId"]?.toString(Charsets.UTF_8) ?: return@runCatching
+                        val pair = store.pairs().firstOrNull { it.id == id } ?: return@runCatching
+                        val host = found.host?.hostAddress?.substringBefore('%') ?: return@runCatching
                         val url = "ws://${if (host.contains(':')) "[$host]" else host}:${found.port}/ws/devices/v1/$id"
-                        if (localEndpoint(url)) connect(pair, url, localTransport = true)
+                        if (localEndpoint(url)) pool.execute { connect(pair, url, localTransport = true) }
                     }
-                })
+                    done()
+                }
+            })
+        }.onFailure { done() }
+    }
             }
         }
         discovery = listener
