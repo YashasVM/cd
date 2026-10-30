@@ -99,6 +99,41 @@ data class Invitation(val id: String, val key: ByteArray, val relay: String, val
             val fragment = requireNotNull(u.rawFragment) { "Paste the complete CD link, including its key" }
             val version = if (fragment.startsWith("v2.")) 2 else 1
             Crypto.decode(id, 16)
+
+        /** Layout (big-endian, written as one decimal integer): version 2, secret(32), expiresSeconds(4), port(2), count(1), IPv4 x count, relayLength(1), relay origin, name. */
+        internal fun compact(text: String): JSONObject {
+            require(text.length > 7 && text.substring(0, 7).equals("cdpair:", ignoreCase = true)) { "Not a CD pairing code" }
+            val digits = text.substring(7)
+            require(digits.length <= 1024 && digits.all { it in '0'..'9' } && !digits.startsWith("0")) { "Invalid pairing code" }
+            val b = BigInteger(digits).toByteArray().let { if (it.size > 1 && it[0] == 0.toByte()) it.copyOfRange(1, it.size) else it }
+            require(b.size >= 42 && b[0] == 2.toByte()) { "Unsupported pairing code. Update CD." }
+            val buffer = ByteBuffer.wrap(b)
+            buffer.get()
+            val secret = ByteArray(32).also { buffer.get(it) }
+            val expires = (buffer.int.toLong() and 0xffffffffL) * 1000
+            val port = buffer.short.toInt() and 0xffff
+            val count = buffer.get().toInt() and 0xff
+            require(count <= 4 && (count > 0) == (port != 0) && buffer.remaining() >= 4 * count + 1) { "Invalid pairing code" }
+            val id = pairIdFromSecret(secret)
+            val path = "/ws/devices/v1/$id"
+            val local = JSONArray()
+            repeat(count) {
+                val ip = ByteArray(4).also { buffer.get(it) }.joinToString(".") { (it.toInt() and 0xff).toString() }
+                local.put("ws://$ip:$port$path")
+            }
+            val relayLength = buffer.get().toInt() and 0xff
+            require(buffer.remaining() >= relayLength + 1) { "Invalid pairing code" }
+            val relayBytes = ByteArray(relayLength).also { buffer.get(it) }
+            val nameBytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
+            val decoder = Charsets.UTF_8.newDecoder()
+            val origin = if (relayLength == 0) DEFAULT_RELAY else decoder.decode(ByteBuffer.wrap(relayBytes)).toString()
+            val name = decoder.decode(ByteBuffer.wrap(nameBytes)).toString()
+            require(nameBytes.size <= MAX_COMPACT_NAME) { "Invalid pairing code" }
+            val relay = URI(origin)
+            require(relay.rawPath.isNullOrEmpty() && relay.rawQuery == null && relay.rawFragment == null && relay.rawUserInfo == null) { "Invalid pairing relay" }
+            return JSONObject().put("version", 1).put("pairId", id).put("secret", Crypto.encode(secret)).put("name", name)
+                .put("relayUrl", origin + path).put("localUrls", local).put("expiresAt", expires)
+        }
             val key = Crypto.decode(if (version == 2 || fragment.startsWith("v1.")) fragment.substring(3) else fragment, 32)
             val relay = "${if (u.scheme == "https") "wss" else "ws"}://${u.rawAuthority}/ws/v$version/$id"
             require(validEndpoint(relay))
