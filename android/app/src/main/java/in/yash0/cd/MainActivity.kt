@@ -31,6 +31,8 @@ import com.journeyapps.barcodescanner.ScanOptions
 import `in`.yash0.cd.ui.CdActions
 import `in`.yash0.cd.ui.CdApp
 import `in`.yash0.cd.ui.CdTheme
+import `in`.yash0.cd.ui.CdDialog
+import `in`.yash0.cd.ui.CdIcons
 import `in`.yash0.cd.ui.DebugFakes
 import `in`.yash0.cd.ui.PreviewData
 import `in`.yash0.cd.ui.ReceiveMode
