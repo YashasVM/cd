@@ -87,7 +87,7 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptIntent(intent) }
     override fun onResume() { super.onResume(); refresh() }
-    // HOOK: backend — trusted sends work while CD is open (ReceiveMode stub is a no-op today).
+    // Paired computers can pair, confirm and send while CD is open; see ReceiveMode.
     override fun onStart() { super.onStart(); ReceiveMode.onForeground(this) }
     override fun onStop() { ReceiveMode.onBackground(this); super.onStop() }
 
@@ -100,8 +100,9 @@ class MainActivity: ComponentActivity(), CdActions {
         }
         val text = (intent.dataString ?: intent.getStringExtra(Intent.EXTRA_TEXT)).orEmpty().trim()
         if (text.isEmpty()) return
-        ui.home(); ui.tab = Tab.RECEIVE; ui.input = text; ui.inputError = ""
-        if (text.startsWith("cdpair:")) submit(text)
+        ui.home(); ui.tab = Tab.RECEIVE; ui.input = ""; ui.inputError = ""
+        if (text.startsWith("cdpair:", ignoreCase = true)) submit(text)
+        else downloadLink = text
     }
 
     private fun notificationsAllowed() = Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
