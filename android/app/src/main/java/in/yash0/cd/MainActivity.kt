@@ -76,7 +76,32 @@ class MainActivity: ComponentActivity(), CdActions {
             // Sending is foreground-only by design, so keep the screen on while a send is running.
             val sending = transfers.any { it.direction == Direction.SEND && it.active }
             LaunchedEffect(sending) { if (sending) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-            CdTheme { CdApp(ui, transfers, status, this, debug, versionName()) }
+            CdTheme {
+                CdApp(ui, transfers, status, this, debug, versionName())
+                downloadLink?.takeUnless { ui.resolving }?.let { raw ->
+                    CdDialog(
+                        title = "Accept download?",
+                        body = "Accept to download this file to Downloads/CD in the background. You can leave CD or turn off the screen. The sender must stay online.",
+                        detail = ui.inputError.takeIf { it.isNotBlank() } ?: if (ui.mobile) "Mobile data is allowed." else "Downloads wait for unmetered Wi-Fi or Ethernet.",
+                        confirm = "Accept", dismiss = "Reject", icon = CdIcons.ArrowDown,
+        pickTarget = savedInstanceState?.getString("cd.pickTarget")
+        downloadLink = savedInstanceState?.getString("cd.downloadLink")
+        returnAfterPermission = savedInstanceState?.getBoolean("cd.returnAfterPermission") ?: false
+        ui.sendPrivate = prefs.getBoolean("sendPrivate", false)
+        lifecycleScope.launch { TrustedOffers.messages.collect { (text, error) -> ui.toast(text, error) } }
+                        onConfirm = {
+                            returnAfterReceive = true
+                            submit(raw)
+                        },
+                        onDismiss = {
+                            downloadLink = null
+                            returnAfterReceive = false
+                            ui.inputError = ""
+                            moveTaskToBack(true)
+                        },
+                    )
+                }
+            }
         }
     }
 
