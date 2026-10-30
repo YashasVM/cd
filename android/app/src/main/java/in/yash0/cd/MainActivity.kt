@@ -45,7 +45,12 @@ class MainActivity: ComponentActivity(), CdActions {
     private val ui = UiState()
     private val debug by lazy { applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 }
     // Asked only when a transfer starts or a device is paired, never on first launch.
-    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) ui.toast("Progress won’t show in notifications"); refresh() }
+    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) ui.toast("Progress won’t show in notifications")
+        if (returnAfterPermission) moveTaskToBack(true)
+        returnAfterPermission = false
+        refresh()
+    }
     private val pushNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) PushBridge.setEnabled(this, true) else TransferBus.status("Allow notifications to enable trusted wake-up"); refresh() }
     private val scanner = registerForActivityResult(ScanContract()) { result -> result.contents?.let { ui.input = it; submit(it.trim()) } }
     // OPEN_DOCUMENT (not GET_CONTENT) so the read grant can be persisted: a send interrupted by the app
