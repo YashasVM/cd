@@ -59,6 +59,6 @@ For emulator integration, forward the CLI/Worker port with `adb reverse` and use
 
 ## Side-by-side preview build
 
-Use `-PcdPreview=true` to build **CD Preview** (`in.yash0.cd.preview`) alongside an existing CD installation. This uses separate app data and does not migrate pairings, history, or retained transfers. Its provider authority and external link filters are distinct, so it does not claim CD's normal web/pairing links. Paste a private link into Receive or scan it inside CD Preview. This avoids uninstalling the original app when the preview uses a different debug signing key.
+CD Beta is the only build identity. CD and CD Preview variants are retired. Remove those old installations manually after saving any needed files. Android cannot merge their private data into CD Beta.
 
 Pair without an account using `cdx pair --name phone`. Scan the QR in CD Beta and approve the laptop, then use `cdx send --to phone <file>`. Pairing credentials stay private on both devices. Review and revoke trusted devices in the app. No login is required.
