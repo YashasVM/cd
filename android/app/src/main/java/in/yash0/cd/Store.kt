@@ -38,7 +38,7 @@ class Store(context: Context) {
     }
     @Synchronized fun pairs(): List<Pairing> = root.getJSONObject("pairs").let { p -> p.keys().asSequence().map { Pairing(JSONObject(p.getJSONObject(it).toString())) }.toList() }
     @Synchronized fun trust(pair: Pairing) { root.getJSONObject("pairs").put(pair.id, pair.json); save() }
-    @Synchronized fun revoke(id: String) { root.getJSONObject("pairs").remove(id); root.optJSONObject("pushWakes")?.remove(id); tasks().filter { it.optString("pairId") == id && it.optString("state") != "complete" }.forEach { it.put("state", "paused"); root.getJSONObject("tasks").put(it.getString("id"), it) }; save() }
+    @Synchronized fun revoke(id: String) { val denied = root.optJSONObject("accountDenied") ?: JSONObject().also { root.put("accountDenied", it) }; denied.put(id, true); root.getJSONObject("pairs").remove(id); root.optJSONObject("pushWakes")?.remove(id); tasks().filter { it.optString("pairId") == id && it.optString("state") != "complete" }.forEach { it.put("state", "paused"); root.getJSONObject("tasks").put(it.getString("id"), it) }; save() }
     @Synchronized fun allowedMobile(): Boolean = root.optBoolean("mobile")
     @Synchronized fun pauseReceiving(): List<JSONObject> {
         root.put("enabled", false)

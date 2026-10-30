@@ -93,7 +93,7 @@ interface SendEngine {
     fun owns(id: String): Boolean = false
 
     object Unavailable: SendEngine {
-        override fun start(context: Context, uris: List<Uri>): String = error("Sending is not available in this build")
+        override fun start(context: Context, uris: List<Uri>, privateLink: Boolean): String = error("Sending is not available in this build")
         override fun pause(context: Context, id: String) {}
         override fun resume(context: Context, id: String) {}
         override fun cancel(context: Context, id: String) {}
