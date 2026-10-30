@@ -63,7 +63,7 @@ class MainActivity: ComponentActivity(), CdActions {
         ReceiveViews.load(applicationContext)
         PushBridge.start(this)
         ReceiveMode.load(this)
-        // No idle receiver at launch: trusted laptops wake CD on demand (ReceiveMode); a notification exists only during a transfer.
+        // Control links to paired computers start in onStart (ReceiveMode.onForeground) and stop once idle in the background.
         refresh()
         ui.restoreNav(savedInstanceState?.getString("cd.navigation"))
         if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) acceptIntent(intent)
