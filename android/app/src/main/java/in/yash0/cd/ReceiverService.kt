@@ -250,9 +250,14 @@ class ReceiverService: Service() {
                     require(text.length <= 16384)
                     val e = JSONObject(text)
                     join.event(e)?.let { webSocket.send(it.toString()) }
-                    if (e.getString("type") == "accepted") {
-                        admitted[key] = webSocket; lastPing[key] = SystemClock.elapsedRealtime()
-                        if (!localTransport) PushBridge.admitted(this@ReceiverService, pair)
+                    when (e.getString("type")) {
+                        "accepted" -> {
+                            admitted[key] = webSocket; lastPing[key] = SystemClock.elapsedRealtime()
+                            ControlHub.admitted(pair.id, url, webSocket)
+                            if (!localTransport) PushBridge.admitted(this@ReceiverService, pair)
+                        }
+                        "peer-joined" -> ControlHub.peer(pair.id, webSocket, true)
+                        "peer-left" -> ControlHub.peer(pair.id, webSocket, false)
                     }
                     if (e.getString("type") in listOf("accepted", "peer-joined")) sendControl(webSocket, pair, JSONObject().put("type", "paired").put("name", Build.MODEL))
                 }.onFailure { webSocket.cancel() }
