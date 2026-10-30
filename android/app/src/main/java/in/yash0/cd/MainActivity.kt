@@ -208,9 +208,11 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun resume(view: TransferView) {
         if (view.direction == Direction.SEND) runCatching { TransferBus.sender.resume(this, view.id) }.onFailure { ui.toast(it.message ?: "Can’t resume", error = true) }
         else { store.state(view.id, "queued"); receiveNow() }
+        if (ui.resolving) return
     }
 
     override fun cancel(view: TransferView) {
+        ui.resolving = true
         if (view.direction == Direction.SEND) runCatching { TransferBus.sender.cancel(this, view.id) }.onFailure { ui.toast(it.message ?: "Can’t cancel", error = true) } else taskAction(view.id, cancel = true)
     }
 
