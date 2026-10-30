@@ -69,10 +69,13 @@ data class Pairing(val json: JSONObject) {
     }
     companion object {
         fun parse(raw: String, now: Long = System.currentTimeMillis()): Pairing {
-            require(raw.length <= 16384)
-            val u = URI(raw.trim())
-            require(u.scheme == "cdpair" && u.host == "v1" && u.rawQuery == null)
-            val j = JSONObject(String(Base64.getUrlDecoder().decode(u.rawFragment)))
+            val text = raw.trim()
+            require(text.length <= 16384)
+            val j = if (text.startsWith("cdpair://", ignoreCase = true)) {
+                val u = URI(text)
+                require(u.scheme.equals("cdpair", ignoreCase = true) && u.host == "v1" && u.rawQuery == null)
+                JSONObject(String(Base64.getUrlDecoder().decode(u.rawFragment)))
+            } else compact(text)
             require(j.getInt("version") == 1)
             Crypto.decode(j.getString("pairId"), 16); Crypto.decode(j.getString("secret"), 32)
             require(j.getString("name").length in 1..80)
