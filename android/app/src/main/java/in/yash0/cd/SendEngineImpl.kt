@@ -256,7 +256,6 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
                     synchronized(this) { run.active(); state.put("expiresAt", expiry).put("accepted", true).put("phase", TransferPhase.WAITING.name); store.save(state) }
                     publish(run, state, TransferPhase.WAITING)
                 }
-                if (event.optString("receiverNonce").isNotEmpty()) { paired = event; break }
             }
             require(paired.getLong("expiresAt") == expiry && Crypto.decode(paired.getString("sessionNonce"), 32).contentEquals(nonce)) { "Relay changed sender session" }
             val receiver = Crypto.decode(paired.getString("receiverNonce"), 32)
