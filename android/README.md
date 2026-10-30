@@ -2,6 +2,16 @@
 
 Native Kotlin and Jetpack Compose receiver for trusted CLI transfers. Requires Android 10 or newer. The first physical-device target is the Samsung S24 Ultra.
 
+## CD Beta updates
+
+The beta package is `in.yash0.cd.beta`, separate from `in.yash0.cd`. All builds use this single package. The current update is `0.1.5-beta`, version code 6. Keep the original signing key when updating. This machine's beta key is in `$HOME/.config/.android/debug.keystore`; set `ANDROID_USER_HOME=$HOME/.config/.android` when building.
+
+```sh
+ANDROID_USER_HOME="$HOME/.config/.android" ./gradlew --max-workers=2 -PcdAbi=arm64-v8a testDebugUnitTest lintDebug assembleDebug
+```
+
+Opening a CD file link shows Accept / Reject. Accept queues the transfer in the foreground receiver and returns to the previous app after any notification permission prompt. Reject performs no lookup and queues no download. Numeric codes and private v1/v2 links are supported. Browser word-code transfers still require the web receiver. Publish `public/.well-known/assetlinks.json` so Android can verify the beta as the website's link handler.
+
 ## Build and install
 
 Install JDK 17 and Android SDK platform 35. Set `ANDROID_HOME` to your SDK location, or put `sdk.dir=/path/to/Android/Sdk` in `local.properties`.
@@ -57,7 +67,7 @@ Unit tests consume the repository's `fixtures/resume-v2.json` and `fixtures/devi
 
 For emulator integration, forward the CLI/Worker port with `adb reverse` and use loopback/private numeric URLs in the test invitation. Pairing still requires a manual Trust action in the app; no test-only trust bypass is included.
 
-## Side-by-side preview build
+## One Android app
 
 CD Beta is the only build identity. CD and CD Preview variants are retired. Remove those old installations manually after saving any needed files. Android cannot merge their private data into CD Beta.
 
