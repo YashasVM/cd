@@ -19,6 +19,23 @@ object ShareCodes {
     }
     fun resolve(lookup: String): String {
         val client = OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).followRedirects(false).build()
+    fun claim(client: OkHttpClient, origin: String, id: String, key: String, senderToken: String): Pair<String, Long> {
+        val body = JSONObject().put("transferId", id).put("key", key).put("version", 2).put("senderToken", senderToken)
+        val request = Request.Builder().url("${origin.trimEnd('/')}/api/codes")
+            .post(body.toString().toRequestBody("application/json".toMediaType())).build()
+        return client.newBuilder().callTimeout(15, TimeUnit.SECONDS).followRedirects(false).build().newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw SendProblem(SendFailureKind.CODE_UNAVAILABLE)
+            val source = response.body?.source() ?: error("Empty code response")
+            source.request(4097)
+            require(source.buffer.size <= 4096) { "Invalid code response" }
+            val result = JSONObject(source.buffer.readUtf8())
+            val code = result.getString("code")
+            val expiry = result.getLong("expiresAt")
+            require(code.matches(Regex("[0-9]{5}"))) { "Invalid share code" }
+            if (expiry <= System.currentTimeMillis()) throw SendProblem(SendFailureKind.CLOCK)
+            code to expiry
+        }
+    }
         return client.newCall(Request.Builder().url(lookup).build()).execute().use { response ->
             require(response.isSuccessful) { if (response.code == 429) "Too many code attempts. Wait a minute and try again." else "Code expired or sender unavailable. Ask for a new code." }
             val source = response.body?.source() ?: error("Empty code response")
@@ -29,8 +46,12 @@ object ShareCodes {
             val id = value.getString("transferId")
             val key = value.getString("key")
             Crypto.decode(id, 16); Crypto.decode(key, 32)
-            val origin = URI(lookup)
-            "${origin.scheme}://${origin.rawAuthority}/s/$id#$key"
+            val lookupOrigin = URI(lookup).let { "${it.scheme}://${it.rawAuthority}" }
+            val origin = value.optString("origin", lookupOrigin)
+            require(origin == lookupOrigin || origin == "https://cdx.yash0.in") { "Invalid transfer origin" }
+            val version = value.optInt("version", 1)
+            require(version in 1..2) { "Unsupported transfer version" }
+            "$origin/s/$id#${if (version == 2) "v2." else ""}$key"
         }
     }
 }
