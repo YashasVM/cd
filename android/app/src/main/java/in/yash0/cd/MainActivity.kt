@@ -123,11 +123,12 @@ class MainActivity: ComponentActivity(), CdActions {
         else { store.state(id, "paused"); if (cancel) { store.state(id, "cancelled"); TransferFiles.discard(this, store, id) } }
     }
 
-    private fun startSend(uris: List<Uri>) {
+    /** Sends to a trusted computer always use a private link: a code's key is held by the relay. */
+    private fun startSend(uris: List<Uri>, to: Pairing? = null) {
         ui.home(); ui.tab = Tab.SEND
         askNotifications()
-        runCatching { TransferBus.sender.start(this, uris) }
-            .onSuccess { id -> ui.sendError = null; ui.open(Screen.Transfer(id, Direction.SEND)) }
+        runCatching { TransferBus.sender.start(this, uris, privateLink = to != null || ui.sendPrivate) }
+            .onSuccess { id -> ui.sendError = null; ui.open(Screen.Transfer(id, Direction.SEND)); if (to != null) TrustedOffers.whenReady(this, id, to) }
             .onFailure { ui.sendError = it.message ?: "Sending failed" }
     }
 
