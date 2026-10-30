@@ -264,18 +264,11 @@ class ReceiverService: Service() {
                         require(join.admitted)
                         require(store.pairs().any { it.id == pair.id } && network.allowed(url))
                         val msg = pair.open(bytes.toByteArray())
-                        if (localTransport && localEndpoint(msg.optString("localUrl"))) {
-                            val control = java.net.URI(url)
-                            val data = java.net.URI(msg.getString("localUrl"))
-                            val endpoint = java.net.URI("ws", null, control.host, data.port, data.path, null, null).toString()
-                            require(localEndpoint(endpoint)); msg.put("localUrl", endpoint)
-                        }
-                        val added = store.addOffer(pair, msg, localTransport)
+                        // Replies to a phone-to-computer share belong to TrustedSend, not the receive queue.
+                        if (msg.getString("type") != "offer") { ControlHub.message(pair.id, msg); return@execute }
+                        val response = OfferIntake.accept(store, pair, url, localTransport, msg)
                         scheduler.wake(msg.getString("transferId"))
-                        if (!added) store.task(msg.getString("transferId"))?.let { task ->
-                            val response = when (task.getString("state")) { "complete" -> "received"; "paused", "cancelled" -> "paused"; else -> null }
-                            if (response != null) sendControl(webSocket, pair, JSONObject().put("type", response).put("transferId", task.getString("id")))
-                        }
+                        if (response != null) sendControl(webSocket, pair, JSONObject().put("type", response).put("transferId", msg.getString("transferId")))
                     }.onFailure { webSocket.cancel() }
                 }
             }
