@@ -116,7 +116,19 @@ class MainActivity: ComponentActivity(), CdActions {
 
     private fun askNotifications() { if (!notificationsAllowed()) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) }
     /** A real receive transfer was queued: ask for notifications once, then run it. */
-    private fun receiveNow() { askNotifications(); ReceiveMode.startTransfer(this) }
+    private fun receiveNow() {
+        if (returnAfterReceive) {
+            ReceiveMode.setPaused(this, false)
+            returnAfterPermission = !notificationsAllowed()
+        }
+        askNotifications()
+        ReceiveMode.startTransfer(this)
+        if (returnAfterReceive) {
+            downloadLink = null
+            if (!returnAfterPermission) moveTaskToBack(true)
+            returnAfterReceive = false
+        }
+    }
     private fun refreshService() { if (store.enabled()) startService(Intent(this, ReceiverService::class.java).setAction("refresh")) }
     private fun taskAction(id: String, cancel: Boolean) {
         if (store.enabled()) startService(Intent(this, ReceiverService::class.java).setAction(if (cancel) "cancel-task" else "pause-task").putExtra("taskId", id))
