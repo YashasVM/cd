@@ -133,7 +133,14 @@ class MainActivity: ComponentActivity(), CdActions {
 
     /* ---------- CdActions ---------- */
 
-    override fun pickFiles() { runCatching { picker.launch(arrayOf("*/*")) }.onFailure { ui.sendError = "No file picker is available on this phone" } }
+    override fun pickFiles(to: Pairing?) {
+        pickTarget = to?.id
+        runCatching { picker.launch(arrayOf("*/*")) }.onFailure { pickTarget = null; ui.sendError = "No file picker is available on this phone" }
+    }
+
+    override fun setSendPrivate(on: Boolean) { ui.sendPrivate = on; prefs.edit().putBoolean("sendPrivate", on).apply() }
+
+    override fun sendToDevice(view: TransferView, pair: Pairing) = TrustedOffers.offerNow(this, view, pair)
 
     override fun scan() {
         scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setBeepEnabled(false).setCaptureActivity(QrScannerActivity::class.java).setOrientationLocked(false))
