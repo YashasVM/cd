@@ -52,7 +52,9 @@ class MainActivity: ComponentActivity(), CdActions {
     // closing can be resumed later from the same uris.
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { runCatching { contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
-        if (uris.isNotEmpty()) startSend(uris)
+        val to = pickTarget?.let { id -> ui.pairs.firstOrNull { it.id == id } }
+        pickTarget = null
+        if (uris.isNotEmpty()) startSend(uris, to)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +71,9 @@ class MainActivity: ComponentActivity(), CdActions {
         if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) acceptIntent(intent)
         setContent {
             val transfers by TransferBus.transfers.collectAsState()
+    /** Pair id the open picker is choosing files for; survives recreation while the picker is up. */
+    private var pickTarget: String? = null
+    private val prefs by lazy { getSharedPreferences("cd-ui", MODE_PRIVATE) }
             val status by TransferBus.receivingStatus.collectAsState()
             val paused by ReceiveMode.paused.collectAsState()
             val wake by ReceiveMode.wakeAvailable.collectAsState()
