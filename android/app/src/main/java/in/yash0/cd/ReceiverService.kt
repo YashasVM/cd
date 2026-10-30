@@ -45,7 +45,7 @@ class ReceiverService: Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("receiving", "File receiving", NotificationManager.IMPORTANCE_LOW))
         try {
             ServiceCompat.startForeground(this, 1, notification("Ready to receive", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-            foregroundReady = true
+            foregroundReady = true; alive = true
         } catch (_: RuntimeException) { PushBridge.fallback(this); stopSelf(); return }
         PushBridge.start(this)
         wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CD:receiver").apply { setReferenceCounted(false) }
