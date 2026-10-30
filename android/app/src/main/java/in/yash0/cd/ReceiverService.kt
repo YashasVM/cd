@@ -319,7 +319,7 @@ class ReceiverService: Service() {
         runCatching { nsd.discoverServices("_cdx._tcp.", NsdManager.PROTOCOL_DNS_SD, listener) }
     }
     override fun onDestroy() {
-        running.set(false); handler.removeCallbacks(renewWake)
+        alive = false; running.set(false); handler.removeCallbacks(renewWake)
         if (::store.isInitialized) store.pairs().forEach { PushBridge.disconnected(it.id) }
         sockets.values.forEach { it.close(1000, "Receiver stopped") }; transferSocket?.cancel(); discovery?.let { runCatching { nsd.stopServiceDiscovery(it) } }
         if (wake?.isHeld == true) wake?.release()
