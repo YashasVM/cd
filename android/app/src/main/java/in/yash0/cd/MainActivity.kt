@@ -182,7 +182,7 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun trust(pair: Pairing) {
         runCatching {
             require(pair.json.getLong("expiresAt") > System.currentTimeMillis())
-            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); refreshService(); askNotifications() }
+            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); ReceiveMode.paired(this); askNotifications() }
             ui.pending = null; ui.input = ""; ui.toast("Trusted ${pair.name}")
         }.onFailure { ui.inputError = "Pairing expired. Run cdx pair again."; ui.pending = null }
         refresh()
@@ -227,7 +227,7 @@ class MainActivity: ComponentActivity(), CdActions {
         ui.toast("$label copied")
     }
 
-    override fun share(text: String) { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share CD link")) }
+    override fun share(text: String) { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share")) }
 
     override fun paste(): String? = getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
 
