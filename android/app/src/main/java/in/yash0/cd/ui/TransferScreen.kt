@@ -85,7 +85,7 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
         ) { kind ->
             when (kind) {
                 TransferBody.RESULT -> Result(view)
-                TransferBody.SHARE -> SharePanel(view, share, actions)
+                TransferBody.SHARE -> SharePanel(view, share, code, devices, offered[view.id].orEmpty(), actions)
                 TransferBody.PREPARING -> Preparing(view)
                 TransferBody.PROGRESS -> Progress(view, link, actions)
             }
