@@ -71,6 +71,9 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
     val pinnedShare = body == TransferBody.SHARE && !(share is ShareState.Offline && share.paused)
     ScreenFrame(
         transferTitle(view, now), largeTitle = false,
+    val code = liveCode(view, now)
+    // Only a private-mode send may go to a trusted computer; a code send's key is held by the relay.
+    val devices = if (privateOffer(view, now) != null) pairs else emptyList()
         navigation = { BackButton(onBack) },
         actions = {
             if (link != null && !pinnedShare) IconAction(CdIcons.Share, if (code != null) "Share code" else "Share ${linkLabel(view.isPrivate).lowercase()}", { actions.share(shareText(link, code)) })
