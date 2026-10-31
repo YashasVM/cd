@@ -209,7 +209,7 @@ private fun Progress(view: TransferView, link: String?, actions: CdActions) {
         if (view.direction == Direction.SEND && link != null) {
             Spacer(Modifier.height(20.dp))
             Row(
-                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy("Private link", link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy(linkLabel(view.isPrivate), link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(CdIcons.Link, null, Modifier.size(20.dp), tint = Cd.accent)
