@@ -35,7 +35,7 @@ object ReceiveMode {
     fun setPaused(context: Context, paused: Boolean) {
         context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).edit().putBoolean("receivePaused", paused).apply()
         _paused.value = paused
-        // Legacy backend: stop a running receiver so paused transfers keep their progress.
+        // Stop a running receiver so paused transfers keep their progress; reconnect controls on un-pause while open.
         if (paused && StoreRegistry.get(context).enabled()) context.startService(Intent(context, ReceiverService::class.java).setAction("pause"))
     }
 
