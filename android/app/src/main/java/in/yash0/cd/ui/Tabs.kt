@@ -56,8 +56,31 @@ fun SendTab(state: UiState, transfers: List<TransferView>, actions: CdActions, c
         }
         Hero(CdIcons.Upload, "Share anything from your phone", "CD makes a private link and QR. Open it on cd.yash0.in, or run cdx receive on any laptop.")
         Spacer(Modifier.height(24.dp))
-        BulletLine(CdIcons.File, "Pick several files at once, or share into CD from any app.")
-        BulletLine(CdIcons.Retry, "Interrupted? Open CD and tap Resume — the receiver keeps its progress.")
+        Group {
+            SwitchListRow(
+                "Private link instead of a code",
+                "End-to-end encrypted: the key never reaches CD’s server. There is no code to type.",
+                state.sendPrivate, { actions.setSendPrivate(it) }, CdIcons.Shield,
+            )
+        }
+        Spacer(Modifier.height(28.dp))
+        SectionHeader("Send to your computer")
+        if (state.pairs.isEmpty()) Group {
+            ListRow(
+                "Pair a computer", "Run cdx pair on it, then tap to scan its QR. After that, send here without codes.",
+                icon = CdIcons.Laptop, onClick = { actions.scan() },
+                trailing = { Icon(CdIcons.Scan, null, Modifier.size(20.dp), tint = Cd.faint) },
+            )
+        } else Group {
+            state.pairs.forEachIndexed { i, pair ->
+                if (i > 0) RowDivider()
+                ListRow(
+                    pair.name, "Private link, straight to cdx on it", icon = CdIcons.Laptop,
+                    onClick = { state.sendError = null; actions.pickFiles(pair) },
+                    trailing = { Icon(CdIcons.Upload, "Choose files for ${pair.name}", Modifier.size(20.dp), tint = Cd.accent) },
+                )
+            }
+        }
         if (sends.isNotEmpty()) {
             Spacer(Modifier.height(28.dp))
             SectionHeader("Your sends")
@@ -79,14 +102,6 @@ private fun Hero(icon: ImageVector, title: String, body: String) {
         Text(title, style = CdType.title)
         Spacer(Modifier.height(8.dp))
         Text(body, style = CdType.bodyMuted)
-    }
-}
-
-@Composable
-private fun BulletLine(icon: ImageVector, text: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = Cd.faint)
-        Text(text, Modifier.weight(1f), style = CdType.small)
     }
 }
 
