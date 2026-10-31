@@ -40,6 +40,7 @@ import `in`.yash0.cd.Route
 import `in`.yash0.cd.TransferPhase
 import `in`.yash0.cd.TransferView
 import kotlin.math.cos
+import `in`.yash0.cd.TrustedSend
 import kotlin.math.sin
 
 fun TransferView.tone(): Tone = when (phase) {
