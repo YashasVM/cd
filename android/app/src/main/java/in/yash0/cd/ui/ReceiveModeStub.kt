@@ -34,18 +34,18 @@ object ReceiveMode {
         _paused.value = context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).getBoolean("receivePaused", false)
     }
 
-    fun setPaused(context: Context, paused: Boolean) {
-        context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).edit().putBoolean("receivePaused", paused).apply()
     @Volatile private var foreground = false
 
+    fun setPaused(context: Context, paused: Boolean) {
+        context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).edit().putBoolean("receivePaused", paused).apply()
         _paused.value = paused
         // Stop a running receiver so paused transfers keep their progress; reconnect controls on un-pause while open.
         if (paused && StoreRegistry.get(context).enabled()) context.startService(Intent(context, ReceiverService::class.java).setAction("pause"))
+        else if (!paused && foreground) ReceiveControl.connect(context)
     }
 
     /** Legacy backend: the receiver service runs the queued task (its notification shows only while it works). */
     fun startTransfer(context: Context) {
-        else if (!paused && foreground) ReceiveControl.connect(context)
         if (_paused.value) return
         StoreRegistry.get(context).enabled(true)
         ContextCompat.startForegroundService(context, Intent(context, ReceiverService::class.java))

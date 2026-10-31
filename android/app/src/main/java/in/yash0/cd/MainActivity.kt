@@ -31,32 +31,32 @@ import androidx.core.content.IntentCompat
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import `in`.yash0.cd.ui.CdActions
-import `in`.yash0.cd.ui.CdApp
-import `in`.yash0.cd.ui.CdTheme
 import `in`.yash0.cd.ui.CdDialog
 import `in`.yash0.cd.ui.CdIcons
+import `in`.yash0.cd.ui.CdApp
+import `in`.yash0.cd.ui.CdTheme
 import `in`.yash0.cd.ui.DebugFakes
 import `in`.yash0.cd.ui.PreviewData
 import `in`.yash0.cd.ui.ReceiveMode
 import `in`.yash0.cd.ui.Tab
+import `in`.yash0.cd.ui.TrustedOffers
 import `in`.yash0.cd.ui.Screen
 import `in`.yash0.cd.ui.UiState
 import `in`.yash0.cd.ui.active
 import org.json.JSONObject
-import `in`.yash0.cd.ui.TrustedOffers
 
 class MainActivity: ComponentActivity(), CdActions {
     private lateinit var store: Store
     private val ui = UiState()
     private val debug by lazy { applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 }
+    private var downloadLink by mutableStateOf<String?>(null)
+    private var returnAfterReceive = false
+    private var returnAfterPermission = false
     // Asked only when a transfer starts or a device is paired, never on first launch.
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) ui.toast("Progress won’t show in notifications")
         if (returnAfterPermission) moveTaskToBack(true)
         returnAfterPermission = false
-    private var downloadLink by mutableStateOf<String?>(null)
-    private var returnAfterReceive = false
-    private var returnAfterPermission = false
         refresh()
     }
     private val pushNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) PushBridge.setEnabled(this, true) else TransferBus.status("Allow notifications to enable trusted wake-up"); refresh() }
@@ -69,6 +69,9 @@ class MainActivity: ComponentActivity(), CdActions {
         pickTarget = null
         if (uris.isNotEmpty()) startSend(uris, to)
     }
+    /** Pair id the open picker is choosing files for; survives recreation while the picker is up. */
+    private var pickTarget: String? = null
+    private val prefs by lazy { getSharedPreferences("cd-ui", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
@@ -81,12 +84,14 @@ class MainActivity: ComponentActivity(), CdActions {
         // Control links to paired computers start in onStart (ReceiveMode.onForeground) and stop once idle in the background.
         refresh()
         ui.restoreNav(savedInstanceState?.getString("cd.navigation"))
+        pickTarget = savedInstanceState?.getString("cd.pickTarget")
+        downloadLink = savedInstanceState?.getString("cd.downloadLink")
+        returnAfterPermission = savedInstanceState?.getBoolean("cd.returnAfterPermission") ?: false
+        ui.sendPrivate = prefs.getBoolean("sendPrivate", false)
+        lifecycleScope.launch { TrustedOffers.messages.collect { (text, error) -> ui.toast(text, error) } }
         if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) acceptIntent(intent)
         setContent {
             val transfers by TransferBus.transfers.collectAsState()
-    /** Pair id the open picker is choosing files for; survives recreation while the picker is up. */
-    private var pickTarget: String? = null
-    private val prefs by lazy { getSharedPreferences("cd-ui", MODE_PRIVATE) }
             val status by TransferBus.receivingStatus.collectAsState()
             val paused by ReceiveMode.paused.collectAsState()
             val wake by ReceiveMode.wakeAvailable.collectAsState()
@@ -102,11 +107,6 @@ class MainActivity: ComponentActivity(), CdActions {
                         body = "Accept to download this file to Downloads/CD in the background. You can leave CD or turn off the screen. The sender must stay online.",
                         detail = ui.inputError.takeIf { it.isNotBlank() } ?: if (ui.mobile) "Mobile data is allowed." else "Downloads wait for unmetered Wi-Fi or Ethernet.",
                         confirm = "Accept", dismiss = "Reject", icon = CdIcons.ArrowDown,
-        pickTarget = savedInstanceState?.getString("cd.pickTarget")
-        downloadLink = savedInstanceState?.getString("cd.downloadLink")
-        returnAfterPermission = savedInstanceState?.getBoolean("cd.returnAfterPermission") ?: false
-        ui.sendPrivate = prefs.getBoolean("sendPrivate", false)
-        lifecycleScope.launch { TrustedOffers.messages.collect { (text, error) -> ui.toast(text, error) } }
                         onConfirm = {
                             returnAfterReceive = true
                             submit(raw)
@@ -125,6 +125,9 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("cd.navigation", ui.saveNav())
+        pickTarget?.let { outState.putString("cd.pickTarget", it) }
+        outState.putString("cd.downloadLink", downloadLink)
+        outState.putBoolean("cd.returnAfterPermission", returnAfterPermission)
         super.onSaveInstanceState(outState)
     }
 
@@ -168,9 +171,6 @@ class MainActivity: ComponentActivity(), CdActions {
         askNotifications()
         ReceiveMode.startTransfer(this)
         if (returnAfterReceive) {
-        pickTarget?.let { outState.putString("cd.pickTarget", it) }
-        outState.putString("cd.downloadLink", downloadLink)
-        outState.putBoolean("cd.returnAfterPermission", returnAfterPermission)
             downloadLink = null
             if (!returnAfterPermission) moveTaskToBack(true)
             returnAfterReceive = false
@@ -208,8 +208,10 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun submit(raw: String) {
         val input = raw.trim()
+        if (ui.resolving) return
         val lookup = runCatching { ShareCodes.lookupUrl(input) }.getOrElse { ui.inputError = it.message ?: "Invalid code"; return }
         if (lookup == null) { submitLink(input); return }
+        ui.resolving = true
         lifecycleScope.launch {
             runCatching { withContext(Dispatchers.IO) { ShareCodes.resolve(lookup) } }
                 .onSuccess { ui.resolving = false; submitLink(it) }
@@ -225,6 +227,8 @@ class MainActivity: ComponentActivity(), CdActions {
                 val invitation = runCatching { Invitation.parse(raw) }.getOrElse { e -> throw IllegalArgumentException(if (e.message?.contains("v2") == true) e.message else "That isn’t a CD link. Paste the sender’s private link.") }
                 val id = invitation.id
                 if (TransferBus.sender.owns(id)) {
+                    returnAfterReceive = false
+                    downloadLink = null
                     ui.open(Screen.Transfer(id, Direction.SEND))
                     ui.input = ""; ui.inputError = ""
                     ui.toast("This phone is sending this file. Open the invitation on another device.")
@@ -275,11 +279,9 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun resume(view: TransferView) {
         if (view.direction == Direction.SEND) runCatching { TransferBus.sender.resume(this, view.id) }.onFailure { ui.toast(it.message ?: "Can’t resume", error = true) }
         else { store.state(view.id, "queued"); receiveNow() }
-        if (ui.resolving) return
     }
 
     override fun cancel(view: TransferView) {
-        ui.resolving = true
         if (view.direction == Direction.SEND) runCatching { TransferBus.sender.cancel(this, view.id) }.onFailure { ui.toast(it.message ?: "Can’t cancel", error = true) } else taskAction(view.id, cancel = true)
     }
 
@@ -296,8 +298,6 @@ class MainActivity: ComponentActivity(), CdActions {
         ui.toast("$label copied")
     }
 
-                    returnAfterReceive = false
-                    downloadLink = null
     override fun share(text: String) { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share")) }
 
     override fun paste(): String? = getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()

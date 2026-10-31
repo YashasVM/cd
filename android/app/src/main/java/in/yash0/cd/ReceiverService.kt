@@ -42,9 +42,9 @@ class ReceiverService: Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val renewWake = object: Runnable { override fun run() { if (running.get() && transferActive) { if (wake?.isHeld == true) wake?.release(); wake?.acquire(10 * 60 * 1000L); handler.postDelayed(this, 9 * 60 * 1000L) } } }
     override fun onBind(intent: Intent?) = null
+    companion object { @Volatile var alive = false; private set }
     override fun onCreate() {
         super.onCreate(); store = StoreRegistry.get(this); network = ReceiverNetwork(this, store); ReceiveViews.load(this)
-    companion object { @Volatile var alive = false; private set }
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("receiving", "File receiving", NotificationManager.IMPORTANCE_LOW))
         try {
             ServiceCompat.startForeground(this, 1, notification("Ready to receive", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
@@ -79,18 +79,18 @@ class ReceiverService: Service() {
                         }
                     }
                 }
+                if (background) stopIfIdle()
                 try { Thread.sleep(2500) } catch (_: InterruptedException) { break }
             }
         }
-                if (background) stopIfIdle()
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!foregroundReady) return START_NOT_STICKY
+        lastStartId = startId
         when (intent?.action) {
             "push-wake" -> {
                 if (stopping.get() || !PushBridge.canWake(this, intent.getStringExtra("pairId").orEmpty())) { stopSelf(); return START_NOT_STICKY }
                 // Replace a potentially half-open control transport without cancelling file data.
-        lastStartId = startId
                 val pairId = intent.getStringExtra("pairId").orEmpty()
                 sockets.keys.filter { it.startsWith("$pairId|") }.forEach { key ->
                     sockets.remove(key)?.cancel(); admitted.remove(key); lastPing.remove(key)
@@ -98,15 +98,21 @@ class ReceiverService: Service() {
                 PushBridge.disconnected(pairId)
             }
             "pause" -> stopReceiving(startId)
+            // CD left the foreground: drop idle control links, but never interrupt or pause a transfer.
+            // With a transfer queued or running, stop once it finishes instead (see the loop).
+            "idle" -> { background = true; if (stopIfIdle()) return START_NOT_STICKY }
             "pause-task", "cancel-task" -> intent.getStringExtra("taskId")?.let { pauseTask(it, intent.action == "cancel-task") }
             "refresh" -> { store.pairs().forEach { PushBridge.disconnected(it.id) }; NativeNetworkDetector.refreshPolicy(); sockets.values.forEach { it.cancel() }; sockets.clear(); admitted.clear(); lastPing.clear(); transferSocket?.cancel() }
             else -> if (intent != null) { background = false; store.enabled(!stopping.get()); store.tasks().filter { it.getString("state") == "queued" }.forEach { scheduler.wake(it.getString("id")) } }
         }
         if (intent == null && !store.enabled()) stopSelf()
-            // CD left the foreground: drop idle control links, but never interrupt or pause a transfer.
-            // With a transfer queued or running, stop once it finishes instead (see the loop).
-            "idle" -> { background = true; if (stopIfIdle()) return START_NOT_STICKY }
         return if (stopping.get()) START_NOT_STICKY else START_STICKY
+    }
+    private fun stopIfIdle(): Boolean {
+        if (receiving || transferActive || ControlHub.busy || store.tasks().any { it.getString("state") in listOf("queued", "connecting", "receiving", "verifying", "retrying") }) return false
+        // stopSelfResult ignores the stop if a newer start (connect) arrived meanwhile.
+        handler.post { if (background) stopSelfResult(lastStartId) }
+        return true
     }
     private fun pauseTask(id: String, cancel: Boolean) {
         val task = store.task(id) ?: return
@@ -116,12 +122,6 @@ class ReceiverService: Service() {
         if (cancel) store.state(id, "cancelled")
         if (activeTaskId == id) transferSocket?.cancel()
         if (cancel) TransferFiles.discard(this, store, id)
-    private fun stopIfIdle(): Boolean {
-        if (receiving || transferActive || ControlHub.busy || store.tasks().any { it.getString("state") in listOf("queued", "connecting", "receiving", "verifying", "retrying") }) return false
-        // stopSelfResult ignores the stop if a newer start (connect) arrived meanwhile.
-        handler.post { if (background) stopSelfResult(lastStartId) }
-        return true
-    }
     }
     private fun stopReceiving(startId: Int) {
         if (!stopping.compareAndSet(false, true)) return
@@ -306,18 +306,6 @@ class ReceiverService: Service() {
         val pair = store.pairs().firstOrNull { it.id == pairId } ?: return
         admitted.filterKeys { it.startsWith("$pairId|") }.values.forEach { sendControl(it, pair, JSONObject().put("type", type).put("transferId", transferId)) }
     }
-    private fun discover() {
-        val listener = object: NsdManager.DiscoveryListener {
-            override fun onDiscoveryStarted(type: String) {}
-            override fun onDiscoveryStopped(type: String) {}
-            override fun onStartDiscoveryFailed(type: String, code: Int) { Status.text = "Local discovery unavailable ($code). Relay available." }
-            override fun onStopDiscoveryFailed(type: String, code: Int) {}
-            override fun onServiceLost(info: NsdServiceInfo) {}
-            override fun onServiceFound(info: NsdServiceInfo) {
-                if (info.serviceType.trimEnd('.') != "_cdx._tcp") return
-                // Only resolve services for pairings this phone trusts (instance name is the pair id).
-                if (store.pairs().none { it.id == info.serviceName }) return
-                enqueueResolve(info)
     // NsdManager resolves one service at a time before Android 14 and fails concurrent resolves with
     // FAILURE_ALREADY_ACTIVE. Resolving every found service at once dropped all but the first, so
     // LAN control waited for the 2.5 s loop on stale addresses. Resolve them one after another.
@@ -351,6 +339,18 @@ class ReceiverService: Service() {
             })
         }.onFailure { done() }
     }
+    private fun discover() {
+        val listener = object: NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(type: String) {}
+            override fun onDiscoveryStopped(type: String) {}
+            override fun onStartDiscoveryFailed(type: String, code: Int) { Status.text = "Local discovery unavailable ($code). Relay available." }
+            override fun onStopDiscoveryFailed(type: String, code: Int) {}
+            override fun onServiceLost(info: NsdServiceInfo) {}
+            override fun onServiceFound(info: NsdServiceInfo) {
+                if (info.serviceType.trimEnd('.') != "_cdx._tcp") return
+                // Only resolve services for pairings this phone trusts (instance name is the pair id).
+                if (store.pairs().none { it.id == info.serviceName }) return
+                enqueueResolve(info)
             }
         }
         discovery = listener

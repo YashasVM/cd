@@ -19,8 +19,6 @@ object ShareCodes {
         require(uri.scheme in listOf("https", "http") && validEndpoint(relay)) { "Use a secure CD link" }
         return "${uri.scheme}://${uri.rawAuthority}/api/codes/${uri.rawFragment}"
     }
-    fun resolve(lookup: String): String {
-        val client = OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).followRedirects(false).build()
     fun claim(client: OkHttpClient, origin: String, id: String, key: String, senderToken: String): Pair<String, Long> {
         val body = JSONObject().put("transferId", id).put("key", key).put("version", 2).put("senderToken", senderToken)
         val request = Request.Builder().url("${origin.trimEnd('/')}/api/codes")
@@ -38,6 +36,8 @@ object ShareCodes {
             code to expiry
         }
     }
+    fun resolve(lookup: String): String {
+        val client = OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).followRedirects(false).build()
         return client.newCall(Request.Builder().url(lookup).build()).execute().use { response ->
             require(response.isSuccessful) { if (response.code == 429) "Too many code attempts. Wait a minute and try again." else "Code expired or sender unavailable. Ask for a new code." }
             val source = response.body?.source() ?: error("Empty code response")

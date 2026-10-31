@@ -40,8 +40,8 @@ import `in`.yash0.cd.Pairing
 import `in`.yash0.cd.Route
 import `in`.yash0.cd.TransferPhase
 import `in`.yash0.cd.TransferView
-import kotlin.math.cos
 import `in`.yash0.cd.TrustedSend
+import kotlin.math.cos
 import kotlin.math.sin
 
 fun TransferView.tone(): Tone = when (phase) {
@@ -71,13 +71,13 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
     val share = shareState(view, now)
     val body = transferBody(view, now)
     val link = liveLink(view, now)
+    val code = liveCode(view, now)
+    // Only a private-mode send may go to a trusted computer; a code send's key is held by the relay.
+    val devices = if (privateOffer(view, now) != null) pairs else emptyList()
     // Copy/Share sit in the pinned area while the invitation is the main content and the sender can accept a receiver.
     val pinnedShare = body == TransferBody.SHARE && !(share is ShareState.Offline && share.paused)
     ScreenFrame(
         transferTitle(view, now), largeTitle = false,
-    val code = liveCode(view, now)
-    // Only a private-mode send may go to a trusted computer; a code send's key is held by the relay.
-    val devices = if (privateOffer(view, now) != null) pairs else emptyList()
         navigation = { BackButton(onBack) },
         actions = {
             if (link != null && !pinnedShare) IconAction(CdIcons.Share, if (code != null) "Share code" else "Share ${linkLabel(view.isPrivate).lowercase()}", { actions.share(shareText(link, code)) })
@@ -95,6 +95,7 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
                 TransferBody.SHARE -> SharePanel(view, share, code, devices, offered[view.id].orEmpty(), actions)
                 TransferBody.PREPARING -> Preparing(view)
                 TransferBody.PROGRESS -> Progress(view, link, actions)
+                TransferBody.CODE_EXPIRED -> CodeExpired(view)
             }
         }
     }
@@ -102,7 +103,6 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
 
 @Composable
 private fun FileLine(view: TransferView, center: Boolean = false) {
-                TransferBody.CODE_EXPIRED -> CodeExpired(view)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start) {
         Text(view.name, style = CdType.title.copy(fontSize = 20.sp, lineHeight = 26.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = if (center) TextAlign.Center else TextAlign.Start)
         Spacer(Modifier.height(4.dp))
@@ -110,14 +110,6 @@ private fun FileLine(view: TransferView, center: Boolean = false) {
     }
 }
 
-@Composable
-private fun Preparing(view: TransferView) {
-    Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spinner(size = 40.dp)
-        Spacer(Modifier.height(24.dp))
-        Text(if (view.direction != Direction.SEND) "Finding the sender…" else if (view.isPrivate) "Creating private link…" else "Getting a code…", style = CdType.title)
-        Spacer(Modifier.height(8.dp))
-        Text(view.message ?: "This usually takes a second or two.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
 /** A code send with no live, unused code: no URL to share, Resume asks the relay for a code. */
 @Composable
 private fun CodeExpired(view: TransferView) {
@@ -136,6 +128,14 @@ private fun CodeExpired(view: TransferView) {
     }
 }
 
+@Composable
+private fun Preparing(view: TransferView) {
+    Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Spinner(size = 40.dp)
+        Spacer(Modifier.height(24.dp))
+        Text(if (view.direction != Direction.SEND) "Finding the sender…" else if (view.isPrivate) "Creating private link…" else "Getting a code…", style = CdType.title)
+        Spacer(Modifier.height(8.dp))
+        Text(view.message ?: "This usually takes a second or two.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(40.dp))
         FileLine(view, center = true)
     }
@@ -152,6 +152,19 @@ private fun SharePanel(view: TransferView, share: ShareState, code: String?, dev
     val offline = share as? ShareState.Offline
     val qrAlpha by animateFloatAsState(if (offline != null) 0.28f else 1f, tween(240), label = "qrDim")
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (code != null) {
+            // The code is the primary thing to share: big, tappable to copy, read digit by digit by screen readers.
+            Text("Share code", style = CdType.section)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                code,
+                Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { actions.copy("Code", code) }
+                    .padding(horizontal = 16.dp, vertical = 4.dp).graphicsLayer { alpha = maxOf(qrAlpha, 0.5f) }
+                    .semantics { contentDescription = "Share code ${code.toList().joinToString(" ")}. Tap to copy." },
+                style = CdType.code.copy(fontSize = 56.sp, lineHeight = 64.sp),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
             QrCode(link, Modifier.size(minOf(maxWidth, if (code != null) 220.dp else 300.dp)).graphicsLayer { alpha = qrAlpha })
         }
@@ -178,19 +191,6 @@ private fun SharePanel(view: TransferView, share: ShareState, code: String?, dev
         Spacer(Modifier.height(6.dp))
         Text(privacyNote(view.isPrivate, code), style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
         if (devices.isNotEmpty()) {
-        if (code != null) {
-            // The code is the primary thing to share: big, tappable to copy, read digit by digit by screen readers.
-            Text("Share code", style = CdType.section)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                code,
-                Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { actions.copy("Code", code) }
-                    .padding(horizontal = 16.dp, vertical = 4.dp).graphicsLayer { alpha = maxOf(qrAlpha, 0.5f) }
-                    .semantics { contentDescription = "Share code ${code.toList().joinToString(" ")}. Tap to copy." },
-                style = CdType.code.copy(fontSize = 56.sp, lineHeight = 64.sp),
-            )
-            Spacer(Modifier.height(12.dp))
-        }
             Spacer(Modifier.height(28.dp))
             SectionHeader("Send to your computer", Modifier.fillMaxWidth())
             Group {

@@ -2,8 +2,8 @@ package `in`.yash0.cd
 
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.InetAddress
 import java.math.BigInteger
+import java.net.InetAddress
 import java.net.URI
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -61,9 +61,9 @@ data class Pairing(val json: JSONObject) {
         val nonce = Crypto.random(12)
         return nonce + Crypto.cipher(true, key("receiver messages"), nonce, "cd-device-v1 receiver $id".toByteArray(), message.toString().toByteArray())
     }
+    /** Opens a computer-sent message: an offer to the phone, or a reply to a [TrustedSend] share. */
     fun open(frame: ByteArray, now: Long = System.currentTimeMillis()): JSONObject {
         require(frame.size in 29..16384) { "Invalid control frame length" }
-    /** Opens a computer-sent message: an offer to the phone, or a reply to a [TrustedSend] share. */
         val msg = JSONObject(String(Crypto.cipher(false, key("sender messages"), frame.copyOfRange(0, 12), "cd-device-v1 sender $id".toByteArray(), frame.copyOfRange(12, frame.size))))
         require(msg.getInt("version") == 1 && msg.getLong("expiresAt") in (now + 1)..(now + 330000)) { "Expired control message" }
         Crypto.decode(msg.getString("messageId"), 16)
@@ -73,11 +73,6 @@ data class Pairing(val json: JSONObject) {
         return msg
     }
     companion object {
-        fun parse(raw: String, now: Long = System.currentTimeMillis()): Pairing {
-            val text = raw.trim()
-            require(text.length <= 16384)
-            val j = if (text.startsWith("cdpair://", ignoreCase = true)) {
-                val u = URI(text)
         const val DEFAULT_RELAY = "wss://cd.yash0.in"
         const val MAX_COMPACT_NAME = 40
         private val SENDER_TYPES = setOf("offer", "receiving", "received", "paused")
@@ -86,6 +81,11 @@ data class Pairing(val json: JSONObject) {
         fun pairIdFromSecret(secret: ByteArray): String = Crypto.encode(Crypto.sha("cd-device-v1 pair id ".toByteArray() + secret).copyOfRange(0, 16))
 
         /** Accepts the compact numeric `cdpair:<digits>` code and the legacy `cdpair://v1#<base64 JSON>`. */
+        fun parse(raw: String, now: Long = System.currentTimeMillis()): Pairing {
+            val text = raw.trim()
+            require(text.length <= 16384)
+            val j = if (text.startsWith("cdpair://", ignoreCase = true)) {
+                val u = URI(text)
                 require(u.scheme.equals("cdpair", ignoreCase = true) && u.host == "v1" && u.rawQuery == null)
                 JSONObject(String(Base64.getUrlDecoder().decode(u.rawFragment)))
             } else compact(text)
@@ -99,22 +99,6 @@ data class Pairing(val json: JSONObject) {
             j.optJSONArray("localUrls")?.let { urls -> require(urls.length() <= 16); repeat(urls.length()) { require(localEndpoint(urls.getString(it))) } }
             return Pairing(j)
         }
-    }
-}
-
-data class Invitation(val id: String, val key: ByteArray, val relay: String, val version: Int = 2) {
-    val rawId: ByteArray get() = Crypto.decode(id, 16)
-    fun token(): ByteArray = Crypto.derive(key, rawId, "cd-transfer-v$version receiver join")
-    fun proof(role: String, nonce: ByteArray): ByteArray = Crypto.hmac(key, "cd-transfer-v2 $role nonce".toByteArray() + rawId + nonce)
-    companion object {
-        fun parse(raw: String): Invitation {
-            val u = URI(raw.trim())
-            require(u.scheme == "https" || (u.scheme == "http" && localEndpoint("ws://${u.rawAuthority}${u.path}")))
-            require(u.userInfo == null && u.query == null && u.path.matches(Regex("/s/[A-Za-z0-9_-]{22}")))
-            val id = u.path.substringAfterLast('/')
-            val fragment = requireNotNull(u.rawFragment) { "Paste the complete CD link, including its key" }
-            val version = if (fragment.startsWith("v2.")) 2 else 1
-            Crypto.decode(id, 16)
 
         /** Layout (big-endian, written as one decimal integer): version 2, secret(32), expiresSeconds(4), port(2), count(1), IPv4 x count, relayLength(1), relay origin, name. */
         internal fun compact(text: String): JSONObject {
@@ -150,6 +134,22 @@ data class Invitation(val id: String, val key: ByteArray, val relay: String, val
             return JSONObject().put("version", 1).put("pairId", id).put("secret", Crypto.encode(secret)).put("name", name)
                 .put("relayUrl", origin + path).put("localUrls", local).put("expiresAt", expires)
         }
+    }
+}
+
+data class Invitation(val id: String, val key: ByteArray, val relay: String, val version: Int = 2) {
+    val rawId: ByteArray get() = Crypto.decode(id, 16)
+    fun token(): ByteArray = Crypto.derive(key, rawId, "cd-transfer-v$version receiver join")
+    fun proof(role: String, nonce: ByteArray): ByteArray = Crypto.hmac(key, "cd-transfer-v2 $role nonce".toByteArray() + rawId + nonce)
+    companion object {
+        fun parse(raw: String): Invitation {
+            val u = URI(raw.trim())
+            require(u.scheme == "https" || (u.scheme == "http" && localEndpoint("ws://${u.rawAuthority}${u.path}")))
+            require(u.userInfo == null && u.query == null && u.path.matches(Regex("/s/[A-Za-z0-9_-]{22}")))
+            val id = u.path.substringAfterLast('/')
+            val fragment = requireNotNull(u.rawFragment) { "Paste the complete CD link, including its key" }
+            val version = if (fragment.startsWith("v2.")) 2 else 1
+            Crypto.decode(id, 16)
             val key = Crypto.decode(if (version == 2 || fragment.startsWith("v1.")) fragment.substring(3) else fragment, 32)
             val relay = "${if (u.scheme == "https") "wss" else "ws"}://${u.rawAuthority}/ws/v$version/$id"
             require(validEndpoint(relay))

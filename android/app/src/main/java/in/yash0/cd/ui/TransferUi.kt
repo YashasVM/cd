@@ -130,6 +130,7 @@ enum class TransferBody { RESULT, SHARE, PREPARING, PROGRESS, CODE_EXPIRED }
 fun transferBody(view: TransferView, now: Long = System.currentTimeMillis()): TransferBody {
     if (view.finished) return TransferBody.RESULT
     if (view.done != 0L) return TransferBody.PROGRESS
+    if (codeExpired(view, now)) return TransferBody.CODE_EXPIRED
     return when (shareState(view, now)) {
         is ShareState.Ready, is ShareState.Offline -> TransferBody.SHARE
         ShareState.Preparing -> TransferBody.PREPARING
@@ -139,6 +140,8 @@ fun transferBody(view: TransferView, now: Long = System.currentTimeMillis()): Tr
 
 fun transferTitle(view: TransferView, now: Long = System.currentTimeMillis()): String {
     val send = view.direction == Direction.SEND
+    if (codeExpired(view, now)) return if (view.code != null) "Code expired" else "No live code"
+    if (send && !view.isPrivate && view.codeSpent && view.phase == TransferPhase.WAITING) return "Waiting for receiver"
     return when (view.phase) {
         TransferPhase.COMPLETE -> if (send) "Sent" else "Saved"
         TransferPhase.FAILED -> "Transfer stopped"
@@ -201,6 +204,3 @@ object NavCodec {
         else -> null
     }
 }
-    if (codeExpired(view, now)) return if (view.code != null) "Code expired" else "No live code"
-    if (send && !view.isPrivate && view.codeSpent && view.phase == TransferPhase.WAITING) return "Waiting for receiver"
-    if (codeExpired(view, now)) return TransferBody.CODE_EXPIRED
