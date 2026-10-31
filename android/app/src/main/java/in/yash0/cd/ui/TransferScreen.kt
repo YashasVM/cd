@@ -127,7 +127,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
     val qrAlpha by animateFloatAsState(if (offline != null) 0.28f else 1f, tween(240), label = "qrDim")
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-            QrCode(link, Modifier.size(minOf(maxWidth, 300.dp)).graphicsLayer { alpha = qrAlpha })
+            QrCode(link, Modifier.size(minOf(maxWidth, if (code != null) 220.dp else 300.dp)).graphicsLayer { alpha = qrAlpha })
         }
         Spacer(Modifier.height(20.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
