@@ -37,7 +37,7 @@ fun SendTab(state: UiState, transfers: List<TransferView>, actions: CdActions, c
     val sends = transfers.filter { it.direction == Direction.SEND }
     ScreenFrame(
         "Send", navigation = chrome.brand, actions = chrome.actions, bottomBar = chrome.bottomBar,
-        pinned = { PrimaryButton(if (state.sendError != null) "Try again" else "Choose files", { state.sendError = null; actions.pickFiles() }, Modifier.fillMaxWidth(), icon = CdIcons.Upload) },
+        pinned = { PrimaryButton(if (state.sendError != null) "Try again" else if (state.sendPrivate) "Choose files · private link" else "Choose files", { state.sendError = null; actions.pickFiles() }, Modifier.fillMaxWidth(), icon = CdIcons.Upload) },
     ) {
         val error = state.sendError
         if (error != null) {

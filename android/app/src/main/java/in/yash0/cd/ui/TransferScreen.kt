@@ -292,7 +292,7 @@ private fun ColumnScope.Pinned(view: TransferView, link: String?, actions: CdAct
             val canCancel = send || view.phase == TransferPhase.PAUSED
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (canCancel) SecondaryButton(if (send) "Cancel" else "Discard", { actions.cancel(view) }, Modifier.weight(1f), icon = CdIcons.Close, danger = true)
-                if (canResume) PrimaryButton("Resume", { actions.resume(view) }, Modifier.weight(1f), icon = CdIcons.Play)
+                if (canResume) PrimaryButton(if (codeExpired(view)) "Get code" else "Resume", { actions.resume(view) }, Modifier.weight(1f), icon = CdIcons.Play)
                 else if (view.active) SecondaryButton("Pause", { actions.pause(view) }, Modifier.weight(1f), icon = CdIcons.Pause)
             }
         }
