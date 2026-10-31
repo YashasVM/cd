@@ -107,7 +107,7 @@ private fun Preparing(view: TransferView) {
     Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spinner(size = 40.dp)
         Spacer(Modifier.height(24.dp))
-        Text(if (view.direction == Direction.SEND) "Creating private link…" else "Finding the sender…", style = CdType.title)
+        Text(if (view.direction != Direction.SEND) "Finding the sender…" else if (view.isPrivate) "Creating private link…" else "Getting a code…", style = CdType.title)
         Spacer(Modifier.height(8.dp))
         Text(view.message ?: "This usually takes a second or two.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(40.dp))
