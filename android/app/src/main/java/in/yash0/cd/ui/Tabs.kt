@@ -313,7 +313,7 @@ fun CdDialog(title: String, body: String, confirm: String, onConfirm: () -> Unit
             if (danger) SecondaryButton(confirm, onConfirm, Modifier.fillMaxWidth(), danger = true, highlighted = true)
             else PrimaryButton(confirm, onConfirm, Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
-            SecondaryButton("Cancel", onDismiss, Modifier.fillMaxWidth())
+            SecondaryButton(dismiss, onDismiss, Modifier.fillMaxWidth())
         }
     }
 }
