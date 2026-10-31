@@ -95,6 +95,7 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
 
 @Composable
 private fun FileLine(view: TransferView, center: Boolean = false) {
+                TransferBody.CODE_EXPIRED -> CodeExpired(view)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start) {
         Text(view.name, style = CdType.title.copy(fontSize = 20.sp, lineHeight = 26.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = if (center) TextAlign.Center else TextAlign.Start)
         Spacer(Modifier.height(4.dp))
@@ -110,6 +111,24 @@ private fun Preparing(view: TransferView) {
         Text(if (view.direction != Direction.SEND) "Finding the sender…" else if (view.isPrivate) "Creating private link…" else "Getting a code…", style = CdType.title)
         Spacer(Modifier.height(8.dp))
         Text(view.message ?: "This usually takes a second or two.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
+/** A code send with no live, unused code: no URL to share, Resume asks the relay for a code. */
+@Composable
+private fun CodeExpired(view: TransferView) {
+    Column(Modifier.fillMaxWidth().padding(top = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        ResultMark(CdIcons.Pause, Tone.IDLE, size = 72.dp)
+        Spacer(Modifier.height(24.dp))
+        Text(if (view.code != null) "This code expired" else "No live code", style = CdType.title)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            if (view.phase == TransferPhase.PAUSED) "Unused codes last 15 minutes. Tap Get code to share this file again — nothing was sent yet."
+            else "Unused codes last 15 minutes. Pausing the send…",
+            style = CdType.bodyMuted, textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(40.dp))
+        FileLine(view, center = true)
+    }
+}
+
         Spacer(Modifier.height(40.dp))
         FileLine(view, center = true)
     }
