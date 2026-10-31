@@ -21,7 +21,7 @@ import kotlin.random.Random
  * DEBUG-ONLY fake data. MainActivity calls [DebugFakes] only when the app is debuggable, so release
  * builds never publish these. Trigger with:
  *   adb shell am start -n in.yash0.cd/.MainActivity --es cd.debug <scenario> [--es cd.debug.screen <screen>] [--ez cd.debug.pairing true]
- * scenarios: all | send-waiting | sending | receiving | complete | paused | failed | clear
+ * scenarios: all | send-waiting | send-private | sending | receiving | complete | paused | failed | clear
  * screens: send | receive | transfers | devices | settings | transfer (opens the scenario's transfer)
  * Long-pressing the "cd" wordmark in a debug build injects "all".
  */
