@@ -275,6 +275,7 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
             ) {
                 Text("cd", style = CdType.brand.copy(fontSize = 40.sp, lineHeight = 40.sp))
                 Text("/di·rect/", Modifier.padding(bottom = 5.dp), style = CdType.kicker)
+        Spacer(Modifier.height(32.dp))
             }
             Spacer(Modifier.height(8.dp))
             Text("Direct phone-to-terminal file transfer.", style = CdType.small)
