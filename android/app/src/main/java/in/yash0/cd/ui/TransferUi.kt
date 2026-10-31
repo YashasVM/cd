@@ -129,3 +129,4 @@ object NavCodec {
 }
     if (codeExpired(view, now)) return if (view.code != null) "Code expired" else "No live code"
     if (send && !view.isPrivate && view.codeSpent && view.phase == TransferPhase.WAITING) return "Waiting for receiver"
+    if (codeExpired(view, now)) return TransferBody.CODE_EXPIRED
