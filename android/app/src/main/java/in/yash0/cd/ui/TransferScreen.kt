@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import `in`.yash0.cd.Direction
+import `in`.yash0.cd.Pairing
 import `in`.yash0.cd.Route
 import `in`.yash0.cd.TransferPhase
 import `in`.yash0.cd.TransferView

@@ -127,3 +127,5 @@ object NavCodec {
         else -> null
     }
 }
+    if (codeExpired(view, now)) return if (view.code != null) "Code expired" else "No live code"
+    if (send && !view.isPrivate && view.codeSpent && view.phase == TransferPhase.WAITING) return "Waiting for receiver"
