@@ -213,8 +213,8 @@ private fun Progress(view: TransferView, link: String?, actions: CdActions) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(CdIcons.Link, null, Modifier.size(20.dp), tint = Cd.accent)
-                Text("Private transfer link", Modifier.weight(1f), style = CdType.body)
-                Icon(CdIcons.Copy, "Copy private link", Modifier.size(20.dp), tint = Cd.faint)
+                Text(if (view.isPrivate) "Private transfer link" else "Transfer link", Modifier.weight(1f), style = CdType.body)
+                Icon(CdIcons.Copy, "Copy ${linkLabel(view.isPrivate).lowercase()}", Modifier.size(20.dp), tint = Cd.faint)
             }
         }
         if (view.direction == Direction.SEND && view.active) {
@@ -265,7 +265,7 @@ fun Speedometer(bytesPerSecond: Float, scaleMb: Float, live: Boolean, modifier: 
 }
 
 @Composable
-private fun ColumnScope.Pinned(view: TransferView, link: String?, actions: CdActions, onBack: () -> Unit) {
+private fun ColumnScope.Pinned(view: TransferView, link: String?, code: String?, actions: CdActions, onBack: () -> Unit) {
     val send = view.direction == Direction.SEND
     when {
         view.phase == TransferPhase.COMPLETE -> {
