@@ -114,7 +114,7 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
         )
         AnimatedVisibility(state.inputError.isNotEmpty()) { Text(state.inputError, Modifier.padding(top = 10.dp), style = CdType.small.copy(color = Cd.danger)) }
         Spacer(Modifier.height(10.dp))
-        Text("Short codes go through the relay. Private links are end-to-end encrypted. Paste either, or scan the sender’s QR code.", style = CdType.small)
+        Text("Type the 5-digit code, paste a link, or scan the sender’s QR. A complete code starts right away.", style = CdType.small)
 
         Spacer(Modifier.height(32.dp))
         SectionHeader("Trusted devices")
