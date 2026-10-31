@@ -38,9 +38,7 @@ data class TransferView(
     val bytesPerSecond: Long,   // smoothed, 0 when idle
     val phase: TransferPhase,
     val route: Route = Route.NONE,
-    // send: private resumable link (https://.../s/...#v2...). Non-null only after the relay has
-    // accepted this root at least once; kept across pause/interruption, null once expired,
-    // cancelled, completed or rejected. Never a short code.
+    // Default sharing uses a five-digit code URL; private sends use a full capability URL.
     val link: String? = null,
     val code: String? = null,
     val message: String? = null,// human-readable status / error; never contains keys or raw URLs
