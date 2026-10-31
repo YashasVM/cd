@@ -57,7 +57,7 @@ fun CdApp(state: UiState, transfers: List<TransferView>, status: String, actions
     state.pending?.let { pair ->
         CdDialog(
             title = "Trust ${pair.name}?",
-            body = "This laptop will be able to send files straight to Downloads/CD on this phone. Confirm that you scanned the QR shown by your own laptop. You can revoke access at any time.",
+            body = "This computer will be able to send files straight to Downloads/CD on this phone, and you can send to it without a code. Confirm that you scanned the QR shown by your own computer. You can revoke access at any time.",
             detail = "device ${pair.id.take(8)}",
             confirm = "Trust device", icon = CdIcons.Shield,
             onConfirm = { actions.trust(pair) }, onDismiss = { state.pending = null },
