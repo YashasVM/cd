@@ -92,7 +92,9 @@ private fun TransferPreview() = CdTheme {
 private fun HomePreview() = CdTheme { CdApp(UiState(), PreviewData.all(), "Ready to receive", PreviewActions, debug = true, version = "preview") }
 
 private object PreviewActions: CdActions {
-    override fun pickFiles() {}
+    override fun pickFiles(to: Pairing?) {}
+    override fun setSendPrivate(on: Boolean) {}
+    override fun sendToDevice(view: TransferView, pair: Pairing) {}
     override fun scan() {}
     override fun submit(raw: String) {}
     override fun setPaused(paused: Boolean) {}

@@ -49,7 +49,7 @@ fun CdApp(state: UiState, transfers: List<TransferView>, status: String, actions
                     }
                 }
                 Screen.Settings -> SettingsScreen(state, actions, version, debug)
-                is Screen.Transfer -> TransferScreen(screen.id, screen.direction, transfers, actions) { state.back() }
+                is Screen.Transfer -> TransferScreen(screen.id, screen.direction, transfers, actions, state.pairs, TrustedOffers.offered) { state.back() }
             }
         }
         Toast(state, Modifier.align(Alignment.TopCenter))
