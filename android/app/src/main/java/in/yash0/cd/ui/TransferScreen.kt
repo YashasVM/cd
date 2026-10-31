@@ -133,7 +133,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatusDot(if (offline != null) Tone.IDLE else Tone.LIVE, pulse = offline == null)
             Text(
-                if (offline != null) offlineLabel(offline) else "Ready — waiting for the receiver",
+                if (offline != null) offlineLabel(offline, code = code != null) else "Ready — waiting for the receiver",
                 style = CdType.body.copy(color = if (offline != null) Cd.text else Cd.muted),
             )
         }
@@ -143,8 +143,9 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            if (offline != null && offline.paused) "The link stays valid. Resume this send to let the receiver connect."
-            else if (offline != null) "The link stays valid while this phone reconnects."
+            if (offline != null && offline.paused) "The ${if (code != null) "code" else "link"} stays valid. Resume this send to let the receiver connect."
+            else if (offline != null) "The ${if (code != null) "code" else "link"} stays valid while this phone reconnects."
+            else if (code != null) "Type the code on cd.yash0.in, scan the QR, or share it."
             else "Scan the QR on the other device, or share the link.",
             style = CdType.bodyMuted, textAlign = TextAlign.Center,
         )
