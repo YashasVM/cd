@@ -43,10 +43,31 @@ fun liveLink(view: TransferView, now: Long = System.currentTimeMillis()): String
     view.link?.takeIf { view.direction == Direction.SEND && !view.finished && !view.expired(now) }
 
 /** Line under a dimmed QR. Never claims the receiver can connect right now. */
-fun offlineLabel(share: ShareState.Offline): String =
-    if (share.paused) "Not connected — resume to accept the receiver" else "Reconnecting — the link stays the same"
+fun offlineLabel(share: ShareState.Offline, code: Boolean = false): String =
+    if (share.paused) "Not connected — resume to accept the receiver" else "Reconnecting — the ${if (code) "code" else "link"} stays the same"
 
-enum class TransferBody { RESULT, SHARE, PREPARING, PROGRESS }
+private val codeUrlPattern = Regex("https://[A-Za-z0-9.-]+(:[0-9]{1,5})?/?#[0-9]{5}")
+
+/**
+ * Typed text complete enough to submit without a tap: a 5-digit code or a code URL. Typed links and
+ * pairing credentials wait for Receive/Go, so a half-typed link never shows an error; pasting or
+ * scanning is an explicit action and submits directly.
+ */
+fun autoSubmittable(typed: String): Boolean {
+    val text = typed.trim()
+    return shareCodePattern.matches(text) || codeUrlPattern.matches(text)
+}
+
+/**
+ * A code send whose unused code ran out (or that paused without one): nothing can be shared and the
+ * only way on is Resume, which asks the relay for a code. Never shown as "Getting a code…", and never
+ * for a spent code: that send waits for the same receiver instead.
+ */
+fun codeExpired(view: TransferView, now: Long = System.currentTimeMillis()): Boolean =
+    view.direction == Direction.SEND && !view.isPrivate && !view.codeSpent && !view.finished && !view.expired(now) && view.done == 0L &&
+        !view.codeLive(now) && (view.code != null || view.phase == TransferPhase.PAUSED)
+
+enum class TransferBody { RESULT, SHARE, PREPARING, PROGRESS, CODE_EXPIRED }
 
 /**
  * Main area of the transfer screen. Before any byte moved, a send keeps the invitation on screen
