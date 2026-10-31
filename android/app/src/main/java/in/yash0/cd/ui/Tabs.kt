@@ -132,9 +132,9 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
             RowDivider()
             ListRow(
                 when (state.pairs.size) { 0 -> "Pair a laptop"; 1 -> "1 trusted device"; else -> "${state.pairs.size} trusted devices" },
-                if (state.pairs.isEmpty()) "Run cdx pair, then scan its QR code." else state.pairs.joinToString(" · ") { it.name },
-                icon = CdIcons.Laptop, onClick = { state.tab = Tab.DEVICES },
-                trailing = { Icon(CdIcons.Chevron, null, Modifier.size(20.dp), tint = Cd.faint) },
+                if (state.pairs.isEmpty()) "Run cdx pair on it, then tap to scan its QR." else state.pairs.joinToString(" · ") { it.name },
+                icon = CdIcons.Laptop, onClick = { if (state.pairs.isEmpty()) actions.scan() else state.tab = Tab.DEVICES },
+                trailing = { Icon(if (state.pairs.isEmpty()) CdIcons.Scan else CdIcons.Chevron, null, Modifier.size(20.dp), tint = Cd.faint) },
             )
         }
     }
@@ -195,7 +195,8 @@ fun DevicesTab(state: UiState, actions: CdActions, chrome: TabChrome) {
         "Devices", navigation = chrome.brand, actions = chrome.actions, bottomBar = chrome.bottomBar,
         pinned = { PrimaryButton("Scan pairing QR", { actions.scan() }, Modifier.fillMaxWidth(), icon = CdIcons.Scan) },
     ) {
-        Text("Paired laptops send files straight to Downloads/CD on this phone.", style = CdType.bodyMuted)
+        Text("Paired computers send straight to Downloads/CD on this phone. Send to them from the Send tab: pick the computer, then the files.", style = CdType.bodyMuted)
+        Spacer(Modifier.height(28.dp))
         Spacer(Modifier.height(28.dp))
         SectionHeader(if (state.pairs.isEmpty()) "Trusted" else "Trusted · ${state.pairs.size}")
         if (state.pairs.isEmpty()) {
