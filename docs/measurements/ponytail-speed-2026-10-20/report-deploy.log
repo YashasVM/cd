@@ -1,0 +1,34 @@
+
+ ⛅️ wrangler 4.145.0 (update available 4.151.2)
+───────────────────────────────────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a configured path:[0m
+
+    • a.yash0.in/cd-bench* (Will match assets: docs/measurements/cd-bench-current-2026-10-20/site/cd-bench*)
+
+
+🌀 Building list of assets...
+✨ Read 81 files from the assets directory /home/yvm/code/cd/docs/measurements/cd-bench-current-2026-10-20/site
+🌀 Starting asset upload...
+🌀 Found 12 new or modified static assets to upload. Proceeding with upload...
++ /cd-bench/ponytail-code-size.json
++ /cd-bench/ponytail-candidate.patch
++ /cd-bench/ponytail-iteration.json
++ /cd-bench/ponytail-relay-reuse-steady.json
++ /cd-bench/ponytail-iteration.html
++ /cd-bench/ponytail-rejected-relay-reuse.patch
++ /cd-bench/bench-croc-lan.mjs
++ /cd-bench/ponytail-tcp-reuse-steady.json
++ /cd-bench/ponytail-paired-cli.mjs
++ /cd-bench/ponytail-build-iteration.mjs
++ /cd-bench/build-report.mjs
++ /cd-bench/index.html
+Uploaded 4 of 12 assets
+Uploaded 8 of 12 assets
+Uploaded 12 of 12 assets
+✨ Success! Uploaded 12 files (68 already uploaded) (3.94 sec)
+
+Total Upload: 0.31 KiB / gzip: 0.22 KiB
+Uploaded cd-benchmark-report (10.93 sec)
+Deployed cd-benchmark-report triggers (6.21 sec)
+  a.yash0.in/cd-bench* (zone name: yash0.in)
+Current Version ID: 3b1ddc0f-7e18-4a03-a2ed-35833f750fd5

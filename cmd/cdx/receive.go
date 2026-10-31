@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,7 +17,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -43,7 +41,7 @@ var invitationPattern = regexp.MustCompile(`([A-Za-z0-9_-]{22})#v1\.([A-Za-z0-9_
 func parseInvitationInput(input string) (invitation, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
-		return invitation{}, errors.New("missing share code or link: paste the link from `cdx send`")
+		return invitation{}, NewFailure(failureInvalidCode, "missing share code or link: paste the link from `cdx send`", retryNever)
 	}
 	if strings.Contains(trimmed, "://") || strings.Contains(trimmed, "/s/") {
 		if value, err := parseInvitationURL(trimmed); err == nil {
@@ -52,7 +50,7 @@ func parseInvitationInput(input string) (invitation, error) {
 	}
 	match := invitationPattern.FindStringSubmatch(trimmed)
 	if match == nil {
-		return invitation{}, errors.New("this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)")
+		return invitation{}, NewFailure(failureInvalidCode, "this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)", retryNever)
 	}
 	return parseInvitationParts(match[1], match[2])
 }
@@ -60,7 +58,7 @@ func parseInvitationInput(input string) (invitation, error) {
 func parseInvitationURL(raw string) (invitation, error) {
 	parsed, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || parsed.Host == "" {
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
+		return invitation{}, NewFailure(failureInvalidCode, "this CD link is invalid: paste the full link from `cdx send`", retryNever)
 	}
 	pathMatch := regexp.MustCompile(`^/s/([A-Za-z0-9_-]{22})/?$`).FindStringSubmatch(parsed.Path)
 	fragmentMatch := regexp.MustCompile(`^v1\.([A-Za-z0-9_-]{43})$`).FindStringSubmatch(parsed.Fragment)
@@ -69,7 +67,7 @@ func parseInvitationURL(raw string) (invitation, error) {
 		if match := invitationPattern.FindStringSubmatch(raw); match != nil {
 			return parseInvitationParts(match[1], match[2])
 		}
-		return invitation{}, errors.New("this CD link is invalid: paste the full link from `cdx send`")
+		return invitation{}, NewFailure(failureInvalidCode, "this CD link is invalid: paste the full link from `cdx send`", retryNever)
 	}
 	return parseInvitationParts(pathMatch[1], fragmentMatch[1])
 }
@@ -78,11 +76,11 @@ func parseInvitationParts(encodedID, encodedKey string) (invitation, error) {
 	var value invitation
 	rawID, err := base64.RawURLEncoding.DecodeString(encodedID)
 	if err != nil || len(rawID) != 16 {
-		return value, errors.New("this CD code is invalid: the transfer id is malformed")
+		return value, NewFailure(failureInvalidCode, "this CD code is invalid: the transfer id is malformed", retryNever)
 	}
 	rawKey, err := base64.RawURLEncoding.DecodeString(encodedKey)
 	if err != nil || len(rawKey) != 32 {
-		return value, errors.New("this CD code is invalid: the transfer key is malformed")
+		return value, NewFailure(failureInvalidCode, "this CD code is invalid: the transfer key is malformed", retryNever)
 	}
 	copy(value.id[:], rawID)
 	copy(value.key[:], rawKey)
@@ -110,30 +108,48 @@ type receiveResult struct {
 func parseReceivedOffer(payload []byte) (fileOffer, uint64, error) {
 	var offer fileOffer
 	if err := json.Unmarshal(payload, &offer); err != nil {
-		return offer, 0, errors.New("the sender offered invalid file details")
+		return offer, 0, NewFailure(failureProtocol, "the sender offered invalid file details", retryNever)
 	}
 	if _, err := receiveFilename(offer.Name); err != nil {
-		return offer, 0, errors.New("the sender offered an unsafe filename")
+		return offer, 0, NewFailure(failureProtocol, "the sender offered an unsafe filename", retryNever)
 	}
 	if len(offer.MediaType) == 0 || len(offer.MediaType) > 127 {
-		return offer, 0, errors.New("the sender offered an invalid file type")
+		return offer, 0, NewFailure(failureProtocol, "the sender offered an invalid file type", retryNever)
 	}
 	for i := 0; i < len(offer.MediaType); i++ {
 		if offer.MediaType[i] < 0x20 || offer.MediaType[i] > 0x7e {
-			return offer, 0, errors.New("the sender offered an invalid file type")
+			return offer, 0, NewFailure(failureProtocol, "the sender offered an invalid file type", retryNever)
 		}
 	}
 	if matched, _ := regexp.MatchString(`^(0|[1-9][0-9]{0,19})$`, offer.Size); !matched {
-		return offer, 0, errors.New("the sender offered an invalid file size")
+		return offer, 0, NewFailure(failureProtocol, "the sender offered an invalid file size", retryNever)
 	}
 	size, err := strconv.ParseUint(offer.Size, 10, 64)
 	if err != nil {
-		return offer, 0, errors.New("the sender offered an invalid file size")
+		return offer, 0, NewFailure(failureProtocol, "the sender offered an invalid file size", retryNever)
 	}
 	if offer.ChunkSize != chunkSize && offer.ChunkSize != chunkSizeLegacy {
-		return offer, 0, errors.New("the sender uses unsupported transfer limits")
+		return offer, 0, NewFailure(failureProtocol, "the sender uses unsupported transfer limits", retryNever)
+	}
+	if offer.MaxChunkSize != 0 && offer.MaxChunkSize != largeChunkSize {
+		return offer, 0, NewFailure(failureProtocol, "the sender uses unsupported negotiated transfer limits", retryNever)
 	}
 	return offer, size, nil
+}
+
+func receiveChunkSelection(offer fileOffer) (int, []byte) {
+	if offer.MaxChunkSize == largeChunkSize && largeRecordsEnabled() {
+		payload, _ := json.Marshal(chunkAcceptance{ChunkSize: largeChunkSize})
+		return largeChunkSize, payload
+	}
+	return offer.ChunkSize, nil
+}
+
+func validateReceivedChunk(payload []byte, limit int, received, size uint64) error {
+	if len(payload) == 0 || len(payload) > limit || received > size || uint64(len(payload)) > size-received {
+		return NewFailure(failureProtocol, "the sender sent data beyond the agreed transfer limits", retryNever)
+	}
+	return nil
 }
 
 // receiveFilename accepts one local component without repairing a wire name.
@@ -179,7 +195,7 @@ func resolveReceiveDest(offerName, out string, force bool) (*receiveDestination,
 	if !force {
 		if _, statErr := root.Lstat(name); statErr == nil {
 			_ = root.Close()
-			return nil, fmt.Errorf("%q already exists: use --out <path> or --force to overwrite", filepath.Join(dir, name))
+			return nil, failuref(failureExists, retryNever, "%q already exists: use --out <path> or --force to overwrite", filepath.Join(dir, name))
 		}
 	}
 	return &receiveDestination{root: root, dir: dir, name: name}, nil
@@ -208,7 +224,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stderr, "code accepted — connecting to sender")
+		transferInfo("code accepted — connecting to sender")
 	} else {
 		invitation, err = parseInvitationInput(code)
 		if err != nil {
@@ -219,17 +235,9 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	dialCtx, cancelDial := context.WithTimeout(ctx, 10*time.Second)
-	defer cancelDial()
-	connection, response, err := websocket.DefaultDialer.DialContext(dialCtx, relayBase+"/"+invitation.encodedID(), http.Header{})
+	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
 	if err != nil {
-		if dialCtx.Err() != nil && ctx.Err() == nil {
-			return errors.New("connect to CD relay timed out: check your network and try again")
-		}
-		if response != nil {
-			return fmt.Errorf("CD relay rejected the connection (HTTP %d): check CD_RELAY_URL ends in /ws/v1", response.StatusCode)
-		}
-		return fmt.Errorf("connect to CD relay: %w", friendlyRelayError(err))
+		return err
 	}
 	defer connection.Close()
 	stopOnCancel := context.AfterFunc(ctx, func() { _ = connection.Close() })
@@ -262,19 +270,19 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "connected — waiting for sender's file offer")
-	link := newRecordLink(connection, sealer, opener, errors.New("sender disconnected (they closed the tab or lost network)"))
+	transferInfo("connected — waiting for sender's file offer")
+	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "sender disconnected (they closed the tab or lost network)", retryNewTransfer))
 	defer link.close()
 	link.start()
 	kind, payload, err := link.next(ctx, offerWait)
 	if err != nil {
 		if isTimeoutError(err) {
-			return errors.New("sender did not offer a file within 15m: ask them to run `cdx send` again")
+			return NewFailure(failureExpired, "sender did not offer a file within 15m: ask them to run `cdx send` again", retryNewTransfer)
 		}
 		return err
 	}
 	if kind != kindOffer {
-		return errors.New("the sender sent a message out of order")
+		return NewFailure(failureProtocol, "the sender sent a message out of order", retryNever)
 	}
 	offer, size, err := parseReceivedOffer(payload)
 	if err != nil {
@@ -292,18 +300,18 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			return fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(rootErr))
 		}
 		dest = &receiveDestination{root: root, dir: dir, name: "cd-bundle.zip"}
-		fmt.Fprintf(os.Stderr, "receiving several files (%s)\n", formatBytes(size))
+		transferInfo("receiving several files (%s)\n", formatBytes(size))
 	} else {
 		if dest, err = resolveReceiveDest(offer.Name, out, force); err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "receiving %s (%s)\n", offer.Name, formatBytes(size))
+		transferInfo("receiving %s (%s)\n", offer.Name, formatBytes(size))
 	}
 	defer dest.root.Close()
 
 	stagingFile, staging, err := createReceiveStaging(dest.root)
 	if err != nil {
-		return fmt.Errorf("cannot write to %q: %s", dest.dir, underlyingReason(err))
+		return failuref(failureLocal, retryNever, "cannot write to %q: %s", dest.dir, underlyingReason(err))
 	}
 	// Best effort cleanup of the staging file on failure; the rename below
 	// moves it away on success.
@@ -315,20 +323,32 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		}
 	}()
 
-	if err := link.send(kindAccept, nil); err != nil {
+	selectedChunkSize, acceptance := receiveChunkSelection(offer)
+	reverse, reverseErr := prepareReverseLAN(link, invitation, offer)
+	if reverseErr != nil {
+		lanDebug("reverse-receiver-listen-failed", reverseErr)
+	}
+	if reverse != nil {
+		defer reverse.close()
+		acceptance, _ = json.Marshal(chunkAcceptance{ChunkSize: selectedChunkSize, LAN: &reverse.lane.offer})
+	}
+	if err := link.send(kindAccept, acceptance); err != nil {
 		return friendlyRelayError(fmt.Errorf("accept file offer: %w", err))
 	}
 	// Data starts on the relay right away; answer a direct-path offer in the
 	// background and the sender moves over when the data channel opens.
-	if offer.Direct != nil && directEnabled() {
-		go answerDirectPath(link, offer.Direct.SDP)
+	if reverse != nil {
+		go reverse.await(ctx, link, offer)
+	} else if directEnabled() && (offer.Direct != nil || offer.LAN != nil) {
+		go openDirectPath(ctx, link, invitation, offer)
 	}
 
 	terminal := isTerminal(os.Stderr)
 	bar := newProgressBar(os.Stderr, "receiving", size)
-	bar.jsonLines = jsonProgress && !terminal
+	bar.jsonLines = jsonProgress
+	bar.plainLines = !terminal
 	reportProgress := func(received uint64) {
-		if terminal || bar.jsonLines {
+		if transferProgressEnabled(terminal, jsonProgress, progressRequested) {
 			bar.update(received)
 		}
 	}
@@ -341,19 +361,19 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		if err != nil {
 			bar.finish()
 			if isTimeoutError(err) {
-				return errors.New("transfer stalled: no data for 90s (network or sender too slow)")
+				return NewFailure(failureStalled, "transfer stalled: no data for 90s (network or sender too slow)", retryNewTransfer)
 			}
 			return err
 		}
 		switch kind {
 		case kindChunk:
-			if len(payload) == 0 || received+uint64(len(payload)) > size {
+			if err := validateReceivedChunk(payload, selectedChunkSize, received, size); err != nil {
 				bar.finish()
-				return errors.New("the sender sent more data than promised")
+				return err
 			}
 			if _, err := stagingFile.Write(payload); err != nil {
 				bar.finish()
-				return fmt.Errorf("write file while receiving: %s", underlyingReason(err))
+				return failuref(failureLocal, retryNever, "write file while receiving: %s", underlyingReason(err))
 			}
 			received += uint64(len(payload))
 			chunks++
@@ -369,20 +389,20 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			bar.finish()
 			endChunks, endBytes, err := decodeCounts(payload)
 			if err != nil || endBytes != size || endBytes != received || endChunks != chunks {
-				return errors.New("the transfer ended before the complete file arrived")
+				return NewFailure(failureProtocol, "the transfer ended before the complete file arrived", retryNever)
 			}
 			if err := stagingFile.Sync(); err != nil {
-				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
+				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
 			if offer.Bundle {
 				succeeded = true
 				return finishBundle(link, dest, stagingFile, staging, force, offer.Name, size, chunks, received, onReceived)
 			}
 			if err := stagingFile.Close(); err != nil {
-				return fmt.Errorf("save file while receiving: %s", underlyingReason(err))
+				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
 			if err := publishReceivedFile(dest.root, staging, dest.name, force); err != nil {
-				return fmt.Errorf("save received file: %s", underlyingReason(err))
+				return failuref(failureLocal, retryNever, "save received file: %s", underlyingReason(err))
 			}
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
@@ -393,7 +413,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if abs == "" {
 				abs = final
 			}
-			fmt.Fprintf(os.Stderr, "received %s (%s) — saved to %s\n", offer.Name, formatBytes(size), abs)
+			transferInfo("received %s (%s) — saved to %s\n", offer.Name, formatBytes(size), abs)
 			succeeded = true
 			if onReceived != nil {
 				return onReceived(receiveResult{Version: 1, Filename: offer.Name, Size: size, Path: abs})
@@ -401,7 +421,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			return nil
 		default:
 			bar.finish()
-			return errors.New("the sender sent a message out of order")
+			return NewFailure(failureProtocol, "the sender sent a message out of order", retryNever)
 		}
 	}
 }
@@ -425,7 +445,7 @@ func finishBundle(link *recordLink, dest *receiveDestination, archive *os.File, 
 			kept = dest.name
 		}
 		abs, _ := filepath.Abs(filepath.Join(dest.dir, kept))
-		fmt.Fprintf(os.Stderr, "kept the files as one zip: %s\n", abs)
+		transferInfo("kept the files as one zip: %s\n", abs)
 		return err
 	}
 	_ = dest.root.Remove(staging)
@@ -437,9 +457,9 @@ func finishBundle(link *recordLink, dest *receiveDestination, archive *os.File, 
 	if len(files) == 1 {
 		noun = "file"
 	}
-	fmt.Fprintf(os.Stderr, "received %d %s (%s) — saved to %s\n", len(files), noun, formatBytes(size), abs)
+	transferInfo("received %d %s (%s) — saved to %s\n", len(files), noun, formatBytes(size), abs)
 	for _, file := range files {
-		fmt.Fprintf(os.Stderr, "  %s\n", file.Filename)
+		transferInfo("  %s\n", file.Filename)
 	}
 	if onReceived != nil {
 		return onReceived(receiveResult{Version: 1, Filename: name, Size: size, Path: abs, Files: files})
@@ -459,6 +479,44 @@ func publishReceivedFile(root *os.Root, staging, final string, force bool) error
 	return root.Remove(staging)
 }
 
+// openDirectPath tries the same-network lane first and otherwise answers
+// the WebRTC offer.
+func openDirectPath(ctx context.Context, link *recordLink, value invitation, offer fileOffer) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		select {
+		case <-link.stop:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	if offer.LAN != nil && lanEnabled() {
+		if stream, err := dialLAN(ctx, offer.LAN, value); err == nil {
+			if link.adoptStream(stream) {
+				lanDebug("receiver-adopted", nil)
+				transferInfo("switched to a direct connection (%s)\n", link.direct.Load().route())
+				return
+			}
+			lanDebug("receiver-adoption-rejected", nil)
+			_ = stream.Close()
+		} else {
+			lanDebug("receiver-lan-failed", err)
+		}
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	select {
+	case <-link.stop:
+		return
+	default:
+	}
+	if offer.Direct != nil {
+		answerDirectPath(link, offer.Direct.SDP)
+	}
+}
+
 // answerDirectPath answers the sender's direct-path offer with a signal
 // record, then trickles each local ICE candidate in its own signal record,
 // so the answer waits for no STUN round trip. Any failure leaves the
@@ -468,7 +526,9 @@ func answerDirectPath(link *recordLink, offerSDP string) {
 	if err != nil {
 		return
 	}
-	link.attachDirect(path)
+	if !link.attachDirect(path) {
+		return
+	}
 	// Candidates found before the answer is sent wait for it: the sender
 	// can only add candidates after applying the answer.
 	var mutex sync.Mutex
@@ -505,7 +565,7 @@ func answerDirectPath(link *recordLink, offerSDP string) {
 	mutex.Unlock()
 	select {
 	case <-path.opened:
-		fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", path.route())
+		transferInfo("switched to a direct connection (%s)\n", path.route())
 	case <-path.lost:
 	}
 }

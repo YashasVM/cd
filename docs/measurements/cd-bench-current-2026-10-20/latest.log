@@ -1,0 +1,346 @@
+disk/auto/random-4k cd #1: 24.35 ms durable
+disk/auto/random-4k croc #1: 522.40 ms durable
+disk/auto/random-4k croc-no-compress #1: 521.80 ms durable
+disk/auto/random-4k croc #2: 527.15 ms durable
+disk/auto/random-4k croc-no-compress #2: 523.35 ms durable
+disk/auto/random-4k cd #2: 23.22 ms durable
+disk/auto/random-4k croc-no-compress #3: 526.18 ms durable
+disk/auto/random-4k cd #3: 23.77 ms durable
+disk/auto/random-4k croc #3: 533.33 ms durable
+disk/auto/random-4k cd #4: 24.71 ms durable
+disk/auto/random-4k croc #4: 519.97 ms durable
+disk/auto/random-4k croc-no-compress #4: 524.36 ms durable
+disk/auto/random-4k croc #5: 523.39 ms durable
+disk/auto/random-4k croc-no-compress #5: 525.57 ms durable
+disk/auto/random-4k cd #5: 20.38 ms durable
+disk/auto/random-4k croc-no-compress #6: 526.20 ms durable
+disk/auto/random-4k cd #6: 25.56 ms durable
+disk/auto/random-4k croc #6: 528.72 ms durable
+disk/auto/random-4k cd #7: 21.80 ms durable
+disk/auto/random-4k croc #7: 538.17 ms durable
+disk/auto/random-4k croc-no-compress #7: 524.46 ms durable
+disk/relay/random-4k cd #1: 20.76 ms durable
+disk/relay/random-4k croc #1: 92.55 ms durable
+disk/relay/random-4k croc-no-compress #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc-no-compress #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #2: 22.50 ms durable
+disk/relay/random-4k croc-no-compress #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #3: 23.22 ms durable
+disk/relay/random-4k croc #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #4: 23.68 ms durable
+disk/relay/random-4k croc #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc-no-compress #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc-no-compress #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #5: 24.27 ms durable
+disk/relay/random-4k croc-no-compress #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #6: 25.03 ms durable
+disk/relay/random-4k croc #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k cd #7: 23.63 ms durable
+disk/relay/random-4k croc #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-4k croc-no-compress #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #1: 217.22 ms durable
+disk/auto/random-1m croc #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc-no-compress #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc-no-compress #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #2: 101.07 ms durable
+disk/auto/random-1m croc-no-compress #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #3: 159.03 ms durable
+disk/auto/random-1m croc #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #4: 112.16 ms durable
+disk/auto/random-1m croc #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc-no-compress #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc-no-compress #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #5: 134.60 ms durable
+disk/auto/random-1m croc-no-compress #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #6: 197.26 ms durable
+disk/auto/random-1m croc #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m cd #7: 440.40 ms durable
+disk/auto/random-1m croc #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-1m croc-no-compress #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #1: 26.32 ms durable
+disk/relay/random-1m croc #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #2: 29.98 ms durable
+disk/relay/random-1m croc-no-compress #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #3: 36.99 ms durable
+disk/relay/random-1m croc #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #4: 27.19 ms durable
+disk/relay/random-1m croc #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #5: 32.04 ms durable
+disk/relay/random-1m croc-no-compress #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #6: 27.50 ms durable
+disk/relay/random-1m croc #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m cd #7: 41.82 ms durable
+disk/relay/random-1m croc #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #1: 1161.52 ms durable
+disk/auto/random-256m croc #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc-no-compress #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc-no-compress #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #2: 443.17 ms durable
+disk/auto/random-256m croc-no-compress #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #3: 368.78 ms durable
+disk/auto/random-256m croc #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #4: 332.36 ms durable
+disk/auto/random-256m croc #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc-no-compress #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc-no-compress #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #5: 399.60 ms durable
+disk/auto/random-256m croc-no-compress #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #6: 321.65 ms durable
+disk/auto/random-256m croc #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m cd #7: 315.83 ms durable
+disk/auto/random-256m croc #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/random-256m croc-no-compress #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #1: 8294.48 ms durable
+disk/relay/random-256m croc #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc-no-compress #1: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc-no-compress #2: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #2: 680.15 ms durable
+disk/relay/random-256m croc-no-compress #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #3: 671.17 ms durable
+disk/relay/random-256m croc #3: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #4: 7905.07 ms durable
+disk/relay/random-256m croc #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc-no-compress #4: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc-no-compress #5: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #5: 689.53 ms durable
+disk/relay/random-256m croc-no-compress #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #6: 679.39 ms durable
+disk/relay/random-256m croc #6: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m cd #7: 2759.29 ms durable
+disk/relay/random-256m croc #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/relay/random-256m croc-no-compress #7: connecting...looking for sender...                     
+
+1 !== 0
+
+disk/auto/compressible-256m cd #1: 4578.19 ms durable
+disk/auto/compressible-256m croc #1: 1325.01 ms durable
+disk/auto/compressible-256m croc-no-compress #1: 1007.73 ms durable
+disk/auto/compressible-256m croc #2: 1285.99 ms durable
+disk/auto/compressible-256m croc-no-compress #2: 1002.29 ms durable
+disk/auto/compressible-256m cd #2: 945.23 ms durable
+disk/auto/compressible-256m croc-no-compress #3: 1012.86 ms durable
+disk/auto/compressible-256m cd #3: 312.08 ms durable
+disk/auto/compressible-256m croc #3: 1325.28 ms durable
+disk/auto/compressible-256m cd #4: 305.22 ms durable
+disk/auto/compressible-256m croc #4: 1311.55 ms durable
+disk/auto/compressible-256m croc-no-compress #4: 1032.65 ms durable
+disk/auto/compressible-256m croc #5: 1271.76 ms durable

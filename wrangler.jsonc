@@ -3,6 +3,8 @@
   "name": "cd",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-12",
+  // Transfer records are already encrypted; compressing ciphertext wastes CPU.
+  "compatibility_flags": ["no_web_socket_compression"],
   "workers_dev": false,
   "routes": [
     { "pattern": "cd.yash0.in", "custom_domain": true },

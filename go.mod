@@ -1,12 +1,13 @@
 module github.com/YashasVM/cd
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/pion/ice/v4 v4.4.7
 	github.com/pion/logging v0.2.4
 	github.com/pion/webrtc/v4 v4.2.23
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 )
 
 require (

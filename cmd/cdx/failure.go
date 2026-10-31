@@ -76,40 +76,6 @@ func classifyFailure(err error) string {
 	if errors.As(err, &network) || errors.Is(err, context.DeadlineExceeded) {
 		return failureNetwork
 	}
-	message := strings.ToLower(err.Error())
-	has := func(parts ...string) bool {
-		for _, part := range parts {
-			if strings.Contains(message, part) {
-				return true
-			}
-		}
-		return false
-	}
-	switch {
-	case has("code is invalid", "link is invalid", "is not a share code"):
-		return failureInvalidCode
-	case has("bad code", "no transfer "):
-		return failureNotFound
-	case has("already claimed"):
-		return failureClaimed
-	case has("expired", "within 15m", "within 10m"):
-		return failureExpired
-	case has("already exists"):
-		return failureExists
-	case has("busy", "too many attempts"):
-		return failureBusy
-	case has("stalled", "too slow", "within 90s"):
-		return failureStalled
-	case has("disconnected", "no longer available"):
-		return failureDisconnected
-	case has("cannot find", "cannot read", "cannot access", "cannot open", "cannot write", "cannot share",
-		"is a folder", "not a regular file", "changed while", "write file"):
-		return failureLocal
-	case has("connect to cd relay", "did not answer", "network"):
-		return failureNetwork
-	case has("invalid", "unsafe", "protocol", "update cdx", "out of order", "unexpected"):
-		return failureProtocol
-	}
 	return failureOther
 }
 func failureGuidance(err error) string {

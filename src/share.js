@@ -17,12 +17,16 @@ import {
 } from './agent-protocol.js';
 import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
 import { downloadNames, readBundle } from './zip-unbundle.js';
-import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
+import { answerDirect, createRecordMerger, parseDirectOffer, DIRECT_BUFFER_BYTES } from './direct-link.js';
+import { selectReceiveChunkSize } from './transfer-limits.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
 // bytes before failing, so slow OPFS/disk on big files doesn't abort.
 const MAX_PENDING_BYTES = 32 * 1024 * 1024;
+const MAX_QUEUE_RECORDS = 512;
+const MAX_RETAINED_RECORDS = 128;
+const MAX_RETAINED_BYTES = 128 * 1024;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
 const PANEL_HTML = `
@@ -61,11 +65,12 @@ function parseOffer(plaintext) {
   if (typeof mediaType !== 'string' || mediaType.length > 127 || !/^[\x20-\x7e]+$/.test(mediaType)) throw new Error('The sender offered an invalid file type.');
   if (typeof size !== 'string' || !/^(0|[1-9][0-9]{0,19})$/.test(size)) throw new Error('The sender offered an invalid file size.');
   const byteSize = BigInt(size);
-  if (byteSize > 0xffffffffffffffffn || (chunkSize !== 64 * 1024 && chunkSize !== 256 * 1024)) throw new Error('The sender uses unsupported transfer limits.');
+  if (byteSize > 0xffffffffffffffffn) throw new Error('The sender uses unsupported transfer limits.');
+  const selectedChunkSize = selectReceiveChunkSize(value);
   // A bundle is several files sent as one zip; it is unpacked on arrival.
   const bundle = value.bundle === true;
   const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
-  return { name, mediaType, size: byteSize, bundle, files, directSdp: parseDirectOffer(value) };
+  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value) };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -86,39 +91,27 @@ function decodeCounts(value) {
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
 export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
-  if (/^#v2\./.test(new URL(shareUrl, window.location.href).hash)) {
+  if (/#v2\.[A-Za-z0-9_-]{43}$/.test(new URL(shareUrl, window.location.href).hash)) {
     let active = null;
-    let db;
-    let settled = false;
     let stopped = false;
-    container.classList.add('share-panel');
-    container.textContent = 'Opening private transfer...';
-    void (async () => {
-      try {
-        const { openResumeDatabase, createResumeKV, cleanExpiredResumeRecords, mountResumableReceiver } = await import('./resume-browser.js');
-        if (stopped) return;
-        db = await openResumeDatabase();
-        const checkpoints = createResumeKV(db, 'checkpoints');
-        const secrets = createResumeKV(db, 'secrets');
-        await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
-        if (stopped) return;
-        active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets });
-        await active.done;
-      } catch (error) {
-        if (!stopped && !active) container.textContent = error.message || 'Could not open local resume storage.';
-      } finally {
-        settled = true;
-        if (stopped || !active) db?.close();
-      }
-    })();
-    const stop = () => {
+    const cleanup = (async () => {
+      const { openResumeDatabase, createResumeKV, cleanExpiredResumeRecords, mountResumableReceiver } = await import('./resume-browser.js');
+      const db = await openResumeDatabase();
+      const checkpoints = createResumeKV(db, 'checkpoints');
+      const secrets = createResumeKV(db, 'secrets');
+      await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
+      if (stopped) return;
+      active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets });
+      active.done.catch(() => {});
+    })().catch((error) => {
+      container.classList.add('share-panel');
+      container.textContent = error.message || 'Could not open local resume storage.';
+    });
+    return () => {
       stopped = true;
       active?.stop();
-      if (settled) db?.close();
-      window.removeEventListener('pagehide', stop);
+      void cleanup;
     };
-    window.addEventListener('pagehide', stop, { once: true });
-    return stop;
   }
   container.classList.add('share-panel');
   container.innerHTML = PANEL_HTML;
@@ -327,6 +320,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     let acknowledged = 0n;
     let chunks = 0;
     let pendingBytes = 0;
+    let pendingRecords = 0;
+    let retainedBytes = 0;
     let queue = Promise.resolve();
     // Records from the relay and the direct path, in sequence order.
     const merger = createRecordMerger();
@@ -341,42 +336,48 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     // Sealing is async and sequence-numbered, so sends run on one chain.
     function send(kind, payload = new Uint8Array()) {
       sendChain = sendChain.catch(() => {}).then(async () => {
+        if (stopped || failureShown) throw new Error('This transfer has stopped.');
         const record = await sealer.seal(kind, payload);
         if (direct?.open) {
           directUsed = true;
           if (!switched) {
             switched = true;
-            for (const earlier of retained.splice(0)) direct.send(earlier);
+            for (const earlier of retained.splice(0)) { await direct.send(earlier); retainedBytes -= earlier.byteLength; }
           }
-          direct.send(record);
+          await direct.send(record);
           return;
         }
-        if (direct && !switched) retained.push(record);
+        if (direct && !switched) {
+          if (retained.length >= MAX_RETAINED_RECORDS || retainedBytes + record.byteLength > MAX_RETAINED_BYTES) {
+            direct.close(); direct = null; retained = []; retainedBytes = 0;
+          } else { retained.push(record); retainedBytes += record.byteLength; }
+        }
+        const started = performance.now();
+        while (socket.bufferedAmount + record.byteLength > DIRECT_BUFFER_BYTES) {
+          if (stopped || failureShown || socket.readyState !== 1 || performance.now() - started > 90_000) throw new Error('The relay send buffer stalled. Ask the sender for a fresh transfer.');
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        if (socket.readyState !== 1) throw new Error('The relay connection closed. Ask the sender for a fresh transfer.');
         socket.send(record);
       });
       return sendChain;
     }
 
-    function enqueueRecords(records, size) {
-      pendingBytes += size;
-      if (pendingBytes > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
-        fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
-        return;
-      }
+    function enqueueRecords(record) {
+      if (stopped || failureShown) return;
       let ordered;
-      try {
-        ordered = merger.push(records);
-      } catch (error) {
-        fail(error, socket, sink);
-        return;
+      try { ordered = merger.push(record); }
+      catch (error) { fail(error, socket, sink); return; }
+      if (!ordered.length) return;
+      const size = ordered.reduce((sum, value) => sum + value.byteLength, 0);
+      if (pendingBytes + size > MAX_PENDING_BYTES || pendingRecords + ordered.length > MAX_QUEUE_RECORDS) {
+        fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink); return;
       }
-      if (ordered.length === 0) {
-        pendingBytes -= size;
-        return;
-      }
+      pendingBytes += size; pendingRecords += ordered.length;
       queue = queue.then(async () => {
-        for (const record of ordered) await processMessage(record);
-      }).finally(() => { pendingBytes -= size; });
+        if (stopped || failureShown) return;
+        for (const value of ordered) await processMessage(value);
+      }).finally(() => { pendingBytes -= size; pendingRecords -= ordered.length; });
       queue.catch((error) => fail(error, socket, sink));
     }
 
@@ -385,16 +386,17 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     function startDirect(offerSdp) {
       answerDirect({
         offerSdp,
-        onSignal: (signal) => { void send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))).catch(() => {}); },
+        onSignal: (signal) => send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))),
         onRecord: (record) => {
           directUsed = true;
-          enqueueRecords(record, record.byteLength);
+          enqueueRecords(record);
         },
         onOpen: () => {},
         onLost: (error) => {
           if (directUsed && state !== 'complete') fail(error, socket, sink);
         }
       }).then((path) => {
+        if (stopped || failureShown) { path.close(); return; }
         direct = path;
         closeDirect = () => path.close();
       }).catch(() => { /* The transfer stays on the relay. */ });
@@ -425,10 +427,11 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
         state = 'receiving';
         renderProgress(0n, offer.size, true);
-        await send(KIND_ACCEPT);
+        await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
         return;
       }
       if (state === 'receiving' && kind === KIND_CHUNK) {
+        if (plaintext.byteLength === 0 || plaintext.byteLength > offer.chunkSize) throw new Error('The sender exceeded the agreed chunk size.');
         if (received + BigInt(plaintext.byteLength) > offer.size) throw new Error('The sender sent more data than promised.');
         await sink.write(plaintext);
         received += BigInt(plaintext.byteLength);
@@ -492,12 +495,16 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     };
     socket.addEventListener('message', (event) => {
       if (typeof event.data !== 'string') {
-        enqueueRecords(event.data, event.data.byteLength);
+        enqueueRecords(event.data);
         return;
       }
-      const size = event.data.length;
-      pendingBytes += size;
-      queue = queue.then(() => processMessage(event.data)).finally(() => { pendingBytes -= size; });
+      if (stopped || failureShown) return;
+      const size = new TextEncoder().encode(event.data).byteLength;
+      if (size > 65536 || pendingBytes + size > MAX_PENDING_BYTES || pendingRecords >= MAX_QUEUE_RECORDS) {
+        fail(new Error('The relay exceeded the safe receive buffer.'), socket, sink); return;
+      }
+      pendingBytes += size; pendingRecords += 1;
+      queue = queue.then(() => { if (!stopped && !failureShown) return processMessage(event.data); }).finally(() => { pendingBytes -= size; pendingRecords -= 1; });
       queue.catch((error) => fail(error, socket, sink));
     });
     socket.addEventListener('error', () => {

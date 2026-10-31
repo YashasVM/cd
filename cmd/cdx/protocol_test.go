@@ -27,7 +27,7 @@ func TestRecordRoundTripPreservesKindAndBytes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	record, err := sealer.seal(kindChunk, []byte("exact bytes"))
+	record, err := sealer.sealInto(nil, kindChunk, []byte("exact bytes"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestRecordRejectsChangedCiphertext(t *testing.T) {
 	value := testInvitation()
 	sealer, _ := newSealer(value, senderDirection)
 	opener, _ := newOpener(value, senderDirection)
-	record, err := sealer.seal(kindChunk, []byte("exact bytes"))
+	record, err := sealer.sealInto(nil, kindChunk, []byte("exact bytes"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +58,8 @@ func TestRecordRejectsSkippedSequence(t *testing.T) {
 	value := testInvitation()
 	sealer, _ := newSealer(value, senderDirection)
 	opener, _ := newOpener(value, senderDirection)
-	first, _ := sealer.seal(kindChunk, []byte("first"))
-	second, _ := sealer.seal(kindChunk, []byte("second"))
+	first, _ := sealer.sealInto(nil, kindChunk, []byte("first"))
+	second, _ := sealer.sealInto(nil, kindChunk, []byte("second"))
 
 	if _, _, err := opener.open(second); err == nil {
 		t.Fatal("skipped sequence was accepted")
@@ -103,7 +103,7 @@ func BenchmarkSealChunk(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
-		if _, err := sealer.seal(kindChunk, payload); err != nil {
+		if _, err := sealer.sealInto(nil, kindChunk, payload); err != nil {
 			b.Fatal(err)
 		}
 	}

@@ -443,13 +443,13 @@ func TestDeviceSenderPipelinesChunksAndRejectsInvalidACK(t *testing.T) {
 
 func TestDeviceTargetedSendRejectsBackgroundOptionsBeforeNetwork(t *testing.T) {
 	output := deviceTestOutput(t)
-	for _, request := range []sendRequest{{to: "phone", detach: true, jsonOutput: true}} {
+	for _, request := range []sendRequest{{to: "phone", detach: true, jsonOutput: true}, {to: "phone", requestID: "stable", jsonOutput: true}} {
 		if code := runDeviceSend(request); code != 1 {
 			t.Fatalf("unsupported background option returned %d", code)
 		}
 	}
 	data := deviceOutputBytes(t, output)
-	if bytes.Count(data, []byte("targeted sends currently stay in the foreground")) != 1 {
+	if bytes.Count(data, []byte("targeted sends currently stay in the foreground")) != 2 {
 		t.Fatalf("missing actionable option errors: %s", data)
 	}
 }

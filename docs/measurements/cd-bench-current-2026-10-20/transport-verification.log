@@ -1,0 +1,10 @@
+browser-browser-direct: 67108864 direct, 786432 relay payload bytes, 3.265s
+browser-cli-direct: 67108864 direct, 0 relay payload bytes, 1.121s
+cli-browser-code: 19922944 direct, 54263808 relay payload bytes, 1.700s
+cli-browser-code-blocked: 0 direct, 67108864 relay payload bytes, 1.598s
+cli-browser-direct: 18350080 direct, 65273856 relay payload bytes, 3.121s
+browser-browser-blocked: 0 direct, 67108864 relay payload bytes, 2.684s
+browser-cli-blocked: 0 direct, 67108864 relay payload bytes, 1.700s
+cli-browser-blocked: 0 direct, 67108864 relay payload bytes, 1.553s
+browser-browser-upgrade: 63963136 direct, 7340032 relay payload bytes, 3.486s
+browser-browser-slow: 67108864 direct, 0 relay payload bytes, 6.014s

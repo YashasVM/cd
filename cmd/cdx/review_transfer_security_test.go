@@ -38,7 +38,7 @@ func reviewReceive(t *testing.T, bundle bool, payload []byte, out string, accept
 		open, _ := newOpener(inv, receiverDirection)
 		offer, _ := json.Marshal(fileOffer{Name: "offered.zip", MediaType: "application/zip", Size: fmtUint(uint64(len(payload))), ChunkSize: chunkSize, Bundle: bundle})
 		send := func(kind messageKind, p []byte) {
-			record, e := seal.seal(kind, p)
+			record, e := seal.sealInto(nil, kind, p)
 			if e == nil {
 				_ = c.WriteMessage(websocket.BinaryMessage, record)
 			}

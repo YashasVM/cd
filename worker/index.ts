@@ -1,7 +1,7 @@
-export { DeviceRoom } from './device-room';
 import { DurableObject } from 'cloudflare:workers';
-import { clientPrefix, sameOrigin } from './code-security';
 import { ResumeRoomProtocol } from './resume-room';
+export { DeviceRoom } from './device-room';
+import { clientPrefix, sameOrigin } from './code-security';
 
 type Role = 'sender' | 'receiver';
 type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string; prefix?: string } | { kind: 'peer'; role: Role };
@@ -57,12 +57,6 @@ function isSocketAttachment(value: unknown): value is SocketAttachment {
       && (!('transferId' in value) || typeof value.transferId === 'string');
   }
   return value.kind === 'peer' && 'role' in value && (value.role === 'sender' || value.role === 'receiver');
-}
-
-function isResumeSocket(socket: WebSocket): boolean {
-  const attachment: unknown = socket.deserializeAttachment();
-  return !!attachment && typeof attachment === 'object' && 'kind' in attachment
-    && (attachment.kind === 'resume-pending' || attachment.kind === 'resume-peer');
 }
 
 function parseJoin(message: string): Join | null {
@@ -135,8 +129,8 @@ function reject(socket: WebSocket, code: number, reason: string): void {
 
 export class TransferRoom extends DurableObject<Env> {
   private room: RoomState = { kind: 'empty' };
-  private claiming: Promise<ClaimResult> | null = null;
   private resume: ResumeRoomProtocol;
+  private claiming: Promise<ClaimResult> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -148,8 +142,8 @@ export class TransferRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     if (!sameOrigin(request)) return new Response('origin forbidden', { status: 403 });
-    const rootId = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
-    if (rootId) return this.resume.fetch(request, rootId);
+    const resumeRoot = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(new URL(request.url).pathname)?.[1];
+    if (resumeRoot) return this.resume.fetch(request, resumeRoot);
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
     if (this.ctx.getWebSockets().length >= 4) return new Response('room connection limit reached', { status: 429 });
     const pair = new WebSocketPair();
@@ -165,7 +159,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    if (isResumeSocket(socket)) { await this.resume.message(socket, message); return; }
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.message(socket, message); return; }
     const attachment: unknown = socket.deserializeAttachment();
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
     if (this.isExpired()) {
@@ -201,7 +196,8 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(socket: WebSocket, code: number, reason: string): Promise<void> {
-    if (isResumeSocket(socket)) { await this.resume.close(socket); return; }
+    const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
+    if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.close(socket); return; }
     // Complete the close handshake. Clients wait for this reply to know every
     // frame they sent before it (such as COMPLETE) reached the room; without
     // it they sit out their close timeout.
@@ -222,8 +218,9 @@ export class TransferRoom extends DurableObject<Env> {
     await this.resume.alarm();
     const now = Date.now();
     for (const socket of this.ctx.getWebSockets()) {
-      if (isResumeSocket(socket)) continue;
       const attachment: unknown = socket.deserializeAttachment();
+      if (attachment && typeof attachment === 'object' && 'kind' in attachment
+        && (attachment.kind === 'resume-pending' || attachment.kind === 'resume-peer')) continue;
       if (!isSocketAttachment(attachment)) reject(socket, 4408, 'join expired');
       else if (attachment.kind === 'pending' && attachment.expiresAt <= now) reject(socket, 4408, 'join expired');
     }
@@ -665,6 +662,28 @@ export default {
         return new Response('signaling temporarily unavailable', { status: 503 });
       }
     }
+    const pushMatch = /^\/api\/devices\/v1\/([A-Za-z0-9_-]{22})\/(push|push-target)$/.exec(url.pathname);
+    if (pushMatch) {
+      if (!['POST', 'DELETE'].includes(request.method) || (request.method === 'DELETE' && pushMatch[2] !== 'push-target')) {
+        return new Response('method not allowed', { status: 405, headers: { Allow: pushMatch[2] === 'push' ? 'POST' : 'POST, DELETE' } });
+      }
+      try {
+        const address = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const { success } = await env.PEER_RATE_LIMITER.limit({ key: `device-push:${address}` });
+        if (!success) return Response.json({ error: 'rate limited' }, { status: 429 });
+        return await env.DEVICES.getByName(pushMatch[1]).fetch(request);
+      } catch {
+        return Response.json({ error: 'device wake-up unavailable' }, { status: 503 });
+      }
+    }
+    const deviceMatch = /^\/ws\/devices\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
+    if (deviceMatch) {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
+      const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+      if (!success) return new Response('connection rate limit reached', { status: 429 });
+      return env.DEVICES.getByName(deviceMatch[1]).fetch(request);
+    }
     const match = /^\/ws\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
     if (match) {
       if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
@@ -678,18 +697,12 @@ export default {
         return new Response('relay temporarily unavailable', { status: 503 });
       }
     }
-    const deviceMatch = /^\/ws\/devices\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
-    if (deviceMatch) {
-      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
-      const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientPrefix(request) });
-      if (!success) return new Response('connection rate limit reached', { status: 429 });
-      return env.DEVICES.getByName(deviceMatch[1]).fetch(request);
-    }
     const resumeMatch = /^\/ws\/v2\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
     if (resumeMatch) {
       if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
       try {
-        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientPrefix(request) });
+        const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+        const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
         if (!success) return new Response('connection rate limit reached', { status: 429 });
         return await env.TRANSFERS.getByName(`v2:${resumeMatch[1]}`).fetch(request);
       } catch (error) {
@@ -700,7 +713,7 @@ export default {
     if (url.pathname.startsWith('/ws/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/peerjs/')) {
       if (url.pathname === '/api/health' && request.method === 'GET') {
         return Response.json(
-          { service: 'cd-agent-sharing', protocol: 'cd-transfer-v1', protocols: ['cd-transfer-v1', 'cd-transfer-v2'], status: 'ok' },
+          { service: 'cd-agent-sharing', protocol: 'cd-transfer-v1', status: 'ok' },
           { headers: { 'Cache-Control': 'no-store' } },
         );
       }

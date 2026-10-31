@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -61,7 +67,7 @@ func TestStateKeyFromInputAcceptsCodesIDsAndLinks(t *testing.T) {
 
 func TestStateRoundTripAndLinkModeKey(t *testing.T) {
 	dir := t.TempDir()
-	coded := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", Phase: phaseWaiting, PID: os.Getpid()}
+	coded := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if err := writeState(dir, coded); err != nil {
 		t.Fatal(err)
 	}
@@ -69,14 +75,14 @@ func TestStateRoundTripAndLinkModeKey(t *testing.T) {
 	if err != nil || read.Filename != "a.bin" || read.UpdatedAt.IsZero() {
 		t.Fatalf("readState = %#v, %v", read, err)
 	}
-	linked := transferState{Version: 1, TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Phase: phaseWaiting}
+	linked := transferState{Version: 1, TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Filename: "b.bin", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if err := writeState(dir, linked); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "bO6Ww6lyA10XmqHEgQYHyA.json")); err != nil {
 		t.Fatalf("link-mode state is not keyed by transfer ID: %v", err)
 	}
-	info, err := os.Stat(filepath.Join(dir, "48291.json"))
+	info, err := os.Stat(filepath.Join(dir, coded.TransferID+".json"))
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("state file mode = %v, %v", info.Mode().Perm(), err)
 	}
@@ -93,7 +99,7 @@ func deadPID(t *testing.T) int {
 
 func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 	dir := t.TempDir()
-	state := transferState{Version: 1, Code: "48291", Phase: phaseSending, PID: deadPID(t)}
+	state := transferState{Version: 1, Code: "48291", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", StartedAt: time.Now().UTC(), Phase: phaseSending, PID: deadPID(t)}
 	if err := writeState(dir, state); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +116,7 @@ func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 	if got := effectiveState(dir, stale); got.Phase != phaseVerified {
 		t.Fatalf("finished holder state = %#v", got)
 	}
-	live := transferState{Code: "1234", Phase: phaseWaiting, PID: os.Getpid()}
+	live := transferState{Code: "1234", Phase: phaseWaiting, PID: os.Getpid(), StartedAt: time.Now().UTC()}
 	if got := effectiveState(dir, live); got.Phase != phaseWaiting {
 		t.Fatalf("live holder state = %#v", got)
 	}
@@ -119,8 +125,8 @@ func TestEffectiveStateReportsADeadHolderAsFailed(t *testing.T) {
 func TestPruneStatesKeepsRecentTransfers(t *testing.T) {
 	dir := t.TempDir()
 	for _, state := range []transferState{
-		{Code: "1111", Phase: phaseVerified},
-		{Code: "2222", Phase: phaseSending},
+		{Version: 1, Code: "1111", TransferID: "aO6Ww6lyA10XmqHEgQYHyA", Filename: "a.bin", PID: os.Getpid(), StartedAt: time.Now().UTC(), Phase: phaseVerified},
+		{Version: 1, Code: "2222", TransferID: "bO6Ww6lyA10XmqHEgQYHyA", Filename: "b.bin", PID: os.Getpid(), StartedAt: time.Now().UTC(), Phase: phaseSending},
 	} {
 		if err := writeState(dir, state); err != nil {
 			t.Fatal(err)
@@ -147,5 +153,81 @@ func TestHolderFailureReturnsTheLastErrorLine(t *testing.T) {
 	}
 	if got := holderFailure(path); got != "cdx: CD relay did not answer" {
 		t.Fatalf("holderFailure = %q", got)
+	}
+}
+
+func TestDetachedPreparationReturnsReadyAndReportsNestedErrors(t *testing.T) {
+	binary := filepath.Join(t.TempDir(), "cdx")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", binary, ".")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build: %v: %s", err, output)
+	}
+	newFakeRelay(t, "11111")
+	stateDirectory := t.TempDir()
+	t.Setenv("CD_STATE_DIR", stateDirectory)
+	root := t.TempDir()
+	folder := filepath.Join(root, "tree")
+	for i := 0; i < 10000; i++ {
+		writeTestFile(t, filepath.Join(folder, fmt.Sprintf("dir-%03d", i/100), fmt.Sprintf("file-%05d", i)), make([]byte, 4096))
+	}
+	extra := filepath.Join(root, "extra.txt")
+	writeTestFile(t, extra, []byte("extra"))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, binary, "send", "--json", folder, extra)
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
+	started := time.Now()
+	if err := command.Run(); err != nil {
+		t.Fatalf("detached send: %v: %s", err, stderr.String())
+	}
+	t.Logf("10000-file tree plus file detached readiness: %s", time.Since(started))
+	if stderr.Len() != 0 {
+		t.Fatalf("captured detached send wrote progress without opt-in: %s", stderr.String())
+	}
+	var ready readyOutput
+	if err := json.Unmarshal(stdout.Bytes(), &ready); err != nil || ready.Code != "11111" || ready.Size == 0 {
+		t.Fatalf("ready = %s, %v", stdout.Bytes(), err)
+	}
+	state, err := readState(stateDirectory, ready.Code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	process, err := os.FindProcess(state.PID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = process.Kill() })
+	if !processAlive(state.PID) {
+		t.Fatal("holder stopped when parent returned")
+	}
+	if runtime.GOOS != "windows" {
+		invalid := filepath.Join(root, "invalid-tree")
+		writeTestFile(t, filepath.Join(invalid, "bad-\xff"), []byte("content"))
+		failure := exec.CommandContext(ctx, binary, "send", invalid)
+		output, err := failure.CombinedOutput()
+		if err == nil || !strings.Contains(string(output), "UTF-8") || !strings.Contains(string(output), "bad-") {
+			t.Fatalf("nested failure = %v, %s", err, output)
+		}
+	}
+}
+
+func TestHolderArgsPreservesProgressOptIn(t *testing.T) {
+	for _, progress := range []bool{false, true} {
+		arguments := holderArgs(sendRequest{progress: progress}, []string{"/tmp/example"})
+		request, err := parseSendArgs(arguments[1:])
+		if err != nil || request.progress != progress || !request.jsonOutput {
+			t.Fatalf("holder args %q parsed as %#v, %v", arguments, request, err)
+		}
+	}
+}
+
+func TestParseStateArgsAcceptsDashPrefixedTransferID(t *testing.T) {
+	jsonOutput, timeout, rest, err := parseStateArgs([]string{"--json", "--timeout", "30s", "--", "-ABCDEFGHIJKLMNOPQRSTU"})
+	if err != nil || !jsonOutput || timeout != 30*time.Second || len(rest) != 1 || rest[0] != "-ABCDEFGHIJKLMNOPQRSTU" {
+		t.Fatalf("state arguments = %v %v %v %v", jsonOutput, timeout, rest, err)
 	}
 }

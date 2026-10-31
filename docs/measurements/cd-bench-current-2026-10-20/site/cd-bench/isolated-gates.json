@@ -1,0 +1,1801 @@
+{
+  "version": 1,
+  "threshold": 1.5,
+  "finished": true,
+  "scope": true,
+  "nativeCases": [
+    {
+      "name": "disk/auto/random-4k",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.707688000000417,
+            "receiverMs": 18.05697499999951,
+            "durableMs": 20.48091199999999,
+            "totalMs": 35.4367059999995
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 5.779110000000401,
+            "receiverMs": 519.7183100000002,
+            "durableMs": 525.3226210000003,
+            "totalMs": 531.075999
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.705742999999529,
+            "receiverMs": 518.8433489999998,
+            "durableMs": 524.4015319999999,
+            "totalMs": 531.332980000001
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.707688000000417,
+          "crocMs": 5.779110000000401,
+          "ratio": 0.39293123433134,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 18.05697499999951,
+          "crocMs": 518.8433489999998,
+          "ratio": 28.733680419893908,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 20.48091199999999,
+          "crocMs": 524.4015319999999,
+          "ratio": 25.604403358600443,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 35.4367059999995,
+          "crocMs": 531.075999,
+          "ratio": 14.98660736130518,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/auto/random-1m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.624072000000524,
+            "receiverMs": 79.90733600000021,
+            "durableMs": 82.29150200000004,
+            "totalMs": 95.88831799999753
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.038233000001128,
+            "receiverMs": 519.9636140000002,
+            "durableMs": 526.1065030000009,
+            "totalMs": 532.0985390000005
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.032967999999528,
+            "receiverMs": 520.832957999999,
+            "durableMs": 525.8589939999983,
+            "totalMs": 532.3306799999991
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.624072000000524,
+          "crocMs": 6.032967999999528,
+          "ratio": 0.47789397905836384,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 79.90733600000021,
+          "crocMs": 519.9636140000002,
+          "ratio": 6.507082328461042,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 82.29150200000004,
+          "crocMs": 525.8589939999983,
+          "ratio": 6.390198030411428,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 95.88831799999753,
+          "crocMs": 532.0985390000005,
+          "ratio": 5.549148739891487,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/auto/random-64m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.256226999998034,
+            "receiverMs": 169.43014199999743,
+            "durableMs": 171.95951499999865,
+            "totalMs": 184.09659499999907
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.378929999998945,
+            "receiverMs": 548.026342000001,
+            "durableMs": 606.1969709999976,
+            "totalMs": 612.9871759999987
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.8138660000004165,
+            "receiverMs": 546.8972200000026,
+            "durableMs": 597.1480030000021,
+            "totalMs": 603.9671490000001
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.256226999998034,
+          "crocMs": 6.378929999998945,
+          "ratio": 0.5204644137220996,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 169.43014199999743,
+          "crocMs": 546.8972200000026,
+          "ratio": 3.227862607823411,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 171.95951499999865,
+          "crocMs": 597.1480030000021,
+          "ratio": 3.472608090340373,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 184.09659499999907,
+          "crocMs": 603.9671490000001,
+          "ratio": 3.280707875123943,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/auto/random-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.152821000003314,
+            "receiverMs": 284.45133799999894,
+            "durableMs": 287.05299200000445,
+            "totalMs": 300.6441180000038
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 8.315174999996088,
+            "receiverMs": 1006.554624999997,
+            "durableMs": 1072.038330000003,
+            "totalMs": 1080.3535049999991
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 8.139505999999528,
+            "receiverMs": 998.9326189999992,
+            "durableMs": 1067.7391639999987,
+            "totalMs": 1075.8786699999982
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.152821000003314,
+          "crocMs": 8.139505999999528,
+          "ratio": 0.575115448714968,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 284.45133799999894,
+          "crocMs": 998.9326189999992,
+          "ratio": 3.5117873799560155,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 287.05299200000445,
+          "crocMs": 1067.7391639999987,
+          "ratio": 3.719658717230797,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 300.6441180000038,
+          "crocMs": 1075.8786699999982,
+          "ratio": 3.578578809913669,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/auto/compressible-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.784484999996494,
+            "receiverMs": 263.12629399998696,
+            "durableMs": 265.8136130000057,
+            "totalMs": 279.23624500000733
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 8.500134000001708,
+            "receiverMs": 1225.3698719999957,
+            "durableMs": 1238.3391779999947,
+            "totalMs": 1247.0558849999943
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.331712999992305,
+            "receiverMs": 985.4306329999963,
+            "durableMs": 996.0223720000067,
+            "totalMs": 1004.9761489999946
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.784484999996494,
+          "crocMs": 7.331712999992305,
+          "ratio": 0.4959058770051202,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 263.12629399998696,
+          "crocMs": 985.4306329999963,
+          "ratio": 3.745086125828402,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 265.8136130000057,
+          "crocMs": 996.0223720000067,
+          "ratio": 3.747070591151347,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 279.23624500000733,
+          "crocMs": 1004.9761489999946,
+          "ratio": 3.59901755948612,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/relay/random-4k",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.510768000000098,
+            "receiverMs": 18.22386000000006,
+            "durableMs": 20.54615400000148,
+            "totalMs": 32.95323599999938
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.004399999999805,
+            "receiverMs": 89.67490399999951,
+            "durableMs": 92.68472199999997,
+            "totalMs": 98.83133300000009
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 5.930346999999529,
+            "receiverMs": 90.53599500000018,
+            "durableMs": 93.43461200000093,
+            "totalMs": 98.98424300000079
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.510768000000098,
+          "crocMs": 5.930346999999529,
+          "ratio": 0.474019420710182,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 18.22386000000006,
+          "crocMs": 89.67490399999951,
+          "ratio": 4.920741489453893,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 20.54615400000148,
+          "crocMs": 92.68472199999997,
+          "ratio": 4.511049707891477,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 32.95323599999938,
+          "crocMs": 98.83133300000009,
+          "ratio": 2.9991389313025874,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/relay/random-1m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.045180000000983,
+            "receiverMs": 22.940953999997873,
+            "durableMs": 25.3706749999983,
+            "totalMs": 37.41585499999928
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.0690209999993385,
+            "receiverMs": 90.87880700000096,
+            "durableMs": 94.37652700000035,
+            "totalMs": 100.57279799999742
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 5.803153999997448,
+            "receiverMs": 91.45094600000084,
+            "durableMs": 95.00866699999824,
+            "totalMs": 100.86166199999934
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.045180000000983,
+          "crocMs": 5.803153999997448,
+          "ratio": 0.48178225647080203,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 22.940953999997873,
+          "crocMs": 90.87880700000096,
+          "ratio": 3.961422310511123,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 25.3706749999983,
+          "crocMs": 94.37652700000035,
+          "ratio": 3.7199060332453384,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 37.41585499999928,
+          "crocMs": 100.57279799999742,
+          "ratio": 2.6879727324151577,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/relay/random-64m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.718727999999828,
+            "receiverMs": 204.06466299999738,
+            "durableMs": 207.1944749999966,
+            "totalMs": 221.2940180000005
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.873064000006707,
+            "receiverMs": 119.37146700000449,
+            "durableMs": 170.80301400000462,
+            "totalMs": 177.87619400000403
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.989577000000281,
+            "receiverMs": 121.90926600000239,
+            "durableMs": 177.4334149999995,
+            "totalMs": 184.32345799999894
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.718727999999828,
+          "crocMs": 6.873064000006707,
+          "ratio": 0.540389259052226,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 204.06466299999738,
+          "crocMs": 119.37146700000449,
+          "ratio": 0.5849688292186385,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 207.1944749999966,
+          "crocMs": 170.80301400000462,
+          "ratio": 0.8243608522862756,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 221.2940180000005,
+          "crocMs": 177.87619400000403,
+          "ratio": 0.8038002816687237,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/relay/random-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.887300000002142,
+            "receiverMs": 670.7252520000038,
+            "durableMs": 674.3665239999973,
+            "totalMs": 687.5181830000074
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.517873999997391,
+            "receiverMs": 568.7356640000071,
+            "durableMs": 628.3155400000105,
+            "totalMs": 635.5564830000076
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 8.083067999992636,
+            "receiverMs": 570.3340060000046,
+            "durableMs": 634.1646289999917,
+            "totalMs": 642.1101749999943
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.887300000002142,
+          "crocMs": 7.517873999997391,
+          "ratio": 0.5049857260884317,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 670.7252520000038,
+          "crocMs": 568.7356640000071,
+          "ratio": 0.8479413326158829,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 674.3665239999973,
+          "crocMs": 628.3155400000105,
+          "ratio": 0.9317122330941994,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 687.5181830000074,
+          "crocMs": 635.5564830000076,
+          "ratio": 0.9244213443588309,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "disk/relay/compressible-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 13.854800000000978,
+            "receiverMs": 657.5417770000058,
+            "durableMs": 660.049886000008,
+            "totalMs": 676.9569630000042
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.67092699999921,
+            "receiverMs": 816.7828029999946,
+            "durableMs": 824.3516079999972,
+            "totalMs": 831.9302390000084
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.21254300000146,
+            "receiverMs": 559.6447509999998,
+            "durableMs": 571.2506719999947,
+            "totalMs": 578.7285839999968
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 13.854800000000978,
+          "crocMs": 7.21254300000146,
+          "ratio": 0.520580809539001,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 657.5417770000058,
+          "crocMs": 559.6447509999998,
+          "ratio": 0.8511166447147204,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 660.049886000008,
+          "crocMs": 571.2506719999947,
+          "ratio": 0.8654659051027966,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 676.9569630000042,
+          "crocMs": 578.7285839999968,
+          "ratio": 0.8548971583589328,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/auto/random-4k",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.866594999999506,
+            "receiverMs": 17.25987399999576,
+            "durableMs": 17.42655799999193,
+            "totalMs": 29.57727100000193
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.6297860000049695,
+            "receiverMs": 519.4587570000003,
+            "durableMs": 519.6600409999955,
+            "totalMs": 526.5856519999943
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.655624000006355,
+            "receiverMs": 519.3334880000039,
+            "durableMs": 519.6238769999763,
+            "totalMs": 526.2795009999827
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.866594999999506,
+          "crocMs": 6.6297860000049695,
+          "ratio": 0.5152712120032708,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 17.25987399999576,
+          "crocMs": 519.3334880000039,
+          "ratio": 30.08906600361807,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 17.42655799999193,
+          "crocMs": 519.6238769999763,
+          "ratio": 29.81792944999334,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 29.57727100000193,
+          "crocMs": 526.2795009999827,
+          "ratio": 17.793375900026355,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/auto/random-1m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.480790999979945,
+            "receiverMs": 75.7992990000057,
+            "durableMs": 75.93741399998544,
+            "totalMs": 88.51283599997987
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.3685029999760445,
+            "receiverMs": 519.8629109999747,
+            "durableMs": 520.008600000001,
+            "totalMs": 527.3860169999825
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.588947999989614,
+            "receiverMs": 521.3787130000128,
+            "durableMs": 521.5980100000161,
+            "totalMs": 527.9888849999988
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.480790999979945,
+          "crocMs": 6.3685029999760445,
+          "ratio": 0.5102643734668962,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 75.7992990000057,
+          "crocMs": 519.8629109999747,
+          "ratio": 6.858413176089341,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 75.93741399998544,
+          "crocMs": 520.008600000001,
+          "ratio": 6.847857631813755,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 88.51283599997987,
+          "crocMs": 527.3860169999825,
+          "ratio": 5.958299844782992,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/auto/random-64m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 13.73086599999806,
+            "receiverMs": 114.59846800001105,
+            "durableMs": 114.79530700002215,
+            "totalMs": 128.55214800001704
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.0114790000079665,
+            "receiverMs": 554.5028989999846,
+            "durableMs": 554.6891219999816,
+            "totalMs": 561.4702800000086
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.650105000007898,
+            "receiverMs": 552.4912440000044,
+            "durableMs": 552.6243109999923,
+            "totalMs": 559.2744160000002
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 13.73086599999806,
+          "crocMs": 6.650105000007898,
+          "ratio": 0.4843179592611884,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 114.59846800001105,
+          "crocMs": 552.4912440000044,
+          "ratio": 4.821104973235341,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 114.79530700002215,
+          "crocMs": 552.6243109999923,
+          "ratio": 4.813997413673763,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 128.55214800001704,
+          "crocMs": 559.2744160000002,
+          "ratio": 4.350564535101554,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/auto/random-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 13.08607000001939,
+            "receiverMs": 237.20472400001017,
+            "durableMs": 237.31719699999667,
+            "totalMs": 251.0159660000063
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.9921229999745265,
+            "receiverMs": 992.9693029999908,
+            "durableMs": 993.2231880000036,
+            "totalMs": 999.854846000002
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.717848000000231,
+            "receiverMs": 996.0959780000267,
+            "durableMs": 996.2544770000095,
+            "totalMs": 1003.9723250000097
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 13.08607000001939,
+          "crocMs": 7.717848000000231,
+          "ratio": 0.5897758456120742,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 237.20472400001017,
+          "crocMs": 992.9693029999908,
+          "ratio": 4.18612785721733,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 237.31719699999667,
+          "crocMs": 993.2231880000036,
+          "ratio": 4.185213716307367,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 251.0159660000063,
+          "crocMs": 999.854846000002,
+          "ratio": 3.9832320705846134,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/auto/compressible-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 13.304761000006692,
+            "receiverMs": 244.77453599998262,
+            "durableMs": 244.9212969999935,
+            "totalMs": 259.03149900000426
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.135822000011103,
+            "receiverMs": 1242.3696409999975,
+            "durableMs": 1242.5664009999891,
+            "totalMs": 1249.769421999983
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.938225999998394,
+            "receiverMs": 996.377164000005,
+            "durableMs": 996.6440529999963,
+            "totalMs": 1003.2839949999761
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 13.304761000006692,
+          "crocMs": 6.938225999998394,
+          "ratio": 0.5214844520690679,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 244.77453599998262,
+          "crocMs": 996.377164000005,
+          "ratio": 4.070591574934395,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 244.9212969999935,
+          "crocMs": 996.6440529999963,
+          "ratio": 4.069242100249138,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 259.03149900000426,
+          "crocMs": 1003.2839949999761,
+          "ratio": 3.8732123269686194,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/relay/random-4k",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 11.868450000009034,
+            "receiverMs": 16.313584000017727,
+            "durableMs": 16.576797000016086,
+            "totalMs": 29.329274000017904
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.010086999973282,
+            "receiverMs": 90.48767400000361,
+            "durableMs": 90.62257100001443,
+            "totalMs": 96.80322200001683
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.733485000004293,
+            "receiverMs": 90.95490700000664,
+            "durableMs": 91.12667100000544,
+            "totalMs": 97.0221479999891
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 11.868450000009034,
+          "crocMs": 6.010086999973282,
+          "ratio": 0.5063919045847358,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 16.313584000017727,
+          "crocMs": 90.48767400000361,
+          "ratio": 5.546768508986455,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 16.576797000016086,
+          "crocMs": 90.62257100001443,
+          "ratio": 5.466832404349676,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 29.329274000017904,
+          "crocMs": 96.80322200001683,
+          "ratio": 3.300566594316577,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/relay/random-1m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 13.408254000009038,
+            "receiverMs": 20.901236999983666,
+            "durableMs": 21.072608999995282,
+            "totalMs": 34.48086300000432
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.407413999986602,
+            "receiverMs": 92.47084299998824,
+            "durableMs": 92.60627399999066,
+            "totalMs": 98.48829899998964
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.244653000001563,
+            "receiverMs": 91.80160799997975,
+            "durableMs": 91.95193699997617,
+            "totalMs": 97.93594699999085
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 13.408254000009038,
+          "crocMs": 6.244653000001563,
+          "ratio": 0.4657320035850569,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 20.901236999983666,
+          "crocMs": 91.80160799997975,
+          "ratio": 4.392161478292002,
+          "pass": true
+        },
+        "durableMs": {
+          "cdMs": 21.072608999995282,
+          "crocMs": 91.95193699997617,
+          "ratio": 4.363576289959955,
+          "pass": true
+        },
+        "totalMs": {
+          "cdMs": 34.48086300000432,
+          "crocMs": 97.93594699999085,
+          "ratio": 2.840298602734467,
+          "pass": true
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/relay/random-64m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 12.759756999992533,
+            "receiverMs": 160.14870800002245,
+            "durableMs": 160.4173230000015,
+            "totalMs": 173.0757900000026
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.357829999993555,
+            "receiverMs": 125.12449800001923,
+            "durableMs": 125.3141080000205,
+            "totalMs": 133.51837399997748
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.7249359999841545,
+            "receiverMs": 123.71050500002457,
+            "durableMs": 123.8602870000177,
+            "totalMs": 132.7345970000024
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 12.759756999992533,
+          "crocMs": 7.357829999993555,
+          "ratio": 0.5766434266732401,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 160.14870800002245,
+          "crocMs": 123.71050500002457,
+          "ratio": 0.7724727008100948,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 160.4173230000015,
+          "crocMs": 123.8602870000177,
+          "ratio": 0.7721129157604542,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 173.0757900000026,
+          "crocMs": 132.7345970000024,
+          "ratio": 0.7669160256324724,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/relay/random-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.236034000001382,
+            "receiverMs": 594.605842000019,
+            "durableMs": 594.7659339999955,
+            "totalMs": 609.0019679999969
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.209693999990122,
+            "receiverMs": 565.0885870000056,
+            "durableMs": 565.2704040000099,
+            "totalMs": 573.9295749999874
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.767180000024382,
+            "receiverMs": 565.8949849999917,
+            "durableMs": 566.0398799999966,
+            "totalMs": 572.380525000015
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.236034000001382,
+          "crocMs": 6.767180000024382,
+          "ratio": 0.4753557065137471,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 594.605842000019,
+          "crocMs": 565.0885870000056,
+          "ratio": 0.9503582828908491,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 594.7659339999955,
+          "crocMs": 565.2704040000099,
+          "ratio": 0.9504081718305242,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 609.0019679999969,
+          "crocMs": 572.380525000015,
+          "ratio": 0.9398664619750753,
+          "pass": false
+        }
+      },
+      "pass": false
+    },
+    {
+      "name": "tmpfs/relay/compressible-256m",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 14.208528999995906,
+            "receiverMs": 733.0679850000015,
+            "durableMs": 733.2791989999823,
+            "totalMs": 747.3518949999998
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.667477999988478,
+            "receiverMs": 848.0486269999819,
+            "durableMs": 848.2185009999957,
+            "totalMs": 854.9011840000167
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.319997000013245,
+            "receiverMs": 578.851296000008,
+            "durableMs": 579.0808930000057,
+            "totalMs": 585.0257259999926
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 14.208528999995906,
+          "crocMs": 7.319997000013245,
+          "ratio": 0.5151833099693398,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 733.0679850000015,
+          "crocMs": 578.851296000008,
+          "ratio": 0.7896283944251185,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 733.2791989999823,
+          "crocMs": 579.0808930000057,
+          "ratio": 0.7897140595147575,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 747.3518949999998,
+          "crocMs": 585.0257259999926,
+          "ratio": 0.7827982104735183,
+          "pass": false
+        }
+      },
+      "pass": false
+    }
+  ],
+  "browserCases": [
+    {
+      "name": "browser-browser/direct",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 49.661100999990595,
+            "receiverMs": 3457.549790000001,
+            "durableMs": 3457.870192999999,
+            "totalMs": 3507.250954000003
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.0114790000079665,
+            "receiverMs": 554.5028989999846,
+            "durableMs": 554.6891219999816,
+            "totalMs": 561.4702800000086
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.650105000007898,
+            "receiverMs": 552.4912440000044,
+            "durableMs": 552.6243109999923,
+            "totalMs": 559.2744160000002
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 49.661100999990595,
+          "crocMs": 6.650105000007898,
+          "ratio": 0.13390973752291874,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 3457.549790000001,
+          "crocMs": 552.4912440000044,
+          "ratio": 0.15979270800320253,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 3457.870192999999,
+          "crocMs": 552.6243109999923,
+          "ratio": 0.159816384119539,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 3507.250954000003,
+          "crocMs": 559.2744160000002,
+          "ratio": 0.15946233199028728,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/auto/random-64m"
+    },
+    {
+      "name": "browser-browser/relay",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 44.752614999997604,
+            "receiverMs": 2310.48363100001,
+            "durableMs": 2310.879261000009,
+            "totalMs": 2365.4146940000064
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.357829999993555,
+            "receiverMs": 125.12449800001923,
+            "durableMs": 125.3141080000205,
+            "totalMs": 133.51837399997748
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.7249359999841545,
+            "receiverMs": 123.71050500002457,
+            "durableMs": 123.8602870000177,
+            "totalMs": 132.7345970000024
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 44.752614999997604,
+          "crocMs": 7.357829999993555,
+          "ratio": 0.16441117463178295,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 2310.48363100001,
+          "crocMs": 123.71050500002457,
+          "ratio": 0.053543121163113765,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 2310.879261000009,
+          "crocMs": 123.8602870000177,
+          "ratio": 0.05359877042923413,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 2365.4146940000064,
+          "crocMs": 132.7345970000024,
+          "ratio": 0.05611472581813683,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/relay/random-64m"
+    },
+    {
+      "name": "browser-cli/direct",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 48.8425120000029,
+            "receiverMs": 1125.639859,
+            "durableMs": 1125.9541039999995,
+            "totalMs": 1175.772355
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.0114790000079665,
+            "receiverMs": 554.5028989999846,
+            "durableMs": 554.6891219999816,
+            "totalMs": 561.4702800000086
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.650105000007898,
+            "receiverMs": 552.4912440000044,
+            "durableMs": 552.6243109999923,
+            "totalMs": 559.2744160000002
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 48.8425120000029,
+          "crocMs": 6.650105000007898,
+          "ratio": 0.13615403319156685,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 1125.639859,
+          "crocMs": 552.4912440000044,
+          "ratio": 0.49082416510270754,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 1125.9541039999995,
+          "crocMs": 552.6243109999923,
+          "ratio": 0.4908053614590249,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 1175.772355,
+          "crocMs": 559.2744160000002,
+          "ratio": 0.4756655602776102,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/auto/random-64m"
+    },
+    {
+      "name": "browser-cli/relay",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 50.588692000001174,
+            "receiverMs": 1751.0577809999995,
+            "durableMs": 1751.5866229999992,
+            "totalMs": 1802.1782039999998
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.357829999993555,
+            "receiverMs": 125.12449800001923,
+            "durableMs": 125.3141080000205,
+            "totalMs": 133.51837399997748
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.7249359999841545,
+            "receiverMs": 123.71050500002457,
+            "durableMs": 123.8602870000177,
+            "totalMs": 132.7345970000024
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 50.588692000001174,
+          "crocMs": 7.357829999993555,
+          "ratio": 0.14544416368767518,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 1751.0577809999995,
+          "crocMs": 123.71050500002457,
+          "ratio": 0.07064901360900586,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 1751.5866229999992,
+          "crocMs": 123.8602870000177,
+          "ratio": 0.07071319532452136,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 1802.1782039999998,
+          "crocMs": 132.7345970000024,
+          "ratio": 0.07365231512921039,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/relay/random-64m"
+    },
+    {
+      "name": "cli-browser/direct",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 19.682886000009603,
+            "receiverMs": 1537.4385709999988,
+            "durableMs": 1537.9543750000012,
+            "totalMs": 1555.7454550000002
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.0114790000079665,
+            "receiverMs": 554.5028989999846,
+            "durableMs": 554.6891219999816,
+            "totalMs": 561.4702800000086
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 6.650105000007898,
+            "receiverMs": 552.4912440000044,
+            "durableMs": 552.6243109999923,
+            "totalMs": 559.2744160000002
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 19.682886000009603,
+          "crocMs": 6.650105000007898,
+          "ratio": 0.3378622931619201,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 1537.4385709999988,
+          "crocMs": 552.4912440000044,
+          "ratio": 0.3593582562720841,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 1537.9543750000012,
+          "crocMs": 552.6243109999923,
+          "ratio": 0.35932425563664194,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 1555.7454550000002,
+          "crocMs": 559.2744160000002,
+          "ratio": 0.3594896672862207,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/auto/random-64m"
+    },
+    {
+      "name": "cli-browser/relay",
+      "complete": true,
+      "groups": {
+        "cd": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 17.693075000002864,
+            "receiverMs": 1477.899311000001,
+            "durableMs": 1478.372295000001,
+            "totalMs": 1501.6746509999994
+          }
+        },
+        "croc": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.357829999993555,
+            "receiverMs": 125.12449800001923,
+            "durableMs": 125.3141080000205,
+            "totalMs": 133.51837399997748
+          }
+        },
+        "croc-no-compress": {
+          "complete": true,
+          "runs": 7,
+          "verified": 7,
+          "medians": {
+            "readyMs": 7.7249359999841545,
+            "receiverMs": 123.71050500002457,
+            "durableMs": 123.8602870000177,
+            "totalMs": 132.7345970000024
+          }
+        }
+      },
+      "metrics": {
+        "readyMs": {
+          "cdMs": 17.693075000002864,
+          "crocMs": 7.357829999993555,
+          "ratio": 0.4158593121880942,
+          "pass": false
+        },
+        "receiverMs": {
+          "cdMs": 1477.899311000001,
+          "crocMs": 123.71050500002457,
+          "ratio": 0.08370699145689262,
+          "pass": false
+        },
+        "durableMs": {
+          "cdMs": 1478.372295000001,
+          "crocMs": 123.8602870000177,
+          "ratio": 0.08378152608711976,
+          "pass": false
+        },
+        "totalMs": {
+          "cdMs": 1501.6746509999994,
+          "crocMs": 132.7345970000024,
+          "ratio": 0.08839104856142534,
+          "pass": false
+        }
+      },
+      "pass": false,
+      "reference": "tmpfs/relay/random-64m"
+    }
+  ],
+  "lanCase": {
+    "name": "physical-lan",
+    "complete": true,
+    "groups": {
+      "cd": {
+        "complete": true,
+        "runs": 3,
+        "verified": 3,
+        "medians": {
+          "readyMs": 18.848601000005146,
+          "receiverMs": 15097.69725702377,
+          "durableMs": 15099.201597000007,
+          "totalMs": 15118.050198000012
+        }
+      },
+      "croc": {
+        "complete": true,
+        "runs": 3,
+        "verified": 3,
+        "medians": {
+          "readyMs": 8.863668999998481,
+          "receiverMs": 13597.88828604979,
+          "durableMs": 13739.558605999999,
+          "totalMs": 13748.422274999997
+        }
+      },
+      "croc-no-compress": {
+        "complete": true,
+        "runs": 3,
+        "verified": 3,
+        "medians": {
+          "readyMs": 8.62109000000055,
+          "receiverMs": 13671.038091912713,
+          "durableMs": 13824.451739000004,
+          "totalMs": 13833.741189
+        }
+      }
+    },
+    "metrics": {
+      "readyMs": {
+        "cdMs": 18.848601000005146,
+        "crocMs": 8.62109000000055,
+        "ratio": 0.457386200705198,
+        "pass": false
+      },
+      "receiverMs": {
+        "cdMs": 15097.69725702377,
+        "crocMs": 13597.88828604979,
+        "ratio": 0.9006597532430823,
+        "pass": false
+      },
+      "durableMs": {
+        "cdMs": 15099.201597000007,
+        "crocMs": 13739.558605999999,
+        "ratio": 0.90995265661794,
+        "pass": false
+      },
+      "totalMs": {
+        "cdMs": 15118.050198000012,
+        "crocMs": 13748.422274999997,
+        "ratio": 0.909404459896475,
+        "pass": false
+      }
+    },
+    "pass": false
+  },
+  "complete": true,
+  "achieved": false,
+  "note": "Browser CD is compared with native croc at the same payload size and RAM output. It is not a croc-browser test. Direct allowed includes successful relay completion before ICE opens. Readiness, native exit, durable completion and total time are separate gates. Actual route evidence and individual verification remain in raw reports."
+}

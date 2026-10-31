@@ -14,8 +14,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"regexp"
-	"sort"
 	"strings"
 	"time"
 )
@@ -54,6 +52,7 @@ type transferState struct {
 	Acknowledged uint64    `json:"acknowledged"`
 	Error        string    `json:"error,omitempty"`
 	ErrorKind    string    `json:"errorKind,omitempty"`
+	Retry        string    `json:"retry,omitempty"`
 	PID          int       `json:"pid"`
 	Log          string    `json:"log,omitempty"`
 	StartedAt    time.Time `json:"startedAt"`
@@ -64,156 +63,29 @@ func (state transferState) finished() bool {
 	return state.Phase == phaseVerified || state.Phase == phaseFailed
 }
 
-// key names the state file: the share code, or the transfer ID in link mode
-// (the link's key fragment is never written to disk).
-func (state transferState) key() string {
-	if state.Code != "" {
-		return state.Code
-	}
-	return state.TransferID
-}
-
-func stateDir() (string, error) {
-	if dir := os.Getenv("CD_STATE_DIR"); dir != "" {
-		return dir, nil
-	}
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return "", fmt.Errorf("find a cache directory for transfer state: %w", err)
-	}
-	return filepath.Join(cache, "cdx", "transfers"), nil
-}
-
-var stateKeyPattern = regexp.MustCompile(`^(\d{4,5}|[A-Za-z0-9_-]{22})$`)
-
-// stateKeyFromInput accepts a share code, a transfer ID, or a full link.
-func stateKeyFromInput(input string) (string, error) {
-	input = strings.TrimSpace(input)
-	if stateKeyPattern.MatchString(input) {
-		return input, nil
-	}
-	if parsed, err := url.Parse(input); err == nil {
-		if id := strings.TrimPrefix(parsed.Path, "/s/"); id != parsed.Path && stateKeyPattern.MatchString(id) {
-			return id, nil
-		}
-	}
-	return "", fmt.Errorf("%q is not a share code or link", input)
-}
-
-func writeState(dir string, state transferState) error {
-	state.UpdatedAt = time.Now().UTC()
-	data, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return err
-	}
-	temporary, err := os.CreateTemp(dir, ".state-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(temporary.Name())
-	if _, err := temporary.Write(append(data, '\n')); err != nil {
-		_ = temporary.Close()
-		return err
-	}
-	if err := temporary.Close(); err != nil {
-		return err
-	}
-	return os.Rename(temporary.Name(), filepath.Join(dir, state.key()+".json"))
-}
-
-func readState(dir, key string) (transferState, error) {
-	data, err := os.ReadFile(filepath.Join(dir, key+".json"))
-	if err != nil {
-		return transferState{}, err
-	}
-	var state transferState
-	if err := json.Unmarshal(data, &state); err != nil {
-		return transferState{}, fmt.Errorf("transfer state for %s is corrupt: %w", key, err)
-	}
-	return state, nil
-}
-
-// effectiveState reports a holder that died without finishing as failed.
-// The holder writes its final state before exiting, so a dead process with
-// an unfinished state is re-read once to rule out that race.
-func effectiveState(dir string, state transferState) transferState {
-	if state.finished() || processAlive(state.PID) {
-		return state
-	}
-	if fresh, err := readState(dir, state.key()); err == nil && fresh.finished() {
-		return fresh
-	}
-	state.Phase = phaseFailed
-	state.Error = "the background sender stopped before the receiver verified the file"
-	state.ErrorKind = failureDisconnected
-	return state
-}
-
-func listStates(dir string) ([]transferState, error) {
-	entries, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var states []transferState
-	for _, entry := range entries {
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".json") || strings.HasPrefix(name, ".") {
-			continue
-		}
-		if state, err := readState(dir, strings.TrimSuffix(name, ".json")); err == nil {
-			states = append(states, state)
-		}
-	}
-	sort.Slice(states, func(i, j int) bool { return states[i].StartedAt.After(states[j].StartedAt) })
-	return states, nil
-}
-
-// pruneStates removes old state files and their logs.
-func pruneStates(dir string, now time.Time) {
-	states, err := listStates(dir)
-	if err != nil {
-		return
-	}
-	for _, state := range states {
-		retention := staleRetention
-		if state.finished() {
-			retention = finishedRetention
-		}
-		if now.Sub(state.UpdatedAt) > retention {
-			_ = os.Remove(filepath.Join(dir, state.key()+".json"))
-			if state.Log != "" && filepath.Dir(state.Log) == dir {
-				_ = os.Remove(state.Log)
-			}
-		}
-	}
-}
-
 func holderArgs(request sendRequest, absolutePaths []string) []string {
-	args := []string{holderCommand}
-	if request.qrPath != "" {
-		args = append(args, "--qr", request.qrPath)
+	args := []string{holderCommand, "--json"}
+	if request.progress {
+		args = append(args, "--progress")
 	}
 	if request.linkMode {
 		args = append(args, "--link")
 	}
-	if request.jsonOutput {
-		args = append(args, "--json")
+	if request.qrPath != "" {
+		args = append(args, "--qr", request.qrPath)
 	}
 	return append(append(args, "--"), absolutePaths...)
 }
 
 // runDetachedSend starts the background holder and returns once it has
-// printed the code. Input problems are reported here, before any process
-// starts, with the same messages as a foreground send.
+// printed the code. Named inputs are validated before starting the holder;
+// the holder alone walks folders and reports problems within their contents.
 func runDetachedSend(request sendRequest) int {
 	fail := func(err error) int {
 		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
 		return 1
 	}
-	if _, err := prepareSource(request.files); err != nil {
+	if err := validateSourcePaths(request.files); err != nil {
 		return fail(err)
 	}
 	if _, _, err := endpointBase(); err != nil {
@@ -267,8 +139,22 @@ func runDetachedSend(request sendRequest) int {
 	select {
 	case value := <-line:
 		if strings.HasSuffix(value, "\n") {
-			fmt.Fprint(os.Stdout, value)
-			fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			var ready readyOutput
+			if err := json.Unmarshal([]byte(value), &ready); err != nil {
+				_ = holder.Process.Kill()
+				_ = holder.Wait()
+				return fail(fmt.Errorf("read background sender: %w", err))
+			}
+			if !request.jsonOutput && isTerminal(os.Stdout) {
+				writeReadyCard(os.Stdout, ready)
+			} else if err := writeReady(os.Stdout, ready, request.jsonOutput); err != nil {
+				_ = holder.Process.Kill()
+				_ = holder.Wait()
+				return fail(err)
+			}
+			if request.progress || (!request.jsonOutput && isTerminal(os.Stderr)) {
+				fmt.Fprintln(os.Stderr, "sending in the background; `cdx wait <code>` exits 0 once the receiver has the file")
+			}
 			_ = holder.Process.Release()
 			return 0
 		}
@@ -277,11 +163,12 @@ func runDetachedSend(request sendRequest) int {
 	case <-time.After(readyWait):
 		_ = holder.Process.Kill()
 		_ = holder.Wait()
-		return fail(errors.New("CD relay did not answer within 30s: check your network and try again"))
+		return fail(NewFailure(failureTimeout, "background sender was not ready within 30s: folder preparation or relay setup took too long; try fewer files or check your network", retrySameRequest))
 	}
-	reason := holderFailure(logPath)
+	reason := readHolderFailure(logPath)
 	_ = os.Remove(logPath)
-	return fail(errors.New(reason))
+	_ = os.Remove(logPath + ".failure.json")
+	return fail(reason)
 }
 
 // holderFailure extracts the holder's final `cdx:` error line from its log.
@@ -304,6 +191,8 @@ func runHolder(args []string) int {
 		fmt.Fprintln(os.Stderr, strings.TrimSpace(err.Error()))
 		return 2
 	}
+	progressRequested = request.progress
+	jsonProgress = request.jsonOutput
 	dir := os.Getenv("CD_STATE_DIR")
 	if dir == "" {
 		fmt.Fprintln(os.Stderr, "cdx: missing transfer state directory")
@@ -311,17 +200,24 @@ func runHolder(args []string) int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
+	if err := recordRequestHolder(request); err != nil {
+		recordHolderFailure(err)
+		fmt.Fprintln(os.Stderr, "cdx:", err)
+		return 1
+	}
 	state := transferState{Version: 1, PID: os.Getpid(), Log: os.Getenv("CD_HOLDER_LOG"), StartedAt: time.Now().UTC()}
 	lastWrite := time.Time{}
 	saved := false
-	save := func(force bool) {
+	save := func(force bool) error {
 		if !saved || (!force && time.Since(lastWrite) < time.Second) {
-			return
+			return nil
 		}
 		if err := writeState(dir, state); err != nil {
 			fmt.Fprintln(os.Stderr, "cdx: record transfer state:", err)
+			return err
 		}
 		lastWrite = time.Now()
+		return nil
 	}
 	pipe := os.Stdout
 	err = sendFile(ctx, request.files, request.linkMode, sendHooks{
@@ -330,13 +226,21 @@ func runHolder(args []string) int {
 				return err
 			}
 			state.Code = value.Code
-			state.TransferID = transferIDFromURL(value.URL)
+			if value.TransferID == "" {
+				value.TransferID = transferIDFromURL(value.URL)
+			}
+			state.TransferID = value.TransferID
 			state.Filename = value.Filename
 			state.Size = value.Size
 			state.Phase = phaseWaiting
 			saved = true
-			// State first, so `cdx wait` right after the code finds it.
-			save(true)
+			// Persist identity and request replay before exposing readiness.
+			if err := save(true); err != nil {
+				return err
+			}
+			if err := recordRequestReady(value); err != nil {
+				return err
+			}
 			if err := writeReady(pipe, value, request.jsonOutput); err != nil {
 				return err
 			}
@@ -358,13 +262,18 @@ func runHolder(args []string) int {
 			state.Error = strings.TrimSpace(err.Error())
 		}
 		state.ErrorKind = classifyFailure(err)
-		save(true)
+		state.Retry = failureGuidance(err)
+		recordHolderFailure(err)
+		_ = save(true)
 		fmt.Fprintln(os.Stderr, "cdx:", state.Error)
 		return 1
 	}
 	state.Phase = phaseVerified
 	state.Acknowledged = state.Size
-	save(true)
+	if err := save(true); err != nil {
+		recordHolderFailure(err)
+		return 1
+	}
 	return 0
 }
 
@@ -377,7 +286,10 @@ func transferIDFromURL(value string) string {
 }
 
 func describeState(state transferState) string {
-	name := state.key()
+	name := state.Code
+	if name == "" {
+		name = state.TransferID
+	}
 	switch state.Phase {
 	case phaseSending:
 		percent := 100.0
@@ -489,7 +401,7 @@ func lookupState(dir, input string, jsonOutput bool) (transferState, int) {
 	}
 	state, err := readState(dir, key)
 	if errors.Is(err, os.ErrNotExist) {
-		reportFailure(os.Stdout, os.Stderr, fmt.Errorf("no transfer %s was sent from this machine", key), jsonOutput)
+		reportFailure(os.Stdout, os.Stderr, NewFailure(failureNotFound, fmt.Sprintf("no transfer %s was sent from this machine", key), retryNever), jsonOutput)
 		return transferState{}, 1
 	}
 	if err != nil {
@@ -509,6 +421,8 @@ func parseStateArgs(args []string) (bool, time.Duration, []string, error) {
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
 		switch {
+		case argument == "--":
+			return jsonOutput, timeout, append(rest, args[index+1:]...), nil
 		case argument == "--json":
 			jsonOutput = true
 		case argument == "--timeout" || strings.HasPrefix(argument, "--timeout="):
@@ -532,4 +446,58 @@ func parseStateArgs(args []string) (bool, time.Duration, []string, error) {
 		}
 	}
 	return jsonOutput, timeout, rest, nil
+}
+
+// Structured startup failures cross the detached process boundary without
+// classifying human diagnostics by their wording.
+func recordHolderFailure(err error) {
+	log := os.Getenv("CD_HOLDER_LOG")
+	if log == "" {
+		return
+	}
+	var value failureOutput
+	value.Version = 1
+	value.Error.Kind = classifyFailure(err)
+	value.Error.Message = err.Error()
+	value.Error.Retry = failureGuidance(err)
+	data, marshalErr := json.Marshal(value)
+	if marshalErr != nil {
+		return
+	}
+	temporary, writeErr := os.CreateTemp(filepath.Dir(log), ".failure-*")
+	if writeErr != nil {
+		return
+	}
+	defer os.Remove(temporary.Name())
+	if _, writeErr = temporary.Write(data); writeErr != nil {
+		temporary.Close()
+		return
+	}
+	if writeErr = temporary.Close(); writeErr != nil {
+		return
+	}
+	_ = os.Rename(temporary.Name(), log+".failure.json")
+}
+
+func readHolderFailure(log string) error {
+	path := log + ".failure.json"
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return NewFailure(failureOther, holderFailure(log), retryNever)
+	}
+	if err != nil {
+		return NewFailure(failureLocal, "read background failure: "+err.Error(), retryNever, err)
+	}
+	if !info.Mode().IsRegular() || info.Size() > 65536 {
+		return NewFailure(failureProtocol, "background sender failure record is invalid", retryNever)
+	}
+	data, err := os.ReadFile(path)
+	var value failureOutput
+	if err == nil {
+		err = json.Unmarshal(data, &value)
+	}
+	if err != nil || value.Version != 1 || value.Error.Kind == "" || value.Error.Message == "" || (value.Error.Retry != retryNever && value.Error.Retry != retrySameRequest && value.Error.Retry != retryNewTransfer) {
+		return NewFailure(failureProtocol, "background sender failure record is corrupt", retryNever, err)
+	}
+	return NewFailure(value.Error.Kind, value.Error.Message, value.Error.Retry)
 }

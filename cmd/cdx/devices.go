@@ -171,7 +171,6 @@ func deviceConnections(ctx context.Context, runtime *deviceRuntime) <-chan devic
 }
 
 func runPair(args []string) int {
-	fmt.Fprintln(os.Stderr, "cdx pair is in beta. Pair only devices you trust; keep CD open while receiving.")
 	flags := flag.NewFlagSet("pair", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	name := flags.String("name", "phone", "name to use with send --to")
@@ -321,8 +320,8 @@ func runDevices(args []string) int {
 }
 
 func runDeviceSend(request sendRequest) int {
-	if request.detach {
-		return deviceFailure(errors.New("targeted sends currently stay in the foreground; remove --detach"), request.jsonOutput)
+	if request.detach || request.requestID != "" {
+		return deviceFailure(errors.New("targeted sends currently stay in the foreground; remove --detach and --request-id"), request.jsonOutput)
 	}
 	store, err := deviceStore()
 	if err != nil {

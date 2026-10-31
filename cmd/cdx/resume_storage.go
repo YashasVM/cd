@@ -149,6 +149,9 @@ func resumeLoadCapability(id string) (resumeCapability, invitation, []byte, erro
 }
 
 func resumeDest(name, out, id string) (string, string, error) {
+	if !filepath.IsLocal(name) {
+		return "", "", resumeFailure("resumable offer filename is unsafe")
+	}
 	safe, err := safeFilename(name)
 	if err != nil || safe != name {
 		return "", "", resumeFailure("resumable offer filename is unsafe")
@@ -266,9 +269,4 @@ func resumeCleanupCapabilities(now time.Time) {
 			_ = os.Remove(path)
 		}
 	}
-}
-
-func validTransferID(id string) bool {
-	bytes, err := base64.RawURLEncoding.DecodeString(id)
-	return err == nil && len(bytes) == 16 && base64.RawURLEncoding.EncodeToString(bytes) == id
 }

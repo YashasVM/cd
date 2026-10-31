@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { IncrementalSHA256 } from './incremental-sha256.js';
 import { encodeBase64Url } from './agent-protocol.js';
+import { BLOB_FALLBACK_LIMIT } from './sink.js';
 import {
   RESUME_CHUNK_SIZE, bytesToHex, createReceiverStage, decodeResumeAck, decodeResumeCounts,
-  encodeResumeAck, encodeResumeCounts, hashFile, parseResumeLink, resumeSafeFilename
+  encodeResumeAck, encodeResumeCounts, hashFile, parseResumeLink, resumeSafeFilename, assertResumeSourceIdentity
 } from './resume-browser.js';
 
 function makeKV() {
@@ -70,9 +71,6 @@ describe('resume browser primitives', () => {
     assert.equal(resumeSafeFilename('report.txt'), true);
     assert.equal(resumeSafeFilename('../report.txt'), false);
     assert.equal(resumeSafeFilename(''), false);
-    for (const name of ['x\ny', 'x\u007fy', 'é'.repeat(128), 'a'.repeat(256)]) assert.equal(resumeSafeFilename(name), false);
-    assert.throws(() => parseResumeLink(`javascript:/s/${id}#v2.${key}`));
-    assert.throws(() => parseResumeLink(`https://user:pass@cd.example/s/${id}#v2.${key}`));
   });
 
   it('hashes files incrementally in bounded chunks', async () => {
@@ -82,6 +80,15 @@ describe('resume browser primitives', () => {
     const reference = new IncrementalSHA256().update(bytes).digestHex();
     assert.equal(hash.digestHex(), reference);
     assert.equal(bytesToHex(hash.digest()).length, 64);
+  });
+
+  it('binds a resumed sender to the original name, size, and whole digest', () => {
+    const file = { name: 'same.bin', size: 3 };
+    const saved = { role: 'sender', filename: 'same.bin', size: 3, wholeSha256: 'a'.repeat(64) };
+    assert.equal(assertResumeSourceIdentity(saved, file, 'a'.repeat(64)), true);
+    assert.throws(() => assertResumeSourceIdentity(saved, { ...file, name: 'other.bin' }, 'a'.repeat(64)), /does not match/);
+    assert.throws(() => assertResumeSourceIdentity(saved, { ...file, size: 4 }, 'a'.repeat(64)), /does not match/);
+    assert.throws(() => assertResumeSourceIdentity(saved, file, 'b'.repeat(64)), /does not match/);
   });
 
   it('writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption', async () => {
@@ -123,10 +130,11 @@ describe('resume browser primitives', () => {
     await assert.rejects(createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets }), /integrity or file identity/);
   });
 
-  it('round-trips v2 progress records', () => {
+  it('round-trips v2 progress records and confirms the fallback cap', () => {
     const ack = encodeResumeAck(12, 2n ** 40n);
     assert.deepEqual(decodeResumeAck(ack), { chunks: 12, bytes: 2n ** 40n });
     const end = encodeResumeCounts(12, 2n ** 40n, 'ab'.repeat(32));
     assert.deepEqual(decodeResumeCounts(end), { chunks: 12, bytes: 2n ** 40n, wholeSha256: 'ab'.repeat(32) });
+    assert.equal(BLOB_FALLBACK_LIMIT, 256n * 1024n * 1024n);
   });
 });

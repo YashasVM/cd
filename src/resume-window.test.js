@@ -44,6 +44,6 @@ test('a record beyond the bounded receive-byte budget is rejected', async () => 
   const { socket } = await connection();
   for (let index = 0; index < MAX_RECORDS - 1; index++) socket.receive(RECORD_BYTES);
   assert.deepEqual(socket.closes, []);
-  socket.receive(RECORD_BYTES + 1);
+  socket.receive(4 * 1024 * 1024 + 64 * 1024 - (MAX_RECORDS - 1) * RECORD_BYTES + 1);
   assert.equal(socket.closes[0]?.code, 4429);
 });

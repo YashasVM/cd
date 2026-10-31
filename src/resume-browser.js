@@ -4,16 +4,14 @@ import {
 } from './resume-protocol.js';
 import { KIND_ACCEPT, KIND_ACK, KIND_CHUNK, KIND_COMPLETE, KIND_END, KIND_OFFER, RECEIVER_DIRECTION, SENDER_DIRECTION, encodeBase64Url } from './agent-protocol.js';
 import { IncrementalSHA256 } from './incremental-sha256.js';
+import { downloadUrlFor } from './sink.js';
+import { createResumeWriter } from './resume-opfs.js';
 
 export const RESUME_CHUNK_SIZE = 256 * 1024;
 export const RESUME_LIMIT_MS = 24 * 60 * 60 * 1000;
 export const RESUME_DB_NAME = 'cd-resume-v2';
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8', { fatal: true });
-// Go v2 can have 4 MiB of plaintext in flight. Each of its sixteen
-// 256 KiB chunks also carries a 12-byte header and 16-byte GCM tag.
-const MAX_PENDING_RECORDS = 16;
-const MAX_PENDING_BYTES = 4 * 1024 * 1024 + MAX_PENDING_RECORDS * 28;
 
 function reportResumeProgress(hooks, role, done, total, metrics) {
   hooks.onProgress?.(done, total, metrics);
@@ -24,7 +22,7 @@ export function parseResumeLink(value, base = globalThis.location?.href) {
   const url = new URL(value, base);
   const path = /^\/s\/([A-Za-z0-9_-]{22})\/?$/.exec(url.pathname);
   const hash = /^#v2\.([A-Za-z0-9_-]{43})$/.exec(url.hash);
-  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || !path || !hash) throw new Error('This resumable CD link is invalid.');
+  if (!path || !hash) throw new Error('This resumable CD link is invalid.');
   const id = decodeBase64Url(path[1]);
   const key = decodeBase64Url(hash[1]);
   if (id.byteLength !== 16 || key.byteLength !== 32 || encodeBase64Url(id) !== path[1] || encodeBase64Url(key) !== hash[1]) throw new Error('This resumable CD link is invalid.');
@@ -141,6 +139,7 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     handle = await directory.getFileHandle(stagingId, { create: true });
   }
 
+  const writer = await createResumeWriter(handle);
   const expiresAt = checkpoint?.expiresAt ?? Math.min(now + RESUME_LIMIT_MS, Number(offer.expiresAt) || now + RESUME_LIMIT_MS);
   let currentOffset = offset;
   let closed = false;
@@ -156,10 +155,7 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     const nextOffset = currentOffset + value.byteLength;
     if (!value.byteLength || value.byteLength > RESUME_CHUNK_SIZE || nextOffset > Number(offer.size) || (nextOffset < Number(offer.size) && value.byteLength !== RESUME_CHUNK_SIZE)) throw new Error('The sender sent an invalid chunk boundary.');
     const nextHash = hash.clone().update(value);
-    const writable = await handle.createWritable({ keepExistingData: true });
-    await writable.seek(currentOffset);
-    await writable.write(value);
-    await writable.close();
+    await writer.write(value, currentOffset);
     await persist(nextOffset, nextHash, priorSessionNonce);
     currentOffset = nextOffset;
     hash = nextHash;
@@ -173,6 +169,7 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     if (closed) throw new Error('The saved receive stage is closed.');
     if (currentOffset !== Number(offer.size) || hash.digestHex() !== offer.wholeSha256) throw new Error('The received file did not match the sender’s whole-file digest.');
     closed = true;
+    await writer.close();
     return handle.getFile();
   }
   function finish() {
@@ -180,11 +177,17 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     operation = current.catch(() => {});
     return current;
   }
-  async function cancel() {
+  async function release() {
     closed = true;
     await operation.catch(() => {});
-    try { await directory.removeEntry(stagingId); } catch { /* Best effort. */ }
-    await checkpoints.delete(checkpointKey);
+    await writer.close();
+  }
+  async function cancel() {
+    try { await release(); }
+    finally {
+      try { await directory.removeEntry(stagingId); } catch { /* Best effort. */ }
+      await checkpoints.delete(checkpointKey);
+    }
   }
   function bindSession(priorSessionNonce) {
     const current = operation.then(() => {
@@ -194,11 +197,30 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     operation = current.catch(() => {});
     return current;
   }
-  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, bindSession, append, finish, cancel, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
+  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, bindSession, append, finish, cancel, release, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
 }
 
 export async function hashFilePrefix(file, offset) {
   return (await hashFile(file, { length: offset })).digestHex();
+}
+
+export function assertResumeSourceIdentity(checkpoint, file, wholeSha256) {
+  if (!checkpoint || checkpoint.role !== 'sender' || checkpoint.filename !== file.name || checkpoint.size !== file.size || checkpoint.wholeSha256 !== wholeSha256) {
+    throw new Error('The selected file does not match the saved source. Choose the original file and try again.');
+  }
+  return true;
+}
+
+export async function createPrivateSenderCapability({ origin = globalThis.location?.origin, secrets }) {
+  const id = crypto.getRandomValues(new Uint8Array(16));
+  const key = crypto.getRandomValues(new Uint8Array(32));
+  const senderToken = crypto.getRandomValues(new Uint8Array(32));
+  const rootId = encodeBase64Url(id);
+  const invitation = { id, key };
+  const receiver = await resumeReceiverAdmission(invitation);
+  const expiresAt = Date.now() + RESUME_LIMIT_MS;
+  await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt });
+  return { invitation, rootId, senderToken, receiverToken: receiver.token, receiverTokenHash: receiver.digest, expiresAt, url: `${origin}/s/${rootId}#v2.${encodeBase64Url(key)}` };
 }
 
 export async function createV2Socket(invitation, role, token, { senderTokenHash, receiverTokenHash, sessionNonce, onSocket, WebSocketCtor = globalThis.WebSocket, location = globalThis.location } = {}) {
@@ -231,7 +253,8 @@ function createSocketInbox(socket) {
     if (waiter) waiter.resolve(event);
     else {
       const size = typeof event.data === 'string' ? textEncoder.encode(event.data).byteLength : event.data?.byteLength ?? 0;
-      if (pending.length >= MAX_PENDING_RECORDS || queuedBytes + size > MAX_PENDING_BYTES) {
+      // CLI senders allow 4 MiB outstanding, plus encrypted headers and control records.
+      if (pending.length >= 32 || queuedBytes + size > 4 * 1024 * 1024 + 64 * 1024) {
         failure = new Error('The peer exceeded the bounded resume receive queue.');
         try { socket.close(4429, 'receive queue full'); } catch { /* Best effort. */ }
         while (waiters.length) waiters.shift().reject(failure);
@@ -324,16 +347,183 @@ async function nextRecord(inbox, opener, expectedKind) {
 
 function sessionParams(session) { return { sessionNonce: session.sessionNonce, receiverNonce: session.receiverNonce }; }
 
-// An explicit cancel must also work before the sender has supplied an offer.
-export async function discardReceiverProgress(rootId, { storage, checkpoints }) {
-  const checkpointKey = `receiver:${rootId}`;
-  const checkpoint = await checkpoints.get(checkpointKey);
-  if (isOpaqueStagingId(checkpoint?.stagingId)) {
-    const directory = await storage.getDirectory();
-    try { await directory.removeEntry(checkpoint.stagingId); }
-    catch (error) { if (error?.name !== 'NotFoundError') throw error; }
+function hashBytes(value) {
+  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error('The peer sent an invalid file digest.');
+  return Uint8Array.from(value.match(/../g), (pair) => Number.parseInt(pair, 16));
+}
+
+export function startResumableSend(file, { link = '', secrets, checkpoints, hooks = {}, origin = globalThis.location?.origin } = {}) {
+  let socket;
+  let cancelled = false;
+  let privateRootId = '';
+  const done = (async () => {
+    if (!file || typeof file.slice !== 'function' || !Number.isSafeInteger(file.size)) throw new Error('Choose one file to send with resume enabled.');
+    const capability = link
+      ? await loadSenderCapability(link, { secrets, checkpoints, origin })
+      : await createPrivateSenderCapability({ origin, secrets });
+    const { invitation, rootId, senderToken, receiverToken, receiverTokenHash, expiresAt, url, reconnect, saved } = capability;
+    privateRootId = rootId;
+    if (cancelled) {
+      await checkpoints.delete(`sender:${rootId}`);
+      await secrets.delete(`sender:${rootId}`);
+      throw new Error('Transfer canceled.');
+    }
+    hooks.onStatus?.('Checking the file before sharing…');
+    const fullHash = await hashFile(file);
+    const wholeSha256 = fullHash.digestHex();
+    if (cancelled) throw new Error('Transfer canceled.');
+    if (reconnect) assertResumeSourceIdentity(saved, file, wholeSha256);
+    const chunkCount = Math.ceil(file.size / RESUME_CHUNK_SIZE);
+    let sourceBytesRead = file.size;
+    let maxWorkingBytes = RESUME_CHUNK_SIZE * 2 + 64;
+    let sessionNonce = crypto.getRandomValues(new Uint8Array(32));
+    if (!reconnect) {
+      const emptyPrefix = new IncrementalSHA256().digestHex();
+      await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({
+        version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
+        wholeSha256, offset: 0, prefixSha256: emptyPrefix, stagingId: 'sender-source', destination: 'source-reselect',
+        expiresAt, priorSessionNonce: encodeBase64Url(sessionNonce)
+      }, senderToken));
+    }
+    if (cancelled) throw new Error('Transfer canceled.');
+    const tokenHashBytes = await crypto.subtle.digest('SHA-256', senderToken);
+    if (cancelled) throw new Error('Transfer canceled.');
+    const connection = await createV2Socket(invitation, 'sender', senderToken, {
+      senderTokenHash: encodeBase64Url(new Uint8Array(tokenHashBytes)),
+      receiverTokenHash: encodeBase64Url(receiverTokenHash), sessionNonce,
+      onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: globalThis.location
+    });
+    socket = connection.socket;
+    let sharePublished = false;
+    const publishShare = async (relayExpiry) => {
+      if (cancelled) throw new Error('Transfer canceled.');
+      const authoritativeExpiry = relayExpiry || expiresAt;
+      if (!Number.isSafeInteger(authoritativeExpiry) || authoritativeExpiry <= Date.now() || authoritativeExpiry > Date.now() + RESUME_LIMIT_MS + 60_000) {
+        throw new Error('The relay returned an invalid resume expiry.');
+      }
+      if (reconnect && authoritativeExpiry !== saved.expiresAt) {
+        throw new Error('The relay expiry does not match this saved transfer.');
+      }
+      if (!reconnect && authoritativeExpiry !== expiresAt) {
+        await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: authoritativeExpiry });
+        const checkpoint = await checkpoints.get(`sender:${rootId}`);
+        if (checkpoint) await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({ ...checkpoint, expiresAt: authoritativeExpiry }, senderToken));
+      }
+      if (cancelled) throw new Error('Transfer canceled.');
+      if (!sharePublished) {
+        hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect) });
+        sharePublished = true;
+      }
+    };
+    const session = await authenticateV2Peer(invitation, 'sender', sessionNonce, connection.inbox, publishShare);
+    if (cancelled) throw new Error('Transfer canceled.');
+    const activeExpiry = session.expiresAt || expiresAt;
+    if (!reconnect && session.expiresAt) {
+      await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: activeExpiry });
+      await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({
+        version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
+        wholeSha256, offset: 0, prefixSha256: new IncrementalSHA256().digestHex(), stagingId: 'sender-source', destination: 'source-reselect',
+        expiresAt: activeExpiry, priorSessionNonce: encodeBase64Url(session.sessionNonce)
+      }, senderToken));
+    }
+    const [sealer, opener] = await Promise.all([
+      createResumeSealer(invitation, SENDER_DIRECTION, sessionParams(session)),
+      createResumeOpener(invitation, RECEIVER_DIRECTION, sessionParams(session))
+    ]);
+    const offer = { name: file.name, size: String(file.size), chunkSize: RESUME_CHUNK_SIZE, wholeSha256, expiresAt: activeExpiry };
+    sendRecord(socket, await sealer.seal(KIND_OFFER, textEncoder.encode(JSON.stringify(offer))));
+    const acceptanceBytes = await nextRecord(connection.inbox, opener, KIND_ACCEPT);
+    if (acceptanceBytes.byteLength > 2048) throw new Error('The receiver sent oversized saved progress.');
+    let acceptance;
+    try { acceptance = JSON.parse(textDecoder.decode(acceptanceBytes)); } catch { throw new Error('The receiver sent invalid saved progress.'); }
+    const offset = Number(acceptance.offset);
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > file.size || (offset % RESUME_CHUNK_SIZE !== 0 && offset !== file.size)) throw new Error('The receiver sent an invalid resume offset.');
+    if (!/^[0-9a-f]{64}$/.test(acceptance.prefixSha256 || '')) throw new Error('The receiver sent an invalid saved digest.');
+    const prefixState = await hashFile(file, { length: offset });
+    sourceBytesRead += offset;
+    const prefixSha256 = prefixState.digestHex();
+    if (prefixSha256 !== acceptance.prefixSha256) throw new Error('The selected file does not match the saved source. Choose the original file and try again.');
+    if (hashBytes(wholeSha256).length !== 32 || fullHash.digestHex() !== wholeSha256) throw new Error('The selected file changed while it was being checked.');
+    const checkpoint = await signResumeCheckpoint({
+      version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
+      wholeSha256, offset, prefixSha256, stagingId: 'sender-source', destination: 'source-reselect',
+      expiresAt: activeExpiry, priorSessionNonce: encodeBase64Url(session.sessionNonce)
+    }, senderToken);
+    await checkpoints.put(`sender:${rootId}`, checkpoint);
+    let bytesSent = offset;
+    let chunksSent = Math.ceil(offset / RESUME_CHUNK_SIZE);
+    let ackedBytes = offset;
+    reportResumeProgress(hooks, 'sender', offset, file.size, { bytesRead: sourceBytesRead, resumedBytes: offset, maxWorkingBytes });
+    const outstanding = [];
+    let position = offset;
+    while (position < file.size || outstanding.length) {
+      if (cancelled) throw new Error('Transfer canceled.');
+      // Four records fit the receiver's bounded inbox while durable ACKs are in flight.
+      if (position < file.size && outstanding.length < 4) {
+        const block = new Uint8Array(await file.slice(position, Math.min(file.size, position + RESUME_CHUNK_SIZE)).arrayBuffer());
+        if (cancelled) throw new Error('Transfer canceled.');
+        if (block.byteLength !== Math.min(RESUME_CHUNK_SIZE, file.size - position)) throw new Error('The selected file changed while sending.');
+        sourceBytesRead += block.byteLength;
+        const sealed = await sealer.seal(KIND_CHUNK, block);
+        if (cancelled) throw new Error('Transfer canceled.');
+        maxWorkingBytes = Math.max(maxWorkingBytes, block.byteLength + sealed.byteLength + outstanding.length * (RESUME_CHUNK_SIZE + 28));
+        sendRecord(socket, sealed);
+        bytesSent += block.byteLength;
+        chunksSent++;
+        position += block.byteLength;
+        prefixState.update(block);
+        outstanding.push({ bytes: bytesSent, chunks: chunksSent, prefixSha256: prefixState.digestHex() });
+        continue;
+      }
+      const ack = decodeResumeAck(await nextRecord(connection.inbox, opener, KIND_ACK));
+      const expected = outstanding.shift();
+      if (ack.bytes !== BigInt(expected.bytes) || ack.chunks !== expected.chunks) throw new Error('The receiver acknowledged invalid saved progress.');
+      ackedBytes = expected.bytes;
+      const savedCheckpoint = await signResumeCheckpoint({
+        version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
+        wholeSha256, offset: ackedBytes, prefixSha256: expected.prefixSha256, stagingId: 'sender-source', destination: 'source-reselect',
+        expiresAt: activeExpiry, priorSessionNonce: encodeBase64Url(session.sessionNonce)
+      }, senderToken);
+      await checkpoints.put(`sender:${rootId}`, savedCheckpoint);
+      reportResumeProgress(hooks, 'sender', ackedBytes, file.size, { bytesRead: sourceBytesRead, resumedBytes: offset, maxWorkingBytes });
+    }
+    if (cancelled) throw new Error('Transfer canceled.');
+    sendRecord(socket, await sealer.seal(KIND_END, encodeResumeCounts(chunksSent, bytesSent, wholeSha256)));
+    const result = decodeResumeCounts(await nextRecord(connection.inbox, opener, KIND_COMPLETE));
+    if (result.bytes !== BigInt(file.size) || result.chunks !== chunkCount || result.wholeSha256 !== wholeSha256) throw new Error('The receiver did not verify the complete file.');
+    await waitForRelayEvent(connection.inbox, ['completed'], 15000);
+    await checkpoints.delete(`sender:${rootId}`);
+    await secrets.delete(`sender:${rootId}`);
+    reportResumeProgress(hooks, 'sender', file.size, file.size, { bytesRead: sourceBytesRead, resumedBytes: offset, maxWorkingBytes });
+    hooks.onComplete?.();
+    return { rootId, url, bytesRead: sourceBytesRead, bytesSent: file.size - offset, resumedBytes: offset, retainedBytes: 0, maxWorkingBytes };
+  })();
+  done.catch((error) => { if (!cancelled) hooks.onError?.(error); }).finally(() => {
+    if (cancelled && privateRootId) {
+      void checkpoints.delete(`sender:${privateRootId}`).catch(() => {});
+      void secrets.delete(`sender:${privateRootId}`).catch(() => {});
+    }
+  });
+  return { done, cancel() {
+    cancelled = true;
+    try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
+    // Cleanup waits until active hashing and checkpoint writes have settled.
+    // A socket loss or page close never calls this method.
+  } };
+}
+
+async function loadSenderCapability(link, { secrets, checkpoints, origin }) {
+  const parsed = parseResumeLink(link, `${origin}/`);
+  const secret = await secrets.get(`sender:${parsed.rootId}`);
+  const checkpoint = await checkpoints.get(`sender:${parsed.rootId}`);
+  if (!secret || !checkpoint || secret.expiresAt <= Date.now() || !(await verifyResumeCheckpoint(checkpoint, decodeBase64Url(secret.senderToken))) || checkpoint.role !== 'sender') {
+    throw new Error('This device has no active sender resume record for that private link. Resume on the device that started the send.');
   }
-  await checkpoints.delete(checkpointKey);
+  return {
+    invitation: { id: parsed.id, key: parsed.key }, rootId: parsed.rootId,
+    senderToken: decodeBase64Url(secret.senderToken), receiverTokenHash: (await resumeReceiverAdmission({ id: parsed.id, key: parsed.key })).digest,
+    expiresAt: checkpoint.expiresAt, url: parsed.url.href, reconnect: true, saved: checkpoint
+  };
 }
 
 export function mountResumableReceiver(container, link, { storage = globalThis.navigator?.storage, checkpoints, secrets, download = true, hooks = {} } = {}) {
@@ -349,28 +539,21 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
   const cancel = container.querySelector('[data-resume-cancel]');
   let stage;
   const cancelClick = () => {
-    if (discard) return;
     stopped = true;
     discard = true;
-    cancel.disabled = true;
+    void stage?.cancel().catch(error => {
+      status.textContent = error.message || 'Could not remove saved progress.';
+      hooks.onError?.(error);
+    });
     try { socket?.close(1000, 'receiver canceled'); } catch { /* Best effort. */ }
-    status.textContent = 'Removing saved progress...';
-    void (async () => {
-      if (stage) await stage.cancel();
-      else {
-        const { rootId } = parseResumeLink(link);
-        await discardReceiverProgress(rootId, { storage, checkpoints });
-      }
-      status.textContent = 'Saved progress removed.';
-      cancel.hidden = true;
-    })().catch((error) => { status.textContent = error.message || 'Could not remove saved progress.'; });
+    status.textContent = 'Saved progress removed.';
   };
   cancel.addEventListener('click', cancelClick);
   const done = (async () => {
     if (!storage?.getDirectory) throw new Error('Resume needs browser durable storage (OPFS). Open this link in a supported browser with site storage enabled.');
     const parsed = parseResumeLink(link);
     const invitation = { id: parsed.id, key: parsed.key };
-    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; if (stopped) { try { value.close(1000, 'receiver left'); } catch { /* Best effort. */ } } } });
+    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; } });
     socket = activeSocket;
     const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox);
     if (stopped) return;
@@ -383,34 +566,27 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
     if (rawOffer.byteLength > 16 * 1024) throw new Error('The sender offered oversized file metadata.');
     let offer;
     try { offer = JSON.parse(textDecoder.decode(rawOffer)); } catch { throw new Error('The sender offered invalid file details.'); }
-    if (!offer || typeof offer !== 'object' || !resumeSafeFilename(offer.name) || !Number.isSafeInteger(offer.expiresAt) || offer.expiresAt <= Date.now() || (session.expiresAt && offer.expiresAt !== session.expiresAt)) throw new Error('The sender offered an invalid or expired file.');
+    if (!resumeSafeFilename(offer.name) || !Number.isSafeInteger(offer.expiresAt) || offer.expiresAt <= Date.now() || (session.expiresAt && offer.expiresAt !== session.expiresAt)) throw new Error('The sender offered an invalid or expired file.');
     filename.textContent = offer.name;
     stage = await createReceiverStage({ invitation, rootId: parsed.rootId, offer, storage, checkpoints, secrets, now: Date.now() });
     if (stopped) {
       if (discard) await stage.cancel();
-      else await stage.bindSession(encodeBase64Url(session.sessionNonce));
+      else { await stage.bindSession(encodeBase64Url(session.sessionNonce)); await stage.release(); }
       return;
     }
     await stage.bindSession(encodeBase64Url(session.sessionNonce));
-    if (stopped) { if (discard) await stage.cancel(); return; }
+    if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
     const resumeControl = { offset: String(stage.offset), prefixSha256: stage.prefixSha256 };
     sendRecord(socket, await sealer.seal(KIND_ACCEPT, textEncoder.encode(JSON.stringify(resumeControl))));
     let chunks = Math.ceil(stage.offset / RESUME_CHUNK_SIZE);
     let maxWorkingBytes = 0;
     while (true) {
       const event = await inbox.next();
-      if (stopped) { if (discard) await stage.cancel(); return; }
-      if (typeof event.data === 'string') {
-        let control;
-        try { control = JSON.parse(event.data); } catch { throw new Error('CD sent an invalid resume response.'); }
-        if (control.type === 'peer-left') throw new Error('The other device disconnected. Your saved progress can be resumed from the same private link.');
-        continue;
-      }
+      if (typeof event.data === 'string') continue;
       const opened = await opener.open(event.data);
       if (opened.kind === KIND_CHUNK) {
         maxWorkingBytes = Math.max(maxWorkingBytes, event.data.byteLength + opened.plaintext.byteLength * 2);
         await stage.append(opened.plaintext, encodeBase64Url(session.sessionNonce));
-        if (stopped) { if (discard) await stage.cancel(); return; }
         chunks++;
         const ack = encodeResumeAck(chunks, stage.currentOffset);
         sendRecord(socket, await sealer.seal(KIND_ACK, ack));
@@ -424,43 +600,38 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       const end = decodeResumeCounts(opened.plaintext);
       if (end.chunks !== chunks || end.bytes !== BigInt(offer.size) || end.wholeSha256 !== offer.wholeSha256 || stage.currentOffset !== Number(offer.size)) throw new Error('The sender’s final counts did not match the staged file.');
       const stagedFile = await stage.finish();
-      if (stopped) { if (discard) await stage.cancel(); return; }
+      if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
       const endHash = await hashFile(stagedFile);
-      if (stopped) { if (discard) await stage.cancel(); return; }
+      if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
       if (endHash.digestHex() !== offer.wholeSha256) throw new Error('The received file failed its whole-file digest check.');
+      let publishedDownload;
       if (download) {
-        const url = URL.createObjectURL(stagedFile);
+        publishedDownload = downloadUrlFor(stagedFile, offer.name, () => stage.cancel());
         const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = offer.name;
+        anchor.href = publishedDownload.url;
+        anchor.download = publishedDownload.name;
         anchor.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        setTimeout(publishedDownload.revoke, 60_000);
+        globalThis.addEventListener?.('pagehide', publishedDownload.revoke, { once: true });
       }
       sendRecord(socket, await sealer.seal(KIND_COMPLETE, encodeResumeCounts(chunks, stage.currentOffset, offer.wholeSha256)));
       socket.send(JSON.stringify({ type: 'complete', protocol: 'cd-transfer-v2', sessionNonce: encodeBase64Url(session.sessionNonce), receiverNonce: encodeBase64Url(session.receiverNonce) }));
       await waitForRelayEvent(inbox, ['completed'], 15000);
-      // The download reads the OPFS file asynchronously. Keep its backing file
-      // until retention expiry; deleting it here can cancel the browser download.
-      if (!download) await stage.cancel();
-      try { socket.close(1000, 'complete'); } catch { /* Best effort. */ }
-      cancel.hidden = true;
-      fill.style.transform = 'scaleX(1)';
+      // OPFS-backed download URLs read lazily; revoke owns their staging cleanup.
+      if (!publishedDownload) await stage.cancel();
       status.textContent = 'File received and verified.';
       hooks.onComplete?.();
-      return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: download ? Number(offer.size) : 0, maxWorkingBytes };
+      return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: publishedDownload ? stage.currentOffset : 0, maxWorkingBytes };
     }
   })().catch(async (error) => {
-    if (stopped) return;
-    if (stage && !stopped) {
-      // An interruption preserves only data whose stage close and checkpoint
-      // write completed. Explicit cancel removes the file and checkpoint.
-    }
-    try { socket?.close(1000, 'receiver stopped'); } catch { /* Best effort. */ }
+    await stage?.release().catch(() => {});
+    try { socket?.close(1011, 'receiver failed'); } catch { /* Best effort. */ }
+    if (stopped) { if (discard) status.textContent = 'Saved progress removed.'; return; }
     status.textContent = error.message || 'The resumable transfer failed.';
     hooks.onError?.(error);
     throw error;
   });
-  return { done, stop() { stopped = true; try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
+  return { done, stop() { stopped = true; void stage?.release().catch(() => {}); try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
 }
 
 function waitSocketOpen(socket, timeout = 15000) {
@@ -518,7 +689,7 @@ export function decodeResumeAck(value) {
 }
 
 export function resumeSafeFilename(value) {
-  return typeof value === 'string' && value.length > 0 && textEncoder.encode(value).byteLength <= 255 && value === value.normalize('NFC') && !/[\\/\u0000-\u001f\u007f]/.test(value) && value !== '.' && value !== '..';
+  return typeof value === 'string' && value.length > 0 && value === value.normalize('NFC') && !/[\\/\0]/.test(value) && value !== '.' && value !== '..';
 }
 
 export { KIND_ACCEPT, KIND_ACK, KIND_CHUNK, KIND_COMPLETE, KIND_END, KIND_OFFER, RECEIVER_DIRECTION, SENDER_DIRECTION, createResumeOpener, createResumeSealer, textEncoder, textDecoder };

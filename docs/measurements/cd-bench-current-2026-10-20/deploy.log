@@ -1,0 +1,25 @@
+
+ ⛅️ wrangler 4.145.0 (update available 4.151.2)
+───────────────────────────────────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a configured path:[0m
+
+    • a.yash0.in/cd-bench* (Will match assets: docs/measurements/cd-bench-current-2026-10-20/site/cd-bench*)
+
+
+🌀 Building list of assets...
+✨ Read 12 files from the assets directory /home/yvm/code/cd/docs/measurements/cd-bench-current-2026-10-20/site
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /cd-bench/bench-croc-matrix.mjs
++ /cd-bench/build-report.mjs
++ /cd-bench/index.html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (8 already uploaded) (2.31 sec)
+
+Total Upload: 0.31 KiB / gzip: 0.22 KiB
+Uploaded cd-benchmark-report (9.33 sec)
+Deployed cd-benchmark-report triggers (5.48 sec)
+  a.yash0.in/cd-bench* (zone name: yash0.in)
+Current Version ID: aa91cf28-4366-4cf6-81b1-de8ed2ab7f69

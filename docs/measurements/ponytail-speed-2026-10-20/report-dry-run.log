@@ -1,0 +1,14 @@
+
+ ⛅️ wrangler 4.145.0 (update available 4.151.2)
+───────────────────────────────────────────────
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWarning: The following routes will attempt to serve Assets on a configured path:[0m
+
+    • a.yash0.in/cd-bench* (Will match assets: docs/measurements/cd-bench-current-2026-10-20/site/cd-bench*)
+
+
+✨ Read 81 files from the assets directory /home/yvm/code/cd/docs/measurements/cd-bench-current-2026-10-20/site
+Total Upload: 0.31 KiB / gzip: 0.22 KiB
+No bindings found.
+--dry-run: exiting now.

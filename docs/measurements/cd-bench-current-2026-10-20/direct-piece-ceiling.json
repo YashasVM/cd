@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "runs": 3,
+  "mib": 64,
+  "pieces": [
+    4096,
+    16384,
+    65536
+  ],
+  "startedAt": "2026-10-20T11:15:26.533Z",
+  "rows": [
+    {
+      "run": 0,
+      "pieceBytes": 4096,
+      "milliseconds": 853.8000000007451,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 78,
+      "ok": true
+    },
+    {
+      "run": 0,
+      "pieceBytes": 16384,
+      "milliseconds": 779.8999999985099,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 71,
+      "ok": true
+    },
+    {
+      "run": 0,
+      "pieceBytes": 65536,
+      "milliseconds": 1192.699999999255,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 113,
+      "ok": true
+    },
+    {
+      "run": 1,
+      "pieceBytes": 16384,
+      "milliseconds": 734.2999999970198,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 68,
+      "ok": true
+    },
+    {
+      "run": 1,
+      "pieceBytes": 65536,
+      "milliseconds": 719.4000000022352,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 66,
+      "ok": true
+    },
+    {
+      "run": 1,
+      "pieceBytes": 4096,
+      "milliseconds": 826.6000000014901,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 75,
+      "ok": true
+    },
+    {
+      "run": 2,
+      "pieceBytes": 65536,
+      "milliseconds": 735.4000000022352,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 67,
+      "ok": true
+    },
+    {
+      "run": 2,
+      "pieceBytes": 4096,
+      "milliseconds": 805.5,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 74,
+      "ok": true
+    },
+    {
+      "run": 2,
+      "pieceBytes": 16384,
+      "milliseconds": 790.2000000029802,
+      "bytes": 67108864,
+      "hash": "bbd1063633a5868279f3afc47ecb011fb1c493c10fe29655e05ab107c09b2065",
+      "maxBuffered": 4194304,
+      "polls": 72,
+      "ok": true
+    }
+  ],
+  "method": "Raw browser-to-browser ordered reliable WebRTC with negotiated channel 1, host ICE candidates only, 4 MiB native send-buffer cap and 10 ms drain polling. Connection establishment and source preload outside timing. No CD encryption, storage, framing or application ACK window. SHA256 after timing. Diagnostic only.",
+  "finishedAt": "2026-10-20T11:15:37.174Z"
+}

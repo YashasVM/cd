@@ -121,6 +121,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -160,6 +161,7 @@ func sendUsage(output io.Writer) {
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
+	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
 	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
 	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
 	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
@@ -196,6 +198,7 @@ type sendRequest struct {
 	deviceConnect func(context.Context, invitation, []byte, int64, readyOutput, string) (*resumeSession, error)
 	resumable     bool
 	resumeID      string
+	requestID     string
 	jsonOutput    bool
 	progress      bool
 	linkMode      bool
@@ -279,7 +282,21 @@ func parseSendArgs(args []string) (sendRequest, error) {
 			request.jsonOutput = true
 			continue
 		}
-
+		if !endOfFlags && (argument == "--request-id" || strings.HasPrefix(argument, "--request-id=")) {
+			value, found := strings.CutPrefix(argument, "--request-id=")
+			if !found {
+				index++
+				if index >= len(args) {
+					return sendRequest{}, errors.New("cdx: --request-id needs an identifier")
+				}
+				value = args[index]
+			}
+			if !requestIDPattern.MatchString(value) {
+				return sendRequest{}, errors.New("cdx: --request-id needs 1-128 letters, digits, dots, underscores or hyphens")
+			}
+			request.requestID = value
+			continue
+		}
 		if !endOfFlags && argument == "--link" {
 			request.linkMode = true
 			continue
@@ -336,13 +353,15 @@ func parseSendArgs(args []string) (sendRequest, error) {
 	if request.detach && request.wait {
 		return sendRequest{}, errors.New("cdx: --detach and --wait cannot be combined")
 	}
-
+	if request.requestID != "" && request.wait {
+		return sendRequest{}, errors.New("cdx: --request-id requires a background send; remove --wait")
+	}
 	if request.resumable || request.resumeID != "" {
 		if request.resumable && request.resumeID != "" {
 			return sendRequest{}, errors.New("cdx: choose --resumable or --resume")
 		}
-		if request.detach {
-			return sendRequest{}, errors.New("cdx: resumable transfers run in the foreground; remove --detach")
+		if request.detach || request.requestID != "" {
+			return sendRequest{}, errors.New("cdx: resumable transfers run in the foreground; remove --detach and --request-id")
 		}
 	}
 	request.files = files
@@ -514,6 +533,9 @@ func runSend(request sendRequest) int {
 	}
 	if request.resumable || request.resumeID != "" {
 		return runResumableSend(request)
+	}
+	if request.requestID != "" {
+		return runRequestSend(request)
 	}
 	jsonProgress = request.jsonOutput
 	progressRequested = request.progress

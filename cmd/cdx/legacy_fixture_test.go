@@ -35,7 +35,7 @@ func TestAndroidLegacyFixtureMatchesCLI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		record, err := sealer.seal(test.kind, []byte("exact bytes"))
+		record, err := sealer.sealInto(nil, test.kind, []byte("exact bytes"))
 		if err != nil || base64.RawURLEncoding.EncodeToString(record) != test.expected {
 			t.Fatal("Android record differs")
 		}

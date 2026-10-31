@@ -1,0 +1,8 @@
+{
+  "name": "cd-benchmark-report",
+  "account_id": "bb13c5aed893f0140aacff72cab0747b",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "assets": { "directory": "./site", "not_found_handling": "404-page" },
+  "routes": [{ "pattern": "a.yash0.in/cd-bench*", "zone_name": "yash0.in" }]
+}

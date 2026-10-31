@@ -1,0 +1,8 @@
+{
+  "comparison": "Runtime code only; tests and benchmark artifacts are excluded.",
+  "file": "src/relay-sender.js",
+  "lineDelta": 0,
+  "byteDelta": 34,
+  "cumulativeLineDelta": -6,
+  "cumulativeByteDelta": -54
+}
