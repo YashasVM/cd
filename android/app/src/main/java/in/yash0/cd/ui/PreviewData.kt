@@ -29,15 +29,16 @@ object PreviewData {
     private const val MB = 1024L * 1024
     fun link(id: String) = "https://cd.yash0.in/s/$id#v2.k3J9xQ2mVd0pL8wR4tYbN6cZs1fH7gAeU5iOq3MnBvX"
     fun view(kind: String, now: Long = System.currentTimeMillis()): TransferView = when (kind) {
-        "send-waiting" -> TransferView("fake-send-wait", Direction.SEND, "Holiday-2026-raw.mov", 1843 * MB, 0, 0, TransferPhase.WAITING, link = link("Qm3xT8vLp2RkZ9wYc4NbAa"), code = "48213", message = "Waiting for the receiver", updatedAt = now)
-        "sending" -> TransferView("fake-send", Direction.SEND, "design-assets.zip", 742 * MB, 311 * MB, 86 * MB, TransferPhase.TRANSFERRING, Route.LAN, link = link("Hk2pQ7vNc4RtW8yZb1MsDf"), code = "90514", updatedAt = now - 1)
+        "send-waiting" -> TransferView("fake-send-wait", Direction.SEND, "Holiday-2026-raw.mov", 1843 * MB, 0, 0, TransferPhase.WAITING, link = "https://cd.yash0.in/#48213", privateLink = link("Qm3xT8vLp2RkZ9wYc4NbAa"), code = "48213", isPrivate = false, message = "Waiting for the receiver", updatedAt = now)
+        "sending" -> TransferView("fake-send", Direction.SEND, "design-assets.zip", 742 * MB, 311 * MB, 86 * MB, TransferPhase.TRANSFERRING, Route.LAN, link = "https://cd.yash0.in/#90514", privateLink = link("Hk2pQ7vNc4RtW8yZb1MsDf"), code = "90514", isPrivate = false, updatedAt = now - 1)
+        "send-private" -> TransferView("fake-send-private", Direction.SEND, "tax-return-2026.pdf", 3 * MB, 0, 0, TransferPhase.WAITING, link = link("Pv8rT2wLq5NcZ7xYb3MkAa"), privateLink = link("Pv8rT2wLq5NcZ7xYb3MkAa"), message = "Waiting for the receiver", updatedAt = now)
         "receiving" -> TransferView("fake-recv", Direction.RECEIVE, "dataset-2026-10.parquet", 2560 * MB, 1210 * MB, 41 * MB, TransferPhase.TRANSFERRING, Route.RELAY, updatedAt = now - 2)
         "complete" -> TransferView("fake-done", Direction.RECEIVE, "Quarterly report final v3.pdf", 18 * MB + 400_000, 18 * MB + 400_000, 0, TransferPhase.COMPLETE, Route.DIRECT, openUri = "content://media/external/downloads/1", updatedAt = now - 7 * 60_000)
         "paused" -> TransferView("fake-paused", Direction.RECEIVE, "ubuntu-26.04-desktop-amd64.iso", 6144 * MB, 2290 * MB, 0, TransferPhase.PAUSED, Route.RELAY, message = "Paused. Saved progress is kept.", updatedAt = now - 40 * 60_000)
         "failed" -> TransferView("fake-failed", Direction.SEND, "screen-recording.mp4", 420 * MB, 96 * MB, 0, TransferPhase.FAILED, Route.RELAY, link = link("Zx9cV7bN5mL3kJ1hG8fDsa"), message = "The receiver went away. Resume continues from its checkpoint.", updatedAt = now - 3 * 3600_000)
         else -> error("unknown scenario $kind")
     }
-    val scenarios = listOf("send-waiting", "sending", "receiving", "complete", "paused", "failed")
+    val scenarios = listOf("send-waiting", "send-private", "sending", "receiving", "complete", "paused", "failed")
     fun all(now: Long = System.currentTimeMillis()) = scenarios.map { view(it, now) }
 
     fun pairs(): List<Pairing> = listOf(
