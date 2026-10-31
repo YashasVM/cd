@@ -121,7 +121,7 @@ private fun Preparing(view: TransferView) {
  * across Ready <-> Offline, so its matrix and draw cache are reused rather than regenerated.
  */
 @Composable
-private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions) {
+private fun SharePanel(view: TransferView, share: ShareState, code: String?, devices: List<Pairing>, offeredTo: Set<String>, actions: CdActions) {
     val link = share.link ?: return
     val offline = share as? ShareState.Offline
     val qrAlpha by animateFloatAsState(if (offline != null) 0.28f else 1f, tween(240), label = "qrDim")
@@ -152,6 +152,19 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
         Spacer(Modifier.height(6.dp))
         Text(privacyNote(view.isPrivate, code), style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
         if (devices.isNotEmpty()) {
+        if (code != null) {
+            // The code is the primary thing to share: big, tappable to copy, read digit by digit by screen readers.
+            Text("Share code", style = CdType.section)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                code,
+                Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { actions.copy("Code", code) }
+                    .padding(horizontal = 16.dp, vertical = 4.dp).graphicsLayer { alpha = maxOf(qrAlpha, 0.5f) }
+                    .semantics { contentDescription = "Share code ${code.toList().joinToString(" ")}. Tap to copy." },
+                style = CdType.code.copy(fontSize = 56.sp, lineHeight = 64.sp),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
             Spacer(Modifier.height(28.dp))
             SectionHeader("Send to your computer", Modifier.fillMaxWidth())
             Group {
