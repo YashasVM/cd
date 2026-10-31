@@ -105,10 +105,24 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
     ) {
         SectionHeader("Code or link from the sender")
         InkField(
-            state.input, { state.input = it; state.inputError = "" }, "Code or link", error = state.inputError.isNotEmpty(),
-            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Share code, private transfer link, or pairing link",
+            state.input,
+            { value ->
+                val was = autoSubmittable(state.input)
+                state.input = value; state.inputError = ""
+                // A complete 5-digit code (or code URL) goes straight through; typed links wait for Receive.
+                if (!was && autoSubmittable(value) && !state.resolving) actions.submit(value.trim())
+            },
+            "5-digit code or link", error = state.inputError.isNotEmpty(),
+            onGo = { if (state.input.isNotBlank() && !state.resolving) actions.submit(state.input.trim()) }, description = "Share code, private transfer link, or pairing link",
             trailing = {
-                if (state.input.isEmpty()) GhostButton("Paste", { actions.paste()?.let { state.input = it; state.inputError = "" } }, icon = CdIcons.Paste, color = Cd.accent)
+                if (state.resolving) Spinner(Modifier.padding(end = 12.dp))
+                else if (state.input.isEmpty()) GhostButton("Paste", {
+                    actions.paste()?.takeIf { it.isNotBlank() }?.let { pasted ->
+                        // Pasting is an explicit action: submit whatever was pasted, including pairing links.
+                        state.input = pasted; state.inputError = ""
+                        actions.submit(pasted.trim())
+                    }
+                }, icon = CdIcons.Paste, color = Cd.accent)
                 else IconAction(CdIcons.Close, "Clear", { state.input = ""; state.inputError = "" }, tint = Cd.faint)
             },
         )
