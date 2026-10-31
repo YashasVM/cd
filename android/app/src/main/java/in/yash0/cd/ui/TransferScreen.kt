@@ -161,7 +161,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("$", style = CdType.mono.copy(color = Cd.accent))
-            Text("Copy receive command", Modifier.weight(1f), style = CdType.body)
+            Text(if (code != null) cmd else "Copy receive command", Modifier.weight(1f), style = if (code != null) CdType.mono else CdType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Icon(CdIcons.Copy, "Copy command", Modifier.size(20.dp), tint = Cd.faint)
         }
         Spacer(Modifier.height(10.dp))
@@ -206,7 +206,7 @@ private fun Progress(view: TransferView, link: String?, actions: CdActions) {
         Spacer(Modifier.height(20.dp))
         FileLine(view)
         view.message?.takeIf { it.isNotBlank() }?.let { Spacer(Modifier.height(14.dp)); Text(it, Modifier.fillMaxWidth(), style = CdType.small) }
-        if (view.direction == Direction.SEND && link != null) {
+        if (view.direction == Direction.SEND && link != null && view.isPrivate) {
             Spacer(Modifier.height(20.dp))
             Row(
                 Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy(linkLabel(view.isPrivate), link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
