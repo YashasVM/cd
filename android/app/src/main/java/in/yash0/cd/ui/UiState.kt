@@ -30,6 +30,10 @@ class UiState {
     var input by mutableStateOf("")
     var inputError by mutableStateOf("")
     var sendError by mutableStateOf<String?>(null)
+    /** Next send uses a private end-to-end link instead of a 5-digit code. Persisted by MainActivity. */
+    var sendPrivate by mutableStateOf(false)
+    /** A typed or pasted code is being looked up; blocks duplicate submits. */
+    var resolving by mutableStateOf(false)
     var tab by mutableStateOf(Tab.SEND)
     var toast by mutableStateOf<String?>(null)
     var toastError by mutableStateOf(false)
