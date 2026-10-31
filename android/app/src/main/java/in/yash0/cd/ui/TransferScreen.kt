@@ -149,7 +149,23 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
             style = CdType.bodyMuted, textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(6.dp))
-        Text("Anyone with this link can receive the file. The link is end-to-end encrypted.", style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
+        Text(privacyNote(view.isPrivate, code), style = CdType.small.copy(color = Cd.faint), textAlign = TextAlign.Center)
+        if (devices.isNotEmpty()) {
+            Spacer(Modifier.height(28.dp))
+            SectionHeader("Send to your computer", Modifier.fillMaxWidth())
+            Group {
+                devices.forEachIndexed { i, pair ->
+                    if (i > 0) RowDivider()
+                    val sent = pair.id in offeredTo
+                    ListRow(
+                        pair.name, if (sent) "Offered — accept it with ${TrustedSend.LISTEN_COMMAND}" else "Tap to send it there privately",
+                        icon = CdIcons.Laptop, iconTint = if (sent) Cd.success else Cd.accent,
+                        onClick = { actions.sendToDevice(view, pair) },
+                        trailing = { Icon(if (sent) CdIcons.Check else CdIcons.Upload, null, Modifier.size(20.dp), tint = if (sent) Cd.success else Cd.faint) },
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(28.dp))
         Hairline()
         Spacer(Modifier.height(20.dp))
