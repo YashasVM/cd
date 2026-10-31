@@ -73,9 +73,9 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
         transferTitle(view, now), largeTitle = false,
         navigation = { BackButton(onBack) },
         actions = {
-            if (link != null && !pinnedShare) IconAction(CdIcons.Share, "Share private link", { actions.share(link) })
+            if (link != null && !pinnedShare) IconAction(CdIcons.Share, if (code != null) "Share code" else "Share ${linkLabel(view.isPrivate).lowercase()}", { actions.share(shareText(link, code)) })
         },
-        pinned = { Pinned(view, if (pinnedShare) link else null, actions, onBack) },
+        pinned = { Pinned(view, if (pinnedShare) link else null, code, actions, onBack) },
     ) {
         // Keyed by the body kind, never by the TransferView, so progress ticks don't restart the fade.
         AnimatedContent(
