@@ -281,8 +281,9 @@ private fun ColumnScope.Pinned(view: TransferView, link: String?, actions: CdAct
         view.phase == TransferPhase.CANCELLED -> SecondaryButton("Remove from list", { actions.dismiss(view) }, Modifier.fillMaxWidth())
         link != null -> {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SecondaryButton("Copy link", { actions.copy("Private link", link) }, Modifier.weight(1f), icon = CdIcons.Copy)
-                PrimaryButton("Share", { actions.share(link) }, Modifier.weight(1f), icon = CdIcons.Share)
+                if (code != null) SecondaryButton("Copy code", { actions.copy("Code", code) }, Modifier.weight(1f), icon = CdIcons.Copy)
+                else SecondaryButton("Copy link", { actions.copy(linkLabel(view.isPrivate), link) }, Modifier.weight(1f), icon = CdIcons.Copy)
+                PrimaryButton("Share", { actions.share(shareText(link, code)) }, Modifier.weight(1f), icon = CdIcons.Share)
             }
             Text("Cancel send", Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { actions.cancel(view) }.padding(horizontal = 16.dp, vertical = 12.dp), style = CdType.label.copy(color = Cd.danger))
         }
