@@ -41,11 +41,15 @@ object ReceiveMode {
 
     /** Legacy backend: the receiver service runs the queued task (its notification shows only while it works). */
     fun startTransfer(context: Context) {
+        else if (!paused && foreground) ReceiveControl.connect(context)
         if (_paused.value) return
         StoreRegistry.get(context).enabled(true)
         ContextCompat.startForegroundService(context, Intent(context, ReceiverService::class.java))
     }
 
-    fun onForeground(context: Context) {}
-    fun onBackground(context: Context) {}
+    fun onForeground(context: Context) { foreground = true; if (!_paused.value) ReceiveControl.connect(context) }
+    fun onBackground(context: Context) { foreground = false; ReceiveControl.disconnectIdle(context) }
+
+    /** Called right after a pairing is saved, so `cdx pair` gets its confirmation without reopening CD. */
+    fun paired(context: Context) { if (!_paused.value) ReceiveControl.connect(context) }
 }
