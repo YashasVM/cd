@@ -99,7 +99,10 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
         pinned = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SecondaryButton("Scan QR", { actions.scan() }, Modifier.weight(1f), icon = CdIcons.Scan)
-                PrimaryButton(if (state.input.trim().startsWith("cdpair:")) "Review" else "Receive", { actions.submit(state.input.trim()) }, Modifier.weight(1f), enabled = state.input.isNotBlank())
+                PrimaryButton(
+                    when { state.resolving -> "Looking up…"; state.input.trim().startsWith("cdpair:", ignoreCase = true) -> "Review"; else -> "Receive" },
+                    { actions.submit(state.input.trim()) }, Modifier.weight(1f), enabled = state.input.isNotBlank() && !state.resolving,
+                )
             }
         },
     ) {
