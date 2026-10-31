@@ -26,9 +26,35 @@ val ShareState.link: String? get() = when (this) { is ShareState.Ready -> link; 
 
 private fun TransferView.expired(now: Long) = expiresAt in 1..now
 
+/**
+ * What the QR and Share button carry. A private send shares its private link. A code send shares
+ * only its short code URL while the code is live, never the long transfer URL behind it: after the
+ * code expires or a receiver has used it there is nothing to share.
+ */
+private fun TransferView.invitation(now: Long): String? =
+    if (isPrivate) link ?: privateLink else link?.takeIf { !codeSpent && codeLive(now) }
+
+/** Code expiry is separate from the 24h transfer expiry; fixtures without one fall back to [TransferView.expiresAt]. */
+private fun TransferView.codeDeadline(): Long = if (codeExpiresAt > 0) codeExpiresAt else expiresAt
+private fun TransferView.codeLive(now: Long): Boolean = code != null && codeDeadline().let { it <= 0 || now < it }
+
+/** The next moment the screen must re-evaluate (code or transfer expiry), or 0 when nothing is pending. */
+fun nextDeadline(view: TransferView, now: Long = System.currentTimeMillis()): Long =
+    listOf(view.codeExpiresAt, view.expiresAt).filter { it > now }.minOrNull() ?: 0
+
+/**
+ * The end-to-end private link of a private-mode send that a trusted computer can join right now.
+ * Requires the explicit private flag (never inferred from a missing code) and WAITING on the relay:
+ * a paused or reconnecting send cannot admit the computer until it is resumed.
+ */
+fun privateOffer(view: TransferView, now: Long = System.currentTimeMillis()): String? =
+    (view.privateLink ?: view.link)?.takeIf { view.isPrivate && view.code == null && view.done == 0L && shareState(view, now) is ShareState.Ready }
+
 fun shareState(view: TransferView, now: Long = System.currentTimeMillis()): ShareState {
     if (view.direction != Direction.SEND || view.finished || view.expired(now)) return ShareState.Hidden
-    val link = view.link
+    // A used code is never shown again: only the receiver that used it can continue, so this is progress.
+    if (!view.isPrivate && view.codeSpent) return ShareState.Hidden
+    val link = view.invitation(now)
     return when (view.phase) {
         TransferPhase.WAITING -> if (link != null) ShareState.Ready(link) else ShareState.Preparing
         TransferPhase.PREPARING, TransferPhase.CONNECTING, TransferPhase.RETRYING ->
