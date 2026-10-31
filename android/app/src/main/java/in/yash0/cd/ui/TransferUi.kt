@@ -40,7 +40,34 @@ fun shareState(view: TransferView, now: Long = System.currentTimeMillis()): Shar
 
 /** The private link if it may still be shared or copied (not expired, not finished). */
 fun liveLink(view: TransferView, now: Long = System.currentTimeMillis()): String? =
-    view.link?.takeIf { view.direction == Direction.SEND && !view.finished && !view.expired(now) }
+    view.invitation(now)?.takeIf { view.direction == Direction.SEND && !view.finished && !view.expired(now) }
+
+private val shareCodePattern = Regex("[0-9]{5}")
+
+/**
+ * The 5-digit share code while it can still admit a receiver: until its own (15 min) expiry, and gone
+ * once bytes moved (a code admits one receiver). Its expiry never ends the transfer itself: the
+ * backend pauses and Resume asks for a code again. While unspent and inside its TTL the relay keeps the
+ * same code across disconnects. Null for private-link sends and once a receiver has used it.
+ */
+fun liveCode(view: TransferView, now: Long = System.currentTimeMillis()): String? =
+    view.code?.takeIf { !view.isPrivate && shareCodePattern.matches(it) && view.done == 0L && view.codeLive(now) && shareState(view, now) != ShareState.Hidden }
+
+/** Text for the share sheet: the code first when there is one, so it reads well in a chat message. */
+fun shareText(link: String, code: String?): String = if (code != null) "CD code $code — open $link or run: cdx receive $code" else link
+
+/** Terminal command for the receiver. The code is preferred: it is short enough to type. */
+fun receiveCommand(link: String, code: String?): String = "cdx receive ${code ?: link}"
+
+/** Truthful privacy line for the current invitation. Only an explicitly private send is called end-to-end encrypted. */
+fun privacyNote(private: Boolean, code: String?): String = when {
+    private -> "Private link: end-to-end encrypted, the key never reaches CD’s server. Anyone with the link can receive the file."
+    code != null -> "Anyone with this code can receive the file until someone does. CD’s server holds the key for codes — turn on Private link for sensitive files."
+    else -> "Anyone with this link can receive the file. It came from a share code, so CD’s server holds the key — it isn’t end-to-end private."
+}
+
+/** Copy/label noun for the transfer URL. */
+fun linkLabel(private: Boolean): String = if (private) "Private link" else "Transfer link"
 
 /** Line under a dimmed QR. Never claims the receiver can connect right now. */
 fun offlineLabel(share: ShareState.Offline, code: Boolean = false): String =
