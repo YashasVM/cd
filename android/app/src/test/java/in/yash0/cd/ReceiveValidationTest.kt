@@ -35,7 +35,7 @@ class ReceiveValidationTest {
         }
         assertEquals(listOf(262144L, 524288L, 786432L, 1048576L, 1310720L, 1310843L), acknowledgements(0))
         assertEquals(listOf(262144L, 524288L, 786432L, 1048576L, 1310720L, 1310843L), acknowledgements(1048575))
-        assertEquals(listOf(1048576L, 1310843L), acknowledgements(4194304))
+        assertEquals(listOf(1310843L), acknowledgements(4194304))
         assertEquals(listOf(1048576L, 1310843L), acknowledgements(1048576))
     }
     @Test fun storageBudgetReservesRetainedRemainderAndDownloadsCopyOnSameVolume() {
