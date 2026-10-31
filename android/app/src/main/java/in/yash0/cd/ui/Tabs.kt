@@ -54,7 +54,11 @@ fun SendTab(state: UiState, transfers: List<TransferView>, actions: CdActions, c
             }
             Spacer(Modifier.height(28.dp))
         }
-        Hero(CdIcons.Upload, "Share anything from your phone", "CD makes a private link and QR. Open it on cd.yash0.in, or run cdx receive on any laptop.")
+        Hero(
+            CdIcons.Upload, "Share anything from your phone",
+            if (state.sendPrivate) "Pick files and CD makes a private, end-to-end encrypted link and QR."
+            else "Pick files and CD gives you a 5-digit code and QR. Type the code on cd.yash0.in or run cdx receive <code>.",
+        )
         Spacer(Modifier.height(24.dp))
         Group {
             SwitchListRow(
