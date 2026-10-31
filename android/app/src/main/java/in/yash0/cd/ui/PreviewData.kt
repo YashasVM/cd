@@ -84,7 +84,7 @@ object DebugFakes {
 @Preview(widthDp = 412, heightDp = 915)
 @Composable
 private fun TransferPreview() = CdTheme {
-    Box(Modifier.fillMaxSize().background(Cd.bg)) { TransferScreen("fake-send", Direction.SEND, PreviewData.all(), PreviewActions) {} }
+    Box(Modifier.fillMaxSize().background(Cd.bg)) { TransferScreen("fake-send-private", Direction.SEND, PreviewData.all(), PreviewActions, PreviewData.pairs(), emptyMap()) {} }
 }
 
 @Preview(widthDp = 412, heightDp = 915)
