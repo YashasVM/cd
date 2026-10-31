@@ -262,7 +262,7 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
         Spacer(Modifier.height(32.dp))
         SectionHeader("Get the cdx CLI (beta)")
         // The install script defaults to the latest stable release, which lacks cdx pair; pin the beta tag explicitly.
-        val cmd = "curl -fsSL https://cd.yash0.in/install.sh | CDX_VERSION=v0.4.0-beta.1 sh"
+        val cmd = "curl -fsSL https://cd.yash0.in/install.sh | CDX_VERSION=v0.4.0-beta.2 sh"
         Group {
             ListRow(cmd, "Tap to copy. Then cdx receive <code or link>, or cdx pair (beta).", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 3, onClick = { actions.copy("Install command", cmd) },
                 trailing = { Icon(CdIcons.Copy, null, Modifier.size(20.dp), tint = Cd.faint) })
@@ -298,7 +298,7 @@ fun SwitchListRow(title: String, detail: String, checked: Boolean, onChange: (Bo
 /* ---------- dialog ---------- */
 
 @Composable
-fun CdDialog(title: String, body: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, danger: Boolean = false, detail: String? = null, icon: ImageVector? = null) {
+fun CdDialog(title: String, body: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, danger: Boolean = false, detail: String? = null, icon: ImageVector? = null, dismiss: String = "Cancel") {
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier.padding(Gutter).fillMaxWidth().enter().clip(RoundedCornerShape(24.dp)).background(Cd.workbench)
