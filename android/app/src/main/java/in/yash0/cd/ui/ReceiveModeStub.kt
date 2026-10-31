@@ -16,8 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * The UI uses exactly these members:
  *   wakeAvailable: StateFlow<Boolean>   push wake-up is configured, trusted laptops can wake CD
  *   paused: StateFlow<Boolean>          user chose "Pause receiving" (reject wake-ups and trusted sends)
- *   load(context)                       read the persisted pause flag
- *   setPaused(context, paused)
+ *   load / setPaused                    persisted pause flag
  *   startTransfer(context)              a real transfer was queued (pasted link / Resume): run it now
  *   onForeground / onBackground         start control links / stop them once idle
  *   paired(context)                     a new pairing was saved: connect it now, not at the next onStart
