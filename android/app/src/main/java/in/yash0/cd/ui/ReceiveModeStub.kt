@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *   load(context)                       read the persisted pause flag
  *   setPaused(context, paused)
  *   startTransfer(context)              a real transfer was queued (pasted link / Resume): run it now
- *   onForeground(context) / onBackground(context)   trusted sends work while CD is open
- * There is no idle "Ready to receive" foreground service any more; a notification exists only during a transfer.
+ *   onForeground / onBackground         start control links / stop them once idle
+ *   paired(context)                     a new pairing was saved: connect it now, not at the next onStart
  */
 object ReceiveMode {
     private val _wake = MutableStateFlow(PushBridge.available)
@@ -34,6 +34,8 @@ object ReceiveMode {
 
     fun setPaused(context: Context, paused: Boolean) {
         context.getSharedPreferences("cd-ui", Context.MODE_PRIVATE).edit().putBoolean("receivePaused", paused).apply()
+    @Volatile private var foreground = false
+
         _paused.value = paused
         // Stop a running receiver so paused transfers keep their progress; reconnect controls on un-pause while open.
         if (paused && StoreRegistry.get(context).enabled()) context.startService(Intent(context, ReceiverService::class.java).setAction("pause"))
