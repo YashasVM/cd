@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import `in`.yash0.cd.PushBridge
+import `in`.yash0.cd.ReceiveControl
 import `in`.yash0.cd.ReceiverService
 import `in`.yash0.cd.StoreRegistry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,10 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /*
- * HOOK: backend — stub for the wake-on-demand receive mode. Replace this object with the real
- * `ReceiveMode` (and change the imports in MainActivity / ui) once the receive backend exposes it.
- * The UI uses exactly these members:
- *   wakeAvailable: StateFlow<Boolean>   push wake-up is configured, trusted laptops can wake CD
+ * Receive mode as the UI sees it. While CD is open (and receiving isn't paused) the authenticated
+ * control links to paired computers run in ReceiverService via [ReceiveControl]: that is what lets
+ * `cdx pair` finish and computers send to this phone without a code. When CD goes to the background
+ * the control service stops once it is idle; running or queued transfers finish first. Trusted
+ * computers can still wake CD with a push hint where this build supports it ([wakeAvailable]).
+ *   wakeAvailable: StateFlow<Boolean>   push wake-up is configured
  *   paused: StateFlow<Boolean>          user chose "Pause receiving" (reject wake-ups and trusted sends)
  *   load / setPaused                    persisted pause flag
  *   startTransfer(context)              a real transfer was queued (pasted link / Resume): run it now
