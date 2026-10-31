@@ -155,7 +155,7 @@ private fun SharePanel(view: TransferView, share: ShareState, actions: CdActions
         Spacer(Modifier.height(20.dp))
         FileLine(view)
         Spacer(Modifier.height(20.dp))
-        val cmd = "cdx receive $link"
+        val cmd = receiveCommand(link, code)
         Row(
             Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button) { actions.copy("Command", cmd) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
