@@ -50,7 +50,7 @@ fun TransferView.tone(): Tone = when (phase) {
 }
 
 @Composable
-fun TransferScreen(id: String, direction: Direction, transfers: List<TransferView>, actions: CdActions, onBack: () -> Unit) {
+fun TransferScreen(id: String, direction: Direction, transfers: List<TransferView>, actions: CdActions, pairs: List<Pairing>, offered: Map<String, Set<String>>, onBack: () -> Unit) {
     val view = transfers.findTransfer(id, direction)
     if (view == null) {
         ScreenFrame("Transfer", largeTitle = false, navigation = { BackButton(onBack) }, pinned = { SecondaryButton("Back", onBack, Modifier.fillMaxWidth()) }) {
@@ -58,11 +58,13 @@ fun TransferScreen(id: String, direction: Direction, transfers: List<TransferVie
         }
         return
     }
-    // Re-evaluated when the invitation expires, so the QR disappears even if the engine publishes nothing.
-    val now by produceState(System.currentTimeMillis(), view.expiresAt) {
-        value = System.currentTimeMillis()
-        val wait = view.expiresAt - value
-        if (view.expiresAt > 0 && wait > 0) { delay(wait + 50); value = System.currentTimeMillis() }
+    // Re-evaluated at the code expiry and the invitation expiry, so the code and QR disappear even if the engine publishes nothing.
+    val now by produceState(System.currentTimeMillis(), view.codeExpiresAt, view.expiresAt) {
+        while (true) {
+            value = System.currentTimeMillis()
+            val next = nextDeadline(view, value).takeIf { it > 0 } ?: break
+            delay(next - value + 50)
+        }
     }
     val share = shareState(view, now)
     val body = transferBody(view, now)
