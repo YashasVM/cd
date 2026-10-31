@@ -57,7 +57,11 @@ class UiState {
 
 /** User intents the UI can raise. Implemented by MainActivity so platform calls stay out of composables. */
 interface CdActions {
-    fun pickFiles()
+    /** Opens the picker; with [to], the chosen files go privately to that trusted computer. */
+    fun pickFiles(to: Pairing? = null)
+    fun setSendPrivate(on: Boolean)
+    /** Offers an existing private send to a trusted computer. */
+    fun sendToDevice(view: TransferView, pair: Pairing)
     fun scan()
     fun submit(raw: String)
     fun setPaused(paused: Boolean)
