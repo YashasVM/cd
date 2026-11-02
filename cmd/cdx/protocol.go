@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"hash"
 	"io"
+	"slices"
 )
 
 const (
@@ -27,6 +28,7 @@ const (
 const (
 	chunkSizeLegacy = 64 * 1024
 	chunkSize       = 256 * 1024
+	largeChunkSize  = 768 * 1024
 )
 
 type direction byte
@@ -154,7 +156,7 @@ func recordAAD(header []byte, id [16]byte) []byte {
 	return append(aad, id[:]...)
 }
 
-func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, error) {
+func (value *recordSealer) sealInto(buffer []byte, kind messageKind, plaintext []byte) ([]byte, error) {
 	if !validKind(value.direction, kind) {
 		return nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
@@ -165,7 +167,7 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 	if headerBytes+ciphertextLength > maxRecordBytes {
 		return nil, NewFailure(failureProtocol, "record is too large", retryNever)
 	}
-	header := make([]byte, headerBytes, headerBytes+ciphertextLength)
+	header := slices.Grow(buffer[:0], headerBytes+ciphertextLength)[:headerBytes]
 	copy(header, []byte("CD"))
 	header[2] = protocolVersion
 	header[3] = byte(kind)
@@ -178,6 +180,16 @@ func (value *recordSealer) seal(kind messageKind, plaintext []byte) ([]byte, err
 }
 
 func (value *recordOpener) open(record []byte) (messageKind, []byte, error) {
+	return value.openRecord(record, false)
+}
+
+// consume opens an exclusively owned record in place. The returned plaintext
+// aliases record, whose contents may also change when authentication fails.
+func (value *recordOpener) consume(record []byte) (messageKind, []byte, error) {
+	return value.openRecord(record, true)
+}
+
+func (value *recordOpener) openRecord(record []byte, consume bool) (messageKind, []byte, error) {
 	if len(record) < headerBytes+value.aead.Overhead() || len(record) > maxRecordBytes {
 		return 0, nil, NewFailure(failureProtocol, "record length is invalid", retryNever)
 	}
@@ -197,7 +209,11 @@ func (value *recordOpener) open(record []byte) (messageKind, []byte, error) {
 	if uint64(plaintextLength)+uint64(headerBytes+value.aead.Overhead()) != uint64(len(record)) {
 		return 0, nil, NewFailure(failureProtocol, "record plaintext length is invalid", retryNever)
 	}
-	plaintext, err := value.aead.Open(nil, recordNonce(value.direction, sequence), record[headerBytes:], recordAAD(header, value.id))
+	var destination []byte
+	if consume {
+		destination = record[headerBytes:headerBytes]
+	}
+	plaintext, err := value.aead.Open(destination, recordNonce(value.direction, sequence), record[headerBytes:], recordAAD(header, value.id))
 	if err != nil {
 		return 0, nil, NewFailure(failureProtocol, "record authentication failed", retryNever)
 	}

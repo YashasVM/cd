@@ -164,38 +164,19 @@ fun IconAction(icon: ImageVector, description: String, onClick: () -> Unit, tint
 /* ---------- bottom navigation ---------- */
 
 @Composable
-fun BottomNav(tab: Tab, activeCount: Int, onSelect: (Tab) -> Unit) {
+fun BottomNav(tab: Tab, onSelect: (Tab) -> Unit) {
     val haptics = rememberHaptics()
-    val items = listOf(
-        Triple(Tab.SEND, "Send", CdIcons.ArrowUp), Triple(Tab.RECEIVE, "Receive", CdIcons.ArrowDown),
-        Triple(Tab.TRANSFERS, "Transfers", CdIcons.History), Triple(Tab.DEVICES, "Devices", CdIcons.Devices),
-    )
-    Column(
-        Modifier.fillMaxWidth().background(Color(0xFF110604))
-            .drawBehind { drawLine(Cd.lineSoft, Offset(0f, 0.5f), Offset(size.width, 0.5f), 1f) }
-            .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.displayCutout).only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
-    ) {
-        Row(Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            items.forEach { (t, label, icon) ->
-                val selected = t == tab
-                val pill by animateFloatAsState(if (selected) 1f else 0f, tween(260, easing = EaseOutSoft), label = "pill")
-                val color by animateColorAsState(if (selected) Cd.text else Cd.faint, label = "nc")
-                Column(
-                    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(16.dp))
-                        .selectable(selected, role = Role.Tab) { if (!selected) { haptics.tick(); onSelect(t) } },
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(64.dp, 32.dp).graphicsLayer { scaleX = 0.6f + 0.4f * pill; alpha = pill }.clip(CircleShape).background(Cd.accent.copy(alpha = 0.16f)))
-                        Icon(icon, null, Modifier.size(22.dp), tint = if (selected) Cd.accent else Cd.faint)
-                        if (t == Tab.TRANSFERS && activeCount > 0) Box(
-                            Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp).sizeIn(minWidth = 18.dp, minHeight = 18.dp).clip(CircleShape).background(Cd.accent).padding(horizontal = 5.dp),
-                            contentAlignment = Alignment.Center,
-                        ) { Text("$activeCount", style = CdType.label.copy(fontSize = 11.sp, lineHeight = 12.sp, color = Cd.bg)) }
-                    }
-                    Spacer(Modifier.height(5.dp))
-                    Text(label, style = CdType.label.copy(fontSize = 13.sp, color = color, fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Medium), maxLines = 1)
-                }
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp), contentAlignment = Alignment.Center) {
+        Row(Modifier.clip(CircleShape).background(Cd.panel).border(1.dp, Cd.lineSoft, CircleShape).padding(6.dp)) {
+            listOf(Triple(Tab.SEND, "Send", CdIcons.Upload), Triple(Tab.RECEIVE, "Receive", CdIcons.ArrowDown), Triple(Tab.DEVICES, "Devices", CdIcons.Laptop)).forEach { (item, label, icon) ->
+                val tint by animateColorAsState(if (item == tab) Cd.accent else Cd.muted, tween(240), label = "navTint")
+                Box(
+                    Modifier.size(64.dp, 48.dp).clip(CircleShape)
+                        .background(if (item == tab) Cd.accent.copy(alpha = 0.2f) else Color.Transparent)
+                        .selectable(item == tab, role = Role.Tab) { haptics.tick(); onSelect(item) }
+                        .semantics { contentDescription = label },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(icon, null, Modifier.size(26.dp), tint = tint) }
             }
         }
     }

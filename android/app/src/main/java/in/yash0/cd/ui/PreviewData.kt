@@ -93,6 +93,7 @@ private fun HomePreview() = CdTheme { CdApp(UiState(), PreviewData.all(), "Ready
 
 private object PreviewActions: CdActions {
     override fun pickFiles() {}
+    override fun importQr() {}
     override fun scan() {}
     override fun submit(raw: String) {}
     override fun setPaused(paused: Boolean) {}

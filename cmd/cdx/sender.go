@@ -40,13 +40,16 @@ type relayEvent struct {
 }
 
 type fileOffer struct {
-	Name      string `json:"name"`
-	MediaType string `json:"mediaType"`
-	Size      string `json:"size"`
-	ChunkSize int    `json:"chunkSize"`
+	Name         string `json:"name"`
+	MediaType    string `json:"mediaType"`
+	Size         string `json:"size"`
+	ChunkSize    int    `json:"chunkSize"`
+	MaxChunkSize int    `json:"maxChunkSize,omitempty"`
 	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
 	// that predate it ignore the field.
-	Direct *directOffer `json:"direct,omitempty"`
+	Direct     *directOffer `json:"direct,omitempty"`
+	LAN        *lanOffer    `json:"lan,omitempty"`
+	ReverseLAN bool         `json:"reverseLAN,omitempty"`
 	// Bundle marks a zip that cdx or the browser built from several files.
 	// Receivers that know it unpack the files; older ones keep the .zip.
 	Bundle bool `json:"bundle,omitempty"`
@@ -98,6 +101,14 @@ func endpointBase() (string, string, error) {
 	return relay, public, nil
 }
 
+func relayTransferEndpoint(base, id string) string {
+	endpoint := base + "/" + id
+	if os.Getenv("CD_RELAY_STREAMING") == "1" {
+		endpoint += "?stream=1"
+	}
+	return endpoint
+}
+
 func isLoopbackHost(host string) bool {
 	if strings.EqualFold(host, "localhost") {
 		return true
@@ -107,15 +118,11 @@ func isLoopbackHost(host string) bool {
 }
 
 func fileMediaType(name string) string {
-	if value := mime.TypeByExtension(strings.ToLower(filepath.Ext(name))); value != "" {
-		if index := strings.Index(value, ";"); index >= 0 {
-			value = strings.TrimSpace(value[:index])
-		}
-		if value != "" {
-			return value
-		}
+	value, _, _ := strings.Cut(mime.TypeByExtension(strings.ToLower(filepath.Ext(name))), ";")
+	if value = strings.TrimSpace(value); value == "" {
+		return "application/octet-stream"
 	}
-	return "application/octet-stream"
+	return value
 }
 
 func safeFilename(path string) (string, error) {
@@ -254,7 +261,6 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if source.skipped > 0 {
 		fmt.Fprintf(os.Stderr, "skipped %d symlinks or special files (only regular files and folders are bundled)\n", source.skipped)
 	}
-	filename := source.name
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -267,7 +273,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
+	connection, err := dialRelay(ctx, relayTransferEndpoint(relayBase, invitation.encodedID()))
 	if err != nil {
 		return err
 	}
@@ -298,13 +304,9 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		Version:    1,
 		TransferID: invitation.encodedID(),
 		URL:        publicBase + "/s/" + invitation.encodedID() + "#v1." + invitation.encodedKey(),
-		Filename:   filename, Size: source.size, Files: source.files,
+		Filename:   source.name, Size: source.size, Files: source.files,
 	}
-	if linkMode {
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
-	} else {
+	if !linkMode {
 		code := accepted.Code
 		if !isShortCode(code) {
 			// Relays that predate join-time codes: claim one separately.
@@ -317,12 +319,12 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 			}
 		}
 		ready.Code = code
-		if err := hooks.ready(ready); err != nil {
-			return err
-		}
+	}
+	if err := hooks.ready(ready); err != nil {
+		return err
 	}
 	if !fancyReady {
-		transferInfo("sharing %s (%s) — share the code above, keep this running\n", filename, formatBytes(ready.Size))
+		transferInfo("sharing %s (%s) — share the code above, keep this running\n", source.name, formatBytes(ready.Size))
 	}
 	if ready.Size > 256*1024*1024 {
 		transferInfo("note: for files over 256 MB, use desktop Chrome or Edge and make sure the receiver has enough free storage")
@@ -347,7 +349,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	defer link.close()
 	// Gather direct-path candidates while waiting for the receiver.
 	var offerSDP chan string
-	if directEnabled() && source.size >= directMinBytes {
+	if directEnabled() && os.Getenv("CD_WEBRTC") != "0" && source.size >= directMinBytes {
 		if path, err := newDirectPath(link.directRecord, link.directLost); err == nil {
 			link.attachDirect(path)
 			offerSDP = make(chan string, 1)
@@ -358,6 +360,27 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 				}
 				offerSDP <- sdp
 			}()
+		}
+	}
+	var lane *lanListener
+	if directEnabled() && lanEnabled() && source.size >= directMinBytes {
+		if candidate, err := listenLAN(invitation); err == nil {
+			lane = candidate
+			defer lane.close()
+			link.lanOffer = &lane.offer
+			go lane.serve(link.adoptStreamConfirmed)
+		} else {
+			lanDebug("sender-listen-failed", err)
+		}
+		link.reverseLAN = func(offer *lanOffer) <-chan struct{} {
+			// Keep the original listener available if the receiver must fall
+			// back after its own inbound TCP connection is blocked.
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				dialReverseLAN(ctx, link, invitation, offer)
+			}()
+			return done
 		}
 	}
 	if _, err := waitRelayEvent(ctx, connection, "peer-joined", receiverWait); err != nil {
@@ -450,12 +473,99 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 	return value, nil
 }
 
+// Large records are opt-in on the wire; legacy receivers keep the offer's
+// original chunkSize and send an empty ACCEPT as before.
+func largeRecordsEnabled() bool { return os.Getenv("CD_LARGE_RECORDS") != "0" }
+
+type chunkAcceptance struct {
+	ChunkSize int       `json:"chunkSize,omitempty"`
+	LAN       *lanOffer `json:"lan,omitempty"`
+}
+
+func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool) (chunkAcceptance, error) {
+	accepted := chunkAcceptance{ChunkSize: chunkSize}
+	if len(payload) == 0 {
+		return accepted, nil
+	}
+	invalid := func() (chunkAcceptance, error) {
+		return chunkAcceptance{}, NewFailure(failureProtocol, "receiver sent an invalid transfer selection", retryNever)
+	}
+	if len(payload) > 4096 {
+		return invalid()
+	}
+	var selection chunkAcceptance
+	decoder := json.NewDecoder(strings.NewReader(string(payload)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&selection); err != nil {
+		return invalid()
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return invalid()
+	}
+	if selection.LAN != nil {
+		if !reverseOffered || validateLANOffer(selection.LAN) != nil {
+			return invalid()
+		}
+		if selection.ChunkSize == 0 {
+			selection.ChunkSize = chunkSize
+		}
+	}
+	if selection.ChunkSize != chunkSize && !(selection.ChunkSize == largeChunkSize && offeredMax == largeChunkSize) {
+		return invalid()
+	}
+	return selection, nil
+}
+
+func acceptedChunkSize(payload []byte, offeredMax int) (int, error) {
+	selection, err := acceptedTransfer(payload, offeredMax, false)
+	return selection.ChunkSize, err
+}
+
+const reverseLANGrace = 50 * time.Millisecond
+
+// Give a selected local TCP connection a bounded head start before bulk data
+// fills the relay. Failed connections still begin relaying within this limit.
+func waitReverseLAN(ctx context.Context, size uint64, done <-chan struct{}) error {
+	if done == nil || size < 8*1024*1024 || os.Getenv("CD_LAN_GRACE") == "0" {
+		return nil
+	}
+	timer := time.NewTimer(reverseLANGrace)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return ctx.Err()
+	case <-timer.C:
+		return ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // transfer streams one source over a paired link. offerSDP, when not nil,
 // yields the direct-path offer to embed in the file offer.
 func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
-	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files}
+	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files, LAN: link.lanOffer, ReverseLAN: link.reverseLAN != nil}
+	if largeRecordsEnabled() {
+		offer.MaxChunkSize = largeChunkSize
+	}
 	if offerSDP != nil {
-		if sdp := <-offerSDP; sdp != "" {
+		var sdp string
+		select {
+		case sdp = <-offerSDP:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		if sdp != "" {
+			// Gathering continues while the recipient enters the code. Include
+			// public candidates discovered after the initial bounded wait.
+			if path := link.direct.Load(); path != nil && path.connection != nil {
+				if current := path.connection.LocalDescription(); current != nil {
+					sdp = current.SDP
+				}
+			}
+			if len(sdp) > maxSDPBytes {
+				return NewFailure(failureProtocol, "direct offer is too large", retryNever)
+			}
 			offer.Direct = &directOffer{SDP: sdp}
 		}
 	}
@@ -472,7 +582,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	handleSignal := func(payload []byte) {
 		path := link.direct.Load()
 		var signal directSignal
-		if path == nil || json.Unmarshal(payload, &signal) != nil {
+		if path == nil || path.connection == nil || json.Unmarshal(payload, &signal) != nil {
 			return
 		}
 		if signal.Candidate != nil {
@@ -498,6 +608,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		}()
 	}
 
+	selectedChunkSize := chunkSize
 	transferInfo("waiting for receiver to accept (up to 10m)")
 	for {
 		kind, payload, err := link.next(ctx, consentWait)
@@ -511,8 +622,18 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			handleSignal(payload)
 			continue
 		}
-		if kind != kindAccept || len(payload) != 0 {
+		if kind != kindAccept {
 			return NewFailure(failureProtocol, "receiver sent an invalid acceptance", retryNever)
+		}
+		selection, selectionErr := acceptedTransfer(payload, offer.MaxChunkSize, offer.ReverseLAN)
+		if selectionErr != nil {
+			return selectionErr
+		}
+		selectedChunkSize = selection.ChunkSize
+		if selection.LAN != nil {
+			if err := waitReverseLAN(ctx, ready.Size, link.reverseLAN(selection.LAN)); err != nil {
+				return err
+			}
 		}
 		break
 	}
@@ -596,7 +717,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	if os.Getenv("CD_REQUEST_JOURNAL") != "" {
 		payloadHash = sha256.New()
 	}
-	buffer := make([]byte, chunkSize)
+	buffer := make([]byte, selectedChunkSize)
 	for {
 		count, readErr := io.ReadFull(file, buffer)
 		if count > 0 {

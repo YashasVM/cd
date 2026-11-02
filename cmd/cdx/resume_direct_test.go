@@ -264,7 +264,7 @@ func TestResumeAssemblerAcceptsOnlyItsConfiguredProtocol(t *testing.T) {
 		t.Fatal("v1 assembler accepted v2 record")
 	}
 	legacy, _ := newSealer(invite, senderDirection)
-	v1, _ := legacy.seal(kindChunk, []byte("v1"))
+	v1, _ := legacy.sealInto(nil, kindChunk, []byte("v1"))
 	if _, err := (&recordAssembler{version: resumeVersion}).push(v1); err == nil {
 		t.Fatal("v2 assembler accepted v1 record")
 	}

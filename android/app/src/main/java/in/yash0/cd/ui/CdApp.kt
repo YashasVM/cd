@@ -20,15 +20,13 @@ import kotlinx.coroutines.delay
 @Composable
 fun CdApp(state: UiState, transfers: List<TransferView>, status: String, actions: CdActions, debug: Boolean, version: String) {
     BackHandler(state.stack.size > 1 || state.tab != Tab.SEND) { state.back() }
-    val activeCount = transfers.count { it.active }
     val chrome = remember(state, actions, debug) {
         TabChrome(
             brand = { BrandMark { if (debug) actions.debugInject() } },
             actions = { IconAction(CdIcons.Settings, "Settings", { state.open(Screen.Settings) }) },
-            bottomBar = { BottomNav(state.tab, activeCountHolder.intValue, { state.tab = it }) },
+            bottomBar = { BottomNav(state.tab, { state.tab = it }) },
         )
     }
-    activeCountHolder.intValue = activeCount
     Box(Modifier.fillMaxSize().background(Cd.bg)) {
         AmbientBackground(height = 300.dp)
         AnimatedContent(
@@ -36,18 +34,17 @@ fun CdApp(state: UiState, transfers: List<TransferView>, status: String, actions
             transitionSpec = {
                 val forward = targetState.second >= initialState.second
                 val dir = if (forward) 1 else -1
-                (fadeIn(tween(280, 40, EaseOutSoft)) + slideInHorizontally(tween(360, easing = EaseOutSoft)) { dir * it / 5 })
-                    .togetherWith(fadeOut(tween(160)) + slideOutHorizontally(tween(360, easing = EaseOutSoft)) { -dir * it / 10 })
+                (fadeIn(tween(300, easing = EaseOutSoft)) + slideInHorizontally(tween(360, easing = EaseOutSoft)) { dir * it / 12 })
+                    .togetherWith(fadeOut(tween(240, easing = EaseOutSoft)) + slideOutHorizontally(tween(360, easing = EaseOutSoft)) { -dir * it / 16 })
             },
             contentKey = { it.first },
             label = "screen",
         ) { (screen, _) ->
             when (screen) {
-                Screen.Home -> AnimatedContent(state.tab, transitionSpec = { fadeIn(tween(220, 60)).togetherWith(fadeOut(tween(120))) }, label = "tab") { tab ->
+                Screen.Home -> AnimatedContent(state.tab, transitionSpec = { fadeIn(tween(280, easing = EaseOutSoft)).togetherWith(fadeOut(tween(280, easing = EaseOutSoft))) }, label = "tab") { tab ->
                     when (tab) {
                         Tab.SEND -> SendTab(state, transfers, actions, chrome)
-                        Tab.RECEIVE -> ReceiveTab(state, status, actions, chrome)
-                        Tab.TRANSFERS -> TransfersTab(state, transfers, chrome)
+                        Tab.RECEIVE -> ReceiveTab(state, transfers, status, actions, chrome)
                         Tab.DEVICES -> DevicesTab(state, actions, chrome)
                     }
                 }
@@ -67,9 +64,6 @@ fun CdApp(state: UiState, transfers: List<TransferView>, status: String, actions
         )
     }
 }
-
-/** Read by the remembered bottom bar so the badge updates without rebuilding the tab chrome. */
-private val activeCountHolder = mutableIntStateOf(0)
 
 /** Snackbar-style confirmation under the app bar, clear of the pinned buttons and the keyboard. */
 @Composable

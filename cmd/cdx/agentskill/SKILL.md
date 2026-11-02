@@ -1,9 +1,11 @@
 ---
 name: cd-file-sharing
-description: Send a local file to the user with CD. Use when asked to send, share, or hand off a file with CD or cdx.
+description: Send a local file to the user with CD. Use when asked to send files to a phone, or to send, share, or hand off a file with CD or cdx.
 ---
 
 # Share files
+
+When the user asks to send files to their phone, send directly without asking for confirmation: run `cdx send --to phone --json <path>...`. This starts a background targeted transfer and returns a PID and private log path. Read that log for completion or errors; `phase: verified` confirms receipt. The phone must have Clerk account receiving enabled, or have been explicitly paired. If the phone is offline, leave the sender running and report that delivery is pending. If no phone is configured or several phones match, report the pairing requirement or ask which device. Use a download link only when the user requests one. Temporary disconnections retry automatically while the sender stays running.
 
 Run `cdx send <path>...` and reply with `https://cd.yash0.in/#<code>` using the
 printed code. Terminal recipients can run `cdx receive <code>`. To share

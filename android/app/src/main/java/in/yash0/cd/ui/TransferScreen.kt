@@ -115,8 +115,8 @@ private fun SharePanel(view: TransferView, actions: CdActions) {
                 style = CdType.code,
             )
             Spacer(Modifier.height(4.dp))
-            Text("Scan the QR, or type this code on cd.yash0.in", style = CdType.small, textAlign = TextAlign.Center)
-        } else Text("Scan the QR on the other device, or share the link.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
+            Text("Scan QR or enter code at cd.yash0.in", style = CdType.small, textAlign = TextAlign.Center)
+        } else Text("Scan QR or share the link.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
         Hairline()
         Spacer(Modifier.height(20.dp))
@@ -132,7 +132,7 @@ private fun SharePanel(view: TransferView, actions: CdActions) {
             Icon(CdIcons.Copy, "Copy command", Modifier.size(20.dp), tint = Cd.faint)
         }
         Spacer(Modifier.height(10.dp))
-        Text("In a terminal, run this to receive.", Modifier.fillMaxWidth(), style = CdType.small.copy(color = Cd.faint))
+        Text("Run on your PC", Modifier.fillMaxWidth(), style = CdType.small.copy(color = Cd.faint))
     }
 }
 
@@ -187,7 +187,7 @@ private fun Progress(view: TransferView, actions: CdActions) {
         }
         if (view.direction == Direction.SEND && view.active) {
             Spacer(Modifier.height(16.dp))
-            Text("Keep CD open while sending. If it closes, open it and tap Resume.", Modifier.fillMaxWidth(), style = CdType.small.copy(color = Cd.faint))
+            Text("Keep CD open while sending.", Modifier.fillMaxWidth(), style = CdType.small.copy(color = Cd.faint))
         }
     }
 }

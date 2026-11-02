@@ -137,7 +137,25 @@ func parseReceivedOffer(payload []byte) (fileOffer, uint64, error) {
 	if offer.ChunkSize != chunkSize && offer.ChunkSize != chunkSizeLegacy {
 		return offer, 0, NewFailure(failureProtocol, "the sender uses unsupported transfer limits", retryNever)
 	}
+	if offer.MaxChunkSize != 0 && offer.MaxChunkSize != largeChunkSize {
+		return offer, 0, NewFailure(failureProtocol, "the sender uses unsupported negotiated transfer limits", retryNever)
+	}
 	return offer, size, nil
+}
+
+func receiveChunkSelection(offer fileOffer) (int, []byte) {
+	if offer.MaxChunkSize == largeChunkSize && largeRecordsEnabled() {
+		payload, _ := json.Marshal(chunkAcceptance{ChunkSize: largeChunkSize})
+		return largeChunkSize, payload
+	}
+	return offer.ChunkSize, nil
+}
+
+func validateReceivedChunk(payload []byte, limit int, received, size uint64) error {
+	if len(payload) == 0 || len(payload) > limit || received > size || uint64(len(payload)) > size-received {
+		return NewFailure(failureProtocol, "the sender sent data beyond the agreed transfer limits", retryNever)
+	}
+	return nil
 }
 
 // resolveReceiveDest maps the offer filename (or --out) to a final path and a
@@ -177,6 +195,8 @@ func resolveReceiveDest(offerName, out string, force bool) (final, staging strin
 // receiveFile joins the relay as the receiver, accepts one file offer, and
 // writes it to disk. onOffer observes the validated offer before acceptance.
 func receiveFile(ctx context.Context, code, out string, force bool, onReceived func(receiveResult) error) error {
+	timing := newTransferTiming("receiver")
+	timing.mark("start")
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -198,11 +218,12 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
+	connection, err := dialRelay(ctx, relayTransferEndpoint(relayBase, invitation.encodedID()))
 	if err != nil {
 		return err
 	}
 	defer connection.Close()
+	timing.mark("relay-connected")
 	stopOnCancel := context.AfterFunc(ctx, func() { _ = connection.Close() })
 	defer stopOnCancel()
 	connection.SetReadLimit(maxRecordBytes)
@@ -233,6 +254,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
+	timing.mark("relay-admitted")
 	transferInfo("connected — waiting for sender's file offer")
 	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "sender disconnected (they closed the tab or lost network)", retryNewTransfer))
 	defer link.close()
@@ -247,10 +269,12 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if kind != kindOffer {
 		return NewFailure(failureProtocol, "the sender sent a message out of order", retryNever)
 	}
+	timing.mark("offer-received")
 	offer, size, err := parseReceivedOffer(payload)
 	if err != nil {
 		return err
 	}
+	timing.mark("offer-parsed")
 	var final, staging, bundleDir string
 	if offer.Bundle {
 		// Several files: stage the zip next to where they unpack.
@@ -281,13 +305,25 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		}
 	}()
 
-	if err := link.send(kindAccept, nil); err != nil {
+	selectedChunkSize, acceptance := receiveChunkSelection(offer)
+	reverse, reverseErr := prepareReverseLAN(link, invitation, offer)
+	if reverseErr != nil {
+		lanDebug("reverse-receiver-listen-failed", reverseErr)
+	}
+	if reverse != nil {
+		defer reverse.close()
+		acceptance, _ = json.Marshal(chunkAcceptance{ChunkSize: selectedChunkSize, LAN: &reverse.lane.offer})
+	}
+	if err := link.send(kindAccept, acceptance); err != nil {
 		return friendlyRelayError(fmt.Errorf("accept file offer: %w", err))
 	}
+	timing.mark("accept-sent")
 	// Data starts on the relay right away; answer a direct-path offer in the
 	// background and the sender moves over when the data channel opens.
-	if offer.Direct != nil && directEnabled() {
-		go answerDirectPath(link, offer.Direct.SDP)
+	if reverse != nil {
+		go reverse.await(ctx, link, offer)
+	} else if directEnabled() && (offer.Direct != nil || offer.LAN != nil) {
+		go openDirectPath(ctx, link, invitation, offer)
 	}
 
 	terminal := isTerminal(os.Stderr)
@@ -314,15 +350,21 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		}
 		switch kind {
 		case kindChunk:
-			if len(payload) == 0 || received+uint64(len(payload)) > size {
+			if err := validateReceivedChunk(payload, selectedChunkSize, received, size); err != nil {
 				bar.finish()
-				return NewFailure(failureProtocol, "the sender sent more data than promised", retryNever)
+				return err
+			}
+			if received == 0 {
+				timing.mark("first-chunk")
 			}
 			if _, err := stagingFile.Write(payload); err != nil {
 				bar.finish()
 				return failuref(failureLocal, retryNever, "write file while receiving: %s", underlyingReason(err))
 			}
 			received += uint64(len(payload))
+			if received == size {
+				timing.mark("last-chunk-written")
+			}
 			chunks++
 			reportProgress(received)
 			if received-acknowledged >= ackIntervalBytes || received == size {
@@ -333,14 +375,17 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				acknowledged = received
 			}
 		case kindEnd:
+			timing.mark("end-received")
 			bar.finish()
 			endChunks, endBytes, err := decodeCounts(payload)
 			if err != nil || endBytes != size || endBytes != received || endChunks != chunks {
 				return NewFailure(failureProtocol, "the transfer ended before the complete file arrived", retryNever)
 			}
+			timing.mark("fsync-start")
 			if err := stagingFile.Sync(); err != nil {
 				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
+			timing.mark("fsync-done")
 			if err := stagingFile.Close(); err != nil {
 				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
@@ -361,7 +406,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 			}
+			timing.mark("complete-sent")
+			timing.mark("finish-start")
 			link.finish(true)
+			timing.mark("finish-done")
 			abs, _ := filepath.Abs(final)
 			if abs == "" {
 				abs = final
@@ -445,6 +493,44 @@ func copyFile(source, dest string) error {
 	return out.Sync()
 }
 
+// openDirectPath tries the same-network lane first and otherwise answers
+// the WebRTC offer.
+func openDirectPath(ctx context.Context, link *recordLink, value invitation, offer fileOffer) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		select {
+		case <-link.stop:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	if offer.LAN != nil && lanEnabled() {
+		if stream, err := dialLAN(ctx, offer.LAN, value); err == nil {
+			if link.adoptStream(stream) {
+				lanDebug("receiver-adopted", nil)
+				fmt.Fprintf(os.Stderr, "switched to a direct connection (%s)\n", link.direct.Load().route())
+				return
+			}
+			lanDebug("receiver-adoption-rejected", nil)
+			_ = stream.Close()
+		} else {
+			lanDebug("receiver-lan-failed", err)
+		}
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	select {
+	case <-link.stop:
+		return
+	default:
+	}
+	if offer.Direct != nil {
+		answerDirectPath(link, offer.Direct.SDP)
+	}
+}
+
 // answerDirectPath answers the sender's direct-path offer with a signal
 // record, then trickles each local ICE candidate in its own signal record,
 // so the answer waits for no STUN round trip. Any failure leaves the
@@ -454,7 +540,9 @@ func answerDirectPath(link *recordLink, offerSDP string) {
 	if err != nil {
 		return
 	}
-	link.attachDirect(path)
+	if !link.attachDirect(path) {
+		return
+	}
 	// Candidates found before the answer is sent wait for it: the sender
 	// can only add candidates after applying the answer.
 	var mutex sync.Mutex

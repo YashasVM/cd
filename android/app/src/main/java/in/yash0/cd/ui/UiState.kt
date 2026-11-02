@@ -8,7 +8,7 @@ import `in`.yash0.cd.Pairing
 import `in`.yash0.cd.TransferView
 
 /** Root destinations in the bottom navigation bar. */
-enum class Tab { SEND, RECEIVE, TRANSFERS, DEVICES }
+enum class Tab { SEND, RECEIVE, DEVICES }
 
 /** Screens pushed over the tabs. [Home] is the tab host. */
 sealed interface Screen {
@@ -47,6 +47,7 @@ class UiState {
 /** User intents the UI can raise. Implemented by MainActivity so platform calls stay out of composables. */
 interface CdActions {
     fun pickFiles()
+    fun importQr()
     fun scan()
     fun submit(raw: String)
     fun setPaused(paused: Boolean)

@@ -82,7 +82,7 @@ func TestLinkMergesRecordsFromBothPathsInSequenceOrder(t *testing.T) {
 	link := &recordLink{opener: opener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32][]byte{}}
 	var records [][]byte
 	for index := 0; index < 4; index++ {
-		record, _ := sealer.seal(kindChunk, []byte{byte(index)})
+		record, _ := sealer.sealInto(nil, kindChunk, []byte{byte(index)})
 		records = append(records, record)
 	}
 	// The direct path overtakes the relay: 2 and 3 arrive before 0 and 1.
@@ -208,8 +208,8 @@ func TestDirectPathCarriesRecordsBetweenTwoPeers(t *testing.T) {
 func TestRecordAssemblerRejectsGarbageAndSplitsRecords(t *testing.T) {
 	value := testInvitation()
 	sealer, _ := newSealer(value, senderDirection)
-	first, _ := sealer.seal(kindChunk, bytes.Repeat([]byte{1}, 100_000))
-	second, _ := sealer.seal(kindEnd, encodeCounts(1, 100_000))
+	first, _ := sealer.sealInto(nil, kindChunk, bytes.Repeat([]byte{1}, 100_000))
+	second, _ := sealer.sealInto(nil, kindEnd, encodeCounts(1, 100_000))
 	stream := append(append([]byte{}, first...), second...)
 	var assembler recordAssembler
 	var records [][]byte
@@ -318,7 +318,7 @@ func TestPeerLeftRightAfterCompleteIsNotAFailure(t *testing.T) {
 	receiverSealer, _ := newSealer(value, receiverDirection)
 	senderOpener, _ := newOpener(value, receiverDirection)
 	link := &recordLink{opener: senderOpener, items: make(chan linkItem, 8), stop: make(chan struct{}), pending: map[uint32][]byte{}}
-	complete, _ := receiverSealer.seal(kindComplete, encodeCounts(0, 0))
+	complete, _ := receiverSealer.sealInto(nil, kindComplete, encodeCounts(0, 0))
 	link.items <- linkItem{record: complete}
 	link.items <- linkItem{err: errors.New("receiver disconnected")}
 	progress := &senderProgress{ended: true}

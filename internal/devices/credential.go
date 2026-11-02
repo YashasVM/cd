@@ -28,13 +28,14 @@ const Receiver = "receiver"
 
 // Pair is private credential material. Never include it in logs or public device listings.
 type Pair struct {
-	Version   int      `json:"version"`
-	PairID    string   `json:"pairId"`
-	Secret    string   `json:"secret"`
-	Name      string   `json:"name"`
-	RelayURL  string   `json:"relayUrl"`
-	LocalURLs []string `json:"localUrls"`
-	ExpiresAt int64    `json:"expiresAt"`
+	AccountSubject string   `json:"accountSubject,omitempty"`
+	Version        int      `json:"version"`
+	PairID         string   `json:"pairId"`
+	Secret         string   `json:"secret"`
+	Name           string   `json:"name"`
+	RelayURL       string   `json:"relayUrl"`
+	LocalURLs      []string `json:"localUrls"`
+	ExpiresAt      int64    `json:"expiresAt"`
 }
 
 type Join struct {
@@ -180,7 +181,7 @@ func NewPair(name, relayOrigin string, localURLs []string, now time.Time) (Pair,
 		u.Fragment = ""
 		urls = append(urls, u.String())
 	}
-	p := Pair{1, id, secret, name, origin.String(), urls, now.Add(MaxLifetime).UnixMilli()}
+	p := Pair{Version: 1, PairID: id, Secret: secret, Name: name, RelayURL: origin.String(), LocalURLs: urls, ExpiresAt: now.Add(MaxLifetime).UnixMilli()}
 	return p, p.Validate()
 }
 func (p Pair) QR() (string, error) {

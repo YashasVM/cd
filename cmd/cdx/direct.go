@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pion/ice/v4"
@@ -69,13 +70,22 @@ func directEnabled() bool {
 type directPath struct {
 	connection *webrtc.PeerConnection
 	channel    *webrtc.DataChannel
-	opened     chan struct{}
-	// lost closes when the data channel or the ICE connection fails.
+	// stream, when set, is an authenticated same-network TCP connection
+	// (see lan.go) that carries the records instead of a data channel.
+	stream   net.Conn
+	streamMu sync.Mutex
+	opened   chan struct{}
+	// lost closes when the data channel, the ICE connection, or the stream
+	// fails.
 	lost      chan struct{}
 	lostOnce  sync.Once
 	openOnce  sync.Once
 	drained   chan struct{}
 	assembler recordAssembler
+	onLost    func(error)
+	// retired marks a path another one replaced before it carried data;
+	// its failure is not reported.
+	retired atomic.Bool
 }
 
 // newDirectPath creates the peer connection and its pre-negotiated data
@@ -101,13 +111,8 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 		_ = connection.Close()
 		return nil, err
 	}
-	path := &directPath{connection: connection, channel: channel, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1)}
-	lose := func(err error) {
-		path.lostOnce.Do(func() {
-			close(path.lost)
-			onLost(err)
-		})
-	}
+	path := &directPath{connection: connection, channel: channel, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1), onLost: onLost}
+	lose := path.lose
 	channel.OnOpen(func() { path.openOnce.Do(func() { close(path.opened) }) })
 	channel.OnClose(func() { lose(NewFailure(failureDisconnected, "direct connection closed", retryNewTransfer)) })
 	channel.SetBufferedAmountLowThreshold(directBufferLow)
@@ -134,6 +139,61 @@ func newDirectPath(onRecord func([]byte), onLost func(error)) (*directPath, erro
 		}
 	})
 	return path, nil
+}
+
+// newStreamPath wraps an authenticated same-network connection as an open
+// direct path. onRecord receives each complete record read from it.
+func newStreamPath(stream net.Conn, onRecord func([]byte), onLost func(error)) *directPath {
+	path := &directPath{stream: stream, opened: make(chan struct{}), lost: make(chan struct{}), drained: make(chan struct{}, 1), onLost: onLost}
+	close(path.opened)
+	go path.readStream(onRecord)
+	return path
+}
+
+func (path *directPath) readStream(onRecord func([]byte)) {
+	for {
+		var header [headerBytes]byte
+		if _, err := io.ReadFull(path.stream, header[:]); err != nil {
+			path.lose(NewFailure(failureDisconnected, "direct connection closed", retryNewTransfer))
+			return
+		}
+		length := uint64(headerBytes) + uint64(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
+		if header[0] != 'C' || header[1] != 'D' || header[2] != path.assembler.protocol() || length > maxRecordBytes {
+			path.lose(NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever))
+			_ = path.stream.Close()
+			return
+		}
+		record := make([]byte, int(length))
+		copy(record, header[:])
+		if _, err := io.ReadFull(path.stream, record[headerBytes:]); err != nil {
+			path.lose(NewFailure(failureDisconnected, "direct connection interrupted", retryNewTransfer))
+			return
+		}
+		onRecord(record)
+	}
+}
+
+type directPathError struct {
+	path *directPath
+	err  error
+}
+
+func (err *directPathError) Error() string { return err.err.Error() }
+func (err *directPathError) Unwrap() error { return err.err }
+
+func (path *directPath) lose(err error) {
+	path.lostOnce.Do(func() {
+		close(path.lost)
+		if !path.retired.Load() {
+			path.onLost(&directPathError{path: path, err: err})
+		}
+	})
+}
+
+// retire closes a path that another one replaced, without reporting it.
+func (path *directPath) retire() {
+	path.retired.Store(true)
+	path.close()
 }
 
 // localDescription waits for ICE gathering (bounded) and returns the SDP.
@@ -223,6 +283,22 @@ func (path *directPath) isOpen() bool {
 // send writes one record as 64 KiB messages, waiting while the channel's
 // send buffer is full.
 func (path *directPath) send(record []byte) error {
+	if path.stream != nil {
+		path.streamMu.Lock()
+		defer path.streamMu.Unlock()
+		if err := path.stream.SetWriteDeadline(time.Now().Add(transferIdle)); err != nil {
+			return err
+		}
+		if n, err := path.stream.Write(record); err != nil {
+			if isTimeoutError(err) {
+				return NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer)
+			}
+			return err
+		} else if n != len(record) {
+			return io.ErrShortWrite
+		}
+		return nil
+	}
 	for path.channel.BufferedAmount() > directBufferHigh {
 		select {
 		case <-path.drained:
@@ -243,12 +319,17 @@ func (path *directPath) send(record []byte) error {
 // route names the network path ICE chose, for the progress log. A private,
 // loopback, or link-local remote address means both ends share a network.
 func (path *directPath) route() string {
-	pair, err := path.connection.SCTP().Transport().ICETransport().GetSelectedCandidatePair()
-	if err != nil || pair == nil {
+	var remote string
+	if path.stream != nil {
+		remote, _, _ = net.SplitHostPort(path.stream.RemoteAddr().String())
+	} else if pair, err := path.connection.SCTP().Transport().ICETransport().GetSelectedCandidatePair(); err == nil && pair != nil {
+		remote = pair.Remote.Address
+	}
+	address := net.ParseIP(remote)
+	if address == nil {
 		return "direct"
 	}
-	address := net.ParseIP(pair.Remote.Address)
-	if address != nil && (address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() || isInterfaceAddress(address)) {
+	if address.IsPrivate() || address.IsLoopback() || address.IsLinkLocalUnicast() || isInterfaceAddress(address) {
 		return "same network"
 	}
 	return "direct internet path"
@@ -268,6 +349,10 @@ func isInterfaceAddress(address net.IP) bool {
 }
 
 func (path *directPath) close() {
+	if path.stream != nil {
+		_ = path.stream.Close()
+		return
+	}
 	_ = path.connection.Close()
 }
 

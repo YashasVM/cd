@@ -269,27 +269,58 @@ func openBundleEntry(entry bundleEntry) (io.ReadCloser, error) {
 	return file, nil
 }
 
-// bundleSize runs writeBundle over zero-filled contents into a counter. Zip
-// headers and sizes do not depend on the bytes, only the CRCs do, so the
-// count is exact.
+// bundleSize counts the Store ZIP emitted by writeBundle without reading or
+// checksumming payload bytes. Keep its layout in step with archive/zip:
+// streamed files have a trailing descriptor, timestamps add a nine-byte extra
+// to both headers, and ZIP64 adds central-directory and end records.
 func bundleSize(entries []bundleEntry) (uint64, error) {
-	var counter countingWriter
-	err := writeBundle(&counter, entries, func(entry bundleEntry) (io.ReadCloser, error) {
-		return io.NopCloser(io.LimitReader(zeroReader{}, int64(entry.size))), nil
-	})
-	return counter.count, err
-}
-
-type countingWriter struct{ count uint64 }
-
-func (writer *countingWriter) Write(data []byte) (int, error) {
-	writer.count += uint64(len(data))
-	return len(data), nil
-}
-
-type zeroReader struct{}
-
-func (zeroReader) Read(data []byte) (int, error) {
-	clear(data)
-	return len(data), nil
+	const max32 = uint64(1<<32 - 1)
+	var local, central uint64
+	add := func(total *uint64, size uint64) error {
+		if size > ^uint64(0)-*total {
+			return errors.New("bundle size exceeds ZIP limits")
+		}
+		*total += size
+		return nil
+	}
+	for _, entry := range entries {
+		if len(entry.name) > 1<<16-1 {
+			return 0, errors.New("zip: FileHeader.Name too long")
+		}
+		extra := uint64(0)
+		if !entry.modified.IsZero() {
+			extra = 9
+		}
+		header := uint64(len(entry.name)) + extra
+		size := entry.size
+		descriptor := uint64(16)
+		if strings.HasSuffix(entry.name, "/") {
+			size, descriptor = 0, 0
+		} else if size >= max32 {
+			descriptor = 24
+		}
+		centralSize := 46 + header
+		if size >= max32 || local >= max32 {
+			centralSize += 28
+		}
+		for _, amount := range []uint64{30 + header, size, descriptor} {
+			if err := add(&local, amount); err != nil {
+				return 0, err
+			}
+		}
+		if err := add(&central, centralSize); err != nil {
+			return 0, err
+		}
+	}
+	end := uint64(22)
+	if len(entries) >= 1<<16-1 || central >= max32 || local >= max32 {
+		end += 56 + 20
+	}
+	if err := add(&local, central); err != nil {
+		return 0, err
+	}
+	if err := add(&local, end); err != nil {
+		return 0, err
+	}
+	return local, nil
 }

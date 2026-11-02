@@ -20,6 +20,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import com.journeyapps.barcodescanner.ScanContract
@@ -44,6 +48,33 @@ class MainActivity: ComponentActivity(), CdActions {
     private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (!granted) ui.toast("Progress won’t show in notifications"); refresh() }
     private val pushNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) PushBridge.setEnabled(this, true) else TransferBus.status("Allow notifications to enable trusted wake-up"); refresh() }
     private val scanner = registerForActivityResult(ScanContract()) { result -> result.contents?.let { ui.input = it; submit(it.trim()) } }
+    private val qrImagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) lifecycleScope.launch {
+            val decoded = withContext(Dispatchers.IO) { runCatching { decodeQrImage(uri) } }
+            decoded.onSuccess { ui.input = it; submit(it) }
+                .onFailure { ui.toast("No readable QR code in this image") }
+        }
+    }
+
+    private fun decodeQrImage(uri: Uri): String {
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        contentResolver.openInputStream(uri).use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0)
+        val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 1 }
+        while (maxOf(bounds.outWidth, bounds.outHeight) / options.inSampleSize > 2048) options.inSampleSize *= 2
+        val bitmap = contentResolver.openInputStream(uri).use { android.graphics.BitmapFactory.decodeStream(it, null, options) }
+            ?: error("Unreadable image")
+        return try {
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            val source = com.google.zxing.RGBLuminanceSource(bitmap.width, bitmap.height, pixels)
+            com.google.zxing.qrcode.QRCodeReader().decode(
+                com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source)),
+                mapOf(com.google.zxing.DecodeHintType.TRY_HARDER to true),
+            ).text
+        } finally { bitmap.recycle() }
+    }
+
     // OPEN_DOCUMENT (not GET_CONTENT) so the read grant can be persisted: a send interrupted by the app
     // closing can be resumed later from the same uris.
     private val picker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -125,8 +156,10 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun pickFiles() { runCatching { picker.launch(arrayOf("*/*")) }.onFailure { ui.sendError = "No file picker is available on this phone" } }
 
+    override fun importQr() { qrImagePicker.launch("image/*") }
+
     override fun scan() {
-        scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Scan a CD link or the cdx pair QR code").setBeepEnabled(false).setOrientationLocked(false))
+        scanner.launch(ScanOptions().addExtra("TRY_HARDER", true).setCaptureActivity(ScanActivity::class.java).setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Scan a CD link or the cdx pair QR code").setBeepEnabled(false).setOrientationLocked(false))
     }
 
     override fun submit(raw: String) {
@@ -190,7 +223,14 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun open(view: TransferView) {
         val uri = view.openUri ?: store.task(view.id)?.optString("publishedUri")?.takeIf { it.isNotEmpty() }
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
+        runCatching {
+            require(!uri.isNullOrBlank())
+            val fileUri = Uri.parse(uri)
+            val mime = contentResolver.getType(fileUri)
+                ?: android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(view.name.substringAfterLast('.', "").lowercase())
+                ?: "*/*"
+            startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(fileUri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
             .onFailure { ui.toast("Open the file in Downloads/CD") }
     }
 
@@ -221,7 +261,7 @@ class MainActivity: ComponentActivity(), CdActions {
         when (intent.getStringExtra("cd.debug.screen")) {
             "send" -> ui.tab = Tab.SEND
             "receive" -> ui.tab = Tab.RECEIVE
-            "transfers", "history" -> ui.tab = Tab.TRANSFERS
+            "transfers", "history" -> ui.tab = Tab.RECEIVE
             "devices" -> ui.tab = Tab.DEVICES
             "settings" -> ui.open(Screen.Settings)
             "transfer" -> if (scenario in PreviewData.scenarios) ui.open(Screen.Transfer(PreviewData.view(scenario).id))

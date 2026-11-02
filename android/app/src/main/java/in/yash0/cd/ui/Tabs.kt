@@ -52,22 +52,19 @@ fun SendTab(state: UiState, transfers: List<TransferView>, actions: CdActions, c
                     Text("Dismiss", Modifier.padding(top = 6.dp).clip(RoundedCornerShape(6.dp)).clickable { state.sendError = null }.padding(vertical = 8.dp), style = CdType.label.copy(color = Cd.accent))
                 }
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
         }
-        Hero(CdIcons.Upload, "Share anything from your phone", "CD makes a private link and QR. Open it on cd.yash0.in, or run cdx receive on any laptop.")
-        Spacer(Modifier.height(24.dp))
-        BulletLine(CdIcons.File, "Pick several files at once, or share into CD from any app.")
-        BulletLine(CdIcons.Retry, "Interrupted? Open CD and tap Resume — the receiver keeps its progress.")
+        Hero(CdIcons.Upload, "Choose files to send")
         if (sends.isNotEmpty()) {
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
             SectionHeader("Your sends")
-            TransferGroup(sends.take(4), state)
+            TransferGroup(sends, state, actions)
         }
     }
 }
 
 @Composable
-private fun Hero(icon: ImageVector, title: String, body: String) {
+private fun Hero(icon: ImageVector, title: String) {
     Column(Modifier.fillMaxWidth().enter(), horizontalAlignment = Alignment.Start) {
         Box(
             Modifier.size(72.dp).clip(CircleShape)
@@ -77,23 +74,13 @@ private fun Hero(icon: ImageVector, title: String, body: String) {
         ) { Icon(icon, null, Modifier.size(30.dp), tint = Cd.accent) }
         Spacer(Modifier.height(24.dp))
         Text(title, style = CdType.title)
-        Spacer(Modifier.height(8.dp))
-        Text(body, style = CdType.bodyMuted)
-    }
-}
-
-@Composable
-private fun BulletLine(icon: ImageVector, text: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Icon(icon, null, Modifier.padding(top = 2.dp).size(20.dp), tint = Cd.faint)
-        Text(text, Modifier.weight(1f), style = CdType.small)
     }
 }
 
 /* ---------- Receive ---------- */
 
 @Composable
-fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabChrome) {
+fun ReceiveTab(state: UiState, transfers: List<TransferView>, status: String, actions: CdActions, chrome: TabChrome) {
     ScreenFrame(
         "Receive", navigation = chrome.brand, actions = chrome.actions, bottomBar = chrome.bottomBar,
         pinned = {
@@ -103,68 +90,38 @@ fun ReceiveTab(state: UiState, status: String, actions: CdActions, chrome: TabCh
             }
         },
     ) {
-        SectionHeader("Link from the sender")
         InkField(
-            state.input, { state.input = it; state.inputError = "" }, "https://cd.yash0.in/s/…", error = state.inputError.isNotEmpty(),
-            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Pairing or private v2 transfer link",
+            state.input, { state.input = it; state.inputError = "" }, "Enter a code or paste a link", error = state.inputError.isNotEmpty(),
+            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Code or link",
             trailing = {
                 if (state.input.isEmpty()) GhostButton("Paste", { actions.paste()?.let { state.input = it; state.inputError = "" } }, icon = CdIcons.Paste, color = Cd.accent)
                 else IconAction(CdIcons.Close, "Clear", { state.input = ""; state.inputError = "" }, tint = Cd.faint)
             },
         )
         AnimatedVisibility(state.inputError.isNotEmpty()) { Text(state.inputError, Modifier.padding(top = 10.dp), style = CdType.small.copy(color = Cd.danger)) }
-        Spacer(Modifier.height(10.dp))
-        Text("Paste a private link from cdx send or cd.yash0.in, or scan its QR code.", style = CdType.small)
 
-        Spacer(Modifier.height(32.dp))
-        SectionHeader("Trusted devices")
-        Group {
-            val (title, detail, icon) = when {
-                state.paused -> Triple("Receiving is paused", "Trusted devices can’t send until you turn it back on in Settings.", CdIcons.Pause)
-                state.wakeAvailable -> Triple("Trusted devices wake CD", "Your paired laptops wake CD automatically when they send.", CdIcons.Bell)
-                else -> Triple("Receive while CD is open", "Keep CD open to receive from trusted devices — wake-up isn’t set up.", CdIcons.Shield)
-            }
-            ListRow(
-                title, detail, icon = icon, iconTint = if (state.paused) Cd.faint else Cd.accent,
-                onClick = { state.open(Screen.Settings) },
-                below = liveStatus(status)?.let { s -> { Text(s, Modifier.padding(top = 4.dp), style = CdType.monoSmall.copy(fontSize = 13.sp, color = Cd.accent)) } },
-            )
-            RowDivider()
-            ListRow(
-                when (state.pairs.size) { 0 -> "Pair a laptop"; 1 -> "1 trusted device"; else -> "${state.pairs.size} trusted devices" },
-                if (state.pairs.isEmpty()) "Run cdx pair, then scan its QR code." else state.pairs.joinToString(" · ") { it.name },
-                icon = CdIcons.Laptop, onClick = { state.tab = Tab.DEVICES },
-                trailing = { Icon(CdIcons.Chevron, null, Modifier.size(20.dp), tint = Cd.faint) },
-            )
-        }
+        Spacer(Modifier.height(24.dp))
+        GhostButton("Choose QR image", { actions.importQr() }, icon = CdIcons.File)
+        Spacer(Modifier.height(16.dp))
+        SectionHeader("Received files")
+        val received = transfers.filter { it.direction == Direction.RECEIVE }
+        if (received.isEmpty()) Text("No received files yet.", style = CdType.small)
+        else TransferGroup(received, state, actions)
     }
 }
 
 /** The legacy receiver posts idle lines ("Ready to receive", "Receiving is off"); only real activity is worth showing. */
 private fun liveStatus(status: String): String? = status.takeIf { it.isNotBlank() && it !in setOf("Receiving is off", "Ready to receive", "Receiving stopped") }
 
-/* ---------- Transfers ---------- */
-
 @Composable
-fun TransfersTab(state: UiState, transfers: List<TransferView>, chrome: TabChrome) {
-    ScreenFrame("Transfers", navigation = chrome.brand, actions = chrome.actions, bottomBar = chrome.bottomBar) {
-        if (transfers.isEmpty()) {
-            EmptyBrand("Nothing here yet", "Sends and receives show up here. Received files land in Downloads/CD.")
-            return@ScreenFrame
-        }
-        val active = transfers.filter { !it.finished }
-        val earlier = transfers.filter { it.finished }
-        if (active.isNotEmpty()) { SectionHeader("In progress"); TransferGroup(active, state); Spacer(Modifier.height(28.dp)) }
-        if (earlier.isNotEmpty()) { SectionHeader("Earlier"); TransferGroup(earlier, state) }
-    }
-}
-
-@Composable
-fun TransferGroup(list: List<TransferView>, state: UiState) {
+fun TransferGroup(list: List<TransferView>, state: UiState, actions: CdActions) {
     Group {
         list.forEachIndexed { i, view ->
             if (i > 0) RowDivider()
-            TransferRow(view, { state.open(Screen.Transfer(view.id)) })
+            TransferRow(view, {
+                if (view.direction == Direction.RECEIVE && view.phase == `in`.yash0.cd.TransferPhase.COMPLETE) actions.open(view)
+                else state.open(Screen.Transfer(view.id))
+            })
         }
     }
 }
@@ -193,24 +150,27 @@ fun DevicesTab(state: UiState, actions: CdActions, chrome: TabChrome) {
     var revoking by remember { mutableStateOf<Pairing?>(null) }
     ScreenFrame(
         "Devices", navigation = chrome.brand, actions = chrome.actions, bottomBar = chrome.bottomBar,
-        pinned = { PrimaryButton("Scan pairing QR", { actions.scan() }, Modifier.fillMaxWidth(), icon = CdIcons.Scan) },
+        pinned = {
+            SecondaryButton("Choose QR image", { actions.importQr() }, Modifier.fillMaxWidth(), icon = CdIcons.File)
+            PrimaryButton("Scan pairing QR", { actions.scan() }, Modifier.fillMaxWidth(), icon = CdIcons.Scan)
+        },
     ) {
-        Text("Paired laptops send files straight to Downloads/CD on this phone.", style = CdType.bodyMuted)
-        Spacer(Modifier.height(28.dp))
+        ListRow("cdx pair", "Run on your PC", icon = CdIcons.Terminal, onClick = { actions.copy("Pair command", "cdx pair") })
+        Spacer(Modifier.height(16.dp))
         SectionHeader(if (state.pairs.isEmpty()) "Trusted" else "Trusted · ${state.pairs.size}")
         if (state.pairs.isEmpty()) {
             Text("No trusted devices yet.", Modifier.padding(vertical = 8.dp), style = CdType.body.copy(color = Cd.faint))
         } else Group {
             state.pairs.forEachIndexed { i, pair ->
                 if (i > 0) RowDivider()
-                ListRow(pair.name, "Trusted · ${pair.id.take(8)}", icon = CdIcons.Laptop, trailing = {
+                ListRow(pair.name, null, icon = CdIcons.Laptop, trailing = {
                     Text("Revoke", Modifier.clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { revoking = pair }.padding(horizontal = 12.dp, vertical = 12.dp), style = CdType.label.copy(color = Cd.danger))
                 })
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         SectionHeader("How to pair")
-        listOf("Run cdx pair on your laptop", "Scan the QR code it shows", "Confirm Trust on this phone").forEachIndexed { i, step ->
+        listOf("Run cdx pair on your PC", "Scan the QR code", "Tap Trust").forEachIndexed { i, step ->
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Box(Modifier.size(32.dp).clip(CircleShape).border(1.dp, Cd.accent.copy(alpha = 0.45f), CircleShape), contentAlignment = Alignment.Center) {
                     Text("${i + 1}", style = CdType.label.copy(color = Cd.accent, fontSize = 15.sp))
@@ -235,30 +195,25 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
     ScreenFrame("Settings", navigation = { BackButton { state.back() } }) {
         SectionHeader("Receiving")
         Group {
-            SwitchListRow("Pause receiving", "Reject wake-ups and transfers from trusted devices.", state.paused, { actions.setPaused(it) }, CdIcons.Pause)
+            SwitchListRow("Pause receiving", "Stop incoming transfers.", state.paused, { actions.setPaused(it) }, CdIcons.Pause)
             if (PushBridge.available) {
                 RowDivider()
                 SwitchListRow("Wake-up notifications", PushBridge.status, state.push, { actions.setPush(it) }, CdIcons.Bell)
             }
             RowDivider()
-            SwitchListRow("Use mobile data", "Off by default. Unmetered Wi-Fi always works.", state.mobile, { actions.setMobile(it) }, CdIcons.Signal)
+            SwitchListRow("Use mobile data", "Receive over mobile data.", state.mobile, { actions.setMobile(it) }, CdIcons.Signal)
         }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            if (PushBridge.available) "Google delivers a wake-up hint when a trusted laptop starts sending. Paused transfers stay paused." else "This build has no wake-up. Keep CD open to receive from trusted devices.",
-            Modifier.padding(horizontal = 4.dp), style = CdType.small.copy(color = Cd.faint),
-        )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         SectionHeader("Battery")
         Group {
-            ListRow("Battery settings", "If wake-ups are slow, let CD run unrestricted.", icon = CdIcons.Battery, onClick = { actions.batterySettings() },
+            ListRow("Battery settings", "Allow background receiving.", icon = CdIcons.Battery, onClick = { actions.batterySettings() },
                 trailing = { Icon(CdIcons.Open, null, Modifier.size(20.dp), tint = Cd.faint) })
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         SectionHeader("Get the cdx CLI")
         val cmd = "curl -fsSL https://cd.yash0.in/install.sh | sh"
         Group {
-            ListRow(cmd, "Tap to copy. Then cdx receive <link>, or cdx pair.", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 1, onClick = { actions.copy("Install command", cmd) },
+            ListRow(cmd, "Tap to copy", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 1, onClick = { actions.copy("Install command", cmd) },
                 trailing = { Icon(CdIcons.Copy, null, Modifier.size(20.dp), tint = Cd.faint) })
         }
         Spacer(Modifier.height(40.dp))
@@ -271,7 +226,6 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
                 Text("/di·rect/", Modifier.padding(bottom = 5.dp), style = CdType.kicker)
             }
             Spacer(Modifier.height(8.dp))
-            Text("Direct phone-to-terminal file transfer.", style = CdType.small)
             Text("Version $version · cd.yash0.in", style = CdType.small.copy(color = Cd.faint))
         }
     }
@@ -310,7 +264,7 @@ fun CdDialog(title: String, body: String, confirm: String, onConfirm: () -> Unit
     }
 }
 
-/** Shared top-bar and bottom-bar slots for the four root tabs. */
+/** Shared top-bar and bottom-bar slots for the three root tabs. */
 class TabChrome(
     val brand: @Composable () -> Unit,
     val actions: @Composable RowScope.() -> Unit,
