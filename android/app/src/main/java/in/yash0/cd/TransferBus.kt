@@ -43,6 +43,7 @@ data class TransferView(
     val message: String? = null,// human-readable status / error
     val openUri: String? = null,// receive: published MediaStore uri when COMPLETE
     val updatedAt: Long = System.currentTimeMillis(),
+    val resumable: Boolean = true,
 )
 
 object TransferBus {

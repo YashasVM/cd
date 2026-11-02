@@ -86,13 +86,24 @@ fun ReceiveTab(state: UiState, transfers: List<TransferView>, status: String, ac
         pinned = {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SecondaryButton("Scan QR", { actions.scan() }, Modifier.weight(1f), icon = CdIcons.Scan)
-                PrimaryButton(if (state.input.trim().startsWith("cdpair:")) "Review" else "Receive", { actions.submit(state.input.trim()) }, Modifier.weight(1f), enabled = state.input.isNotBlank())
+                PrimaryButton(if (state.resolvingCode) "Finding sender…" else if (state.input.trim().startsWith("cdpair:")) "Review" else "Receive", { actions.submit(state.input.trim()) }, Modifier.weight(1f), enabled = state.input.isNotBlank() && !state.resolvingCode)
             }
         },
     ) {
+        if (state.paused) {
+            Group {
+                ListRow("Receiving paused", null, icon = CdIcons.Pause,
+                    trailing = { GhostButton("Resume", { actions.setPaused(false) }, color = Cd.accent) })
+            }
+            Spacer(Modifier.height(16.dp))
+        } else if (status.startsWith("Waiting for unmetered") || status.startsWith("Waiting for Wi-Fi")) {
+            Text(status, style = CdType.small)
+            GhostButton("Data settings", { state.open(Screen.Settings) }, color = Cd.accent)
+            Spacer(Modifier.height(16.dp))
+        }
         InkField(
             state.input, { state.input = it; state.inputError = "" }, "Enter a code or paste a link", error = state.inputError.isNotEmpty(),
-            onGo = { if (state.input.isNotBlank()) actions.submit(state.input.trim()) }, description = "Code or link",
+            onGo = { if (state.input.isNotBlank() && !state.resolvingCode) actions.submit(state.input.trim()) }, description = "Code or link",
             trailing = {
                 if (state.input.isEmpty()) GhostButton("Paste", { actions.paste()?.let { state.input = it; state.inputError = "" } }, icon = CdIcons.Paste, color = Cd.accent)
                 else IconAction(CdIcons.Close, "Clear", { state.input = ""; state.inputError = "" }, tint = Cd.faint)
@@ -109,9 +120,6 @@ fun ReceiveTab(state: UiState, transfers: List<TransferView>, status: String, ac
         else TransferGroup(received, state, actions)
     }
 }
-
-/** The legacy receiver posts idle lines ("Ready to receive", "Receiving is off"); only real activity is worth showing. */
-private fun liveStatus(status: String): String? = status.takeIf { it.isNotBlank() && it !in setOf("Receiving is off", "Ready to receive", "Receiving stopped") }
 
 @Composable
 fun TransferGroup(list: List<TransferView>, state: UiState, actions: CdActions) {
@@ -213,7 +221,7 @@ fun SettingsScreen(state: UiState, actions: CdActions, version: String, debug: B
         SectionHeader("Get the cdx CLI")
         val cmd = "curl -fsSL https://cd.yash0.in/install.sh | sh"
         Group {
-            ListRow(cmd, "Tap to copy", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 1, onClick = { actions.copy("Install command", cmd) },
+            ListRow(cmd, "Tap to copy", icon = CdIcons.Terminal, titleStyle = CdType.mono.copy(fontSize = 14.sp), titleLines = 4, onClick = { actions.copy("Install command", cmd) },
                 trailing = { Icon(CdIcons.Copy, null, Modifier.size(20.dp), tint = Cd.faint) })
         }
         Spacer(Modifier.height(40.dp))

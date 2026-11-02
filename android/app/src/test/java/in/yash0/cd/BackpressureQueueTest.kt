@@ -8,6 +8,25 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class BackpressureQueueTest {
+    @Test fun networkEofPreservesAlreadyReceivedCompletionFrames() {
+        val inbox = BackpressureQueue<String>(3)
+        inbox.put("encrypted COMPLETE")
+        inbox.put("completed")
+        val eof = IOException("Peer closed")
+        inbox.finish(eof)
+        assertEquals("encrypted COMPLETE", inbox.take(100))
+        assertEquals("completed", inbox.take(100))
+        assertSame(eof, assertThrows(IOException::class.java) { inbox.take(100) })
+        assertSame(eof, assertThrows(IOException::class.java) { inbox.put("late frame", 100) })
+    }
+    @Test fun explicitAbortDiscardsFramesEvenAfterGracefulEof() {
+        val inbox = BackpressureQueue<String>(2)
+        inbox.put("pending data")
+        inbox.finish(IOException("Peer closed"))
+        val cancelled = IOException("Cancelled")
+        inbox.close(cancelled)
+        assertSame(cancelled, assertThrows(IOException::class.java) { inbox.take(100) })
+    }
     @Test fun fullInboxWaitsForConsumerThenDeliversAllRecordsInOrder() {
         val inbox = BackpressureQueue<Int>(8)
         val full = CountDownLatch(1)

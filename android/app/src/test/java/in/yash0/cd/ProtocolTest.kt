@@ -79,10 +79,10 @@ class ProtocolTest {
         assertThrows(Exception::class.java) { Pairing.parse(rawPair, now - 30001) }
         assertThrows(Exception::class.java) { pair.open(frame, now - 30001) }
     }
-    @Test fun invitationRequiresResumablePrivateLink() {
+    @Test fun invitationAcceptsBothPrivateLinkVersions() {
         val f = fixture().getJSONObject("invitation"); val url = "https://cd.yash0.in/s/${f.getString("rootId")}#v2.${f.getString("masterKey")}"
         assertEquals("wss://cd.yash0.in/ws/v2/${f.getString("rootId")}", Invitation.parse(url).relay)
-        assertThrows(Exception::class.java) { Invitation.parse(url.replace("v2.", "v1.")) }
+        assertEquals(1, Invitation.parse(url.replace("v2.", "v1.")).version)
         assertThrows(Exception::class.java) { Invitation.parse(url.replace("https://", "http://")) }
     }
 }

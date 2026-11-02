@@ -90,7 +90,7 @@ class MainActivity: ComponentActivity(), CdActions {
         ReceiveViews.load(applicationContext)
         PushBridge.start(this)
         ReceiveMode.load(this)
-        // No idle receiver at launch: trusted laptops wake CD on demand (ReceiveMode); a notification exists only during a transfer.
+        // Resume the trusted receiver in onStart, including builds without push wake-up.
         refresh()
         if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) acceptIntent(intent)
         setContent {
@@ -108,7 +108,7 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptIntent(intent) }
     override fun onResume() { super.onResume(); refresh() }
-    // HOOK: backend — trusted sends work while CD is open (ReceiveMode stub is a no-op today).
+    // Keep trusted receiving available after the activity leaves the foreground.
     override fun onStart() { super.onStart(); ReceiveMode.onForeground(this) }
     override fun onStop() { ReceiveMode.onBackground(this); super.onStop() }
 
@@ -163,20 +163,42 @@ class MainActivity: ComponentActivity(), CdActions {
     }
 
     override fun submit(raw: String) {
-        if (raw.isBlank()) return
+        if (raw.isBlank() || ui.resolvingCode) return
         runCatching {
+            val request = if (raw.startsWith("cdpair:")) null else DownloadRequest.parse(raw)
+            if (request?.code != null) {
+                ui.resolvingCode = true
+                ui.inputError = ""
+                lifecycleScope.launch {
+                    val resolved = withContext(Dispatchers.IO) { runCatching {
+                        val client = okhttp3.OkHttpClient.Builder().callTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build()
+                        val lookup = okhttp3.Request.Builder().url("https://cd.yash0.in/api/codes/${request.code}").build()
+                        client.newCall(lookup).execute().use { response ->
+                            require(response.isSuccessful) { "Code expired or sender offline. Ask for a new code." }
+                            val body = response.body ?: error("Empty code response")
+                            val source = body.source()
+                            require(!source.request(4097)) { "Invalid code response" }
+                            val bytes = source.readByteArray()
+                            request.resolveCapability(JSONObject(String(bytes, Charsets.UTF_8)))
+                        }
+                    } }
+                    ui.resolvingCode = false
+                    resolved.onSuccess { submit(it) }.onFailure { ui.inputError = it.message ?: "Could not look up code" }
+                }
+                return
+            }
             if (raw.startsWith("cdpair:")) ui.pending = Pairing.parse(raw)
             else {
-                require(!raw.matches(Regex("\\d{4,8}"))) { "Short codes work on cd.yash0.in. Paste the sender’s private link here." }
-                val invitation = runCatching { Invitation.parse(raw) }.getOrElse { e -> throw IllegalArgumentException(if (e.message?.contains("v2") == true) e.message else "That isn’t a CD link. Paste the sender’s private link.") }
+                val invitation = requireNotNull(request?.invitation)
                 val id = invitation.id
                 val prior = store.task(id)
                 require(prior?.optString("state") != "complete") { "This transfer is already saved" }
-                store.putTask((prior ?: JSONObject().put("id", id).put("url", raw)).put("state", "queued"))
+                store.putTask(requireNotNull(request).queuedTask(prior))
                 if (ReceiveMode.paused.value) ui.toast("Receiving is paused in Settings")
                 receiveNow(); ui.input = ""
                 // Optimistic row so the user lands on the transfer immediately; the receiver replaces it by id.
                 if (TransferBus.transfers.value.none { it.id == id }) TransferBus.publish(TransferView(id, Direction.RECEIVE, prior?.optString("filename")?.takeIf { it.isNotEmpty() } ?: "Private transfer", prior?.optString("size")?.toLongOrNull() ?: -1, 0, 0, TransferPhase.WAITING, message = "Connecting to the sender"))
+                ui.tab = Tab.RECEIVE
                 ui.open(Screen.Transfer(id))
             }
             ui.inputError = ""
@@ -189,7 +211,7 @@ class MainActivity: ComponentActivity(), CdActions {
     override fun trust(pair: Pairing) {
         runCatching {
             require(pair.json.getLong("expiresAt") > System.currentTimeMillis())
-            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); refreshService(); askNotifications() }
+            if (!pair.json.optBoolean("debugFake")) { store.trust(pair); ReceiveMode.startTransfer(this); askNotifications() }
             ui.pending = null; ui.input = ""; ui.toast("Trusted ${pair.name}")
         }.onFailure { ui.inputError = "Pairing expired. Run cdx pair again."; ui.pending = null }
         refresh()
@@ -214,7 +236,13 @@ class MainActivity: ComponentActivity(), CdActions {
 
     override fun resume(view: TransferView) {
         if (view.direction == Direction.SEND) runCatching { TransferBus.sender.resume(this, view.id) }.onFailure { ui.toast(it.message ?: "Can’t resume") }
-        else { store.state(view.id, "queued"); receiveNow() }
+        else {
+            if (store.task(view.id)?.optBoolean("resumable", true) == false) {
+                ui.toast("Ask the sender for a new link or code")
+                return
+            }
+            store.state(view.id, "queued"); receiveNow()
+        }
     }
 
     override fun cancel(view: TransferView) {
@@ -226,15 +254,22 @@ class MainActivity: ComponentActivity(), CdActions {
         runCatching {
             require(!uri.isNullOrBlank())
             val fileUri = Uri.parse(uri)
-            val mime = contentResolver.getType(fileUri)
-                ?: android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(view.name.substringAfterLast('.', "").lowercase())
-                ?: "*/*"
+            val inferred = fileMime(view.name) { android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
+            val mime = if (inferred != "application/octet-stream") inferred
+                else contentResolver.getType(fileUri) ?: inferred
             startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(fileUri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
         }
             .onFailure { ui.toast("Open the file in Downloads/CD") }
     }
 
-    override fun dismiss(view: TransferView) { TransferBus.remove(view.id); ui.back() }
+    override fun dismiss(view: TransferView) {
+        runCatching {
+            if (view.direction == Direction.SEND || store.dismiss(view.id)) {
+                TransferBus.remove(view.id)
+                ui.back()
+            }
+        }.onFailure { ui.toast("Could not remove transfer. Try again.") }
+    }
 
     override fun copy(label: String, text: String) {
         getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(label, text))

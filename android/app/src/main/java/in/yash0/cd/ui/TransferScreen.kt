@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -110,25 +111,38 @@ private fun SharePanel(view: TransferView, actions: CdActions) {
         if (view.code != null) {
             Text(
                 view.code,
-                Modifier.clip(RoundedCornerShape(12.dp)).clickable { actions.copy("Code", view.code) }.padding(horizontal = 12.dp, vertical = 4.dp)
+                Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Copy code") { actions.copy("Code", view.code) }.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 4.dp)
                     .semantics { contentDescription = "Share code ${view.code.toList().joinToString(" ")}. Tap to copy." },
                 style = CdType.code,
             )
             Spacer(Modifier.height(4.dp))
-            Text("Scan QR or enter code at cd.yash0.in", style = CdType.small, textAlign = TextAlign.Center)
+            Text("Scan QR or enter this code in CD", style = CdType.small, textAlign = TextAlign.Center)
         } else Text("Scan QR or share the link.", style = CdType.bodyMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
         Hairline()
         Spacer(Modifier.height(20.dp))
         FileLine(view)
         Spacer(Modifier.height(20.dp))
+        SectionHeader("Link")
+        Row(
+            Modifier.fillMaxWidth().panel(14.dp, Cd.ink)
+                .clickable(onClickLabel = "Copy link") { actions.copy("Link", link) }
+                .heightIn(min = 56.dp).padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(link, Modifier.weight(1f), style = CdType.monoSmall)
+            Icon(CdIcons.Copy, "Copy link", Modifier.size(20.dp), tint = Cd.faint)
+        }
+        Spacer(Modifier.height(16.dp))
+        SectionHeader("Command")
         val cmd = "cdx receive ${view.code ?: link}"
         Row(
-            Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable { actions.copy("Command", cmd) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button, onClickLabel = "Copy command") { actions.copy("Command", cmd) }.heightIn(min = 56.dp).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("$", style = CdType.mono.copy(color = Cd.accent))
-            Text(cmd, Modifier.weight(1f), style = CdType.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(cmd, Modifier.weight(1f), style = CdType.mono)
             Icon(CdIcons.Copy, "Copy command", Modifier.size(20.dp), tint = Cd.faint)
         }
         Spacer(Modifier.height(10.dp))
@@ -177,11 +191,11 @@ private fun Progress(view: TransferView, actions: CdActions) {
         if (view.direction == Direction.SEND && link != null) {
             Spacer(Modifier.height(20.dp))
             Row(
-                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable { actions.copy("Private link", link) }.heightIn(min = 56.dp).padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().panel(14.dp, Cd.ink).clickable(role = Role.Button, onClickLabel = "Copy link") { actions.copy("Private link", link) }.heightIn(min = 56.dp).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Icon(CdIcons.Link, null, Modifier.size(20.dp), tint = Cd.accent)
-                Text(link, Modifier.weight(1f), style = CdType.monoSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(link, Modifier.weight(1f), style = CdType.monoSmall)
                 Icon(CdIcons.Copy, "Copy private link", Modifier.size(20.dp), tint = Cd.faint)
             }
         }
@@ -243,7 +257,8 @@ private fun ColumnScope.Pinned(view: TransferView, waiting: Boolean, actions: Cd
             SecondaryButton("Done", onBack, Modifier.fillMaxWidth())
         }
         view.phase == TransferPhase.FAILED -> {
-            PrimaryButton(if (send) "Resume" else "Try again", { actions.resume(view) }, Modifier.fillMaxWidth(), icon = CdIcons.Retry)
+            if (view.resumable) PrimaryButton(if (send) "Resume" else "Try again", { actions.resume(view) }, Modifier.fillMaxWidth(), icon = CdIcons.Retry)
+            else PrimaryButton("Enter a new code", onBack, Modifier.fillMaxWidth(), icon = CdIcons.Retry)
             SecondaryButton("Remove from list", { actions.dismiss(view) }, Modifier.fillMaxWidth())
         }
         view.phase == TransferPhase.CANCELLED -> SecondaryButton("Remove from list", { actions.dismiss(view) }, Modifier.fillMaxWidth())
@@ -255,13 +270,16 @@ private fun ColumnScope.Pinned(view: TransferView, waiting: Boolean, actions: Cd
             Text("Cancel send", Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(10.dp)).clickable { actions.cancel(view) }.padding(horizontal = 16.dp, vertical = 12.dp), style = CdType.label.copy(color = Cd.danger))
         }
         else -> {
-            val canResume = view.phase == TransferPhase.PAUSED || (view.phase == TransferPhase.RETRYING && !send)
-            // Receive transfers are discarded only once paused (the receiver keeps verified progress until then).
-            val canCancel = send || view.phase == TransferPhase.PAUSED
+            val canResume = view.resumable && (view.phase == TransferPhase.PAUSED || (view.phase == TransferPhase.RETRYING && !send))
+            // Resumable receives must pause before discarding retained progress.
+            val canCancel = send || !view.resumable || view.phase == TransferPhase.PAUSED
+            if (!view.resumable && view.phase == TransferPhase.PAUSED) {
+                PrimaryButton("Enter a new code", onBack, Modifier.fillMaxWidth(), icon = CdIcons.Retry)
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (canCancel) SecondaryButton(if (send) "Cancel" else "Discard", { actions.cancel(view) }, Modifier.weight(1f), icon = CdIcons.Close, danger = true)
                 if (canResume) PrimaryButton("Resume", { actions.resume(view) }, Modifier.weight(1f), icon = CdIcons.Play)
-                else if (view.active) SecondaryButton("Pause", { actions.pause(view) }, Modifier.weight(1f), icon = CdIcons.Pause)
+                else if (view.active && view.resumable) SecondaryButton("Pause", { actions.pause(view) }, Modifier.weight(1f), icon = CdIcons.Pause)
             }
         }
     }

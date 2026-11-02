@@ -27,6 +27,7 @@ class UiState {
     var pending by mutableStateOf<Pairing?>(null)
     var input by mutableStateOf("")
     var inputError by mutableStateOf("")
+    var resolvingCode by mutableStateOf(false)
     var sendError by mutableStateOf<String?>(null)
     var tab by mutableStateOf(Tab.SEND)
     var toast by mutableStateOf<String?>(null)

@@ -28,7 +28,7 @@ require(cdAbi == null || cdAbi in setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_
 android {
     namespace = "in.yash0.cd"
     compileSdk = 35
-    defaultConfig { applicationId = "in.yash0.cd.beta"; minSdk = 29; targetSdk = 35; versionCode = 3; versionName = "0.1.2-beta.2"; if (cdAbi != null) ndk { abiFilters += cdAbi } }
+    defaultConfig { applicationId = "in.yash0.cd.beta"; minSdk = 29; targetSdk = 35; versionCode = 8; versionName = "0.1.7-beta"; if (cdAbi != null) ndk { abiFilters += cdAbi } }
     buildFeatures { compose = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }

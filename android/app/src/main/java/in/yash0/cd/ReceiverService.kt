@@ -41,7 +41,7 @@ class ReceiverService: Service() {
     private val renewWake = object: Runnable { override fun run() { if (running.get() && transferActive) { if (wake?.isHeld == true) wake?.release(); wake?.acquire(10 * 60 * 1000L); handler.postDelayed(this, 9 * 60 * 1000L) } } }
     override fun onBind(intent: Intent?) = null
     override fun onCreate() {
-        super.onCreate(); store = StoreRegistry.get(this); network = ReceiverNetwork(this, store); ReceiveViews.load(this)
+        super.onCreate(); store = StoreRegistry.get(this); store.recoverInterruptedTransfers(); network = ReceiverNetwork(this, store); ReceiveViews.load(this)
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("receiving", "File receiving", NotificationManager.IMPORTANCE_LOW))
         try {
             ServiceCompat.startForeground(this, 1, notification("Ready to receive", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
@@ -111,6 +111,7 @@ class ReceiverService: Service() {
     }
     private fun stopReceiving(startId: Int) {
         if (!stopping.compareAndSet(false, true)) return
+        `in`.yash0.cd.ui.ReceiveMode.stopped(this)
         val paused = runCatching { store.pauseReceiving() }.getOrElse { store.tasks().filter { it.getString("state") == "paused" } }
         transferSocket?.cancel()
         paused.forEach { control(it.optString("pairId"), "paused", it.getString("id")) }
@@ -162,12 +163,21 @@ class ReceiverService: Service() {
                 var lastNetworkCheck = 0L
                 var allowed = true
                 transferActive = true; renewWake.run()
+                if (Invitation.parse(task.getString("url")).version == 1) {
+                OrdinaryReceiver(this, store, network.client(client, endpoint), { transferSocket = it }, { name, offset, size ->
+                    val now = SystemClock.elapsedRealtime()
+                    val text = "$name · $offset / $size bytes"
+                    store.progress(id, offset)
+                    if (now - lastProgressAt >= 250) { lastProgressAt = now; notify(text, offset, size) }
+                }, { val now = SystemClock.elapsedRealtime(); if (now - lastNetworkCheck >= 1000) { allowed = network.allowed(endpoint); lastNetworkCheck = now }; ReceiveGate.check(running.get(), store.taskState(id), allowed); true }, ::diagnostic).receive(task, endpoint)
+                } else {
                 ResumeReceiver(this, store, network.client(client, endpoint), { transferSocket = it }, { name, offset, size ->
                     val now = SystemClock.elapsedRealtime()
                     val text = "$name · $offset / $size bytes"
                     store.progress(id, offset)
                     if (now - lastProgressAt >= 250) { lastProgressAt = now; notify(text, offset, size) }
                 }, { val now = SystemClock.elapsedRealtime(); if (now - lastNetworkCheck >= 1000) { allowed = network.allowed(endpoint); lastNetworkCheck = now }; ReceiveGate.check(running.get(), store.taskState(id), allowed); true }, ::diagnostic).receive(task, endpoint, usingLocal)
+                }
                 scheduler.finished(id)
                 control(task.optString("pairId"), "received", id)
                 notify("Saved to Downloads/CD"); return
@@ -198,6 +208,11 @@ class ReceiverService: Service() {
                 if (e is ExpiredTransferException || (e is WireFailure && e.expired)) {
                     val message = ExpiredTransferException().message!!
                     store.state(id, "paused", message); notify(message); return
+                }
+                if (!task.optBoolean("resumable", true)) {
+                    store.state(id, "failed", "Transfer interrupted. Ask the sender for a new link or code.")
+                    notify("Transfer interrupted. Ask for a new link or code.")
+                    return
                 }
                 if (StorageBudget.exhausted(e, this)) {
                     val message = if (e is InsufficientSpaceException) e.message!! else "Storage is full. Free space on your phone, then tap Resume. Retained progress is safe."
