@@ -80,7 +80,7 @@ function decodeCounts(value) {
 // Renders the relay receiver into `container` and starts receiving the
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
-export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
+export function mountRelayReceiver(container, shareUrl, { autoReceive = false, onState = () => {}, onTransport = () => {} } = {}) {
   container.classList.add('share-panel');
   container.innerHTML = PANEL_HTML;
   const pick = (name) => container.querySelector(`[data-relay="${name}"]`);
@@ -97,6 +97,9 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     download: pick('download')
   };
   let failureShown = false;
+  let trace;
+  let stopTimers = () => {};
+  let downloadCleanup = () => {};
   // Leaving before the socket exists must still stop receive() from joining.
   let stopped = false;
   let stop = () => { stopped = true; failureShown = true; };
@@ -149,7 +152,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       pendingProgress = { received, total };
       if (!progressQueued) {
         progressQueued = true;
-        requestAnimationFrame(() => {
+        setTimeout(() => requestAnimationFrame(() => {
           progressQueued = false;
           if (pendingProgress && !failureShown) {
             const { received: r, total: t } = pendingProgress;
@@ -157,7 +160,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
             paintProgress(r, t);
             lastProgressPaint = performance.now();
           }
-        });
+        }), Math.max(0, PROGRESS_RENDER_MS - (now - lastProgressPaint)));
       }
       return;
     }
@@ -171,6 +174,9 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
   function fail(error, socket, sink) {
     if (failureShown) return;
     failureShown = true;
+    stopTimers();
+    trace?.finish('failed');
+    onState('failed');
     closeDirect();
     if (sink) void sink.abort().catch(() => {});
     if (socket?.readyState === WebSocket.OPEN) socket.close(4400, 'receiver failed');
@@ -196,6 +202,9 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
 
   async function receive() {
     const invitation = parseInvitation(new URL(shareUrl, window.location.href));
+    trace = import.meta.env?.VITE_CD_DIAGNOSTICS === '1' ? globalThis.cdDiagnostics?.start('receiver', invitation) : null;
+    trace?.event('connecting');
+    onState('connecting');
     const [{ token }, opener, sealer] = await Promise.all([
       receiverAdmission(invitation),
       createOpener(invitation, SENDER_DIRECTION),
@@ -211,7 +220,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     let received = 0n;
     let acknowledged = 0n;
     let chunks = 0;
-    let pendingBytes = 0;
+    let lastArrival = Date.now();
+    const stallTimer = setInterval(() => {
+      if (state === 'receiving' && Date.now() - lastArrival > 90_000) fail(new Error('The transfer stalled. Check your network and retry.'), socket, sink);
+    }, 5000);
     let queue = Promise.resolve();
     // Records from the relay and the direct path, in sequence order.
     const merger = createRecordMerger();
@@ -231,9 +243,9 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
           directUsed = true;
           if (!switched) {
             switched = true;
-            for (const earlier of retained.splice(0)) direct.send(earlier);
+            for (const earlier of retained.splice(0)) await direct.send(earlier);
           }
-          direct.send(record);
+          await direct.send(record);
           return;
         }
         if (direct && !switched) retained.push(record);
@@ -242,26 +254,18 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       return sendChain;
     }
 
-    function enqueueRecords(records, size) {
-      pendingBytes += size;
-      if (pendingBytes > MAX_PENDING_BYTES + MAX_RECORD_BYTES) {
-        fail(new Error('The sender exceeded the safe receive buffer.'), socket, sink);
-        return;
-      }
+    function enqueueRecords(record) {
+      if (failureShown || stopped) return;
+      lastArrival = Date.now();
       let ordered;
-      try {
-        ordered = merger.push(records);
-      } catch (error) {
-        fail(error, socket, sink);
-        return;
-      }
-      if (ordered.length === 0) {
-        pendingBytes -= size;
-        return;
-      }
+      try { ordered = merger.push(record); trace?.queue(merger.bufferedBytes); }
+      catch (error) { fail(error, socket, sink); return; }
       queue = queue.then(async () => {
-        for (const record of ordered) await processMessage(record);
-      }).finally(() => { pendingBytes -= size; });
+        for (const item of ordered) {
+          try { if (!failureShown && !stopped) await processMessage(item); }
+          finally { merger.release(item); }
+        }
+      });
       queue.catch((error) => fail(error, socket, sink));
     }
 
@@ -270,16 +274,20 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     function startDirect(offerSdp) {
       answerDirect({
         offerSdp,
+        trace,
         onSignal: (signal) => { void send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))).catch(() => {}); },
         onRecord: (record) => {
           directUsed = true;
-          enqueueRecords(record, record.byteLength);
+          onTransport('direct');
+          container.dataset.transport = 'direct';
+          enqueueRecords(record);
         },
         onOpen: () => {},
         onLost: (error) => {
           if (directUsed && state !== 'complete') fail(error, socket, sink);
         }
       }).then((path) => {
+        if (stopped || failureShown || state === 'complete') { path.close(); return; }
         direct = path;
         closeDirect = () => path.close();
       }).catch(() => { /* The transfer stays on the relay. */ });
@@ -294,12 +302,18 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         if (value.type === 'accepted') elements.status.textContent = 'Connected. Waiting for file details...';
         return;
       }
+      const started = trace ? performance.now() : 0;
       const { kind, plaintext } = await opener.open(data);
+      trace?.timing('decrypt', performance.now() - started);
       if (state === 'connecting' && kind === KIND_OFFER) {
         offer = parseOffer(plaintext);
         state = 'offered';
-        if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp);
+        trace?.event('offered');
+        container.dataset.transport = 'relay';
+        onTransport('relay');
+        if (offer.directSdp && typeof RTCPeerConnection === 'function' && trace?.mode !== 'relay') startDirect(offer.directSdp);
         sink = await waitForAcceptance(offer);
+        trace?.event('sink', sink.storage || sink.kind);
         if (failureShown) {
           await sink.abort();
           return;
@@ -307,15 +321,21 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         elements.offer.hidden = true;
         elements.status.textContent = `Receiving ${offer.name}...`;
         state = 'receiving';
+        lastArrival = Date.now();
+        trace?.event('accepted');
+        onState('transferring');
         renderProgress(0n, offer.size, true);
         await send(KIND_ACCEPT);
         return;
       }
       if (state === 'receiving' && kind === KIND_CHUNK) {
         if (received + BigInt(plaintext.byteLength) > offer.size) throw new Error('The sender sent more data than promised.');
+        const writeStarted = trace ? performance.now() : 0;
         await sink.write(plaintext);
+        trace?.timing('write', performance.now() - writeStarted);
         received += BigInt(plaintext.byteLength);
         chunks += 1;
+        trace?.progress(Number(received), Number(offer.size), chunks, directUsed ? 'direct' : 'relay');
         renderProgress(received, offer.size);
         if (received - acknowledged >= ACK_INTERVAL || received === offer.size) {
           await send(KIND_ACK, encodeCounts(chunks, received));
@@ -326,8 +346,14 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       if (state === 'receiving' && kind === KIND_END) {
         const ended = decodeCounts(plaintext);
         if (ended.bytes !== offer.size || ended.bytes !== received || ended.chunks !== chunks) throw new Error('The transfer ended before the complete file arrived.');
+        onState('saving');
+        const flushStarted = trace ? performance.now() : 0;
         const result = await sink.close();
+        trace?.timing('flush', performance.now() - flushStarted);
         state = 'complete';
+        clearInterval(stallTimer);
+        onState('complete');
+        trace?.finish('complete');
         renderProgress(received, offer.size, true);
         await send(KIND_COMPLETE, encodeCounts(chunks, received));
         if (sink.kind === 'download') {
@@ -342,6 +368,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
             revoked = true;
             result.revoke();
           };
+          downloadCleanup = revoke;
           elements.download.addEventListener('click', () => setTimeout(revoke, 60_000), { once: true });
           window.addEventListener('pagehide', revoke, { once: true });
           if (autoReceive) {
@@ -367,6 +394,13 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     };
     window.addEventListener('pagehide', leave, { once: true });
     stop = () => {
+      stopped = true;
+      failureShown = true;
+      clearInterval(stallTimer);
+      clearTimeout(connectTimeout);
+      if (!directUsed || state === 'complete') clearInterval(stallTimer);
+      if (state !== 'complete') trace?.finish('cancelled');
+      downloadCleanup();
       window.removeEventListener('pagehide', leave);
       closeDirect();
       if (state !== 'complete') void sink?.abort().catch(() => {});
@@ -374,12 +408,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     };
     socket.addEventListener('message', (event) => {
       if (typeof event.data !== 'string') {
-        enqueueRecords(event.data, event.data.byteLength);
+        enqueueRecords(event.data);
         return;
       }
-      const size = event.data.length;
-      pendingBytes += size;
-      queue = queue.then(() => processMessage(event.data)).finally(() => { pendingBytes -= size; });
+      queue = queue.then(() => { if (!failureShown && !stopped) return processMessage(event.data); });
       queue.catch((error) => fail(error, socket, sink));
     });
     socket.addEventListener('error', () => {
@@ -388,8 +420,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     const connectTimeout = setTimeout(() => {
       if (state === 'connecting') fail(new Error('Could not reach the CD relay. Check your connection and reload the link.'), socket, sink);
     }, 15_000);
+    stopTimers = () => { clearInterval(stallTimer); clearTimeout(connectTimeout); };
     socket.addEventListener('close', (event) => {
       clearTimeout(connectTimeout);
+      if (!directUsed || state === 'complete') clearInterval(stallTimer);
       if (state !== 'complete' && !directUsed) fail(new Error(closeReasonMessage(event)), null, sink);
     });
   }

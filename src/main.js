@@ -1,20 +1,8 @@
-import { cleanCode, codeFromUrl, generateEphemeralId, isValidCode, peerIdFor } from './p2p-code.js';
 import { cleanShortCode, codeLookupPath, isShortCode, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { startRelaySend } from './relay-sender.js';
 import { createZipBundle, fileSource } from './zip-bundle.js';
 import { startQrScanner } from './qr-scanner.js';
-import { parseManifest } from './p2p-manifest.js';
-import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
-import { openRawChannel, parseTransferOffer, receiveWindowFor } from './raw-channel.js';
-import {
-  DOWNLOAD_TOO_LARGE,
-  createSink,
-  createStageSink,
-  detectCapabilities,
-  selectSinkTier
-} from './sink.js';
-
-if ('serviceWorker' in navigator) {
+if (import.meta.env?.VITE_CD_DIAGNOSTICS !== '1' && 'serviceWorker' in navigator) {
   // Register after first paint/idle so the install never contends with app
   // boot (or an in-progress transfer) for bandwidth and CPU.
   const registerSw = () => {
@@ -28,7 +16,7 @@ if ('serviceWorker' in navigator) {
 }
 
 let qrCodeModulePromise;
-let peerModulePromise;
+
 
 function loadQrCode() {
   qrCodeModulePromise ??= import('qrcode')
@@ -38,18 +26,6 @@ function loadQrCode() {
       throw error;
     });
   return qrCodeModulePromise;
-}
-
-function loadPeer() {
-  // PeerJS is the heaviest dependency on this page. Loading it on demand
-  // keeps first paint fast; transfers await it only when one starts.
-  peerModulePromise ??= import('peerjs')
-    .then((module) => module.Peer || module.default?.Peer || module.default)
-    .catch((error) => {
-      peerModulePromise = undefined;
-      throw error;
-    });
-  return peerModulePromise;
 }
 
 function warmUpOnIdle(task) {
@@ -69,38 +45,6 @@ warmUpOnIdle(() => {
 });
 
 const PROGRESS_UPDATE_INTERVAL = 120;
-const CONNECTION_TIMEOUT_MS = 15000;
-const MIN_PENDING_RECEIVE_BYTES = 8 * 1024 * 1024;
-const SIGNALING_RETRY_LIMIT = 3;
-const SIGNALING_RETRY_DELAY_MS = 300;
-
-function isTemporarySignalingError(error) {
-  return ['network', 'socket-error', 'socket-closed', 'server-error'].includes(error?.type);
-}
-
-function peerOptions() {
-  const iceServers = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
-  ];
-  // TURN-ready: set window.__CD_TURN_SERVERS__ to an array of RTCIceServer
-  // before creating a transfer to relay through TURN (symmetric NAT/CGNAT).
-  // STUN-only when unset.
-  try {
-    const injected = window.__CD_TURN_SERVERS__;
-    if (Array.isArray(injected) && injected.length > 0) iceServers.push(...injected);
-  } catch { /* STUN-only fallback */ }
-  return {
-    host: window.location.hostname,
-    port: window.location.port ? Number(window.location.port) : window.location.protocol === 'https:' ? 443 : 80,
-    path: '/peerjs/',
-    secure: window.location.protocol === 'https:',
-    key: 'peerjs',
-    debug: 0,
-    config: { iceServers },
-  };
-}
-
 // Agent-relay links (from `cdx send` or a browser terminal-send) look like
 // https://cd.yash0.in/s/<22 chars>#v1.<43 chars>. The room lives on the
 // sender's origin, so receivers open the pasted link as-is instead of
@@ -365,6 +309,7 @@ const Sender = (() => {
       onStatus(text) {
         if (current === generation) els.senderStatus.textContent = text;
       },
+      onTransport(route) { els.senderView.dataset.transport = route; },
       onProgress(done, total) {
         if (current !== generation) return;
         lastProgressUpdate.value = updateProgress(els.senderProgress, done, total, startedAt || Date.now(), done === total, lastProgressUpdate);
@@ -456,755 +401,87 @@ const Sender = (() => {
 })();
 
 const Receiver = (() => {
-  let peer = null;
-  // `connection` is the committed transport: whichever of the data channel
-  // or the relay tunnel delivered the sender's first message. Until then
-  // both are candidates.
-  let connection = null;
-  let candidates = [];
-  const lostCandidates = new Set();
-  let manifest = null;
-  let currentFile = null;
-  let currentSink = null;
-  let stageSink = null;
-  let pendingDownloadUrls = [];
-  const DOWNLOAD_URL_TTL_MS = 10 * 60 * 1000;
-  let currentFileBytes = 0;
-  let nextFileIndex = 0;
-  let pickerPromise = null;
-  let totalBytesReceived = 0;
-  let transferStartTime = null;
-  let transferComplete = false;
-  let transferCancelled = false;
-  let lastProgressAckAt = 0;
-  let progressAckTimer = 0;
-  let dataQueue = Promise.resolve();
-  let pendingReceiveBytes = 0;
-  // The window this receiver announces; pending input may reach it.
-  const receiveWindow = receiveWindowFor(navigator.userAgent, navigator.userAgentData?.mobile);
-  const maxPendingReceiveBytes = Math.max(MIN_PENDING_RECEIVE_BYTES, receiveWindow + 2 * 1024 * 1024);
-  let transferGeneration = 0;
-  let timeoutId = null;
-  let lastArrivalAt = 0;
-  let stallIntervalId = null;
-  const lastProgressUpdate = { value: 0 };
-
-  function connect(rawCode) {
-    const agentUrl = agentShareUrlFromInput(rawCode);
-    if (agentUrl) {
-      openRelay(agentUrl);
-      return;
-    }
-    const short = isShortCode(rawCode);
-    const code = short ? cleanShortCode(rawCode) : codeFromUrl(rawCode, window.location.href);
-    if (!short && !isValidCode(code)) {
-      els.scannerStatus.textContent = 'That isn’t a code. Codes are 5 digits, or paste the sender’s link.';
-      els.codeInput.setAttribute('aria-invalid', 'true');
-      els.codeInput.focus();
-      return;
-    }
-
-    els.codeInput.removeAttribute('aria-invalid');
-    void stopScanner();
-    resetConnectionOnly();
-    transferCancelled = false;
-    const connectionGeneration = transferGeneration;
-    els.receiverInputSection.classList.add('hidden');
-    els.receiverConnecting.classList.remove('hidden');
-    els.codeInput.value = code;
-    setState('connecting');
-
-    if (short) {
-      void connectShortCode(connectionGeneration, code);
-      return;
-    }
-
-    void establishPeer(connectionGeneration, code);
-
-    timeoutId = setTimeout(() => {
-      if (!connection) {
-        showError('Connection timed out. Check the code and try again.');
-      }
-    }, CONNECTION_TIMEOUT_MS);
-  }
-
-  // Short numeric codes resolve through the relay directory to a transfer,
-  // then open the relay receiver inline. Works for codes from `cdx send`
-  // and the browser terminal-send page alike.
-  async function connectShortCode(connectionGeneration, code) {
-    let response;
-    try {
-      response = await fetch(codeLookupPath(code));
-    } catch {
-      if (connectionGeneration !== transferGeneration) return;
-      showError('Could not reach CD. Check your connection and try again.');
-      return;
-    }
-    if (connectionGeneration !== transferGeneration || transferCancelled) return;
-    if (response.status === 404) {
-      showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
-      return;
-    }
-    if (!response.ok) {
-      showError('Connection failed. Try again.');
-      return;
-    }
-    let capability;
-    try {
-      capability = parseCapability(await response.json());
-    } catch {
-      showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
-      return;
-    }
-    openRelay(shareUrlFromCapability(capability.origin ?? window.location.origin, capability.transferId, capability.key));
-  }
-
-  // Relay transfers (links and numeric codes) run inline in this tab. The
-  // relay socket is same-origin, so links to another host still navigate.
+  let generation = 0;
   let stopRelay = null;
-  let relayGeneration = 0;
+  let lookup = null;
 
-  async function openRelay(url) {
-    const target = new URL(url, window.location.href);
-    if (target.origin !== window.location.origin) {
-      if (target.protocol === 'https:' || target.protocol === 'http:') window.location.href = target.href;
-      else showError('That isn’t a CD link.');
-      return;
-    }
-    void stopScanner();
-    clearTimeout(timeoutId);
-    const generation = ++relayGeneration;
-    els.codeInput.value = '';
-    els.codeInput.removeAttribute('aria-invalid');
-    els.receiverInputSection.classList.add('hidden');
-    els.receiverConnecting.classList.remove('hidden');
-    let mountRelayReceiver;
-    try {
-      ({ mountRelayReceiver } = await import('./share.js'));
-    } catch {
-      if (generation === relayGeneration) showError('Could not load the receiver. Check your connection and try again.');
-      return;
-    }
-    if (generation !== relayGeneration) return;
-    els.receiverConnecting.classList.add('hidden');
-    els.receiverRelay.classList.remove('hidden');
-    setState('idle');
-    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url, { autoReceive: true });
-  }
-
-  function closeRelay() {
-    relayGeneration++;
+  function reset() {
+    generation++;
+    lookup?.abort();
+    lookup = null;
     stopRelay?.();
     stopRelay = null;
-    els.receiverRelay.classList.add('hidden');
     els.receiverRelayPanel.replaceChildren();
-  }
-
-  async function establishPeer(connectionGeneration, code, signalingRetries = 0) {
-    const PeerCtor = await loadPeer().catch(() => null);
-    if (connectionGeneration !== transferGeneration || transferCancelled) return;
-    if (!PeerCtor) {
-      showError('Could not start. Check your connection and try again.');
-      return;
-    }
-    const activePeer = new PeerCtor(`cd-r-${generateEphemeralId()}`, peerOptions());
-    peer = activePeer;
-    let retryScheduled = false;
-
-    peer.on('open', () => {
-      if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled) return;
-      // Open the relay room up front so the sender can switch to it without
-      // another round trip if the data channel never connects.
-      const capability = generateTunnelCapability();
-      const tunnel = openRelayTunnel({ capability, role: 'creator', connect: (url) => new WebSocket(url) });
-      // `raw: 1` offers the raw data channel; senders that don't know it
-      // (old cached pages) use the PeerJS channel as before.
-      const directConnection = activePeer.connect(peerIdFor(code), {
-        reliable: true,
-        serialization: 'binary',
-        metadata: { relay: capability, raw: 1, window: receiveWindow }
-      });
-      const raw = openRawChannel(directConnection);
-      closeCandidates();
-      candidates = [directConnection, raw, tunnel];
-      for (const transport of candidates) attachTransport(transport, connectionGeneration);
-    });
-
-    peer.on('error', (err) => {
-      if (peer !== activePeer || connectionGeneration !== transferGeneration || transferCancelled || retryScheduled) return;
-      // Signaling is only needed to connect; losing it mid-transfer is harmless.
-      if (connection?.open && isTemporarySignalingError(err)) return;
-      if (err.type === 'peer-unavailable') {
-        showError('No transfer with that code. Check the digits, or ask the sender for a new one.');
-        return;
-      }
-      if (isTemporarySignalingError(err) && !connection?.open && signalingRetries < SIGNALING_RETRY_LIMIT) {
-        retryScheduled = true;
-        connection = null;
-        activePeer.destroy();
-        setTimeout(() => {
-          if (peer === activePeer && connectionGeneration === transferGeneration && !transferCancelled) {
-            void establishPeer(connectionGeneration, code, signalingRetries + 1);
-          }
-        }, SIGNALING_RETRY_DELAY_MS * (signalingRetries + 1));
-        return;
-      }
-      showError('Connection failed. Try again.');
-    });
-  }
-
-  function attachTransport(transport, connectionGeneration) {
-    const current = () => connectionGeneration === transferGeneration && candidates.includes(transport);
-    // A candidate that fails before the sender commits to it is not an
-    // error while the other one may still carry the transfer.
-    const lose = (message) => {
-      if (!current()) return;
-      if (connection === transport) {
-        if (!transferCancelled && !transferComplete) showError(message);
-        return;
-      }
-      if (connection) return;
-      lostCandidates.add(transport);
-      if (!transferCancelled && candidates.every((candidate) => lostCandidates.has(candidate))) showError('Connection failed. Try again.');
-    };
-
-    transport.on('open', () => {
-      if (!current() || transferCancelled || (connection && connection !== transport)) return;
-      els.receiverConnecting.classList.add('hidden');
-    });
-
-    transport.on('data', (data) => {
-      if (!current()) return;
-      if (!connection) commitTransport(transport);
-      if (connection !== transport) return;
-      lastArrivalAt = Date.now();
-      const frameBytes = data instanceof Blob ? data.size : data instanceof ArrayBuffer ? data.byteLength : ArrayBuffer.isView(data) ? data.byteLength : 1024;
-      pendingReceiveBytes += frameBytes;
-      if (pendingReceiveBytes > maxPendingReceiveBytes) {
-        failProtocol();
-        return;
-      }
-      dataQueue = dataQueue
-        .then(() => connectionGeneration === transferGeneration && handleData(data))
-        .catch((error) => {
-          if (connectionGeneration !== transferGeneration) return;
-          if (error?.message === DOWNLOAD_TOO_LARGE) refuseTransfer(DOWNLOAD_TOO_LARGE);
-          else if (error?.message === 'invalid file size' || error?.message === 'invalid file count') {
-            refuseTransfer('That file is too large or too many files — max 5 GB per file, 100 files. Split it and try again.');
-          } else failProtocol();
-        })
-        .finally(() => {
-          if (connectionGeneration === transferGeneration) pendingReceiveBytes -= frameBytes;
-        });
-    });
-
-    transport.on('error', () => {
-      if (transferCancelled) return;
-      lose('Lost the connection to the sender. Try again.');
-    });
-
-    transport.on('close', () => {
-      if (connection === transport && totalBytesReceived >= (manifest?.totalSize ?? Infinity)) return;
-      lose('Lost the connection to the sender. Try again.');
-    });
-  }
-
-  // commitTransport keeps the transport the sender chose and closes the
-  // other candidate.
-  function commitTransport(transport) {
-    connection = transport;
-    els.receiverConnecting.classList.add('hidden');
-    for (const candidate of candidates) {
-      // The raw channel lives on its PeerJS owner's peer connection.
-      if (candidate === transport || candidate === transport.owner) continue;
-      try { candidate.close(); } catch { /* Best effort. */ }
-    }
-    candidates = [transport];
-  }
-
-  function closeCandidates() {
-    const closing = candidates;
-    candidates = [];
-    lostCandidates.clear();
-    for (const candidate of closing) {
-      try { candidate.close(); } catch { /* Best effort. */ }
-    }
-  }
-
-  async function handleData(data) {
-    if (transferCancelled) return;
-
-    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data) || data instanceof Blob) {
-      await handleChunk(data);
-      return;
-    }
-
-    switch (data.type) {
-      case 'manifest':
-        handleManifest(data);
-        break;
-      case 'file-start':
-        await handleFileStart(data);
-        break;
-      case 'file-complete':
-        await handleFileComplete(data);
-        break;
-      case 'transfer-complete':
-        handleTransferComplete();
-        break;
-      case 'cancel':
-        transferCancelled = true;
-        showError('The sender canceled the transfer.');
-        break;
-      default:
-        throw new Error('unexpected control message');
-    }
-  }
-
-  // A sender that stops sending without closing (dead network, a killed tab
-  // on a network that never delivers FIN) would otherwise leave the receiver
-  // on a progress bar forever. Arrival timestamps update for every frame,
-  // even while chunks queue, so only true silence trips this.
-  const STALL_TIMEOUT_MS = 45_000;
-  const STALL_CHECK_MS = 5_000;
-
-  function startStallWatch() {
-    stopStallWatch();
-    lastArrivalAt = Date.now();
-    stallIntervalId = setInterval(() => {
-      if (transferCancelled || transferComplete || !manifest) return;
-      if (Date.now() - lastArrivalAt > STALL_TIMEOUT_MS) {
-        failProtocol('Connection stalled. Check the network and try again.');
-      }
-    }, STALL_CHECK_MS);
-  }
-
-  function stopStallWatch() {
-    if (stallIntervalId !== null) {
-      clearInterval(stallIntervalId);
-      stallIntervalId = null;
-    }
-  }
-
-  function handleManifest(data) {
-    if (manifest) throw new Error('duplicate manifest');
-    manifest = parseManifest(data);
-    totalBytesReceived = 0;
-    transferStartTime = Date.now();
-    transferCancelled = false;
-    lastProgressAckAt = 0;
-    nextFileIndex = 0;
-    lastProgressUpdate.value = 0;
-    startStallWatch();
-
-    setManifestSummary();
-    els.receiverProgress.classList.remove('hidden');
-    lastProgressUpdate.value = updateProgress(
-      els.receiverProgress,
-      totalBytesReceived,
-      manifest.totalSize,
-      transferStartTime,
-      true,
-      lastProgressUpdate
-    );
-    setState('transferring');
-  }
-
-  function setManifestSummary() {
-    if (!manifest) return;
-
-    if (manifest.totalFiles === 1) {
-      const onlyFile = manifest.files[0];
-      setFileInfo(els.receiverFileInfo, onlyFile.name, formatSize(onlyFile.size), 'Getting ready');
-      return;
-    }
-
-    const previewNames = manifest.files.slice(0, 3).map((item) => item.name).join(', ');
-    const remaining = manifest.totalFiles - 3;
-    const suffix = remaining > 0 ? ` + ${remaining} more` : '';
-    setFileInfo(els.receiverFileInfo, `${manifest.totalFiles} files incoming`, formatSize(manifest.totalSize), previewNames + suffix);
-  }
-
-  async function handleFileStart(data) {
-    if (!manifest || currentFile || !Number.isInteger(data.index) || data.index !== nextFileIndex) {
-      throw new Error('unexpected file start');
-    }
-
-    const generation = transferGeneration;
-    currentFile = manifest.files[data.index];
-    currentFileBytes = 0;
-    currentSink = null;
-    stageSink = null;
-    pickerPromise = null;
-    setFileInfo(
-      els.receiverFileInfo,
-      currentFile.name,
-      formatSize(currentFile.size),
-      `File ${data.index + 1} of ${manifest.totalFiles}`
-    );
-
-    const tier = selectSinkTier(detectCapabilities(), currentFile.size, navigator.userAgent);
-    if (tier === 'too-large') {
-      refuseTransfer(DOWNLOAD_TOO_LARGE);
-      return;
-    }
-    if (tier === 'file-picker') {
-      // Fire the save dialog WITHOUT blocking the transfer queue. Awaiting
-      // it here stalls the sender (backpressure) until the user picks a
-      // location; instead chunks stage (preferably off-heap in OPFS) and
-      // flush at file-complete.
-      pickerPromise = openWritable(currentFile);
-      const staged = await createStageSink({ name: currentFile.name, size: currentFile.size });
-      if (generation !== transferGeneration || transferCancelled) {
-        await staged.discard();
-        return;
-      }
-      stageSink = staged;
-    } else {
-      const sink = await createSink({ mediaType: currentFile.mimeType, name: currentFile.name, size: currentFile.size });
-      if (generation !== transferGeneration || transferCancelled) {
-        await sink.abort();
-        return;
-      }
-      currentSink = sink;
-    }
-  }
-
-  async function openWritable(file) {
-    const generation = transferGeneration;
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: file.name,
-        types: [{ description: file.mimeType, accept: { [file.mimeType]: ['.' + extensionFor(file.name)] } }]
-      });
-      const writable = await handle.createWritable();
-      if (generation !== transferGeneration || transferCancelled) {
-        await writable.abort();
-        return null;
-      }
-      return { handle, writable };
-    } catch {
-      return null;
-    }
-  }
-
-  async function handleChunk(data) {
-    if (!currentFile || !manifest) throw new Error('unexpected file bytes');
-
-    const generation = transferGeneration;
-    const file = currentFile;
-    const sink = currentSink || stageSink;
-    const chunk = data instanceof Blob ? await data.arrayBuffer() : data;
-    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
-    const chunkSize = chunk.byteLength;
-    if (chunkSize === 0 || currentFileBytes + chunkSize > file.size || totalBytesReceived + chunkSize > manifest.totalSize) {
-      throw new Error('file size exceeded');
-    }
-
-    if (!sink) {
-      throw new Error('unexpected file bytes');
-    }
-    await sink.write(chunk);
-    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
-
-    totalBytesReceived += chunkSize;
-    currentFileBytes += chunkSize;
-    lastProgressUpdate.value = updateProgress(
-      els.receiverProgress,
-      totalBytesReceived,
-      manifest.totalSize,
-      transferStartTime,
-      false,
-      lastProgressUpdate
-    );
-    sendProgressAck();
-  }
-
-  function sendProgressAck(force = false) {
-    if (!connection?.open) return;
-    const now = performance.now();
-    const wait = PROGRESS_UPDATE_INTERVAL - (now - lastProgressAckAt);
-    if (!force && wait > 0) {
-      // Throttled acks are deferred, never dropped: a sender with a full
-      // window sends nothing more until it hears the latest count.
-      progressAckTimer ||= setTimeout(() => {
-        progressAckTimer = 0;
-        sendProgressAck(true);
-      }, wait);
-      return;
-    }
-    clearTimeout(progressAckTimer);
-    progressAckTimer = 0;
-    connection.send({ type: 'progress', bytes: totalBytesReceived });
-    lastProgressAckAt = now;
-  }
-
-  async function handleFileComplete(data) {
-    if (!currentFile || data.index !== nextFileIndex || currentFileBytes !== currentFile.size) {
-      throw new Error('incomplete file');
-    }
-
-    const generation = transferGeneration;
-    const file = currentFile;
-    const activeSink = currentSink;
-    const activeStageSink = stageSink;
-    const cleanupStale = async () => {
-      try { await activeSink?.abort(); } catch { /* Best effort. */ }
-      try { await activeStageSink?.discard(); } catch { /* Best effort. */ }
-    };
-
-    // Adopt the save stream if the dialog resolved while chunks staged.
-    const picked = await pickerPromise;
-    if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
-      try { await picked?.writable?.abort(); } catch { /* Best effort. */ }
-      await cleanupStale();
-      return;
-    }
-    pickerPromise = null;
-    if (picked && !transferCancelled) {
-      setState('saving');
-      if (activeStageSink) {
-        const staged = await activeStageSink.toFile(file.mimeType);
-        if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
-          await staged.cleanup();
-          try { await picked.writable.abort(); } catch { /* Best effort. */ }
-          await cleanupStale();
-          return;
-        }
-        stageSink = null;
-        try {
-          await staged.file.stream().pipeTo(picked.writable);
-        } catch (error) {
-          await staged.cleanup();
-          throw error;
-        }
-        if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
-          await staged.cleanup();
-          await cleanupStale();
-          return;
-        }
-        await staged.cleanup();
-      }
-    } else if (activeSink) {
-      const result = await activeSink.close();
-      if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
-        try { result?.revoke?.(); } catch { /* Best effort. */ }
-        await cleanupStale();
-        return;
-      }
-      currentSink = null;
-      downloadUrl(result.url, file.name, result.revoke);
-    } else if (activeStageSink) {
-      const download = await activeStageSink.toDownload(file.mimeType);
-      if (generation !== transferGeneration || transferCancelled || currentFile !== file) {
-        try { download?.revoke?.(); } catch { /* Best effort. */ }
-        await cleanupStale();
-        return;
-      }
-      stageSink = null;
-      downloadUrl(download.url, file.name, download.revoke);
-    }
-
-    if (generation !== transferGeneration || transferCancelled || currentFile !== file) return;
-
-    lastProgressUpdate.value = updateProgress(
-      els.receiverProgress,
-      totalBytesReceived,
-      manifest.totalSize,
-      transferStartTime,
-      true,
-      lastProgressUpdate
-    );
-    sendProgressAck(true);
-    currentFile = null;
-    currentFileBytes = 0;
-    nextFileIndex += 1;
-    currentSink = null;
-    stageSink = null;
-  }
-
-  function extensionFor(fileName) {
-    const extension = fileName.split('.').pop();
-    return extension && extension !== fileName ? extension : 'download';
-  }
-
-  function handleTransferComplete() {
-    if (!manifest || currentFile || nextFileIndex !== manifest.totalFiles || totalBytesReceived !== manifest.totalSize) {
-      throw new Error('incomplete transfer');
-    }
-    transferComplete = true;
-    clearTimeout(timeoutId);
-    stopStallWatch();
-    sendProgressAck(true);
-    connection?.send({ type: 'transfer-ack' });
-    els.receiverFileInfo.classList.add('hidden');
-    els.receiverProgress.classList.add('hidden');
-    els.receiverComplete.classList.remove('hidden');
-    els.receiverCompleteMessage.textContent = manifest.totalFiles > 1 ? `Saved ${manifest.totalFiles} files` : 'Saved';
-    els.receiverCompleteDetail.textContent = manifest.totalFiles > 1
-      ? `${formatSize(manifest.totalSize)} · check your downloads folder`
-      : `${shortenMiddle(manifest.files[0].name, 48)} · ${formatSize(manifest.totalSize)}`;
-    setState('complete');
-  }
-
-  function revokeDownload(entry) {
-    const index = pendingDownloadUrls.indexOf(entry);
-    if (index !== -1) pendingDownloadUrls.splice(index, 1);
-    clearTimeout(entry.timeoutId);
-    try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
-    URL.revokeObjectURL(entry.url);
-    entry.link?.remove();
-    const list = els.receiverComplete.querySelector('.redownload-list');
-    if (list && list.childElementCount === 0) list.remove();
-  }
-
-  function downloadUrl(url, fileName, revokeExtra) {
-    const entry = { url, revokeExtra, timeoutId: 0, link: null };
-    // Browsers can block automatic downloads after the first file, so every
-    // file also gets a manual re-download link. Without it a blocked second
-    // file is silently lost.
-    const manual = document.createElement('a');
-    manual.href = url;
-    manual.download = fileName;
-    manual.textContent = pendingDownloadUrls.length === 0 && (!manifest || manifest.totalFiles === 1)
-      ? 'Download again'
-      : `Download ${shortenMiddle(fileName, 24)}`;
-    manual.title = `Download ${fileName} again`;
-    manual.className = 'secondary-btn';
-    const actions = els.receiverComplete.querySelector('.result-actions');
-    let list = els.receiverComplete.querySelector('.redownload-list');
-    if (!list) {
-      list = document.createElement('div');
-      list.className = 'redownload-list';
-      actions.insertBefore(list, els.receiveAnotherBtn);
-    }
-    list.appendChild(manual);
-    entry.link = manual;
-    pendingDownloadUrls.push(entry);
-
-    const auto = document.createElement('a');
-    auto.href = url;
-    auto.download = fileName;
-    document.body.appendChild(auto);
-    auto.click();
-    document.body.removeChild(auto);
-    // Revoking too early aborts large downloads still flushing to disk; the
-    // entry is also revoked on reset and pagehide.
-    entry.timeoutId = setTimeout(() => revokeDownload(entry), DOWNLOAD_URL_TTL_MS);
+    for (const element of [els.receiverRelay, els.receiverConnecting, els.receiverError]) element.classList.add('hidden');
+    els.receiverInputSection.classList.remove('hidden');
+    els.codeInput.value = '';
+    setState('idle');
   }
 
   function showError(message) {
-    transferCancelled = true;
-    try { connection?.close(); } catch { /* The channel may already be closed. */ }
-    closeCandidates();
-    peer?.destroy();
-    clearTimeout(timeoutId);
-    stopStallWatch();
     els.receiverConnecting.classList.add('hidden');
-    els.receiverInputSection.classList.add('hidden');
-    els.receiverRelay.classList.add('hidden');
-    els.receiverFileInfo.classList.add('hidden');
-    els.receiverProgress.classList.add('hidden');
-    els.receiverComplete.classList.add('hidden');
     els.receiverError.querySelector('.error-message').textContent = message;
     els.receiverError.classList.remove('hidden');
     setState('failed');
   }
 
-  function failProtocol(message = 'The sender sent invalid transfer data.') {
-    transferCancelled = true;
-    stopStallWatch();
-    try { connection?.close(); } catch { /* Best effort. */ }
-    peer?.destroy();
-    showError(message);
-  }
-
-  function refuseTransfer(message) {
-    transferCancelled = true;
-    try { connection?.close(); } catch { /* Best effort. */ }
-    try { peer?.destroy(); } catch { /* Best effort. */ }
-    showError(message);
-  }
-
-  function cancel() {
-    if (transferCancelled) return;
-    transferCancelled = true;
+  async function openRelay(value) {
+    const target = new URL(value, location.href);
+    if (target.origin !== location.origin) { location.href = target.href; return; }
+    reset();
+    stopScanner();
+    const current = generation;
+    els.receiverInputSection.classList.add('hidden');
+    els.receiverConnecting.classList.remove('hidden');
+    setState('connecting');
     try {
-      connection?.send({ type: 'cancel' });
-    } catch {
-      // The connection may already be closing.
+      const { mountRelayReceiver } = await import('./share.js');
+      if (current !== generation) return;
+      els.receiverConnecting.classList.add('hidden');
+      els.receiverRelay.classList.remove('hidden');
+      stopRelay = mountRelayReceiver(els.receiverRelayPanel, target.href, { autoReceive: true, onState: setState });
+    } catch { if (current === generation) showError('Could not load the receiver. Check your connection and try again.'); }
+  }
+
+  async function connect(value) {
+    const url = agentShareUrlFromInput(value);
+    if (url) { await openRelay(url); return; }
+    const code = codeFromInput(value);
+    if (!isShortCode(code)) {
+      els.scannerStatus.textContent = 'Enter a 5-digit code or paste a share link. For an old word code, ask the sender to reload CD.';
+      els.codeInput.setAttribute('aria-invalid', 'true');
+      return;
     }
     reset();
+    stopScanner();
+    const current = generation;
+    lookup = new AbortController();
+    els.receiverInputSection.classList.add('hidden');
+    els.receiverConnecting.classList.remove('hidden');
+    setState('connecting');
+    const timer = setTimeout(() => lookup?.abort(), 15_000);
+    try {
+      const response = await fetch(codeLookupPath(code), { signal: lookup.signal });
+      if (current !== generation) return;
+      if (!response.ok) throw new Error(response.status === 404 ? 'No transfer with that code. Ask the sender for a fresh code.' : 'Could not look up the code. Try again shortly.');
+      const capability = parseCapability(await response.json());
+      if (current !== generation) return;
+      await openRelay(shareUrlFromCapability(location.origin, capability.transferId, capability.key));
+    } catch (error) {
+      if (current === generation) showError(error.name === 'AbortError' ? 'Code lookup timed out. Check your connection and retry.' : error.message);
+    } finally { clearTimeout(timer); }
   }
-
-  function resetConnectionOnly() {
-    transferGeneration += 1;
-    transferCancelled = true;
-    peer?.destroy();
-    peer = null;
-    closeCandidates();
-    connection = null;
-    manifest = null;
-    currentFile = null;
-    if (currentSink) void currentSink.abort();
-    if (stageSink) void stageSink.discard();
-    currentSink = null;
-    stageSink = null;
-    for (const entry of pendingDownloadUrls) {
-      clearTimeout(entry.timeoutId);
-      try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
-      try { URL.revokeObjectURL(entry.url); } catch { /* Best effort. */ }
-      entry.link?.remove();
-    }
-    pendingDownloadUrls = [];
-    els.receiverComplete.querySelector('.redownload-list')?.remove();
-    currentFileBytes = 0;
-    nextFileIndex = 0;
-    pickerPromise = null;
-    totalBytesReceived = 0;
-    transferStartTime = null;
-    transferComplete = false;
-    dataQueue = Promise.resolve();
-    pendingReceiveBytes = 0;
-    clearTimeout(progressAckTimer);
-    progressAckTimer = 0;
-    clearTimeout(timeoutId);
-    stopStallWatch();
-  }
-
-  function reset() {
-    closeRelay();
-    resetConnectionOnly();
-    els.receiverInputSection.classList.remove('hidden');
-    els.receiverConnecting.classList.add('hidden');
-    els.receiverFileInfo.classList.add('hidden');
-    els.receiverProgress.classList.add('hidden');
-    els.receiverComplete.classList.add('hidden');
-    els.receiverError.classList.add('hidden');
-    els.receiverCompleteMessage.textContent = 'Saved';
-    els.codeInput.value = '';
-    resetProgress(els.receiverProgress);
-    setState('idle');
-  }
-
-  // Leaving with object URLs alive leaks the OPFS staging entries behind
-  // them; downloads already handed to the browser are unaffected.
-  window.addEventListener('pagehide', () => {
-    for (const entry of pendingDownloadUrls) {
-      clearTimeout(entry.timeoutId);
-      try { entry.revokeExtra?.(); } catch { /* Best effort. */ }
-      try { URL.revokeObjectURL(entry.url); } catch { /* Best effort. */ }
-    }
-    pendingDownloadUrls = [];
-  });
-
-  return {
-    connect,
-    openRelay,
-    reset,
-    cancel
-  };
+  return { connect, openRelay, reset, cancel: reset };
 })();
+
+function codeFromInput(value) {
+  const text = String(value ?? '').trim();
+  if (isShortCode(text)) return text;
+  try {
+    const code = new URL(text, location.href).hash.slice(1);
+    return isShortCode(code) ? code : '';
+  } catch { return ''; }
+}
 
 let stopCamera = null;
 let scannerGeneration = 0;
@@ -1227,8 +504,8 @@ async function startScanner() {
       if (generation !== scannerGeneration) return true;
       const value = text.trim();
       // Anything the Receive box accepts: a numeric code, a private /s/ link,
-      // or an older word-code link.
-      if (!isShortCode(value) && !agentShareUrlFromInput(value) && !isValidCode(codeFromUrl(value))) {
+      // or a private share link.
+      if (!isShortCode(codeFromInput(value)) && !agentShareUrlFromInput(value)) {
         els.scannerLive.textContent = 'That QR code isn’t from CD. Point at the code on the sender’s screen.';
         return false;
       }
@@ -1352,7 +629,7 @@ els.codeInput.addEventListener('input', (event) => {
   }
   // Pasting a full link via autofill/drag doesn't fire a paste event, so
   // detect link characters and extract the code instead of mangling it.
-  event.target.value = /[:\/#.]/.test(raw) ? codeFromUrl(raw, window.location.href) : cleanCode(raw);
+  event.target.value = /[:\/#.]/.test(raw) ? codeFromInput(raw) : raw.replace(/[^0-9]/g, '').slice(0, 5);
   els.codeInput.removeAttribute('aria-invalid');
   // Five digits is the longest numeric code, so nothing else is coming.
   if (/^\d{5}$/.test(event.target.value.trim())) connectEnteredCode();
@@ -1372,11 +649,11 @@ els.codeInput.addEventListener('paste', (event) => {
     Receiver.openRelay(agentUrl);
     return;
   }
-  els.codeInput.value = codeFromUrl(text);
+  els.codeInput.value = codeFromInput(text);
   els.codeInput.removeAttribute('aria-invalid');
   // A pasted code is complete; don't make people find the Connect button.
   if (isShortCode(text)) Receiver.connect(text);
-  else if (isValidCode(els.codeInput.value)) Receiver.connect(els.codeInput.value);
+  else if (isShortCode(els.codeInput.value)) Receiver.connect(els.codeInput.value);
 });
 
 els.scanQrBtn.addEventListener('click', () => void startScanner());
@@ -1438,9 +715,9 @@ window.addEventListener('drop', (event) => {
   Sender.init(files);
 });
 
-const initialCode = codeFromUrl(window.location.href, window.location.href);
-if (isValidCode(initialCode)) {
-  history.replaceState(null, '', window.location.pathname);
+const initialCode = codeFromInput(location.href);
+if (isShortCode(initialCode)) {
+  history.replaceState(null, '', location.pathname + location.search);
   switchToReceiveMode();
   els.codeInput.value = initialCode;
   Receiver.connect(initialCode);

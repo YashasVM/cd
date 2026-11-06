@@ -17,3 +17,6 @@ public/install.ps1
 # Stray `go build` outputs at the repository root
 /cd
 /cdx
+
+dist-demo/
+.demo-tests/

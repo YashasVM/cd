@@ -3,10 +3,11 @@ import { startAmbientDots } from './ambient-dots.js';
 const agentShare = /^\/s\/[A-Za-z0-9_-]{22}\/?$/.test(window.location.pathname);
 const agentSend = /^\/send\/?$/.test(window.location.pathname);
 
-// Single app: `/s/*` renders the relay receiver, `/send` the relay sender,
-// everything else the browser-to-browser P2P UI (which also resolves numeric
-// relay codes and links inline in its Receive tab).
-const app = agentShare ? import('./share-page.js') : agentSend ? import('./agent-send.js') : import('./main.js');
+const diagnostics = import.meta.env.VITE_CD_DIAGNOSTICS === '1'
+  ? import('./diagnostics.js') : Promise.resolve(null);
+const app = diagnostics.then(() => /^\/diagnostics\//.test(location.pathname) && import.meta.env.VITE_CD_DIAGNOSTICS === '1'
+  ? import('./diagnostic-report.js')
+  : agentShare ? import('./share-page.js') : agentSend ? import('./agent-send.js') : import('./main.js'));
 
 // Lead with the installer for the visitor's OS; the other one stays as the alternative.
 if (/Win/i.test(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent)) {
@@ -80,6 +81,10 @@ function cycleRoute() {
 }
 
 app.then(() => {
+  globalThis.cdDiagnostics?.mount();
+  const cleanup = () => import('./sink.js').then(({ cleanAbandonedStages }) => cleanAbandonedStages()).catch(() => {});
+  if ('requestIdleCallback' in window) requestIdleCallback(cleanup);
+  else setTimeout(cleanup, 1500);
   startAmbientDots();
   cycleRoute();
   const workbench = document.querySelector('.workbench');

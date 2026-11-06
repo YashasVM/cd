@@ -16,11 +16,14 @@
     "verify:cli-loop": "node scripts/verify-cli-loop.mjs",
     "bench": "npm run build && node scripts/bench.mjs",
     "deploy:dry": "npm run build && wrangler deploy --dry-run",
-    "verify:browser": "npm run build && node scripts/verify-browser.mjs"
+    "verify:browser": "npm run build && node scripts/verify-browser.mjs",
+    "build:demo": "node scripts/sync-install.mjs && VITE_CD_DIAGNOSTICS=1 vite build --outDir dist-demo",
+    "deploy:demo": "npm run build:demo && wrangler deploy --env demo",
+    "demo:send": "node scripts/demo-send.mjs",
+    "test:worker": "node --test worker/*.test.ts"
   },
   "dependencies": {
     "jsqr": "1.4.0",
-    "peerjs": "1.5.5",
     "qrcode": "1.5.4"
   },
   "devDependencies": {

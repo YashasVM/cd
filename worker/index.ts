@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import { readDiagnosticReport, type DiagnosticState } from './diagnostics';
 
 type Role = 'sender' | 'receiver';
 type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string } | { kind: 'peer'; role: Role };
@@ -14,7 +15,6 @@ type RoomState =
 type SenderJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'sender'; receiverTokenHash: string; shareKey?: string };
 type ReceiverJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'receiver'; receiverToken: string };
 type Join = SenderJoin | ReceiverJoin;
-type PeerAttachment = { id: string; peers: string[]; messages: number };
 
 const MAX_JOIN_BYTES = 512;
 const MAX_RECORD_BYTES = 1024 * 1024;
@@ -26,20 +26,6 @@ const MAX_PEER_BUFFER_BYTES = 32 * 1024 * 1024;
 const JOIN_TIMEOUT_MS = 10 * 1000;
 const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1000;
 const TOMBSTONE_MS = 5 * 60 * 1000;
-const MAX_SIGNAL_BYTES = 128 * 1024;
-const MAX_SIGNAL_MESSAGES = 512;
-
-function isPeerID(value: unknown): value is string {
-  return typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
-}
-
-function isPeerAttachment(value: unknown): value is PeerAttachment {
-  return !!value && typeof value === 'object'
-    && 'id' in value && isPeerID(value.id)
-    && 'peers' in value && Array.isArray(value.peers) && value.peers.every(isPeerID)
-    && 'messages' in value && typeof value.messages === 'number' && Number.isSafeInteger(value.messages) && value.messages >= 0;
-}
-
 function isBase64Url32(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
 }
@@ -123,15 +109,20 @@ function reject(socket: WebSocket, code: number, reason: string): void {
 
 export class TransferRoom extends DurableObject<Env> {
   private room: RoomState = { kind: 'empty' };
+  private diagnostics: DiagnosticState | null = null;
+  private colo = 'unknown';
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
       this.room = await ctx.storage.get<RoomState>('room') ?? { kind: 'empty' };
+      if (env.DIAGNOSTICS_ENABLED === 'true') this.diagnostics = await ctx.storage.get<DiagnosticState>('diagnostics') ?? null;
     });
   }
 
   async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname.startsWith('/api/diagnostics/')) return this.diagnosticReport(request);
+    this.colo = typeof request.cf?.colo === 'string' ? request.cf.colo : 'local';
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
     if (this.ctx.getWebSockets().length >= 4) return new Response('room connection limit reached', { status: 429 });
     const pair = new WebSocketPair();
@@ -173,6 +164,13 @@ export class TransferRoom extends DurableObject<Env> {
       return;
     }
     try {
+      if (this.diagnostics) {
+        const d = this.diagnostics.relay;
+        if (attachment.role === 'sender') d.senderBytes += message.byteLength;
+        else d.receiverBytes += message.byteLength;
+        d.frames++;
+        d.peakBufferedBytes = Math.max(d.peakBufferedBytes, peer.bufferedAmount + message.byteLength);
+      }
       peer.send(message);
     } catch {
       reject(socket, 1011, 'relay send failed');
@@ -200,6 +198,10 @@ export class TransferRoom extends DurableObject<Env> {
 
   async alarm(): Promise<void> {
     const now = Date.now();
+    if (this.diagnostics && this.diagnostics.expiresAt <= now) {
+      this.diagnostics = null;
+      await this.ctx.storage.delete('diagnostics');
+    }
     for (const socket of this.ctx.getWebSockets()) {
       const attachment: unknown = socket.deserializeAttachment();
       if (!isSocketAttachment(attachment)) reject(socket, 4408, 'join expired');
@@ -230,6 +232,10 @@ export class TransferRoom extends DurableObject<Env> {
       socket.serializeAttachment({ kind: 'peer', role: 'sender' } satisfies SocketAttachment);
       await this.ctx.storage.put('room', nextRoom);
       this.room = nextRoom;
+      if (this.env.DIAGNOSTICS_ENABLED === 'true') {
+        this.diagnostics = { tokenHash: join.receiverTokenHash, expiresAt: Date.now() + 24 * 60 * 60 * 1000, relay: { senderBytes: 0, receiverBytes: 0, frames: 0, peakBufferedBytes: 0, createdAt: Date.now(), colo: this.colo }, reports: {} };
+        await this.ctx.storage.put('diagnostics', this.diagnostics);
+      }
       await this.scheduleAlarm();
       logEvent('sender_admitted');
       // A failed claim still admits the sender; it falls back to POST
@@ -271,6 +277,7 @@ export class TransferRoom extends DurableObject<Env> {
     const nextRoom: RoomState = { kind: 'paired', receiverTokenHash: this.room.receiverTokenHash, expiresAt: this.room.expiresAt };
     await this.ctx.storage.put('room', nextRoom);
     this.room = nextRoom;
+    if (this.diagnostics) this.diagnostics.relay.pairedAt = Date.now();
     logEvent('room_paired');
     await this.scheduleAlarm();
     try {
@@ -285,6 +292,22 @@ export class TransferRoom extends DurableObject<Env> {
     // The room admits one receiver, so the code has done its job: release
     // it now instead of leaving it guessable until expiry.
     await this.releaseCode(shareCode);
+  }
+
+  private async diagnosticReport(request: Request): Promise<Response> {
+    if (this.env.DIAGNOSTICS_ENABLED !== 'true' || !this.diagnostics || this.diagnostics.expiresAt <= Date.now()) return new Response('not found', { status: 404 });
+    const token = request.headers.get('Authorization')?.replace(/^Bearer /, '');
+    if (!isBase64Url32(token) || !equalTokenHashes(await hashToken(token), this.diagnostics.tokenHash)) return new Response('unauthorized', { status: 401 });
+    if (request.method === 'POST') {
+      try {
+        const report = await readDiagnosticReport(request);
+        this.diagnostics.reports[report.role] = report;
+        await this.ctx.storage.put('diagnostics', this.diagnostics);
+      } catch { return new Response('invalid diagnostic report', { status: 400 }); }
+      return new Response(null, { status: 204 });
+    }
+    if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
+    return Response.json({ expiresAt: this.diagnostics.expiresAt, relay: this.diagnostics.relay, reports: this.diagnostics.reports }, { headers: { 'Cache-Control': 'no-store' } });
   }
 
   private peer(role: Role): WebSocket | null {
@@ -319,6 +342,10 @@ export class TransferRoom extends DurableObject<Env> {
     const nextRoom = { kind: 'terminal', expiresAt: Date.now() + TOMBSTONE_MS } satisfies RoomState;
     await this.ctx.storage.put('room', nextRoom);
     this.room = nextRoom;
+    if (this.diagnostics) {
+      this.diagnostics.relay.finishedAt = Date.now();
+      await this.ctx.storage.put('diagnostics', this.diagnostics);
+    }
     logEvent('room_terminal');
     await this.scheduleAlarm();
     await this.releaseCode(shareCode);
@@ -326,6 +353,7 @@ export class TransferRoom extends DurableObject<Env> {
 
   private async scheduleAlarm(): Promise<void> {
     const deadlines: number[] = [];
+    if (this.diagnostics) deadlines.push(this.diagnostics.expiresAt);
     if (this.room.kind !== 'empty') deadlines.push(this.room.expiresAt);
     for (const socket of this.ctx.getWebSockets()) {
       const attachment: unknown = socket.deserializeAttachment();
@@ -333,83 +361,6 @@ export class TransferRoom extends DurableObject<Env> {
     }
     if (deadlines.length > 0) await this.ctx.storage.setAlarm(Math.min(...deadlines));
   }
-}
-
-export class PeerSignal extends DurableObject<Env> {
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.pathname === '/deliver' && request.method === 'POST') {
-      const body = await request.text();
-      const bodyBytes = new TextEncoder().encode(body).byteLength;
-      if (bodyBytes > MAX_SIGNAL_BYTES) return new Response('too large', { status: 413 });
-      const socket = this.ctx.getWebSockets().find((peer) => peer.readyState === WebSocket.OPEN && isPeerAttachment(peer.deserializeAttachment()));
-      if (!socket) return new Response('peer unavailable', { status: 404 });
-      if (socket.bufferedAmount + bodyBytes > MAX_PEER_BUFFER_BYTES) {
-        socket.close(4429, 'peer is too slow');
-        return new Response('peer is too slow', { status: 429 });
-      }
-      try { socket.send(body); } catch { return new Response('peer unavailable', { status: 404 }); }
-      return new Response(null, { status: 204 });
-    }
-    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
-    const id = request.headers.get('X-CD-Peer-ID');
-    if (!isPeerID(id)) return new Response('invalid peer id', { status: 400 });
-    const pair = new WebSocketPair();
-    const client = pair[0];
-    const server = pair[1];
-    this.ctx.acceptWebSocket(server);
-    if (this.ctx.getWebSockets().some((socket) => socket !== server && socket.readyState === WebSocket.OPEN)) {
-      server.send(JSON.stringify({ type: 'ID-TAKEN' }));
-      server.close(4409, 'peer id taken');
-      return new Response(null, { status: 101, webSocket: client });
-    }
-    server.serializeAttachment({ id, peers: [], messages: 0 } satisfies PeerAttachment);
-    server.send(JSON.stringify({ type: 'OPEN' }));
-    return new Response(null, { status: 101, webSocket: client });
-  }
-
-  async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    const attachment: unknown = socket.deserializeAttachment();
-    if (!isPeerAttachment(attachment) || typeof message !== 'string' || new TextEncoder().encode(message).byteLength > MAX_SIGNAL_BYTES) {
-      socket.close(4400, 'invalid signal');
-      return;
-    }
-    let value: unknown;
-    try { value = JSON.parse(message); } catch { socket.close(4400, 'invalid signal'); return; }
-    if (!value || typeof value !== 'object' || !('type' in value)) { socket.close(4400, 'invalid signal'); return; }
-    if (value.type === 'HEARTBEAT') return;
-    if (!['OFFER', 'ANSWER', 'CANDIDATE', 'LEAVE'].includes(String(value.type)) || !('dst' in value) || !isPeerID(value.dst)) {
-      socket.close(4400, 'invalid signal');
-      return;
-    }
-    attachment.messages += 1;
-    if (attachment.messages > MAX_SIGNAL_MESSAGES) { socket.close(4429, 'signal limit reached'); return; }
-    if (!attachment.peers.includes(value.dst)) attachment.peers = [...attachment.peers.slice(-7), value.dst];
-    socket.serializeAttachment(attachment);
-    const target = value.dst;
-    try {
-      const delivered = await this.env.PEERS.getByName(target).fetch('https://peer.internal/deliver', {
-        method: 'POST', body: JSON.stringify({ ...value, src: attachment.id }),
-      });
-      if (!delivered.ok) socket.send(JSON.stringify({ type: 'EXPIRE', src: target }));
-    } catch {
-      socket.send(JSON.stringify({ type: 'EXPIRE', src: target }));
-    }
-  }
-
-  async webSocketClose(socket: WebSocket): Promise<void> {
-    const attachment: unknown = socket.deserializeAttachment();
-    if (!isPeerAttachment(attachment)) return;
-    await Promise.all(attachment.peers.map(async (peer) => {
-      try {
-        await this.env.PEERS.getByName(peer).fetch('https://peer.internal/deliver', {
-          method: 'POST', body: JSON.stringify({ type: 'LEAVE', src: attachment.id }),
-        });
-      } catch { /* Peer cleanup is best effort. */ }
-    }));
-  }
-
-  async webSocketError(socket: WebSocket): Promise<void> { await this.webSocketClose(socket); }
 }
 
 // Short numeric share codes ("48291") map to a transfer capability
@@ -540,22 +491,14 @@ export default {
       else if (!assetPath.split('/').pop()?.includes('.')) assetPath = '/design/index.html';
       return env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
     }
-    if (url.pathname === '/peerjs/peerjs') {
-      const id = url.searchParams.get('id');
-      if (!isPeerID(id) || url.searchParams.get('key') !== 'peerjs' || request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
-        return new Response('invalid signaling request', { status: 400 });
-      }
-      try {
-        const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-        const { success } = await env.PEER_RATE_LIMITER.limit({ key: clientAddress });
-        if (!success) return new Response('connection rate limit reached', { status: 429 });
-        const headers = new Headers(request.headers);
-        headers.set('X-CD-Peer-ID', id);
-        return await env.PEERS.getByName(id).fetch(new Request(request, { headers }));
-      } catch {
-        return new Response('signaling temporarily unavailable', { status: 503 });
-      }
+    const diagnosticId = /^\/api\/diagnostics\/([A-Za-z0-9_-]{22})$/.exec(url.pathname)?.[1];
+    if (diagnosticId) {
+      if (env.DIAGNOSTICS_ENABLED !== 'true') return new Response('not found', { status: 404 });
+      const { success } = await env.DIAGNOSTIC_RATE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') ?? 'unknown' });
+      if (!success) return new Response('too many reports', { status: 429 });
+      return env.TRANSFERS.getByName(diagnosticId).fetch(request);
     }
+    if (url.pathname.startsWith('/peerjs/')) return new Response('Word codes have retired. Reload CD on both devices.', { status: 410 });
     const match = /^\/ws\/v1\/([A-Za-z0-9_-]{22})$/.exec(url.pathname);
     if (match) {
       if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('websocket required', { status: 426 });
@@ -581,7 +524,7 @@ export default {
       }
       const codeLookup = /^\/api\/codes\/(\d{4,5})$/.exec(url.pathname);
       if (codeLookup && request.method === 'GET') {
-        return serveCodes(request, env, codeLookup[1], url.hostname === 'cd.yash0.in');
+        return serveCodes(request, env, codeLookup[1]);
       }
       return new Response('not found', { status: 404 });
     }
@@ -592,19 +535,14 @@ export default {
 // Short-code directory requests share the relay's per-IP rate limit, which
 // also bounds code guessing to a trickle. Current senders get their code in
 // the relay join instead; POST /api/codes remains for older clients.
-async function serveCodes(request: Request, env: Env, code: string | null, legacyFallback = false): Promise<Response> {
+async function serveCodes(request: Request, env: Env, code: string | null): Promise<Response> {
   try {
     const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    const { success } = await env.CONNECTION_RATE_LIMITER.limit({ key: clientAddress });
+    const { success } = await env.CODE_RATE_LIMITER.limit({ key: clientAddress });
     if (!success) return new Response('connection rate limit reached', { status: 429 });
     if (code !== null) {
       const capability = await codeShard(env, code).lookup(code);
-      if (!capability) {
-        const legacy = legacyFallback ? await lookupLegacyCode(code) : null;
-        if (!legacy) return new Response('code unavailable', { status: 404 });
-        logEvent('code_resolved_legacy', { code });
-        return Response.json({ ...legacy, origin: LEGACY_ORIGIN });
-      }
+      if (!capability) return new Response('code unavailable', { status: 404 });
       logEvent('code_resolved', { code });
       return Response.json(capability);
     }
@@ -625,21 +563,3 @@ async function serveCodes(request: Request, env: Env, code: string | null, legac
   }
 }
 
-// cdx v0.1.0 (still the latest published release) registers its codes on
-// the old cdx.yash0.in Worker, so a code typed on cd.yash0.in would miss.
-// Resolve misses there too; the receiver then opens that host's share page,
-// where the sender's relay room lives.
-const LEGACY_ORIGIN = 'https://cdx.yash0.in';
-
-async function lookupLegacyCode(code: string): Promise<{ transferId: string; key: string } | null> {
-  try {
-    const response = await fetch(`${LEGACY_ORIGIN}/api/codes/${code}`, { signal: AbortSignal.timeout(5000) });
-    if (!response.ok) return null;
-    const body: unknown = await response.json();
-    if (!body || typeof body !== 'object' || !('transferId' in body) || !('key' in body)
-      || !isTransferId(body.transferId) || !isMasterKey(body.key)) return null;
-    return { transferId: body.transferId, key: body.key };
-  } catch {
-    return null;
-  }
-}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { createSink, createStageSink, createOPFSSink, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
+import { createSink, createOPFSSink, cleanAbandonedStages, downloadUrlFor, DOWNLOAD_TOO_LARGE, WEBKIT_BLOB_LIMIT, detectCapabilities, isWebKitBrowser, selectSinkTier } from './sink.js';
 
 const SAFARI_MAC =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
@@ -97,7 +97,6 @@ describe('download sink lifecycle', () => {
     await withBrowser(t, { async getDirectory() { throw new Error('storage unavailable'); } }, async () => {
       const offer = { name: 'large.bin', size: WEBKIT_BLOB_LIMIT + 1n, mediaType: 'application/octet-stream' };
       await assert.rejects(createSink(offer), { message: DOWNLOAD_TOO_LARGE });
-      await assert.rejects(createStageSink(offer), { message: DOWNLOAD_TOO_LARGE });
     });
   });
 
@@ -170,4 +169,22 @@ describe('download sink lifecycle', () => {
       assert.equal(cleaned, 1);
     });
   });
+});
+
+
+it('sweeps only old CD staging files with no active owner', async () => {
+  const removed = [];
+  const names = ['cd-rx-' + 'a'.repeat(36), 'cd-rx-' + 'b'.repeat(36), 'cd-rx-' + 'c'.repeat(36), 'other-file'];
+  const now = 100_000_000;
+  await cleanAbandonedStages({
+    now,
+    storage: { async getDirectory() { return {
+      async *entries() {
+        for (const [index, name] of names.entries()) yield [name, { kind: 'file', async getFile() { return { lastModified: index === 2 ? now : 0 }; } }];
+      },
+      async removeEntry(name) { removed.push(name); }
+    }; } },
+    locks: { async request(name, options, callback) { await callback(name.endsWith('b'.repeat(36)) ? null : {}); } }
+  });
+  assert.deepEqual(removed, [names[0]]);
 });
