@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "sourceReadBytes": 4194304,
+  "wireRelayChunkBytes": 262144,
+  "rows": [
+    {
+      "direction": "browser-browser",
+      "beforeMs": 1151.2379,
+      "afterMs": 1062.3701140000012,
+      "ratio": 1.083650495085368
+    },
+    {
+      "direction": "browser-cli",
+      "beforeMs": 699.9615060000001,
+      "afterMs": 635.3069749999995,
+      "ratio": 1.101768961374933
+    }
+  ],
+  "verifiedRelayTransfers": 28,
+  "verifiedDirectTransfers": 14,
+  "profileReadCallsBefore": 256,
+  "profileReadCallsAfter": 16,
+  "note": "Seven trials per affected path. Same compression-disabled runtime, frozen CLI and Worker. Separate sequential before/after suites, same random size and entropy class, different payload hashes. Profiles are diagnostics and are excluded from speed claims. Direct candidate trials are separately recorded, without a new paired direct baseline. This iteration does not prove the croc target."
+}

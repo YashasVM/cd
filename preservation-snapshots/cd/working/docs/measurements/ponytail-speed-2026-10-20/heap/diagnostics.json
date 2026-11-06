@@ -1,0 +1,8 @@
+{
+  "mib": 256,
+  "profileCPU": false,
+  "sha256": "58dcd4413a94714ec7ef1cb89cec88e02e72cd8426bf3476122696b2df00e74f",
+  "sender": "{\"transport\":\"relay\",\"relayBytes\":268445221,\"directBytes\":0}\n",
+  "receiver": "{\"transport\":\"relay\",\"relayBytes\":6928,\"directBytes\":0}\n",
+  "note": "Instrumented profiles; not benchmark timings."
+}

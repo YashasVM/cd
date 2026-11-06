@@ -1,0 +1,57 @@
+File: cdx-ponytail-profile
+Build ID: 90ad09749fd27ee5e9605b9a81b12337133eb5f8
+Type: alloc_space
+Time: 2026-10-20 17:57:19 IST
+Showing nodes accounting for 3085.37kB, 100% of 3085.37kB total
+      flat  flat%   sum%        cum   cum%
+     776kB 25.15% 25.15%      776kB 25.15%  slices.Grow[go.shape.[]uint8,go.shape.uint8] (inline)
+     768kB 24.89% 50.04%  2568.83kB 83.26%  github.com/YashasVM/cd/cmd/cdx.transfer
+  388.50kB 12.59% 62.63%   388.50kB 12.59%  runtime.mallocgc
+  320.39kB 10.38% 73.02%   320.39kB 10.38%  internal/sync.newIndirectNode[go.shape.interface {},go.shape.interface {}] (inline)
+  256.30kB  8.31% 81.33%   704.73kB 22.84%  mime.setExtensionType
+  192.05kB  6.22% 87.55%   192.05kB  6.22%  strings.genSplit
+  128.05kB  4.15% 91.70%   128.05kB  4.15%  internal/sync.newEntryNode[go.shape.interface {},go.shape.interface {}] (inline)
+   64.02kB  2.08% 93.78%    64.02kB  2.08%  bufio.(*Scanner).Text (inline)
+   64.02kB  2.08% 95.85%    64.02kB  2.08%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).readRelay
+   64.01kB  2.07% 97.93%    64.01kB  2.07%  testing.(*M).Run
+   64.01kB  2.07%   100%    64.01kB  2.07%  github.com/YashasVM/cd/cmd/cdx.recordNonce (inline)
+         0     0%   100%   840.01kB 27.23%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).sendReleasable
+         0     0%   100%   840.01kB 27.23%  github.com/YashasVM/cd/cmd/cdx.(*recordSealer).sealInto
+         0     0%   100%  2568.83kB 83.26%  github.com/YashasVM/cd/cmd/cdx.TestProfileCLI
+         0     0%   100%   960.81kB 31.14%  github.com/YashasVM/cd/cmd/cdx.fileMediaType
+         0     0%   100%  2568.83kB 83.26%  github.com/YashasVM/cd/cmd/cdx.run
+         0     0%   100%  2568.83kB 83.26%  github.com/YashasVM/cd/cmd/cdx.runSend
+         0     0%   100%  2568.83kB 83.26%  github.com/YashasVM/cd/cmd/cdx.sendFile
+         0     0%   100%   448.44kB 14.53%  internal/sync.(*HashTrieMap[go.shape.interface {},go.shape.interface {}]).Store (inline)
+         0     0%   100%   448.44kB 14.53%  internal/sync.(*HashTrieMap[go.shape.interface {},go.shape.interface {}]).Swap
+         0     0%   100%   320.39kB 10.38%  internal/sync.(*HashTrieMap[go.shape.interface {},go.shape.interface {}]).expand
+         0     0%   100%    64.01kB  2.07%  main.main
+         0     0%   100%   960.81kB 31.14%  mime.TypeByExtension
+         0     0%   100%   960.81kB 31.14%  mime.initMime
+         0     0%   100%   960.81kB 31.14%  mime.initMimeUnix
+         0     0%   100%   960.81kB 31.14%  mime.loadMimeGlobsFile
+         0     0%   100%   260.02kB  8.43%  runtime.allocm
+         0     0%   100%    64.25kB  2.08%  runtime.gcBgMarkWorker
+         0     0%   100%       65kB  2.11%  runtime.gcStart.func4
+         0     0%   100%    64.01kB  2.07%  runtime.main
+         0     0%   100%    64.23kB  2.08%  runtime.malg
+         0     0%   100%   130.01kB  4.21%  runtime.mcall
+         0     0%   100%       65kB  2.11%  runtime.mstart
+         0     0%   100%       65kB  2.11%  runtime.mstart0
+         0     0%   100%       65kB  2.11%  runtime.mstart1
+         0     0%   100%   260.02kB  8.43%  runtime.newm
+         0     0%   100%   388.50kB 12.59%  runtime.newobject
+         0     0%   100%    64.23kB  2.08%  runtime.newproc.func1
+         0     0%   100%    64.23kB  2.08%  runtime.newproc1
+         0     0%   100%   130.01kB  4.21%  runtime.park_m
+         0     0%   100%   195.01kB  6.32%  runtime.resetspinning
+         0     0%   100%   195.01kB  6.32%  runtime.schedule
+         0     0%   100%       65kB  2.11%  runtime.startTheWorldWithSema
+         0     0%   100%   195.01kB  6.32%  runtime.startm
+         0     0%   100%   129.24kB  4.19%  runtime.systemstack
+         0     0%   100%   195.01kB  6.32%  runtime.wakep
+         0     0%   100%   192.05kB  6.22%  strings.Split (inline)
+         0     0%   100%   448.44kB 14.53%  sync.(*Map).Store (inline)
+         0     0%   100%   960.81kB 31.14%  sync.(*Once).Do (inline)
+         0     0%   100%   960.81kB 31.14%  sync.(*Once).doSlow
+         0     0%   100%  2568.83kB 83.26%  testing.tRunner

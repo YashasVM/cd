@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "startedAt": "2026-10-20T12:50:56.000Z",
+  "runs": 1,
+  "mib": 64,
+  "rows": [
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 97.23396099999991,
+      "downloadEventMs": 4165.754165,
+      "receiverMs": 4322.184115,
+      "durableMs": 4322.66547,
+      "totalMs": 4419.903436,
+      "sha256": "567dbd67db1ca6ee09cea797edc46df77ac4970448e162aadf69b85260e3d1ec"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 93.63953200000014,
+      "receiverMs": 3307.0535900000004,
+      "durableMs": 3307.4222290000007,
+      "totalMs": 3401.0639599999995,
+      "sha256": "567dbd67db1ca6ee09cea797edc46df77ac4970448e162aadf69b85260e3d1ec"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 11.188368000000992,
+      "downloadEventMs": 2627.9158239999997,
+      "receiverMs": 2760.373003999999,
+      "durableMs": 2760.5248629999987,
+      "totalMs": 2771.714081,
+      "sha256": "567dbd67db1ca6ee09cea797edc46df77ac4970448e162aadf69b85260e3d1ec"
+    }
+  ],
+  "method": "Official croc browser UI and tagged croc-web server, private loopback relay, default browser compression policy. Pages preload outside timing; readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and includes automatic consent and download save. File/directory fsync added for every output; SHA-256 checked outside timing. RAM output, warm input cache. No direct browser transport or public internet claim.",
+  "sourceCommit": "8a806c36956533f9c003c55f16e31fcf14133f8e",
+  "sourceDirty": "",
+  "crocVersion": "croc version 11.5.5",
+  "binaries": {
+    "croc": "6683a1fbaada19b4b48bcb92244722d7b8a11eb617558e67ee493417214a051c",
+    "web": "b74f951063f18ec7336871e29b2c2d7d2af6d54f820121741471c15b5b8bf106"
+  },
+  "chromium": "154.0.8037.97",
+  "finishedAt": "2026-10-20T12:51:08.473Z"
+}

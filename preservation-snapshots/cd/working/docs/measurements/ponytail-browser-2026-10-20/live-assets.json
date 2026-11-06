@@ -1,0 +1,38 @@
+[
+  {
+    "name": "goal.md",
+    "sha256": "8eb7550d20267bd449c0929c8fd31dd82bddafc46f015cf017dbd0492db1e5c7",
+    "bytes": 3551,
+    "matched": true
+  },
+  {
+    "name": "browser-matching-browser-paired.json",
+    "sha256": "e76d626123567a16e7a907b153787f7661336de4619743124e01df2b66fce5f7",
+    "bytes": 113050,
+    "matched": true
+  },
+  {
+    "name": "browser-matching-browser-summary.json",
+    "sha256": "37979094ea44cd9a7e9b4ba1927914e7df6d9862b18839607dd53182456f3ec5",
+    "bytes": 24798,
+    "matched": true
+  },
+  {
+    "name": "browser-source-views.patch",
+    "sha256": "398962482852cf5aef544da2675abfe5d755dd837646945ff69ef9d698ae63ae",
+    "bytes": 2480,
+    "matched": true
+  },
+  {
+    "name": "bench-croc-browser.mjs",
+    "sha256": "ff715571f206ab9d1a63ea34789042bd0c9b8fa043c5646f3b354af03a848314",
+    "bytes": 10109,
+    "matched": true
+  },
+  {
+    "name": "bench-browser-croc-paired.mjs",
+    "sha256": "ec6b69a8e3580ba7074b5b19a3e76d3cdad3f9d78225850ab0b006ba9d806320",
+    "bytes": 5308,
+    "matched": true
+  }
+]

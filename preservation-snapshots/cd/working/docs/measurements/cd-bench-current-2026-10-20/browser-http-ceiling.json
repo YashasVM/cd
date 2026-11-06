@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "mib": 16,
+  "runs": 3,
+  "rows": [
+    {
+      "run": 0,
+      "transport": "http",
+      "ms": 514,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 31.1284046692607
+    },
+    {
+      "run": 0,
+      "transport": "websocket",
+      "ms": 428.6000000014901,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 37.33084461022952
+    },
+    {
+      "run": 1,
+      "transport": "http",
+      "ms": 554.8000000007451,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 28.839221340985066
+    },
+    {
+      "run": 1,
+      "transport": "websocket",
+      "ms": 405.9000000022352,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 39.41857600372479
+    },
+    {
+      "run": 2,
+      "transport": "http",
+      "ms": 517.7999999970198,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 30.89996137522613
+    },
+    {
+      "run": 2,
+      "transport": "websocket",
+      "ms": 411.19999999925494,
+      "hash": "45dc2ad471ef4a2e3fe32a88fde2caa6b929a74a0f6c42833a0e32210fcca33a",
+      "bytes": 16777216,
+      "mibPerSecond": 38.91050583664638
+    }
+  ],
+  "startedAt": "2026-10-20T10:40:18.790Z",
+  "method": "Raw browser echo through a stateless local Worker, HTTP POST versus WebSocket. Same bytes uploaded and downloaded, no encryption, OPFS or CD processing. HTTP buffers at most 16 MiB before responding to avoid the measured local streaming-echo stall; WebSocket echoes while receiving. Preload and SHA256 outside timing. Diagnostic only, not a production feature or comparison with croc.",
+  "finishedAt": "2026-10-20T10:40:26.198Z"
+}

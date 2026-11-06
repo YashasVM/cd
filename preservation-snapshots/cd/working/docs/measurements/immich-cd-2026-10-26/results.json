@@ -1,0 +1,693 @@
+{
+  "started": "2026-10-26T07:23:02Z",
+  "rows": [
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "14aeefed9f8781320ed7f3f4a8f789e24e3d0bb3d20c5cf93b9b346e9113b825",
+      "seconds": 0.19860869497642852,
+      "httpSeconds": 0.183652,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "14aeefed9f8781320ed7f3f4a8f789e24e3d0bb3d20c5cf93b9b346e9113b825",
+      "readySeconds": 2.115776819002349,
+      "seconds": 6.140638254000805,
+      "receiverSeconds": 4.024845786014339,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6127401420089882,
+      "bridgeSeconds": 6.7533783960097935
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "9ccf5e3d0b48ccacc54c75cccebaaceb85200618cb8247bc00a9385b8a0e1807",
+      "readySeconds": 1.6840043159900233,
+      "seconds": 5.520763287990121,
+      "receiverSeconds": 3.8367452599923126,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.659593505988596,
+      "bridgeSeconds": 6.180356793978717
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "9ccf5e3d0b48ccacc54c75cccebaaceb85200618cb8247bc00a9385b8a0e1807",
+      "seconds": 0.22790755101596005,
+      "httpSeconds": 0.192059,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "b377f442b01f97cac9521950b2bd011ed82067c82e28ed733bd77f3912150931",
+      "seconds": 0.23223074999987148,
+      "httpSeconds": 0.162647,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "b377f442b01f97cac9521950b2bd011ed82067c82e28ed733bd77f3912150931",
+      "readySeconds": 2.0997560159885325,
+      "seconds": 6.7015910589834675,
+      "receiverSeconds": 4.601820593001321,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.8329167650081217,
+      "bridgeSeconds": 7.534507823991589
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "08888cfc7f2f2715232799cce1f6c80cd5ec77270ebf5a0c5665e4b0d7fe6ef1",
+      "seconds": 1.162764544977108,
+      "httpSeconds": 1.148364,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "08888cfc7f2f2715232799cce1f6c80cd5ec77270ebf5a0c5665e4b0d7fe6ef1",
+      "readySeconds": 1.6616045009868685,
+      "seconds": 7.029508042993257,
+      "receiverSeconds": 5.3678917920042295,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591355,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6820103560166899,
+      "bridgeSeconds": 7.711518399009947
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "bb23d0d9c41243549d0cf02b3e4ace6b3871b83b0fac8a70455893497f729d7b",
+      "readySeconds": 1.610951862996444,
+      "seconds": 7.2164714979880955,
+      "receiverSeconds": 5.6055136600043625,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.1110820200119633,
+      "bridgeSeconds": 8.327553518000059
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "bb23d0d9c41243549d0cf02b3e4ace6b3871b83b0fac8a70455893497f729d7b",
+      "seconds": 1.2577533050207421,
+      "httpSeconds": 1.232578,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "da414405a3c6695ff18f53d5d3f776ec33566ee1919999daf18b2e7c34f7c761",
+      "seconds": 1.1413848079973832,
+      "httpSeconds": 1.130381,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "da414405a3c6695ff18f53d5d3f776ec33566ee1919999daf18b2e7c34f7c761",
+      "readySeconds": 1.8181481389910914,
+      "seconds": 6.54846605900093,
+      "receiverSeconds": 4.730304883996723,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.4866199539974332,
+      "bridgeSeconds": 7.035086012998363
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "1ee3524ebefbe3bbdd4d3f89c8008c832c68fe8cfe35da5d11c14fde5b1b0dda",
+      "seconds": 4.419576047017472,
+      "httpSeconds": 4.400983,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "1ee3524ebefbe3bbdd4d3f89c8008c832c68fe8cfe35da5d11c14fde5b1b0dda",
+      "readySeconds": 1.7131994030205533,
+      "seconds": 13.045248241018271,
+      "receiverSeconds": 11.332036773004802,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 33819768,
+          "directBytes": 22042400,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 7093,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.0625498309964314,
+      "bridgeSeconds": 14.107798072014702
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "2189a37247c413b668557413e194de6f74e706a995c6424bf4f33fa4b0a48b80",
+      "readySeconds": 1.663758267997764,
+      "seconds": 11.045477337000193,
+      "receiverSeconds": 9.38171005199547,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 25955168,
+          "directBytes": 26761160,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6892,
+          "directBytes": 6947,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.0698505240143277,
+      "bridgeSeconds": 12.11532786101452
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "2189a37247c413b668557413e194de6f74e706a995c6424bf4f33fa4b0a48b80",
+      "seconds": 4.424453031999292,
+      "httpSeconds": 4.413507,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "c551c008659df3a924e6f087a1615cdf540fc68ccafa116754a9c6cc6b6c02a3",
+      "seconds": 4.42714069201611,
+      "httpSeconds": 4.416768,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "c551c008659df3a924e6f087a1615cdf540fc68ccafa116754a9c6cc6b6c02a3",
+      "readySeconds": 1.6111340999777894,
+      "seconds": 11.876691273995675,
+      "receiverSeconds": 10.26554935699096,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 29887468,
+          "directBytes": 25188240,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6933,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.2195265409827698,
+      "bridgeSeconds": 13.096217814978445
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "e1fa7c5d5296a232af3f720b87ab0864c8e8ca0e6d4b1017dd8ab5d533e3e405",
+      "seconds": 1.2142818699940108,
+      "httpSeconds": 1.20195,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "e1fa7c5d5296a232af3f720b87ab0864c8e8ca0e6d4b1017dd8ab5d533e3e405",
+      "readySeconds": 1.2104894180083647,
+      "seconds": 4.3757427649979945,
+      "receiverSeconds": 3.165233604988316,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.3896976920077577,
+      "bridgeSeconds": 4.765440457005752
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "a8001ea7a904d993d3b2dc3c631fc2f29eb2fe56de2be10daa707cc2a4127cdc",
+      "readySeconds": 1.813864955009194,
+      "seconds": 5.157373572001234,
+      "receiverSeconds": 3.343496554007288,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.3886914339964278,
+      "bridgeSeconds": 5.5460650059976615
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "a8001ea7a904d993d3b2dc3c631fc2f29eb2fe56de2be10daa707cc2a4127cdc",
+      "seconds": 0.5337458470021375,
+      "httpSeconds": 0.515661,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "0612d202b8b86764aa2ff4e904a0efbc7857607e90a6d91ac72806a37af2cf13",
+      "seconds": 0.9733109009976033,
+      "httpSeconds": 0.960268,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "0612d202b8b86764aa2ff4e904a0efbc7857607e90a6d91ac72806a37af2cf13",
+      "readySeconds": 1.7639843189972453,
+      "seconds": 4.731636050972156,
+      "receiverSeconds": 2.9676320939906873,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.3906859150156379,
+      "bridgeSeconds": 5.122321965987794
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "edd5109f77fad8db913faaa34f486eddfa27bb310692396f8191ee454d315810",
+      "seconds": 5.453695037984289,
+      "httpSeconds": 5.440453,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "edd5109f77fad8db913faaa34f486eddfa27bb310692396f8191ee454d315810",
+      "readySeconds": 1.1088439489831217,
+      "seconds": 5.621447345998604,
+      "receiverSeconds": 4.512589512014529,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6954695659806021,
+      "bridgeSeconds": 6.316916911979206
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "6938924f7a71b16bd93e2aeb6f94cdbe9aa6a0003825387ef5fd30a9108a3e6b",
+      "readySeconds": 1.2098719300120138,
+      "seconds": 5.656265042023733,
+      "receiverSeconds": 4.446383521979442,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6946776409749873,
+      "bridgeSeconds": 6.350942682998721
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "6938924f7a71b16bd93e2aeb6f94cdbe9aa6a0003825387ef5fd30a9108a3e6b",
+      "seconds": 5.130954708001809,
+      "httpSeconds": 5.113021,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "135b6cf5d2d3f689aaf4b9f3294dd7a67fd0e6bf98cb0cd37422ac6e7184e29c",
+      "seconds": 5.453738957992755,
+      "httpSeconds": 5.438557,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "135b6cf5d2d3f689aaf4b9f3294dd7a67fd0e6bf98cb0cd37422ac6e7184e29c",
+      "readySeconds": 1.2604606160020921,
+      "seconds": 6.6140254979836755,
+      "receiverSeconds": 5.353550846019061,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.4798184469982516,
+      "bridgeSeconds": 7.093843944981927
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "9821128906a4c02a9e9581ad65f3cc297e7231cd7ab69d71b918bade4282457e",
+      "seconds": 17.892702999000903,
+      "httpSeconds": 17.878314,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "9821128906a4c02a9e9581ad65f3cc297e7231cd7ab69d71b918bade4282457e",
+      "readySeconds": 1.612355680001201,
+      "seconds": 12.38634172399179,
+      "receiverSeconds": 10.773976042983122,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.157991051004501,
+      "bridgeSeconds": 13.544332774996292
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "38ad12b15a3eb5ae61ba90624f5c2ee2496c9be92125b468533a8c8d6c4522db",
+      "readySeconds": 1.6634901069919579,
+      "seconds": 12.442925733019365,
+      "receiverSeconds": 10.779422572988551,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.1726000320049934,
+      "bridgeSeconds": 13.615525765024358
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "38ad12b15a3eb5ae61ba90624f5c2ee2496c9be92125b468533a8c8d6c4522db",
+      "seconds": 18.02209117100574,
+      "httpSeconds": 18.008218,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "dc81c3f9cf18e3ac65366a42feaacc89779ba0081e8d572bb37e67a9b6fe7ae4",
+      "seconds": 18.66567062502145,
+      "httpSeconds": 18.652781,
+      "verified": true
+    },
+    {
+      "route": "public",
+      "size": "large-file",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "dc81c3f9cf18e3ac65366a42feaacc89779ba0081e8d572bb37e67a9b6fe7ae4",
+      "readySeconds": 1.2092536020209081,
+      "seconds": 12.500148070015712,
+      "receiverSeconds": 11.290881930995965,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.0855139549821615,
+      "bridgeSeconds": 13.585662024997873
+    }
+  ],
+  "immichVersion": {
+    "major": 3,
+    "minor": 3,
+    "patch": 5,
+    "prerelease": null
+  },
+  "cdSha256": "d47726679f2aeb67465c7fb1f5c586b97394718d4ee535baaba674897d357008",
+  "publicImmich": "https://yet-accordance-vatican-smoke.trycloudflare.com",
+  "lanStarted": "2026-10-26T07:19:21Z",
+  "finished": "2026-10-26T07:26:23Z"
+}

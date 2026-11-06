@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 3,
+  "modes": [
+    "0"
+  ],
+  "chunks": [
+    262144
+  ],
+  "startedAt": "2026-10-20T10:48:02.501Z",
+  "rows": [
+    {
+      "run": 0,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "permessage-deflate; client_max_window_bits=15",
+      "receiverExtensions": "permessage-deflate; client_max_window_bits=15",
+      "bytes": 67108864,
+      "milliseconds": 1496.277665,
+      "mibPerSecond": 42.772809818022644,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 127
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "permessage-deflate; client_max_window_bits=15",
+      "receiverExtensions": "permessage-deflate; client_max_window_bits=15",
+      "bytes": 67108864,
+      "milliseconds": 1482.461456,
+      "mibPerSecond": 43.17144283311471,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 125
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "extensions": "permessage-deflate; client_max_window_bits=15",
+      "receiverExtensions": "permessage-deflate; client_max_window_bits=15",
+      "bytes": 67108864,
+      "milliseconds": 1504.8435959999997,
+      "mibPerSecond": 42.529336716531446,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 127
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.",
+  "finishedAt": "2026-10-20T10:48:08.677Z"
+}

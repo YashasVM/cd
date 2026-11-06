@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "productionChangeRetained": false,
+  "beforeMs": 2952.346929,
+  "afterMs": 2936.8429849999998,
+  "ratio": 1.0052791191354753,
+  "pairedTrials": 14,
+  "raw": [
+    {
+      "name": "Separate contexts, 64 KiB",
+      "medianMs": 2700.448687
+    },
+    {
+      "name": "Separate contexts, native shared memory",
+      "medianMs": 3073.0656819999967
+    },
+    {
+      "name": "Separate contexts, 16 KiB",
+      "medianMs": 3695.4187009999987
+    },
+    {
+      "name": "Separate contexts, 64 KiB",
+      "medianMs": 2631.5965570000044
+    },
+    {
+      "name": "64 KiB, 0 ms wait included",
+      "medianMs": 2688.8624660000023
+    },
+    {
+      "name": "64 KiB, 100 ms wait included",
+      "medianMs": 2757.5118809999985
+    },
+    {
+      "name": "256 KiB, 0 ms wait included",
+      "medianMs": 2257.639866999998
+    },
+    {
+      "name": "256 KiB, 100 ms wait included",
+      "medianMs": 2394.676158999995
+    }
+  ],
+  "note": "Earlier sequential cohorts suggested a gain that did not survive an alternating seven-round comparison. The framing candidate was removed. Raw diagnostics exclude CD application work and do not establish a product win. Shared-memory test still uses RAM in both /tmp and /dev/shm on this host. Route metadata omits IP addresses; address equality in early runs was not validated and was replaced with null."
+}

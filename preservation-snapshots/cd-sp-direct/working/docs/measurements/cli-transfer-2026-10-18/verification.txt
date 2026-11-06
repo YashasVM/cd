@@ -1,0 +1,59 @@
+go test ./...
+ok  	github.com/YashasVM/cd/cmd/cdx	2.398s
+
+go vet ./...
+passed, no output
+
+go test -race ./cmd/cdx
+ok  	github.com/YashasVM/cd/cmd/cdx	8.357s
+
+npm test
+ℹ tests 64
+ℹ suites 6
+ℹ pass 64
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1138.236972
+
+npm run build
+
+> cd@1.0.0 build
+> node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build
+
+design: wrote 1 docs -> public/design/docs.json
+install: synced scripts/install.sh -> public/install.sh
+install: synced scripts/install.ps1 -> public/install.ps1
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 81 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                          14.26 kB │ gzip:  3.10 kB
+dist/assets/index-BQNCGYPm.css           24.21 kB │ gzip:  5.97 kB
+dist/assets/share-page-aFoCyCo_.js        0.92 kB │ gzip:  0.53 kB
+dist/assets/agent-protocol-LskAY8uV.js    2.94 kB │ gzip:  1.23 kB
+dist/assets/sink-CJGX-iL8.js              3.16 kB │ gzip:  1.30 kB
+dist/assets/agent-send-_ZgAJpsP.js        3.49 kB │ gzip:  1.15 kB
+dist/assets/index-DoJwOUBG.js             6.60 kB │ gzip:  2.80 kB
+dist/assets/relay-sender-CMoEeM_h.js     11.29 kB │ gzip:  4.43 kB
+dist/assets/share-Cl3kMbDc.js            14.99 kB │ gzip:  5.79 kB
+dist/assets/browser-CbXXil_7.js          23.46 kB │ gzip:  8.85 kB
+dist/assets/main-CsoBnXuW.js             35.15 kB │ gzip: 11.83 kB
+dist/assets/bundler-tDZmScZY.js          86.45 kB │ gzip: 23.11 kB
+dist/assets/jsQR-CJdWWflH.js            129.97 kB │ gzip: 47.49 kB
+
+✓ built in 482ms
+
+npx tsc
+passed, no output
+
+node scripts/verify-agent.mjs
+sender switched to the direct path
+verified a folder send arrived as 5 separate files in the browser
+verified 40 signaling registrations from one IP
+verified 1572937 exact bytes through CLI, Worker, encryption, flow control, and receiver
+
+Playwright browser sender -> CLI probe
+verified browser sender -> new CLI: 1572937 exact bytes and browser completion state

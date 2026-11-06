@@ -1,0 +1,94 @@
+{
+  "chromium": "155.0.8059.84",
+  "payloadMiB": 32,
+  "chunkBytes": 262144,
+  "runs": 7,
+  "verified": true,
+  "expected": "8ebb54db8f664a55cb97469b7314223cf43e3f377cceecb49028d07a343ca4cf",
+  "trials": [
+    {
+      "name": "current",
+      "run": 0,
+      "milliseconds": 430.09999999403954,
+      "mibPerSecond": 74.40130202381648
+    },
+    {
+      "name": "before",
+      "run": 0,
+      "milliseconds": 727.1999999880791,
+      "mibPerSecond": 44.004400440765366
+    },
+    {
+      "name": "before",
+      "run": 1,
+      "milliseconds": 643.5999999940395,
+      "mibPerSecond": 49.72032318256115
+    },
+    {
+      "name": "current",
+      "run": 1,
+      "milliseconds": 419,
+      "mibPerSecond": 76.37231503579953
+    },
+    {
+      "name": "current",
+      "run": 2,
+      "milliseconds": 415.69999998807907,
+      "mibPerSecond": 76.9785903317721
+    },
+    {
+      "name": "before",
+      "run": 2,
+      "milliseconds": 662.3000000119209,
+      "mibPerSecond": 48.31647289660882
+    },
+    {
+      "name": "before",
+      "run": 3,
+      "milliseconds": 647.6999999880791,
+      "mibPerSecond": 49.40558900816576
+    },
+    {
+      "name": "current",
+      "run": 3,
+      "milliseconds": 412.90000000596046,
+      "mibPerSecond": 77.5006054723615
+    },
+    {
+      "name": "current",
+      "run": 4,
+      "milliseconds": 414.2000000178814,
+      "mibPerSecond": 77.25736358913214
+    },
+    {
+      "name": "before",
+      "run": 4,
+      "milliseconds": 663.2999999821186,
+      "mibPerSecond": 48.243630334483136
+    },
+    {
+      "name": "before",
+      "run": 5,
+      "milliseconds": 647.4000000059605,
+      "mibPerSecond": 49.42848316296785
+    },
+    {
+      "name": "current",
+      "run": 5,
+      "milliseconds": 462.19999998807907,
+      "mibPerSecond": 69.2340977949488
+    },
+    {
+      "name": "current",
+      "run": 6,
+      "milliseconds": 418.7000000178814,
+      "mibPerSecond": 76.42703606074367
+    },
+    {
+      "name": "before",
+      "run": 6,
+      "milliseconds": 655.4000000059605,
+      "mibPerSecond": 48.82514494920504
+    }
+  ]
+}

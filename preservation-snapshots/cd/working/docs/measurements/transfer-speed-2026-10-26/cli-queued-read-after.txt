@@ -1,0 +1,20 @@
+Captured from tool output, final bounded one-item fast path, ready records checked first.
+Command: go test ./cmd/cdx -run '^TestLink' -bench '^BenchmarkLinkNextQueued$' -benchmem -benchtime=1s -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkLinkNextQueued-12    9563293  130.1 ns/op  48 B/op  2 allocs/op
+BenchmarkLinkNextQueued-12    8839215  123.1 ns/op  48 B/op  2 allocs/op
+BenchmarkLinkNextQueued-12    9378082  133.3 ns/op  48 B/op  2 allocs/op
+PASS
+ok github.com/YashasVM/cd/cmd/cdx 4.759s
+
+Final checks:
+go test ./cmd/cdx
+ok github.com/YashasVM/cd/cmd/cdx 12.875s
+go test -race ./cmd/cdx -run 'TestLink|TestRelay|TestTCP'
+ok github.com/YashasVM/cd/cmd/cdx 1.311s
+go test ./cmd/cdx -run '^TestLinkNextDeliversReadyRecordBeforeQueuedError$'
+ok github.com/YashasVM/cd/cmd/cdx 0.003s

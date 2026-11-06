@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "startedAt": "2026-10-20T09:49:50.572Z",
+  "runs": 1,
+  "mib": 64,
+  "rows": [
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 49.09254999999985,
+      "receiveStartedAt": 1792489791918.8083,
+      "receiverMs": 1783.22558,
+      "durableMs": 1784.005328,
+      "totalMs": 1833.1019119999999,
+      "sha256": "d7776b34c5de1f8fbfaa248c35a28136d6e3c9f9b5efb9589020d789af1f801f",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67111460,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1808,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 4089850,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "engineMaxima": {
+          "relayBytes": 67111460,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4974901,
+          "window_capacity": 4613389,
+          "window_inFlight": 4718592,
+          "window_minRTT": 59.19999999925494,
+          "window_sampleCount": 6
+        },
+        "maxJSHeapBytes": 87966029,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792489791945,
+        "relayLastPayloadAt": 1792489793616
+      },
+      "receiverStats": null,
+      "senderPhases": {
+        "encrypt": {
+          "calls": 88,
+          "ms": 50.30000001192093,
+          "maxMs": 1.1000000014901161
+        },
+        "decrypt": {
+          "calls": 45,
+          "ms": 2.0000000037252903,
+          "maxMs": 0.10000000149011612
+        },
+        "blobRead": {
+          "calls": 256,
+          "ms": 373.49999998882413,
+          "maxMs": 5.200000002980232
+        },
+        "shortTimer": {
+          "calls": 9,
+          "ms": 90.99999999627471,
+          "maxMs": 10.199999999254942
+        }
+      },
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 1808,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    }
+  ],
+  "method": "Preload both pages outside transfer timing. Sender readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and ends after browser download save or CLI exit. File and directory fsync added to both; SHA256 checked after timing. Local Worker control and output in tmpfs; not physical persistence. No artificial CPU/decrypt delays.",
+  "cdxSha256": "90cc18ddf508874f3cf3a6ad59a937617f7ceaf7228b11341ce9cb0999a09768",
+  "chromium": "154.0.8037.97",
+  "finishedAt": "2026-10-20T09:49:53.835Z"
+}

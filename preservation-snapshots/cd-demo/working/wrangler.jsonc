@@ -1,0 +1,225 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "cd",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "cd.yash0.in",
+      "custom_domain": true
+    },
+    {
+      "pattern": "design.yash0.in",
+      "custom_domain": true
+    }
+  ],
+  "env": {
+    "test": {
+      "name": "cd-test",
+      "routes": [
+        {
+          "pattern": "cd-test.yash0.in",
+          "custom_domain": true
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TRANSFERS",
+            "class_name": "TransferRoom"
+          },
+          {
+            "name": "CODES",
+            "class_name": "CodeDirectory"
+          }
+        ]
+      },
+      "ratelimits": [
+        {
+          "name": "CONNECTION_RATE_LIMITER",
+          "namespace_id": "9237404",
+          "simple": {
+            "limit": 120,
+            "period": 60
+          }
+        },
+        {
+          "name": "CODE_RATE_LIMITER",
+          "namespace_id": "9237403",
+          "simple": {
+            "limit": 30,
+            "period": 60
+          }
+        },
+        {
+          "name": "DIAGNOSTIC_RATE_LIMITER",
+          "namespace_id": "9237411",
+          "simple": {
+            "limit": 240,
+            "period": 60
+          }
+        }
+      ],
+      "vars": {
+        "DIAGNOSTICS_ENABLED": "false"
+      }
+    },
+    "demo": {
+      "name": "cd-demo",
+      "routes": [
+        {
+          "pattern": "demo.yash0.in",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "DIAGNOSTICS_ENABLED": "true"
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TRANSFERS",
+            "class_name": "TransferRoom"
+          },
+          {
+            "name": "CODES",
+            "class_name": "CodeDirectory"
+          }
+        ]
+      },
+      "ratelimits": [
+        {
+          "name": "CONNECTION_RATE_LIMITER",
+          "namespace_id": "9237420",
+          "simple": {
+            "limit": 120,
+            "period": 60
+          }
+        },
+        {
+          "name": "CODE_RATE_LIMITER",
+          "namespace_id": "9237421",
+          "simple": {
+            "limit": 30,
+            "period": 60
+          }
+        },
+        {
+          "name": "DIAGNOSTIC_RATE_LIMITER",
+          "namespace_id": "9237422",
+          "simple": {
+            "limit": 240,
+            "period": 60
+          }
+        }
+      ],
+      "assets": {
+        "directory": "./dist-demo",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": [
+          "/ws/*",
+          "/api/*",
+          "/peerjs/*",
+          "/",
+          "/docs.json",
+          "/app.js",
+          "/style.css"
+        ]
+      }
+    }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TRANSFERS",
+        "class_name": "TransferRoom"
+      },
+      {
+        "name": "CODES",
+        "class_name": "CodeDirectory"
+      }
+    ]
+  },
+  "ratelimits": [
+    {
+      "name": "CONNECTION_RATE_LIMITER",
+      "namespace_id": "9237401",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    },
+    {
+      "name": "CODE_RATE_LIMITER",
+      "namespace_id": "9237402",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "DIAGNOSTIC_RATE_LIMITER",
+      "namespace_id": "9237410",
+      "simple": {
+        "limit": 240,
+        "period": 60
+      }
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "TransferRoom"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "PeerSignal"
+      ]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": [
+        "CodeDirectory"
+      ]
+    },
+    {
+      "tag": "v4",
+      "deleted_classes": [
+        "PeerSignal"
+      ]
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/ws/*",
+      "/api/*",
+      "/peerjs/*",
+      "/",
+      "/docs.json",
+      "/app.js",
+      "/style.css"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "vars": {
+    "DIAGNOSTICS_ENABLED": "false"
+  }
+}

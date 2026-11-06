@@ -1,0 +1,408 @@
+{
+  "version": 1,
+  "finishedAt": "2026-10-20T12:31:04.601Z",
+  "goal": "At least 1.5× faster than the faster croc mode on every required speed metric and scenario; prefer 2×. Smaller runtime code. Android excluded.",
+  "goalAchieved": false,
+  "retained": "Reuse ciphertext storage only after synchronous TCP writes. Remove duplicate sender setup and the old sealing wrapper.",
+  "rejected": "Relay buffer reuse cut allocation but failed the steady-runtime timing comparison.",
+  "rows": [
+    {
+      "metric": "readyMs",
+      "before": {
+        "median": 17.542724000006274,
+        "min": 15.219035999998596,
+        "max": 30.755772000000434
+      },
+      "after": {
+        "median": 17.750221999998757,
+        "min": 16.524057999999968,
+        "max": 25.401166999999987
+      },
+      "crocMs": 9.994982999996864,
+      "improvement": 0.9883101180372562,
+      "versusCroc": 0.5630905912048629,
+      "pass": false
+    },
+    {
+      "metric": "receiverMs",
+      "before": {
+        "median": 232.27159699999902,
+        "min": 199.24530199999936,
+        "max": 469.99791799999366
+      },
+      "after": {
+        "median": 197.00030700000207,
+        "min": 167.2198470000003,
+        "max": 216.91816800000015
+      },
+      "crocMs": 1003.5385049999968,
+      "improvement": 1.1790418022038747,
+      "versusCroc": 5.09409614777903,
+      "pass": true
+    },
+    {
+      "metric": "durableMs",
+      "before": {
+        "median": 232.51047599999947,
+        "min": 199.4544449999994,
+        "max": 470.2313279999944
+      },
+      "after": {
+        "median": 197.28460600000108,
+        "min": 167.47970899999927,
+        "max": 217.1885289999991
+      },
+      "crocMs": 1003.6925229999979,
+      "improvement": 1.178553566414595,
+      "versusCroc": 5.087535937801413,
+      "pass": true
+    },
+    {
+      "metric": "totalMs",
+      "before": {
+        "median": 263.2662479999999,
+        "min": 216.413407,
+        "max": 487.77405200000067
+      },
+      "after": {
+        "median": 215.03482799999983,
+        "min": 184.29925100000037,
+        "max": 237.32323899999756
+      },
+      "crocMs": 1016.5842409999987,
+      "improvement": 1.2242958522049279,
+      "versusCroc": 4.72753297898329,
+      "pass": true
+    }
+  ],
+  "codeSize": {
+    "comparison": "Affected production Go files versus the preexisting dirty checkout. Excludes tests and measurement files. Preexisting edits preserved.",
+    "files": [
+      {
+        "file": "cmd/cdx/protocol.go",
+        "beforeLines": 221,
+        "afterLines": 222,
+        "beforeBytes": 6892,
+        "afterBytes": 6933,
+        "beforeSha256": "417df6c99487ef6cf87ac5fec6f7eaa96c627cb2dae7616e580541635a8914d1",
+        "afterSha256": "da730ac8744fd251a1cac6644b950a678e858c689bc44d19515933ba12e8710e"
+      },
+      {
+        "file": "cmd/cdx/link.go",
+        "beforeLines": 474,
+        "afterLines": 478,
+        "beforeBytes": 14423,
+        "afterBytes": 14530,
+        "beforeSha256": "ca0a5d04a15d35026dfc00c9e3a7ce2ce9f8a9f741d0529829a7933fdfbd0e65",
+        "afterSha256": "2d5d3c04889b31201f78227457a598470437cc315fbdbac67048ae0d56130cc3"
+      },
+      {
+        "file": "cmd/cdx/sender.go",
+        "beforeLines": 836,
+        "afterLines": 825,
+        "beforeBytes": 28142,
+        "afterBytes": 27906,
+        "beforeSha256": "5e0d49805296c1a60528a6ebe08411e8e956737c8f331913e7b5f725f94ede9d",
+        "afterSha256": "91c20c374a790d33ec68579e4780d80d7f34801af879f9d68721b987c21427fc"
+      }
+    ],
+    "lineDelta": -6,
+    "byteDelta": -88
+  },
+  "tcp": {
+    "file": "tcp-reuse-steady.json",
+    "groups": {
+      "before": {
+        "cd": {
+          "readyMs": {
+            "median": 17.542724000006274,
+            "min": 15.219035999998596,
+            "max": 30.755772000000434
+          },
+          "receiverMs": {
+            "median": 232.27159699999902,
+            "min": 199.24530199999936,
+            "max": 469.99791799999366
+          },
+          "durableMs": {
+            "median": 232.51047599999947,
+            "min": 199.4544449999994,
+            "max": 470.2313279999944
+          },
+          "totalMs": {
+            "median": 263.2662479999999,
+            "min": 216.413407,
+            "max": 487.77405200000067
+          }
+        },
+        "croc": {
+          "readyMs": {
+            "median": 9.28523199999995,
+            "min": 7.935184000001755,
+            "max": 21.86194400000386
+          },
+          "receiverMs": {
+            "median": 998.1262210000004,
+            "min": 993.7708099999982,
+            "max": 1011.9401359999993
+          },
+          "durableMs": {
+            "median": 998.3334859999995,
+            "min": 993.9477869999973,
+            "max": 1012.2276389999988
+          },
+          "totalMs": {
+            "median": 1008.8936659999999,
+            "min": 1002.6162689999983,
+            "max": 1025.042306000003
+          }
+        },
+        "croc-no-compress": {
+          "readyMs": {
+            "median": 9.043047000001025,
+            "min": 8.544802999999774,
+            "max": 13.285382000001846
+          },
+          "receiverMs": {
+            "median": 1001.6015430000002,
+            "min": 995.3265759999995,
+            "max": 1051.4268509999965
+          },
+          "durableMs": {
+            "median": 1001.920701,
+            "min": 995.5808219999999,
+            "max": 1051.6336599999995
+          },
+          "totalMs": {
+            "median": 1010.4655039999998,
+            "min": 1005.2901920000004,
+            "max": 1060.6235430000015
+          }
+        }
+      },
+      "after": {
+        "cd": {
+          "readyMs": {
+            "median": 17.750221999998757,
+            "min": 16.524057999999968,
+            "max": 25.401166999999987
+          },
+          "receiverMs": {
+            "median": 197.00030700000207,
+            "min": 167.2198470000003,
+            "max": 216.91816800000015
+          },
+          "durableMs": {
+            "median": 197.28460600000108,
+            "min": 167.47970899999927,
+            "max": 217.1885289999991
+          },
+          "totalMs": {
+            "median": 215.03482799999983,
+            "min": 184.29925100000037,
+            "max": 237.32323899999756
+          }
+        },
+        "croc": {
+          "readyMs": {
+            "median": 9.994982999996864,
+            "min": 9.428995000002033,
+            "max": 10.50586900000053
+          },
+          "receiverMs": {
+            "median": 1011.5981260000008,
+            "min": 1002.5064910000001,
+            "max": 1041.3763440000039
+          },
+          "durableMs": {
+            "median": 1011.8468399999983,
+            "min": 1002.6750250000005,
+            "max": 1041.542607000003
+          },
+          "totalMs": {
+            "median": 1021.997833999998,
+            "min": 1012.206435,
+            "max": 1050.971602000005
+          }
+        },
+        "croc-no-compress": {
+          "readyMs": {
+            "median": 10.561149999999543,
+            "min": 8.941934000000401,
+            "max": 24.614925000001676
+          },
+          "receiverMs": {
+            "median": 1003.5385049999968,
+            "min": 995.484166000002,
+            "max": 1020.0517350000009
+          },
+          "durableMs": {
+            "median": 1003.6925229999979,
+            "min": 995.7383420000006,
+            "max": 1020.2517799999987
+          },
+          "totalMs": {
+            "median": 1016.5842409999987,
+            "min": 1006.8035320000017,
+            "max": 1030.404266999998
+          }
+        }
+      }
+    },
+    "verified": 42,
+    "binaries": {
+      "before": {
+        "path": "/tmp/cdx-ponytail-baseline",
+        "sha256": "1e70f98f30a145f7e221941457c93a70161794bdac69cac6dd00686190489c98"
+      },
+      "after": {
+        "path": "/tmp/cdx-ponytail-tcp-reuse",
+        "sha256": "23f1a5ffdb50c6ff3079cd1352e4c140660ce861494ce7141c993d110c2dc08b"
+      }
+    }
+  },
+  "relay": {
+    "file": "relay-reuse-steady.json",
+    "groups": {
+      "before": {
+        "cd": {
+          "readyMs": {
+            "median": 18.028118999998696,
+            "min": 16.788328000002366,
+            "max": 36.206357000000025
+          },
+          "receiverMs": {
+            "median": 591.4531810000008,
+            "min": 476.36621300000115,
+            "max": 886.8259009999999
+          },
+          "durableMs": {
+            "median": 592.142738999999,
+            "min": 476.86679899999945,
+            "max": 887.783674
+          },
+          "totalMs": {
+            "median": 610.081596,
+            "min": 494.89491799999814,
+            "max": 923.990031
+          }
+        },
+        "croc": {
+          "readyMs": {
+            "median": 11.481082999998762,
+            "min": 10.327144000000771,
+            "max": 27.29386700000032
+          },
+          "receiverMs": {
+            "median": 595.009023999999,
+            "min": 580.2518249999994,
+            "max": 644.5145239999997
+          },
+          "durableMs": {
+            "median": 595.3045000000002,
+            "min": 580.4766469999995,
+            "max": 645.0604239999998
+          },
+          "totalMs": {
+            "median": 607.7705139999998,
+            "min": 592.1944609999991,
+            "max": 657.7253190000001
+          }
+        },
+        "croc-no-compress": {
+          "readyMs": {
+            "median": 10.678648000000976,
+            "min": 9.899133000000802,
+            "max": 11.732459999999264
+          },
+          "receiverMs": {
+            "median": 593.266340000002,
+            "min": 575.2986840000012,
+            "max": 642.8146390000002
+          },
+          "durableMs": {
+            "median": 593.5832809999993,
+            "min": 575.5710269999981,
+            "max": 643.0403410000004
+          },
+          "totalMs": {
+            "median": 604.7800179999977,
+            "min": 587.3034869999974,
+            "max": 654.48821
+          }
+        }
+      },
+      "after": {
+        "cd": {
+          "readyMs": {
+            "median": 19.652935000005527,
+            "min": 16.83223700000235,
+            "max": 25.90573399999994
+          },
+          "receiverMs": {
+            "median": 651.0565339999994,
+            "min": 441.6852429999999,
+            "max": 821.3961650000001
+          },
+          "durableMs": {
+            "median": 651.6023959999984,
+            "min": 442.16179199999897,
+            "max": 822.3176999999996
+          },
+          "totalMs": {
+            "median": 674.8039279999975,
+            "min": 459.58375499999966,
+            "max": 847.164812
+          }
+        },
+        "croc": {
+          "readyMs": {
+            "median": 12.140433999999914,
+            "min": 9.520141999997577,
+            "max": 32.03966599999694
+          },
+          "receiverMs": {
+            "median": 601.6171270000013,
+            "min": 577.0507910000015,
+            "max": 636.7536909999999
+          },
+          "durableMs": {
+            "median": 602.272194000001,
+            "min": 577.468237000001,
+            "max": 637.1866239999999
+          },
+          "totalMs": {
+            "median": 614.8424099999975,
+            "min": 587.0628069999948,
+            "max": 649.3270579999999
+          }
+        },
+        "croc-no-compress": {
+          "readyMs": {
+            "median": 12.193938000000344,
+            "min": 9.670217999999295,
+            "max": 13.322348999998212
+          },
+          "receiverMs": {
+            "median": 595.9634640000004,
+            "min": 571.104668,
+            "max": 628.592181
+          },
+          "durableMs": {
+            "median": 596.1989959999992,
+            "min": 571.3430720000033,
+            "max": 629.0308120000009
+          },
+          "totalMs": {
+            "median": 609.5213449999974,
+            "min": 581.0132900000026,
+            "max": 639.9992669999992
+          }
+        }
+      }
+    },
+    "verified": 42,
+    "retained": false
+  },
+  "limits": "Same-host loopback, 256 MiB random input, RAM output. Seven alternating trials per binary. No universal speed claim. The complete acceptance matrix above remains snapshot 806bb37. Readiness and the 100 Mb/s physical LAN still miss the target. Other host activity was not eliminated; no competing benchmark process was observed."
+}

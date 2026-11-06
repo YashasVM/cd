@@ -1,0 +1,9 @@
+=== RUN   TestOfferDoesNotWaitForUnresponsiveSTUN
+    perf_regression_test.go:24: offer waited 1.001249307s for STUN
+--- FAIL: TestOfferDoesNotWaitForUnresponsiveSTUN (1.00s)
+=== RUN   TestRelayChunkUsesOneSocketWrite
+    perf_regression_test.go:74: 256 KiB record took 65 socket writes, want 1
+--- FAIL: TestRelayChunkUsesOneSocketWrite (0.00s)
+FAIL
+FAIL	github.com/YashasVM/cd/cmd/cdx	1.016s
+FAIL

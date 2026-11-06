@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "scenario": "Browser built UI to durable CLI receiver, local Worker relay, random payload, fresh browser context per transfer, seven alternating order pairs, module graphs prewarmed, no artificial latency",
+  "runs": 7,
+  "payloadBytes": 8388685,
+  "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+  "chromiumPath": "/usr/bin/chromium",
+  "chromiumVersion": "155.0.8059.84",
+  "storagePath": "/tmp/cd-browser-resume-pair-ehKT8p",
+  "hashes": {
+    "baseline": "3cbfd1c4a864357188c733ec63a5a49a6bdf66f7e0b5c3e991f7056f5829f869",
+    "candidateBundle": "35c185aaa4bf3a9305a9ffce0c21b8f973228ee105b8857de308d9a3e50b8fcf",
+    "receiver": "6d23ef0d3d6bdebe860e4a014c6a1791b0d764d7c2a4028384bf454fbf3f435d",
+    "sharedSources": {
+      "agent-protocol": "d6044d9c6998e009807ecb7aab68cb07262e085679b1ac1027746be601fa344e",
+      "resume-protocol": "03fc1169f48f870ac76e16c9d69809205d8b4562eb38f81067985428d529576b",
+      "incremental-sha256": "6b7f2d282be3af2039766f32e57899ac77f51d2fdd2417cbdaf4eeb3f9f6ef67",
+      "resume-retention": "b0c4b7c04a9a71eb7452f86b66be197fd8af8577da6250c363db54bf5cd68698"
+    },
+    "worker": {
+      "worker/index.ts": "4e5c6c3f3396adb47ba7aff9c39794bdeaeb93a6e30aa91ecc1de953b1970a31",
+      "worker/resume-room.ts": "f56df25ecc3fc5711c20986288c9e04d70dc3f230d0db2a2b0d759ae1b702729"
+    }
+  },
+  "rows": [
+    {
+      "mode": "before",
+      "trial": 1,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 306.4782669999995,
+      "receiverDurableMs": 581.6420989999997,
+      "senderCompleteMs": 589.2151519999998,
+      "selectedToDurableMs": 890.8711999999996,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "after",
+      "trial": 1,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 294.67078500000025,
+      "receiverDurableMs": 416.1608619999997,
+      "senderCompleteMs": 444.06010999999944,
+      "selectedToDurableMs": 713.2892170000005,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "after",
+      "trial": 2,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 290.5678480000006,
+      "receiverDurableMs": 378.37745899999936,
+      "senderCompleteMs": 386.3098979999995,
+      "selectedToDurableMs": 671.3422539999992,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "before",
+      "trial": 2,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 290.85919600000125,
+      "receiverDurableMs": 540.9644329999992,
+      "senderCompleteMs": 548.6075060000003,
+      "selectedToDurableMs": 833.9139489999998,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "before",
+      "trial": 3,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 368.0081160000009,
+      "receiverDurableMs": 586.8087830000004,
+      "senderCompleteMs": 594.7719689999994,
+      "selectedToDurableMs": 957.4731960000008,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "after",
+      "trial": 3,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 291.906547999999,
+      "receiverDurableMs": 359.74706499999957,
+      "senderCompleteMs": 365.5757389999999,
+      "selectedToDurableMs": 653.6979119999996,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "after",
+      "trial": 4,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 206.24681899999996,
+      "receiverDurableMs": 353.04566499999964,
+      "senderCompleteMs": 361.5556520000009,
+      "selectedToDurableMs": 560.825413999999,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "before",
+      "trial": 4,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 285.8450849999972,
+      "receiverDurableMs": 508.2337120000011,
+      "senderCompleteMs": 532.8377880000007,
+      "selectedToDurableMs": 795.5897750000004,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "before",
+      "trial": 5,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 289.9392190000035,
+      "receiverDurableMs": 501.5822040000021,
+      "senderCompleteMs": 507.45550100000037,
+      "selectedToDurableMs": 793.1361630000029,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "after",
+      "trial": 5,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 206.698508999998,
+      "receiverDurableMs": 348.49897500000225,
+      "senderCompleteMs": 355.7708220000022,
+      "selectedToDurableMs": 557.6220119999998,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "after",
+      "trial": 6,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 288.20987599999717,
+      "receiverDurableMs": 356.13125800000125,
+      "senderCompleteMs": 361.55302400000073,
+      "selectedToDurableMs": 646.2742289999987,
+      "baselineIntercepts": 0
+    },
+    {
+      "mode": "before",
+      "trial": 6,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 214.51801999999952,
+      "receiverDurableMs": 571.1894439999996,
+      "senderCompleteMs": 577.9561670000003,
+      "selectedToDurableMs": 787.6812879999998,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "before",
+      "trial": 7,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 308.2617889999965,
+      "receiverDurableMs": 522.5732949999983,
+      "senderCompleteMs": 526.1593529999991,
+      "selectedToDurableMs": 832.6610909999981,
+      "baselineIntercepts": 1
+    },
+    {
+      "mode": "after",
+      "trial": 7,
+      "bytes": 8388685,
+      "sha256": "55e14922b88792ee30b2774e43cd3b6f5ffa936d5b36431e4b325b8c3fdbbebc",
+      "readyMs": 306.7841950000002,
+      "receiverDurableMs": 591.7578310000026,
+      "senderCompleteMs": 600.220618000003,
+      "selectedToDurableMs": 902.1430110000001,
+      "baselineIntercepts": 0
+    }
+  ],
+  "medians": {
+    "before": {
+      "readyMs": 290.85919600000125,
+      "receiverDurableMs": 540.9644329999992,
+      "senderCompleteMs": 548.6075060000003,
+      "selectedToDurableMs": 832.6610909999981
+    },
+    "after": {
+      "readyMs": 290.5678480000006,
+      "receiverDurableMs": 359.74706499999957,
+      "senderCompleteMs": 365.5757389999999,
+      "selectedToDurableMs": 653.6979119999996
+    }
+  },
+  "speedup": {
+    "readyMs": 1.0010026849219762,
+    "receiverDurableMs": 1.5037355009414735,
+    "senderCompleteMs": 1.5006671599725616,
+    "selectedToDurableMs": 1.2737704614237755
+  }
+}

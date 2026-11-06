@@ -1,0 +1,150 @@
+diff --git i/src/sink.js w/src/sink.js
+index 8d848ca..78a8b01 100644
+--- i/src/sink.js
++++ w/src/sink.js
+@@ -96,8 +96,17 @@ export async function createOPFSSink({ name }) {
+   const FLUSH_BYTES = 4 * 1024 * 1024;
+   let pending = [];
+   let pendingBytes = 0;
++  let writing = Promise.resolve();
++  let writeError = null;
++  let aborted = false;
++  const checkWritable = () => {
++    if (aborted) throw new Error('The download was canceled.');
++    if (writeError) throw writeError;
++  };
+   const flush = async () => {
+     if (pendingBytes === 0) return;
++    await writing;
++    checkWritable();
+     let merged;
+     if (pending.length === 1) {
+       merged = pending[0];
+@@ -111,9 +120,11 @@ export async function createOPFSSink({ name }) {
+     }
+     pending = [];
+     pendingBytes = 0;
+-    await writable.write(merged);
++    // Keep one write in flight and one bounded batch being assembled.
++    writing = Promise.resolve().then(() => writable.write(merged)).catch(error => { writeError = error; });
+   };
+   const discard = async () => {
++    aborted = true;
+     pending = [];
+     pendingBytes = 0;
+     try { await writable.abort(); } catch { /* Best effort. */ }
+@@ -123,6 +134,7 @@ export async function createOPFSSink({ name }) {
+     kind: 'download',
+     internalName: internal,
+     async write(bytes) {
++      checkWritable();
+       const view = bytes instanceof Uint8Array
+         ? bytes
+         : ArrayBuffer.isView(bytes)
+@@ -134,6 +146,8 @@ export async function createOPFSSink({ name }) {
+     },
+     async file() {
+       await flush();
++      await writing;
++      checkWritable();
+       await writable.close();
+       return fileHandle.getFile();
+     },
+diff --git i/src/sink.test.js w/src/sink.test.js
+index 8fd09a9..7560aa6 100644
+--- i/src/sink.test.js
++++ w/src/sink.test.js
+@@ -166,6 +166,93 @@ describe('download sink lifecycle', () => {
+     });
+   });
+
++  it('overlaps one disk write, applies backpressure to the next batch, and waits before publishing', async (t) => {
++    const writes = [], releases = [];
++    let closed = false;
++    await withBrowser(t, { async getDirectory() { return {
++      async getFileHandle() { return {
++        async createWritable() { return {
++          write(bytes) { writes.push(Uint8Array.from(bytes)); return new Promise(resolve => releases.push(resolve)); },
++          async close() { closed = true; }, async abort() {}
++        }; },
++        async getFile() { return new Blob(writes); }
++      }; }, async removeEntry() {}
++    }; } }, async () => {
++      let first, second;
++      try {
++        const sink = await createOPFSSink({ name: 'overlap.bin' });
++        let firstDone = false;
++        first = sink.write(new Uint8Array(4 * 1024 * 1024).fill(1)).then(() => { firstDone = true; });
++        await new Promise(resolve => setImmediate(resolve));
++        assert.equal(firstDone, true, 'the first batch should overlap receiver processing');
++        await sink.write(new Uint8Array(2 * 1024 * 1024).fill(2));
++        let secondDone = false;
++        second = sink.write(new Uint8Array(2 * 1024 * 1024).fill(2)).then(() => { secondDone = true; });
++        await new Promise(resolve => setImmediate(resolve));
++        assert.equal(secondDone, false);
++        assert.equal(writes.length, 1);
++        releases[0](); await second;
++        assert.equal(writes.length, 2);
++        const file = sink.file();
++        await new Promise(resolve => setImmediate(resolve));
++        assert.equal(closed, false, 'publication must wait for the outstanding disk write');
++        releases[1]();
++        const result = new Uint8Array(await (await file).arrayBuffer());
++        assert.equal(result.length, 8 * 1024 * 1024);
++        assert.ok(result.subarray(0, 4 * 1024 * 1024).every(byte => byte === 1));
++        assert.ok(result.subarray(4 * 1024 * 1024).every(byte => byte === 2));
++        assert.equal(closed, true);
++      } finally { for (const release of releases) release(); await Promise.all([first, second]); }
++    });
++  });
++
++  it('surfaces an overlapping write failure before further input or publication', async (t) => {
++    let closed = false, aborts = 0;
++    const removed = [];
++    await withBrowser(t, { async getDirectory() { return {
++      async getFileHandle() { return {
++        async createWritable() { return {
++          async write() { throw new Error('disk quota exceeded'); },
++          async close() { closed = true; }, async abort() { aborts++; }
++        }; }, async getFile() { throw new Error('must not publish'); }
++      }; }, async removeEntry(name) { removed.push(name); }
++    }; } }, async () => {
++      const sink = await createOPFSSink({ name: 'quota.bin' });
++      await sink.write(new Uint8Array(4 * 1024 * 1024));
++      await new Promise(resolve => setImmediate(resolve));
++      await assert.rejects(sink.write(Uint8Array.of(1)), /disk quota exceeded/);
++      await assert.rejects(sink.file(), /disk quota exceeded/);
++      assert.equal(closed, false);
++      await sink.abort();
++      assert.equal(aborts, 1);
++      assert.deepEqual(removed, [sink.internalName]);
++    });
++  });
++
++  it('cancellation releases a blocked batch without starting another disk write', async (t) => {
++    let rejectWrite, writes = 0;
++    const removed = [];
++    await withBrowser(t, { async getDirectory() { return {
++      async getFileHandle() { return {
++        async createWritable() { return {
++          write() { writes++; return new Promise((_,reject) => { rejectWrite = reject; }); },
++          async close() { throw new Error('must not close'); },
++          async abort() { rejectWrite(new Error('disk aborted')); }
++        }; }, async getFile() { throw new Error('must not publish'); }
++      }; }, async removeEntry(name) { removed.push(name); }
++    }; } }, async () => {
++      const sink = await createOPFSSink({ name: 'cancel.bin' });
++      await sink.write(new Uint8Array(4 * 1024 * 1024));
++      const next = sink.write(new Uint8Array(4 * 1024 * 1024));
++      const rejected = assert.rejects(next, /canceled/);
++      await sink.abort();
++      await rejected;
++      await assert.rejects(sink.file(), /canceled/);
++      assert.equal(writes, 1);
++      assert.deepEqual(removed, [sink.internalName]);
++    });
++  });
++
+   it('preserves bytes in the fallback and revokes cleanup only once', async (t) => {
+     await withBrowser(t, {}, async () => {
+       const sink = await createSink({ name: 'hello.txt', size: 5, mediaType: 'text/plain' });

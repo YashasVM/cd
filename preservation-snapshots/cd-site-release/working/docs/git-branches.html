@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0d0503" />
+    <meta name="description" content="A short, plain-English guide to Git branches and merging." />
+    <title>Git branches, simply</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0503;
+        --surface: #180a07;
+        --text: #e4d4b6;
+        --muted: #b3a38c;
+        --faint: #a28f79;
+        --accent: #e58a57;
+        --line: rgba(228, 212, 182, .15);
+        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        min-width: 320px;
+        min-height: 100svh;
+        margin: 0;
+        padding: 48px 20px;
+        background: radial-gradient(ellipse at 50% 0, #1b0603 0, var(--bg) 56%);
+        color: var(--text);
+        font: 16px/1.6 Inter, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main { width: min(680px, 100%); margin: 0 auto; }
+      header { margin-bottom: 28px; }
+      .wordmark { margin: 0; font: 400 44px/1 Georgia, "Times New Roman", serif; letter-spacing: -.05em; }
+      .eyebrow { margin: 10px 0 0; color: var(--faint); font: 12px var(--mono); }
+      article {
+        padding: clamp(22px, 6vw, 40px);
+        border: 1px solid var(--line);
+        border-top: 2px solid rgba(229, 138, 87, .55);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 36px); line-height: 1.15; letter-spacing: -.035em; }
+      .intro { margin: 0 0 28px; color: var(--muted); }
+      h2 { margin: 28px 0 8px; font-size: 18px; letter-spacing: -.015em; }
+      p { margin: 0 0 12px; }
+      ul, ol { margin: 8px 0 0; padding-left: 22px; }
+      li { padding-left: 3px; margin: 7px 0; }
+      li::marker { color: var(--accent); }
+      code { color: var(--accent); font: .92em var(--mono); }
+      pre {
+        overflow-x: auto;
+        margin: 12px 0 0;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: #070707;
+        color: var(--text);
+        font: 13px/1.8 var(--mono);
+      }
+      pre code { color: inherit; }
+      .note { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+      footer { margin-top: 20px; color: var(--faint); font: 11px var(--mono); }
+      a { color: var(--text); }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      @media (max-width: 480px) { body { padding: 28px 16px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="wordmark">cd</p>
+        <p class="eyebrow">a tiny guide to Git</p>
+      </header>
+
+      <article>
+        <h1>Branches, simply</h1>
+        <p class="intro">A branch is a separate line of work in the same project. It lets someone make a change without disturbing the main version.</p>
+
+        <h2>Working in parallel</h2>
+        <ol>
+          <li>Each person or agent gets a branch for their task.</li>
+          <li>They edit and save their work with commits on that branch.</li>
+          <li>When it is ready, they open a pull request so the change can be reviewed.</li>
+        </ol>
+
+        <h2>Merging</h2>
+        <p>Merging joins a finished branch back into the main branch. Git combines the changes. If two branches changed the same lines in different ways, Git asks someone to choose how those lines should look.</p>
+
+        <h2>The usual flow</h2>
+        <pre><code>git switch main
+git pull
+git switch -c improve-the-page
+# make changes, then save them
+git add .
+git commit -m "Improve the page"
+git push -u origin improve-the-page
+# open a pull request on GitHub</code></pre>
+
+        <p class="note">For agents to work at the same time without editing the same files in one folder, give each one its own branch and worktree. Merge each finished branch through a pull request.</p>
+      </article>
+
+      <footer>Short version: branch → work → review → merge</footer>
+    </main>
+  </body>
+</html>

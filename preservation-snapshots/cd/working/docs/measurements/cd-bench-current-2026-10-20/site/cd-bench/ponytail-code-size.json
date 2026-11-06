@@ -1,0 +1,34 @@
+{
+  "comparison": "Affected production Go files versus the preexisting dirty checkout. Excludes tests and measurement files. Preexisting edits preserved.",
+  "files": [
+    {
+      "file": "cmd/cdx/protocol.go",
+      "beforeLines": 221,
+      "afterLines": 222,
+      "beforeBytes": 6892,
+      "afterBytes": 6933,
+      "beforeSha256": "417df6c99487ef6cf87ac5fec6f7eaa96c627cb2dae7616e580541635a8914d1",
+      "afterSha256": "da730ac8744fd251a1cac6644b950a678e858c689bc44d19515933ba12e8710e"
+    },
+    {
+      "file": "cmd/cdx/link.go",
+      "beforeLines": 474,
+      "afterLines": 478,
+      "beforeBytes": 14423,
+      "afterBytes": 14530,
+      "beforeSha256": "ca0a5d04a15d35026dfc00c9e3a7ce2ce9f8a9f741d0529829a7933fdfbd0e65",
+      "afterSha256": "2d5d3c04889b31201f78227457a598470437cc315fbdbac67048ae0d56130cc3"
+    },
+    {
+      "file": "cmd/cdx/sender.go",
+      "beforeLines": 836,
+      "afterLines": 825,
+      "beforeBytes": 28142,
+      "afterBytes": 27906,
+      "beforeSha256": "5e0d49805296c1a60528a6ebe08411e8e956737c8f331913e7b5f725f94ede9d",
+      "afterSha256": "91c20c374a790d33ec68579e4780d80d7f34801af879f9d68721b987c21427fc"
+    }
+  ],
+  "lineDelta": -6,
+  "byteDelta": -88
+}

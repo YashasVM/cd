@@ -1,0 +1,14 @@
+{
+  "label": "relay",
+  "direct": false,
+  "interrupted": false,
+  "result": {
+    "id": "dbu29s5CL--aFoodsi_fhA",
+    "phase": "COMPLETE",
+    "done": 268435456,
+    "link": "http://127.0.0.1:8788/s/dbu29s5CL--aFoodsi_fhA#v2.iGiu8lM2svK0qynh9j2OEdQp82BD4MQSG9-p0axBix0",
+    "rate": 12975624,
+    "route": "RELAY"
+  },
+  "wallSeconds": 21.305094390001614
+}

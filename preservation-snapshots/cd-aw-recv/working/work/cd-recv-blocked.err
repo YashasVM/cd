@@ -1,0 +1,21 @@
+cdx: --resume needs a valid transfer ID
+
+usage: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...
+
+  <path>...      a file, or several files and folders (they arrive as separate files)
+  --to <name>    send automatically to a paired Android device (resumable)
+  --link         print a private end-to-end encrypted link instead of a share code
+  --json         print transfer JSON (includes qrPath when --qr is used)
+  --progress     show transfer progress (JSON lines with --json)
+  --qr <path>    save a QR PNG for the receive link (path must not exist)
+  --request-id <id>  safely repeat a background send with the same inputs
+  --detach       send in the background even from a terminal
+  --wait         stay in the foreground until the receiver verifies the file
+  --             treat the next argument as the file even if it starts with -
+  -h, --help     show this help
+  -v, --version  show version
+
+examples:
+  cdx send ./app.apk
+  cdx send "./my photo.zip" --json
+  cdx send -- -weird-name.bin

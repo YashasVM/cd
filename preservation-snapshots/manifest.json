@@ -1,0 +1,505 @@
+{
+  "purpose": "Historical source archive for workspace consolidation. Separate source variants; no integration or merge requested. Unique media and credentials remain in private filesystem archives.",
+  "sources": [
+    {
+      "path": "/home/yvm/code/cd",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd",
+      "head": "39f53f3fa9bfdcb4d120a9d359cbc9b786146035",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd",
+          "sha": "84ef228f3d07587f5c62db75f1713d41c9c57927"
+        }
+      },
+      "status_sha256": "ade3020aeacac2728f38463917266e8dfd0d00a296b5cbc58f71928ffe9547e6",
+      "file_count": 1293
+    },
+    {
+      "path": "/home/yvm/code/cd-agent-a",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-agent-a",
+      "head": "0f5c65909cb78b5b7427cc35c91a6c2fc47ab808",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 178
+    },
+    {
+      "path": "/home/yvm/code/cd-agent-b",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-agent-b",
+      "head": "cab7b0ac7bb45a9dcb5dbfbae1ea3b0652fe2de8",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 149
+    },
+    {
+      "path": "/home/yvm/code/cd-agent-c",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-agent-c",
+      "head": "b16a771f1a2aa561e147d9cf04c3e152773e044d",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 179
+    },
+    {
+      "path": "/home/yvm/code/cd-android-baseline-2026-10-19",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-android-baseline-2026-10-19",
+      "head": "57232025406c6b86e688ffa598319cab7ffd60e8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-android-baseline-2026-10-19",
+          "sha": "2093967bc35ecf44abd578e55d7b91a8450f2f6e"
+        }
+      },
+      "status_sha256": "3ef172b24f77a1cb8640fe1dfb2aa30f558dd8089362d8a3c158449ee7ecc322",
+      "file_count": 58
+    },
+    {
+      "path": "/home/yvm/code/cd-android-old-tmp",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-android-old-tmp",
+      "head": "57232025406c6b86e688ffa598319cab7ffd60e8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-android-old-tmp",
+          "sha": "b7bb71b99ec63dba6ef60236e9823294b9f4029a"
+        }
+      },
+      "status_sha256": "3ef172b24f77a1cb8640fe1dfb2aa30f558dd8089362d8a3c158449ee7ecc322",
+      "file_count": 60
+    },
+    {
+      "path": "/home/yvm/code/cd-aw-recv",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-aw-recv",
+      "head": "57232025406c6b86e688ffa598319cab7ffd60e8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-aw-recv",
+          "sha": "f5ef7b82039e72f53791e5ddf0e848233a9760c7"
+        }
+      },
+      "status_sha256": "3ef172b24f77a1cb8640fe1dfb2aa30f558dd8089362d8a3c158449ee7ecc322",
+      "file_count": 201
+    },
+    {
+      "path": "/home/yvm/code/cd-aw-send",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-aw-send",
+      "head": "57232025406c6b86e688ffa598319cab7ffd60e8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-aw-send",
+          "sha": "f209434b0f6d9dc34e17bdc3db8fd89cd1b7045e"
+        }
+      },
+      "status_sha256": "3ef172b24f77a1cb8640fe1dfb2aa30f558dd8089362d8a3c158449ee7ecc322",
+      "file_count": 184
+    },
+    {
+      "path": "/home/yvm/code/cd-aw-ui",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-aw-ui",
+      "head": "57232025406c6b86e688ffa598319cab7ffd60e8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-aw-ui",
+          "sha": "0a165b2ba3652f04287e6ccf7559f9784824ba9d"
+        }
+      },
+      "status_sha256": "3ef172b24f77a1cb8640fe1dfb2aa30f558dd8089362d8a3c158449ee7ecc322",
+      "file_count": 141
+    },
+    {
+      "path": "/home/yvm/code/cd-beta-update",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-beta-update",
+      "head": "7e4e2d2262b6667d6a4dba6e9498ebdd340c389c",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 736
+    },
+    {
+      "path": "/home/yvm/code/cd-cancel-tests",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-cancel-tests",
+      "head": "afca0ff7f55448ea24084d69251b3b5449d57cbd",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 177
+    },
+    {
+      "path": "/home/yvm/code/cd-cycle",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-cycle",
+      "head": "288b3b806da0f04935eb6f3e5938f314d6d4b806",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 246
+    },
+    {
+      "path": "/home/yvm/code/cd-demo",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-demo",
+      "head": "5e5b14ae018d8bb9f5e4f5357090966cd2da0657",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-demo",
+          "sha": "322782e73fad5795d9d3125247d4cca61f91d29c"
+        }
+      },
+      "status_sha256": "fa05daacbc6894692961d88a8b5f54de41253fa0a37d2fa2d601555dc28f86d7",
+      "file_count": 115
+    },
+    {
+      "path": "/home/yvm/code/cd-fix-relay-wait",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-fix-relay-wait",
+      "head": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-fix-relay-wait",
+          "sha": "4eb5c3261955a986db4c9db0fc4d2ec8b6399202"
+        }
+      },
+      "status_sha256": "98eb11a867df9ecf8507682026d43c8353950fbd51c564e50dba8de00657c4cf",
+      "file_count": 137
+    },
+    {
+      "path": "/home/yvm/code/cd-luna-browser",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-luna-browser",
+      "head": "c47d9e87de5912ad6fbc756baf0b74aadead103c",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 152
+    },
+    {
+      "path": "/home/yvm/code/cd-nearby",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-nearby",
+      "head": "f3bac7df3455885aa886afc0e9b5e9ecbaf23f08",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-nearby",
+          "sha": "5eee4b953bf984943b4d648f22e32d5d45074338"
+        }
+      },
+      "status_sha256": "958e9d058e3059f00386ad93b924119ac4759b64c4e0281d67bb6f0932372565",
+      "file_count": 162
+    },
+    {
+      "path": "/home/yvm/code/cd-optimization",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-optimization",
+      "head": "f05c3bf79783487e7b0a6805cc373b273fe6544b",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 141
+    },
+    {
+      "path": "/home/yvm/code/cd-perf-croc",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-perf-croc",
+      "head": "c1df17e11edd549cdbfd16b25ad9ae593d4babc6",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 173
+    },
+    {
+      "path": "/home/yvm/code/cd-production",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-production",
+      "head": "0bb36ce5245a1781dfb589e4dd413ed4c75e1f9d",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 135
+    },
+    {
+      "path": "/home/yvm/code/cd-resume-browser",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-resume-browser",
+      "head": "3c85e4d223ee61ae24e16166363e67647e838a2e",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 168
+    },
+    {
+      "path": "/home/yvm/code/cd-resume-cli",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-resume-cli",
+      "head": "2b14b4e01f60e13526afb41db5a6aace25153724",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 167
+    },
+    {
+      "path": "/home/yvm/code/cd-resume-protocol",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-resume-protocol",
+      "head": "52f2c62fb63a229c355cdacb58f4fe1d9ba43a9f",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 241
+    },
+    {
+      "path": "/home/yvm/code/cd-retention",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-retention",
+      "head": "1760f5e2863c9c88c6ab5bc0c811c781deedfe84",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 176
+    },
+    {
+      "path": "/home/yvm/code/cd-site-release",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-site-release",
+      "head": "b56f1f4968f9ae3609ae325408bda9f4dc9475b9",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-site-release",
+          "sha": "81f34e9b14915e6a301373bef2a14e5df7e7966f"
+        },
+        "staged": {
+          "ref": "refs/heads/preservation/2026-11-07/staged/cd-site-release",
+          "sha": "b2983f1a98bb1bd6e76ee7395abc97c89db888a4"
+        }
+      },
+      "status_sha256": "a8c27bb28bbf55ff5554186c03e34adaaf2e033c2b4e77c5f24db55ad0a6b0d5",
+      "file_count": 109
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-bench",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-bench",
+      "head": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-sp-bench",
+          "sha": "d1de15cca6085516c124fa2bad62889571b5dfe2"
+        }
+      },
+      "status_sha256": "9ab7b069b309d8c3d5d876ec2caadc6000526e2d1160dcd57d73724cce8ba033",
+      "file_count": 165
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-brecv",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-brecv",
+      "head": "a54df3b36cedf978d0ef75b9a3aaa8f68b250ec8",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 165
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-bsend",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-bsend",
+      "head": "d3ab044f20fc9ba6dce333b2c85835e9e7e7dd63",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 173
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-cli",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-cli",
+      "head": "baaa1bda5bda89db4034b1c3560aa89e2a6126f0",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 217
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-direct",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-direct",
+      "head": "70dfd0862f791938a9cff151756f001debb1fad8",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-sp-direct",
+          "sha": "c2d386c8b56000a983a9993b9a2075cd51e37f08"
+        }
+      },
+      "status_sha256": "6a67d5faf541dded0a9032e452036d5ce33c914a05be2ebefec278ece8f0fd8a",
+      "file_count": 159
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-meter",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-meter",
+      "head": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-sp-meter",
+          "sha": "09861458134e5dc4a2a9ba7877b733e066b18c8e"
+        }
+      },
+      "status_sha256": "3b4e3cc0f15716b67505a32ae74d7cc39824d46dbce8116351b8730b6ad719ee",
+      "file_count": 168
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-mobile",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-mobile",
+      "head": "71597e20d3dbfb1ed7358353d10d178459366364",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 174
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-relay",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-relay",
+      "head": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 162
+    },
+    {
+      "path": "/home/yvm/code/cd-sp-stats",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-sp-stats",
+      "head": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+      "snapshots": {
+        "working": {
+          "ref": "refs/heads/preservation/2026-11-07/source/cd-sp-stats",
+          "sha": "de547641fff1a49a933c173974e83eddcca80926"
+        }
+      },
+      "status_sha256": "ccf5f849dbb7ee5cefbf92034f91ff705103c01c00e167436f45da58ad2b4e28",
+      "file_count": 137
+    },
+    {
+      "path": "/home/yvm/code/cd-speed",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-speed",
+      "head": "40132e4bc4b105382fb5441d756f98a7a3fd6f48",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 202
+    },
+    {
+      "path": "/home/yvm/code/cd-web-ui",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/cd-web-ui",
+      "head": "3b277fb68f20bcf642d8467c84fc777d3bcb750f",
+      "snapshots": {},
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file_count": 134
+    }
+  ],
+  "verified_ref_targets": {
+    "refs/heads/preservation/2026-11-07/branch/android-public-readiness": "39f53f3fa9bfdcb4d120a9d359cbc9b786146035",
+    "refs/heads/preservation/2026-11-07/branch/beta/clean": "7e4e2d2262b6667d6a4dba6e9498ebdd340c389c",
+    "refs/heads/preservation/2026-11-07/branch/codex/backend-reliability": "0e49ebe92cf21876402de5cc2d776aaf61597c37",
+    "refs/heads/preservation/2026-11-07/branch/codex/production-site-integration": "0bb36ce5245a1781dfb589e4dd413ed4c75e1f9d",
+    "refs/heads/preservation/2026-11-07/branch/codex/site-release": "b56f1f4968f9ae3609ae325408bda9f4dc9475b9",
+    "refs/heads/preservation/2026-11-07/branch/codex/web-ui-polish": "3b277fb68f20bcf642d8467c84fc777d3bcb750f",
+    "refs/heads/preservation/2026-11-07/branch/cycle/agent-a": "0f5c65909cb78b5b7427cc35c91a6c2fc47ab808",
+    "refs/heads/preservation/2026-11-07/branch/cycle/agent-b": "cab7b0ac7bb45a9dcb5dbfbae1ea3b0652fe2de8",
+    "refs/heads/preservation/2026-11-07/branch/cycle/agent-c": "b16a771f1a2aa561e147d9cf04c3e152773e044d",
+    "refs/heads/preservation/2026-11-07/branch/cycle/cancel-tests": "afca0ff7f55448ea24084d69251b3b5449d57cbd",
+    "refs/heads/preservation/2026-11-07/branch/cycle/integration": "288b3b806da0f04935eb6f3e5938f314d6d4b806",
+    "refs/heads/preservation/2026-11-07/branch/cycle/luna-browser": "c47d9e87de5912ad6fbc756baf0b74aadead103c",
+    "refs/heads/preservation/2026-11-07/branch/cycle/resume-browser": "3c85e4d223ee61ae24e16166363e67647e838a2e",
+    "refs/heads/preservation/2026-11-07/branch/cycle/resume-cli": "2b14b4e01f60e13526afb41db5a6aace25153724",
+    "refs/heads/preservation/2026-11-07/branch/cycle/resume-protocol": "52f2c62fb63a229c355cdacb58f4fe1d9ba43a9f",
+    "refs/heads/preservation/2026-11-07/branch/cycle/retention": "1760f5e2863c9c88c6ab5bc0c811c781deedfe84",
+    "refs/heads/preservation/2026-11-07/branch/demo-video": "7c340b6cdaa705809efcce4ad5ea9c62a0309685",
+    "refs/heads/preservation/2026-11-07/branch/docs/highway-map": "97484d4234dae094b10a4e589932b3ee4972d904",
+    "refs/heads/preservation/2026-11-07/branch/feat/android-app": "109038996f33a5385980b19663f062bf0f498a72",
+    "refs/heads/preservation/2026-11-07/branch/feat/cd-nearby": "f3bac7df3455885aa886afc0e9b5e9ecbaf23f08",
+    "refs/heads/preservation/2026-11-07/branch/feat/stats-site": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/branch/feature/multi-file-selection": "03f1c92c03b77a144dba561a256a2be4af1870ef",
+    "refs/heads/preservation/2026-11-07/branch/fix/android-beta-60": "c7a639c709139cc9b85bc6c24da009fd8a7f4320",
+    "refs/heads/preservation/2026-11-07/branch/fix/cd-beta-link-download-update": "8e0872bc86f6311b0e81f515165b3fe3577cbad4",
+    "refs/heads/preservation/2026-11-07/branch/fix/go-1.26.9-pr6": "3c6ea92fdaf03001905e195ee6efb1217b2c6dc9",
+    "refs/heads/preservation/2026-11-07/branch/fix/receive-auto-download-cli-colors": "4d7a523d027fe08670862ae0ae4a4ace15b3f772",
+    "refs/heads/preservation/2026-11-07/branch/fix/relay-wait-keepalive": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/branch/fix/transfer-speed-demo": "5e5b14ae018d8bb9f5e4f5357090966cd2da0657",
+    "refs/heads/preservation/2026-11-07/branch/main": "57232025406c6b86e688ffa598319cab7ffd60e8",
+    "refs/heads/preservation/2026-11-07/branch/matt": "bbb723bd8988890a6f5c10c4748b63835e112bb8",
+    "refs/heads/preservation/2026-11-07/branch/optimization": "52098e4b3b2ea8bc5f153eff74fc204c52382c77",
+    "refs/heads/preservation/2026-11-07/branch/perf/beat-croc": "c1df17e11edd549cdbfd16b25ad9ae593d4babc6",
+    "refs/heads/preservation/2026-11-07/branch/perf/bench-harness": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/branch/perf/browser-direct": "70dfd0862f791938a9cff151756f001debb1fad8",
+    "refs/heads/preservation/2026-11-07/branch/perf/browser-receive": "a54df3b36cedf978d0ef75b9a3aaa8f68b250ec8",
+    "refs/heads/preservation/2026-11-07/branch/perf/browser-send-pipeline": "d3ab044f20fc9ba6dce333b2c85835e9e7e7dd63",
+    "refs/heads/preservation/2026-11-07/branch/perf/cli-transfer": "baaa1bda5bda89db4034b1c3560aa89e2a6126f0",
+    "refs/heads/preservation/2026-11-07/branch/perf/mobile-bundle": "71597e20d3dbfb1ed7358353d10d178459366364",
+    "refs/heads/preservation/2026-11-07/branch/perf/relay-worker": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/branch/perf/resume-production-verify": "5753b93f70233de1dede1b728d9e0a205b921db3",
+    "refs/heads/preservation/2026-11-07/branch/perf/speedometer": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/branch/perf/transfer-speed": "40132e4bc4b105382fb5441d756f98a7a3fd6f48",
+    "refs/heads/preservation/2026-11-07/branch/prf": "db6934ba54380f8cd8a0b58157c0a3dcecbcf66c",
+    "refs/heads/preservation/2026-11-07/branch/prof": "a44151153348c17c1bcc4b0b75f9213a3aeb8c9b",
+    "refs/heads/preservation/2026-11-07/branch/release/v0.3.6": "9b466dbadda08493a0c6bde8d506cd9872ddde14",
+    "refs/heads/preservation/2026-11-07/branch/research/highway-android": "25f0df08f4f6c8c6b3758a6913f3a46f2b5624db",
+    "refs/heads/preservation/2026-11-07/branch/research/highway-identity": "24a268ba7368697d5f04d8d5935d85bf92e31092",
+    "refs/heads/preservation/2026-11-07/branch/research/highway-transport": "9cc9eda38970a0d08d98441411456a45fd88926e",
+    "refs/heads/preservation/2026-11-07/branch/speed-auto-download": "f9987510ba3419e3c82108d53f971b8e7f7df754",
+    "refs/heads/preservation/2026-11-07/branch/t3code/create-premium-file-sharing-video": "68d01067e08ea3ba39d657facbe0b1afe2f72fac",
+    "refs/heads/preservation/2026-11-07/tip/0-cd": "39f53f3fa9bfdcb4d120a9d359cbc9b786146035",
+    "refs/heads/preservation/2026-11-07/tip/1-t3code-848a9448": "68d01067e08ea3ba39d657facbe0b1afe2f72fac",
+    "refs/heads/preservation/2026-11-07/tip/2-cd-agent-a": "0f5c65909cb78b5b7427cc35c91a6c2fc47ab808",
+    "refs/heads/preservation/2026-11-07/tip/3-cd-agent-b": "cab7b0ac7bb45a9dcb5dbfbae1ea3b0652fe2de8",
+    "refs/heads/preservation/2026-11-07/tip/4-cd-agent-c": "b16a771f1a2aa561e147d9cf04c3e152773e044d",
+    "refs/heads/preservation/2026-11-07/tip/5-cd-beta-update": "7e4e2d2262b6667d6a4dba6e9498ebdd340c389c",
+    "refs/heads/preservation/2026-11-07/tip/6-cd-cancel-tests": "afca0ff7f55448ea24084d69251b3b5449d57cbd",
+    "refs/heads/preservation/2026-11-07/tip/7-cd-cycle": "288b3b806da0f04935eb6f3e5938f314d6d4b806",
+    "refs/heads/preservation/2026-11-07/tip/8-cd-demo": "5e5b14ae018d8bb9f5e4f5357090966cd2da0657",
+    "refs/heads/preservation/2026-11-07/tip/9-cd-fix-relay-wait": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/tip/10-cd-luna-browser": "c47d9e87de5912ad6fbc756baf0b74aadead103c",
+    "refs/heads/preservation/2026-11-07/tip/11-cd-nearby": "f3bac7df3455885aa886afc0e9b5e9ecbaf23f08",
+    "refs/heads/preservation/2026-11-07/tip/12-cd-optimization": "f05c3bf79783487e7b0a6805cc373b273fe6544b",
+    "refs/heads/preservation/2026-11-07/tip/13-cd-perf-croc": "c1df17e11edd549cdbfd16b25ad9ae593d4babc6",
+    "refs/heads/preservation/2026-11-07/tip/14-cd-production": "0bb36ce5245a1781dfb589e4dd413ed4c75e1f9d",
+    "refs/heads/preservation/2026-11-07/tip/15-cd-resume-browser": "3c85e4d223ee61ae24e16166363e67647e838a2e",
+    "refs/heads/preservation/2026-11-07/tip/16-cd-resume-cli": "2b14b4e01f60e13526afb41db5a6aace25153724",
+    "refs/heads/preservation/2026-11-07/tip/17-cd-resume-protocol": "52f2c62fb63a229c355cdacb58f4fe1d9ba43a9f",
+    "refs/heads/preservation/2026-11-07/tip/18-cd-retention": "1760f5e2863c9c88c6ab5bc0c811c781deedfe84",
+    "refs/heads/preservation/2026-11-07/tip/19-cd-site-release": "b56f1f4968f9ae3609ae325408bda9f4dc9475b9",
+    "refs/heads/preservation/2026-11-07/tip/20-cd-sp-bench": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/tip/21-cd-sp-brecv": "a54df3b36cedf978d0ef75b9a3aaa8f68b250ec8",
+    "refs/heads/preservation/2026-11-07/tip/22-cd-sp-bsend": "d3ab044f20fc9ba6dce333b2c85835e9e7e7dd63",
+    "refs/heads/preservation/2026-11-07/tip/23-cd-sp-cli": "baaa1bda5bda89db4034b1c3560aa89e2a6126f0",
+    "refs/heads/preservation/2026-11-07/tip/24-cd-sp-direct": "70dfd0862f791938a9cff151756f001debb1fad8",
+    "refs/heads/preservation/2026-11-07/tip/25-cd-sp-meter": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/tip/26-cd-sp-mobile": "71597e20d3dbfb1ed7358353d10d178459366364",
+    "refs/heads/preservation/2026-11-07/tip/27-cd-sp-relay": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/tip/28-cd-sp-stats": "9732bbb7062292cc790f89e62520b3c0b8ad1b27",
+    "refs/heads/preservation/2026-11-07/tip/29-cd-speed": "40132e4bc4b105382fb5441d756f98a7a3fd6f48",
+    "refs/heads/preservation/2026-11-07/tip/30-cd-web-ui": "3b277fb68f20bcf642d8467c84fc777d3bcb750f",
+    "refs/heads/preservation/2026-11-07/tip/31-cd-main-stdlib": "09b943fd1d48a77aeef366957cdf73438024f286",
+    "refs/heads/preservation/2026-11-07/tip/32-cd-ponytail-browser-after": "974c6cdfed6b52696fd96d262e547d4f9a729e85",
+    "refs/heads/preservation/2026-11-07/tip/33-cd-ponytail-browser-before": "974c6cdfed6b52696fd96d262e547d4f9a729e85",
+    "refs/heads/preservation/2026-11-07/tip/34-cd-pr6-stdlib": "3c6ea92fdaf03001905e195ee6efb1217b2c6dc9",
+    "refs/heads/preservation/2026-11-07/tip/35-cd-pr60-fixes": "c7a639c709139cc9b85bc6c24da009fd8a7f4320",
+    "refs/heads/preservation/2026-11-07/tip/36-cd-pr63-review": "bed684a505f256d5e67a45fd35688c282792d9b5",
+    "refs/heads/preservation/2026-11-07/tip/37-cd-prof-final-run": "806bb373c156c38f67d1c29028be073459809672",
+    "refs/heads/preservation/2026-11-07/tip/38-cd-prof-relay-frames": "7d9ed8622e7d635f2b20326e88a33d5a422cafc2",
+    "refs/heads/preservation/2026-11-07/tip/39-cd-prof-relay-mode": "c8f9ba0f5a2bd9e7326fc027b4f39af9f1bcabc8",
+    "refs/heads/preservation/2026-11-07/tip/40-cd-prof-run": "046d8e53de280299f3a19fb7896afd6529de4bb3",
+    "refs/heads/preservation/2026-11-07/tip/41-cd-public-integration": "54c73352865fe3f3be16f62ed02582f6c58d9ec7",
+    "refs/heads/preservation/2026-11-07/tip/42-cd-release-v0.3.6": "9b466dbadda08493a0c6bde8d506cd9872ddde14",
+    "refs/heads/preservation/2026-11-07/tip/43-cd-resume-production": "5753b93f70233de1dede1b728d9e0a205b921db3",
+    "refs/heads/preservation/2026-11-07/tip/44-android": "25f0df08f4f6c8c6b3758a6913f3a46f2b5624db",
+    "refs/heads/preservation/2026-11-07/tip/45-identity": "24a268ba7368697d5f04d8d5935d85bf92e31092",
+    "refs/heads/preservation/2026-11-07/tip/46-map": "97484d4234dae094b10a4e589932b3ee4972d904",
+    "refs/heads/preservation/2026-11-07/tip/47-transport": "9cc9eda38970a0d08d98441411456a45fd88926e",
+    "refs/heads/preservation/2026-11-07/tip/48-cdx-onboarding-release": "33a282734ffd9ce43c44c72f155ed61c6fd41112",
+    "refs/heads/preservation/2026-11-07/tip/49-mfpr": "03f1c92c03b77a144dba561a256a2be4af1870ef",
+    "refs/heads/preservation/2026-11-07/tip/50-pr39": "03f1c92c03b77a144dba561a256a2be4af1870ef",
+    "refs/heads/preservation/2026-11-07/source/cd": "84ef228f3d07587f5c62db75f1713d41c9c57927",
+    "refs/heads/preservation/2026-11-07/source/cd-android-baseline-2026-10-19": "2093967bc35ecf44abd578e55d7b91a8450f2f6e",
+    "refs/heads/preservation/2026-11-07/source/cd-android-old-tmp": "b7bb71b99ec63dba6ef60236e9823294b9f4029a",
+    "refs/heads/preservation/2026-11-07/source/cd-aw-recv": "f5ef7b82039e72f53791e5ddf0e848233a9760c7",
+    "refs/heads/preservation/2026-11-07/source/cd-aw-send": "f209434b0f6d9dc34e17bdc3db8fd89cd1b7045e",
+    "refs/heads/preservation/2026-11-07/source/cd-aw-ui": "0a165b2ba3652f04287e6ccf7559f9784824ba9d",
+    "refs/heads/preservation/2026-11-07/source/cd-demo": "322782e73fad5795d9d3125247d4cca61f91d29c",
+    "refs/heads/preservation/2026-11-07/source/cd-fix-relay-wait": "4eb5c3261955a986db4c9db0fc4d2ec8b6399202",
+    "refs/heads/preservation/2026-11-07/source/cd-nearby": "5eee4b953bf984943b4d648f22e32d5d45074338",
+    "refs/heads/preservation/2026-11-07/source/cd-site-release": "81f34e9b14915e6a301373bef2a14e5df7e7966f",
+    "refs/heads/preservation/2026-11-07/staged/cd-site-release": "b2983f1a98bb1bd6e76ee7395abc97c89db888a4",
+    "refs/heads/preservation/2026-11-07/source/cd-sp-bench": "d1de15cca6085516c124fa2bad62889571b5dfe2",
+    "refs/heads/preservation/2026-11-07/source/cd-sp-direct": "c2d386c8b56000a983a9993b9a2075cd51e37f08",
+    "refs/heads/preservation/2026-11-07/source/cd-sp-meter": "09861458134e5dc4a2a9ba7877b733e066b18c8e",
+    "refs/heads/preservation/2026-11-07/source/cd-sp-stats": "de547641fff1a49a933c173974e83eddcca80926"
+  },
+  "loose_files": [
+    {
+      "path": "/home/yvm/code/cd-android-brief.md",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/loose-files/cd-android-brief.md",
+      "sha256": "d1d9ae602e575fe8f5c75531fa761a770832f704b9665ec137fc1608eb25a9b9"
+    },
+    {
+      "path": "/home/yvm/code/cd-android-pr.build.log",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/loose-files/cd-android-pr.build.log",
+      "sha256": "d6064c22cdee34c70cd6b63e13094f83a1a44075106455b0a3aa01d4bd6e6954"
+    },
+    {
+      "path": "/home/yvm/code/cd-android-pr.files",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/loose-files/cd-android-pr.files",
+      "sha256": "8ba5fcd9220e70f760066f47a437cffc7b3a370f8b5d582846cdf44b4a5326e7"
+    },
+    {
+      "path": "/home/yvm/code/cd-speed-brief.md",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/loose-files/cd-speed-brief.md",
+      "sha256": "95769bcca037e9ba3c8c42096198f91927566d951c5848e6788e9631f6ac51ba"
+    },
+    {
+      "path": "/home/yvm/code/cd-speed-findings.md",
+      "backup": "/home/yvm/code-cleanup-backups/2026-11-07/cd/verified/loose-files/cd-speed-findings.md",
+      "sha256": "d3a50562bc8a74ee2ad33d44721be44efa5a85e4873499f1b042cbd63ba2c3cc"
+    }
+  ],
+  "private_exclusions_report": "additional-private-exclusions.json in private local backup"
+}

@@ -1,0 +1,30 @@
+{
+  "name": "cd-nearby",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 1420",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build --no-bundle",
+    "test": "cargo test --workspace",
+    "test:engine": "cargo test -p cd-nearby-engine -p cd-nearby-discovery",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1",
+    "lucide-react": "0.542.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.5",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "prettier": "^3.9.9",
+    "typescript": "5.9.3",
+    "vite": "8.3.0"
+  }
+}

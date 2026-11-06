@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 3,
+  "rows": [],
+  "startedAt": "2026-10-20T10:33:18.619Z",
+  "method": "Raw browser echo through a stateless local Worker, HTTP POST versus WebSocket. Same bytes uploaded and downloaded, no encryption, OPFS or CD processing. Both stream the echo while receiving, with no full-file Worker buffering. Preload and SHA256 outside timing. Diagnostic only, not a production feature or comparison with croc.",
+  "error": "page.evaluate: TimeoutError: signal timed out\n    at /home/yvm/code/cd/scripts/bench-browser-http.mjs:24:28",
+  "finishedAt": "2026-10-20T10:34:22.884Z"
+}

@@ -1,0 +1,250 @@
+{
+  "timestamp": "2026-10-17T18:47:28.831Z",
+  "mib": 64,
+  "runs": 6,
+  "warmupPairs": 1,
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "filesystem": "/tmp/cd-speed-compare-9KRniy",
+  "loadBefore": [
+    0.67,
+    0.92,
+    5.24
+  ],
+  "trials": [
+    {
+      "version": "current",
+      "pair": -1,
+      "warmup": true,
+      "completed": true,
+      "readinessMs": 17.717190999999957,
+      "seconds": 0.2294415570000001,
+      "mibPerSecond": 278.9381349953094,
+      "commandOutputBytes": 432,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "head",
+      "pair": -1,
+      "warmup": true,
+      "completed": true,
+      "readinessMs": 11.214572999999746,
+      "seconds": 0.21411334499999976,
+      "mibPerSecond": 298.90710455249797,
+      "commandOutputBytes": 1317
+    },
+    {
+      "version": "head",
+      "pair": 0,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 13.113476999999875,
+      "seconds": 0.21239191699999993,
+      "mibPerSecond": 301.3297346904215,
+      "commandOutputBytes": 1315
+    },
+    {
+      "version": "current",
+      "pair": 0,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 11.034614000000147,
+      "seconds": 0.22453757399999996,
+      "mibPerSecond": 285.0302462072562,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "current",
+      "pair": 1,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 11.106725000000097,
+      "seconds": 0.20609710099999984,
+      "mibPerSecond": 310.53323743743516,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "head",
+      "pair": 1,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 12.082612000000154,
+      "seconds": 0.20422808399999987,
+      "mibPerSecond": 313.3751183798994,
+      "commandOutputBytes": 1315
+    },
+    {
+      "version": "head",
+      "pair": 2,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 11.739014000000225,
+      "seconds": 0.20379827799999975,
+      "mibPerSecond": 314.03601948000795,
+      "commandOutputBytes": 1315
+    },
+    {
+      "version": "current",
+      "pair": 2,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 13.249376000000211,
+      "seconds": 0.21286604200000012,
+      "mibPerSecond": 300.6585709899185,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "current",
+      "pair": 3,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 11.351528000000144,
+      "seconds": 0.20345411300000024,
+      "mibPerSecond": 314.5672459322556,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "head",
+      "pair": 3,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 12.229975000000195,
+      "seconds": 0.21404792099999942,
+      "mibPerSecond": 298.99846586223174,
+      "commandOutputBytes": 1315
+    },
+    {
+      "version": "head",
+      "pair": 4,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 14.746062999999594,
+      "seconds": 0.20859932600000047,
+      "mibPerSecond": 306.80827799031266,
+      "commandOutputBytes": 1315
+    },
+    {
+      "version": "current",
+      "pair": 4,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 12.930395000000317,
+      "seconds": 0.21075625200000014,
+      "mibPerSecond": 303.66833435622095,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "current",
+      "pair": 5,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 13.462359000000106,
+      "seconds": 0.20167448499999954,
+      "mibPerSecond": 317.34306895589765,
+      "commandOutputBytes": 431,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 67116198,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 2628,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "version": "head",
+      "pair": 5,
+      "warmup": false,
+      "completed": true,
+      "readinessMs": 14.174290999999357,
+      "seconds": 0.19905683599999974,
+      "mibPerSecond": 321.516212585636,
+      "commandOutputBytes": 1315
+    }
+  ],
+  "baseCommit": "57232025406c6b86e688ffa598319cab7ffd60e8",
+  "executableSHA256": {
+    "current": "d7ff9f37e44019be528bacfe4363feb52dee7ddd7bfee7f35d8a9e0c85770b65",
+    "head": "06e8d6957b4266f7052f6f04c4348bb616a6cd6eb6e6fb6098b14d1fc544db3e"
+  },
+  "loadAfter": [
+    0.86,
+    0.95,
+    5.23
+  ]
+}

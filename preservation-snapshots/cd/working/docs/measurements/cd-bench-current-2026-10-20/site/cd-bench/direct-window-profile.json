@@ -1,0 +1,1343 @@
+{
+  "version": 1,
+  "profiling": true,
+  "runtime": "direct workerd",
+  "webSocketCompression": false,
+  "startedAt": "2026-10-20T11:31:24.349Z",
+  "runs": 3,
+  "mib": 64,
+  "rows": [
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 55.55404900000008,
+      "receiveStartedAt": 1792495885230.0586,
+      "downloadEventMs": 3726.8664469999994,
+      "downloadSaveMs": 120.37041800000043,
+      "receiverMs": 3847.247039,
+      "durableMs": 3847.6343829999996,
+      "totalMs": 3903.1920419999997,
+      "sha256": "2ee0c9d5966e9bc68141d9d4f80e0005ef1997aa2c3badb4f5fdc220c495bcc8",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1332,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2839,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1079,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3932300,
+        "maxRelayBufferedBytes": 1332,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1332,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1332,
+          "maxIncomingBytes": 251,
+          "maxIncomingCount": 1,
+          "retainedBytes": 1332,
+          "incomingBytes": 251,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 41.19999999925494,
+          "window_sampleCount": 5
+        },
+        "windowSamples": [
+          {
+            "at": 1792495885350,
+            "size": 4194304,
+            "inFlight": 0,
+            "capacity": 4194304,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495885396,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 1346016
+          },
+          {
+            "at": 1792495887881,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 41.19999999925494,
+            "ackBytes": 1572864,
+            "nativeBuffered": 2242600
+          },
+          {
+            "at": 1792495887922,
+            "size": 1572864,
+            "inFlight": 2359296,
+            "capacity": 0,
+            "minRTT": 41.19999999925494,
+            "ackBytes": 3145728,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495887971,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 18.800000000745058,
+            "ackBytes": 6291456,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888006,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 18.800000000745058,
+            "ackBytes": 7864320,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888031,
+            "size": 1884931,
+            "inFlight": 786432,
+            "capacity": 1098499,
+            "minRTT": 18.800000000745058,
+            "ackBytes": 11010048,
+            "nativeBuffered": 786460
+          },
+          {
+            "at": 1792495888059,
+            "size": 1884931,
+            "inFlight": 1572864,
+            "capacity": 312067,
+            "minRTT": 18.800000000745058,
+            "ackBytes": 11010048,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888089,
+            "size": 1884931,
+            "inFlight": 1572864,
+            "capacity": 312067,
+            "minRTT": 18.800000000745058,
+            "ackBytes": 12582912,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888119,
+            "size": 2277836,
+            "inFlight": 1572864,
+            "capacity": 704972,
+            "minRTT": 18.700000002980232,
+            "ackBytes": 15728640,
+            "nativeBuffered": 971384
+          },
+          {
+            "at": 1792495888166,
+            "size": 2277836,
+            "inFlight": 1572864,
+            "capacity": 704972,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 17301504,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888192,
+            "size": 2277836,
+            "inFlight": 1572864,
+            "capacity": 704972,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 18874368,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888220,
+            "size": 2277836,
+            "inFlight": 1572864,
+            "capacity": 704972,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 20447232,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888250,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 22020096,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888277,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 25165824,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495888326,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 26738688,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888373,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 29884416,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888406,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 31457280,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888442,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 34603008,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888489,
+            "size": 1646337,
+            "inFlight": 1572864,
+            "capacity": 73473,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 36175872,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888530,
+            "size": 1646337,
+            "inFlight": 1572864,
+            "capacity": 73473,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 39321600,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888560,
+            "size": 1646337,
+            "inFlight": 1572864,
+            "capacity": 73473,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 40894464,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888585,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 44040192,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495888636,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 45613056,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888682,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 48758784,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888714,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 50331648,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888746,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 51904512,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888771,
+            "size": 1572864,
+            "inFlight": 786432,
+            "capacity": 786432,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 55050240,
+            "nativeBuffered": 786460
+          },
+          {
+            "at": 1792495888799,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 55050240,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888839,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 58195968,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888867,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 59768832,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888904,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 62914560,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495888935,
+            "size": 1803949,
+            "inFlight": 1572864,
+            "capacity": 231085,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 64487424,
+            "nativeBuffered": 0
+          }
+        ],
+        "maxJSHeapBytes": 78619966,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792495885355,
+        "directLastPayloadAt": 1792495888937,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "prflx",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        }
+      },
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 1079,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1332,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1119,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "windowSamples": [],
+        "maxJSHeapBytes": 69729810,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792495885374,
+        "directReceivedLastPayloadAt": 1792495888947,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "host",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        }
+      },
+      "senderPhases": {
+        "encrypt": {
+          "calls": 88,
+          "ms": 71.90000000596046,
+          "maxMs": 1.3999999985098839
+        },
+        "decrypt": {
+          "calls": 48,
+          "ms": 1.8000000044703484,
+          "maxMs": 0.10000000149011612
+        },
+        "blobRead": {
+          "calls": 16,
+          "ms": 61.49999999254942,
+          "maxMs": 7.5
+        }
+      },
+      "receiverPhases": {
+        "decrypt": {
+          "calls": 88,
+          "ms": 57.399999998509884,
+          "maxMs": 1.5
+        },
+        "encrypt": {
+          "calls": 48,
+          "ms": 1.3000000044703484,
+          "maxMs": 0.10000000149011612
+        },
+        "diskWrite": {
+          "calls": 15,
+          "ms": 143.20000000670552,
+          "maxMs": 19.5
+        }
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 45.51842899999974,
+      "receiveStartedAt": 1792495889575.5176,
+      "downloadEventMs": 3656.081286999999,
+      "downloadSaveMs": 72.10427700000037,
+      "receiverMs": 3728.1904959999993,
+      "durableMs": 3728.4675640000005,
+      "totalMs": 3773.987407999999,
+      "sha256": "2ee0c9d5966e9bc68141d9d4f80e0005ef1997aa2c3badb4f5fdc220c495bcc8",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1333,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2838,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1078,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3932300,
+        "maxRelayBufferedBytes": 1333,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1333,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1333,
+          "maxIncomingBytes": 299,
+          "maxIncomingCount": 2,
+          "retainedBytes": 1333,
+          "incomingBytes": 299,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 32.600000001490116,
+          "window_sampleCount": 5
+        },
+        "windowSamples": [
+          {
+            "at": 1792495889711,
+            "size": 4194304,
+            "inFlight": 0,
+            "capacity": 4194304,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495889748,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 1303856
+          },
+          {
+            "at": 1792495892213,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 32.600000001490116,
+            "ackBytes": 1572864,
+            "nativeBuffered": 2213600
+          },
+          {
+            "at": 1792495892248,
+            "size": 1572864,
+            "inFlight": 2359296,
+            "capacity": 0,
+            "minRTT": 32.600000001490116,
+            "ackBytes": 3145728,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892278,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 6291456,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892312,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 7864320,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892354,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 11010048,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892386,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 12582912,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892414,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 15728640,
+            "nativeBuffered": 1195036
+          },
+          {
+            "at": 1792495892463,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 17301504,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892489,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 18874368,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892542,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 22020096,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892579,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 25165824,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892614,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 26738688,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892640,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 29884416,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495892690,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 31457280,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892728,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 34603008,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892770,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 36175872,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892807,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 39321600,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892841,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 40894464,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892866,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 44040192,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495892912,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 45613056,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495892937,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 48758784,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495892994,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 50331648,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495893022,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 53477376,
+            "nativeBuffered": 1405928
+          },
+          {
+            "at": 1792495893068,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 55050240,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495893093,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 58195968,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495893144,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 59768832,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495893183,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 62914560,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495893211,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 10.699999999254942,
+            "ackBytes": 64487424,
+            "nativeBuffered": 0
+          }
+        ],
+        "maxJSHeapBytes": 74201426,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792495889716,
+        "directLastPayloadAt": 1792495893214,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "host",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        }
+      },
+      "receiverStats": {
+        "directBytes": 2838,
+        "directPayloadBytes": 0,
+        "relayBytes": 1078,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1333,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1118,
+        "maxRelayBufferedBytes": 549,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "windowSamples": [],
+        "maxJSHeapBytes": 68260346,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792495889730,
+        "directReceivedLastPayloadAt": 1792495893223,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "host",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        }
+      },
+      "senderPhases": {
+        "encrypt": {
+          "calls": 88,
+          "ms": 72.2000000141561,
+          "maxMs": 1.5
+        },
+        "decrypt": {
+          "calls": 48,
+          "ms": 1.699999999254942,
+          "maxMs": 0.19999999925494194
+        },
+        "blobRead": {
+          "calls": 16,
+          "ms": 65.80000000074506,
+          "maxMs": 7.600000001490116
+        }
+      },
+      "receiverPhases": {
+        "decrypt": {
+          "calls": 88,
+          "ms": 61.599999990314245,
+          "maxMs": 1.4000000022351742
+        },
+        "encrypt": {
+          "calls": 48,
+          "ms": 1.5999999940395355,
+          "maxMs": 0.20000000298023224
+        },
+        "diskWrite": {
+          "calls": 15,
+          "ms": 149.5,
+          "maxMs": 19.300000000745058
+        }
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 43.991659000001164,
+      "receiveStartedAt": 1792495893784.683,
+      "downloadEventMs": 3279.4094889999997,
+      "downloadSaveMs": 85.82886399999916,
+      "receiverMs": 3365.243032999999,
+      "durableMs": 3365.6672279999984,
+      "totalMs": 3409.660181000001,
+      "sha256": "2ee0c9d5966e9bc68141d9d4f80e0005ef1997aa2c3badb4f5fdc220c495bcc8",
+      "senderStats": {
+        "directBytes": 67111592,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 3933908,
+        "relayPayloadBytes": 3932160,
+        "directReceivedBytes": 2879,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1079,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 4172384,
+        "maxRelayBufferedBytes": 3932580,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1121,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 3933908,
+          "directBytes": 67111592,
+          "maxRetainedBytes": 3932580,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 3932580,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 4194304,
+          "window_minRTT": 50.599999997764826,
+          "window_sampleCount": 15
+        },
+        "windowSamples": [
+          {
+            "at": 1792495893912,
+            "size": 4194304,
+            "inFlight": 0,
+            "capacity": 4194304,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495893939,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 3932580
+          },
+          {
+            "at": 1792495893967,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 0,
+            "ackBytes": 0,
+            "nativeBuffered": 2155572
+          },
+          {
+            "at": 1792495893997,
+            "size": 4194304,
+            "inFlight": 3670016,
+            "capacity": 524288,
+            "minRTT": 50.599999997764826,
+            "ackBytes": 1048576,
+            "nativeBuffered": 2052084
+          },
+          {
+            "at": 1792495896080,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 50.599999997764826,
+            "ackBytes": 3145728,
+            "nativeBuffered": 3331040
+          },
+          {
+            "at": 1792495896106,
+            "size": 4194304,
+            "inFlight": 3932160,
+            "capacity": 262144,
+            "minRTT": 50.599999997764826,
+            "ackBytes": 3145728,
+            "nativeBuffered": 1097392
+          },
+          {
+            "at": 1792495896161,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 17.900000002235174,
+            "ackBytes": 7864320,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896199,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 17.199999999254942,
+            "ackBytes": 11010048,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896229,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 17.100000001490116,
+            "ackBytes": 12582912,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896255,
+            "size": 2617614,
+            "inFlight": 2359296,
+            "capacity": 258318,
+            "minRTT": 17.100000001490116,
+            "ackBytes": 15728640,
+            "nativeBuffered": 2161760
+          },
+          {
+            "at": 1792495896312,
+            "size": 2617614,
+            "inFlight": 2359296,
+            "capacity": 258318,
+            "minRTT": 16.899999998509884,
+            "ackBytes": 17301504,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896342,
+            "size": 2617614,
+            "inFlight": 2359296,
+            "capacity": 258318,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 20447232,
+            "nativeBuffered": 536716
+          },
+          {
+            "at": 1792495896371,
+            "size": 1684218,
+            "inFlight": 1572864,
+            "capacity": 111354,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 22020096,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896401,
+            "size": 1684218,
+            "inFlight": 1572864,
+            "capacity": 111354,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 23592960,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896427,
+            "size": 1684218,
+            "inFlight": 1572864,
+            "capacity": 111354,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 25165824,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896462,
+            "size": 1684218,
+            "inFlight": 1572864,
+            "capacity": 111354,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 26738688,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896490,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 28311552,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896539,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 31457280,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896580,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 34603008,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896622,
+            "size": 1601992,
+            "inFlight": 1572864,
+            "capacity": 29128,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 36175872,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896664,
+            "size": 1601992,
+            "inFlight": 1572864,
+            "capacity": 29128,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 39321600,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896693,
+            "size": 1601992,
+            "inFlight": 1572864,
+            "capacity": 29128,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 40894464,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896730,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 44040192,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896758,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 45613056,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896796,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 48758784,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896825,
+            "size": 1837033,
+            "inFlight": 1572864,
+            "capacity": 264169,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 50331648,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896857,
+            "size": 1837033,
+            "inFlight": 1572864,
+            "capacity": 264169,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 53477376,
+            "nativeBuffered": 951320
+          },
+          {
+            "at": 1792495896898,
+            "size": 1837033,
+            "inFlight": 1572864,
+            "capacity": 264169,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 55050240,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896939,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 58195968,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896966,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 59768832,
+            "nativeBuffered": 0
+          },
+          {
+            "at": 1792495896992,
+            "size": 1572864,
+            "inFlight": 1572864,
+            "capacity": 0,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 62914560,
+            "nativeBuffered": 1572920
+          },
+          {
+            "at": 1792495897040,
+            "size": 1660703,
+            "inFlight": 1572864,
+            "capacity": 87839,
+            "minRTT": 12.100000001490116,
+            "ackBytes": 64487424,
+            "nativeBuffered": 0
+          }
+        ],
+        "maxJSHeapBytes": 74654882,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792495893915,
+        "relayLastPayloadAt": 1792495893928,
+        "directFirstPayloadAt": 1792495893936,
+        "directLastPayloadAt": 1792495897044,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "host",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        }
+      },
+      "receiverStats": {
+        "directBytes": 2879,
+        "directPayloadBytes": 0,
+        "relayBytes": 1079,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111592,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 3933908,
+        "relayReceivedPayloadBytes": 3932160,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1119,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived",
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived"
+        ],
+        "successfulDirectPieces": 49,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "windowSamples": [],
+        "maxJSHeapBytes": 64716022,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792495893947,
+        "directReceivedLastPayloadAt": 1792495897055,
+        "selectedRoute": {
+          "localType": "host",
+          "remoteType": "host",
+          "protocol": "udp",
+          "sameAddress": null,
+          "currentRoundTripTime": 0
+        },
+        "relayReceivedFirstPayloadAt": 1792495893954,
+        "relayReceivedLastPayloadAt": 1792495894011
+      },
+      "senderPhases": {
+        "encrypt": {
+          "calls": 98,
+          "ms": 75.2000000178814,
+          "maxMs": 1.5
+        },
+        "decrypt": {
+          "calls": 49,
+          "ms": 1.900000013411045,
+          "maxMs": 0.19999999925494194
+        },
+        "blobRead": {
+          "calls": 16,
+          "ms": 76.29999999701977,
+          "maxMs": 19.300000000745058
+        },
+        "shortTimer": {
+          "calls": 204,
+          "ms": 2071.300000000745,
+          "maxMs": 11.599999997764826
+        }
+      },
+      "receiverPhases": {
+        "decrypt": {
+          "calls": 98,
+          "ms": 59.600000005215406,
+          "maxMs": 1.4000000022351742
+        },
+        "encrypt": {
+          "calls": 49,
+          "ms": 0.6999999992549419,
+          "maxMs": 0.10000000149011612
+        },
+        "diskWrite": {
+          "calls": 15,
+          "ms": 135.59999999776483,
+          "maxMs": 19.100000001490116
+        }
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 3932160,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    }
+  ],
+  "method": "Preload both pages outside transfer timing. Sender readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and ends after browser download save or CLI exit. File and directory fsync added to both; SHA256 checked after timing. Local Worker control and output in tmpfs; not physical persistence. No artificial CPU/decrypt delays.",
+  "cdxSha256": "90cc18ddf508874f3cf3a6ad59a937617f7ceaf7228b11341ce9cb0999a09768",
+  "chromium": "154.0.8037.97",
+  "finishedAt": "2026-10-20T11:31:37.306Z",
+  "addressEqualityReliable": false
+}

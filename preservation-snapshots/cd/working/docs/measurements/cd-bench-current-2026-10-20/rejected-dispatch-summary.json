@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "sourceBase": "c8f9ba0",
+  "productionChangeRetained": false,
+  "rows": [
+    {
+      "name": "OPFS overlap \u00b7 browser-browser",
+      "beforeMs": 991.3149090000006,
+      "afterMs": 977.1323950000001,
+      "ratio": 1.0145144241175226,
+      "result": "rejected"
+    },
+    {
+      "name": "OPFS overlap \u00b7 cli-browser",
+      "beforeMs": 898.7537860000002,
+      "afterMs": 914.8189350000002,
+      "ratio": 0.9824389850435267,
+      "result": "rejected"
+    },
+    {
+      "name": "Raw relay \u00b7 standard versus hibernating",
+      "beforeMs": 309.1958800000002,
+      "afterMs": 323.8450419999999,
+      "ratio": 0.9547649026536595,
+      "result": "rejected"
+    }
+  ],
+  "directPieceMedians": {
+    "4096": 826.6000000014901,
+    "16384": 779.8999999985099,
+    "65536": 735.4000000022352
+  },
+  "relayPrototypePatchSha256": "be8e207f21e3e09cb0fec21dffba3903332e01c8cd694dc3a575a323d8e475cd",
+  "relayWorkerBundleSha256": "bb5047e81455cd587aa813100ee3e1530ea34156ba16ed79ec46e2d21600633d",
+  "note": "OPFS overlap and standard relay dispatch did not show useful end-to-end or raw gains. The ordered/reliable WebRTC diagnostic uses two peers in one page, not the separate contexts used by product benchmarks; it supports no production speed claim. No security, memory, completion or compatibility constraint was removed to seek a win."
+}

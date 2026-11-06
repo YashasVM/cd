@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.vite/
+.wrangler/
+bin/
+npm-debug.log*
+.agents/
+skills-lock.json
+
+# Generated from scripts/install.* at build time (see scripts/sync-install.mjs)
+public/install.sh
+public/install.ps1
+
+*.iml
+.idea/
+
+# Stray `go build` outputs at the repository root
+/cd
+/cdx
+
+# Local Firebase project setup and server credentials
+/.firebase/
+/android/app/google-services.json

@@ -1,0 +1,7 @@
+{
+  "name": "cd-browser-transport-diagnostic-local-only",
+  "main": "./browser-ceiling-worker.js",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": false,
+  "routes": []
+}

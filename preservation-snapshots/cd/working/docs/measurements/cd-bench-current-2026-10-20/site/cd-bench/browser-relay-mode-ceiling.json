@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "mib": 64,
+  "runs": 3,
+  "modes": [
+    "0",
+    "1"
+  ],
+  "chunks": [
+    65536,
+    262144,
+    786432
+  ],
+  "startedAt": "2026-10-20T10:46:51.218Z",
+  "rows": [
+    {
+      "run": 0,
+      "mode": "0",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1647.91254,
+      "mibPerSecond": 38.83701255164913,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 136
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1859.5656939999994,
+      "mibPerSecond": 34.4166383615808,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 157
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "0",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1561.644588,
+      "mibPerSecond": 40.98243639544442,
+      "senderStats": {
+        "maxBuffered": 4091365,
+        "polls": 128
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "1",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1570.0068610000008,
+      "mibPerSecond": 40.76415306824571,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 137
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "1",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1480.2188819999992,
+      "mibPerSecond": 43.23684880544581,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 126
+      },
+      "ok": true
+    },
+    {
+      "run": 0,
+      "mode": "1",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1523.4170940000004,
+      "mibPerSecond": 42.0108191328986,
+      "senderStats": {
+        "maxBuffered": 4097845,
+        "polls": 126
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1491.2854879999995,
+      "mibPerSecond": 42.915994633483635,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 126
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "0",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1571.3639019999991,
+      "mibPerSecond": 40.72894885681295,
+      "senderStats": {
+        "maxBuffered": 4083157,
+        "polls": 130
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "1",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1494.847084000001,
+      "mibPerSecond": 42.81374375012659,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 129
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "1",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1543.2363590000023,
+      "mibPerSecond": 41.4712883264824,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 132
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "1",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1550.4354569999996,
+      "mibPerSecond": 41.27872573543706,
+      "senderStats": {
+        "maxBuffered": 4096117,
+        "polls": 129
+      },
+      "ok": true
+    },
+    {
+      "run": 1,
+      "mode": "0",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1607.9138669999993,
+      "mibPerSecond": 39.80312709125981,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 132
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "0",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1602.682582999998,
+      "mibPerSecond": 39.93304767822518,
+      "senderStats": {
+        "maxBuffered": 4095685,
+        "polls": 133
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "1",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1568.79133,
+      "mibPerSecond": 40.79573795196841,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 137
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "1",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1500.6631390000002,
+      "mibPerSecond": 42.6478123815634,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 127
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "1",
+      "chunkBytes": 786432,
+      "bytes": 67108864,
+      "milliseconds": 1569.4806190000018,
+      "mibPerSecond": 40.77782116276004,
+      "senderStats": {
+        "maxBuffered": 4090069,
+        "polls": 130
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "0",
+      "chunkBytes": 65536,
+      "bytes": 67108864,
+      "milliseconds": 1616.498435999998,
+      "mibPerSecond": 39.59174879152192,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 136
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "mode": "0",
+      "chunkBytes": 262144,
+      "bytes": 67108864,
+      "milliseconds": 1479.488752000001,
+      "mibPerSecond": 43.25818625757282,
+      "senderStats": {
+        "maxBuffered": 4194304,
+        "polls": 125
+      },
+      "ok": true
+    }
+  ],
+  "method": "Raw browser WebSocket to Node receiver through the real local Worker. Random payload preloaded outside timing, no CD file/record encryption, disk writing or application ACK window. Measures transport overhead only. SHA256 checked after timing. Private authenticated throwaway room; never exposes an unencrypted production transfer option.",
+  "finishedAt": "2026-10-20T10:47:25.068Z"
+}

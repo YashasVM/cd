@@ -1,0 +1,50 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #0D0503; }
+      #f8-bg { position: absolute; inset: 0; background: #E58A57; }
+      #f8-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f8-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f8-line { display: block; }
+      .f8-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f8-wi { display: inline-block; }
+      .f8-gap { display: inline-block; width: 0.24em; }
+      .f8-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f8-slot-in { position: absolute; inset: 0; }
+      .f8-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f8-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f8-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f8-accent { color: #E58A57; }
+
+      #f8-s { top: 250px; font-size: 200px; color: #0D0503; }
+      #f8-slot { width: 0.92em; height: 0.92em; background: #0D0503; vertical-align: -0.1em; }
+      #f8-icon { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #f8-install { position: absolute; left: 106px; top: 560px; padding: 26px 34px; border-radius: 16px; background: #0D0503; color: #E4D4B6; font-size: 34px; white-space: nowrap; }
+      #f8-install b { color: #E58A57; font-weight: 500; margin-right: 0.6em; }
+      #f8-url { position: absolute; left: 106px; top: 720px; font-size: 44px; font-weight: 700; letter-spacing: -0.02em; color: #0D0503; }
+
+  </style>
+  <div data-hf-id="hf-csys" id="root" data-composition-id="08-cta" data-width="1920" data-height="1080" data-duration="2.486">
+    <div data-hf-id="hf-qf4g" id="f8-bg" class="clip" data-start="0" data-duration="2.486" data-track-index="0"></div>
+    
+    <div data-hf-id="hf-9l7k" class="f8-sentence" id="f8-s">
+      <span data-hf-id="hf-xo02" class="f8-line"><span data-hf-id="hf-29nf" class="f8-w"><span data-hf-id="hf-y9cc" class="f8-wi" id="f8-a0">send</span></span><span data-hf-id="hf-y0vc" class="f8-gap"></span><span data-hf-id="hf-mwm3" class="f8-w"><span data-hf-id="hf-m7yy" class="f8-wi" id="f8-a1">it</span></span><span data-hf-id="hf-e0o0" class="f8-gap"></span><span data-hf-id="hf-mib2" class="f8-w"><span data-hf-id="hf-iph0" class="f8-wi" id="f8-a2">with</span></span><span data-hf-id="hf-ctqx" class="f8-gap"></span><span data-hf-id="hf-8p6t" class="f8-slot" id="f8-slot"><img data-hf-id="hf-w2zj" id="f8-icon" src="assets/cd-icon.png" alt="cd" /></span><span data-hf-id="hf-m401" class="f8-w"><span data-hf-id="hf-6gh0" class="f8-wi" id="f8-dot">.</span></span></span>
+    </div>
+    <div data-hf-id="hf-zdor" id="f8-install" class="f8-mono"><b data-hf-id="hf-0ogj">$</b>curl -fsSL https://cd.yash0.in/install.sh | sh</div>
+    <div data-hf-id="hf-5h0m" id="f8-url">cd.yash0.in</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f8-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+tl.fromTo("#f8-a1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.060);
+tl.fromTo("#f8-a2", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.120);
+    tl.fromTo("#f8-slot", { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2)" }, 0.22);
+    tl.fromTo("#f8-dot", { yPercent: 140 }, { yPercent: 0, duration: 0.3, ease: "expo.out" }, 0.36);
+    tl.fromTo("#f8-install", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 0.916);
+    tl.fromTo("#f8-url", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 1.374);
+    window.__timelines["08-cta"] = tl;
+  </script>
+</template>

@@ -1,0 +1,27 @@
+[
+  {
+    "file": "ponytail-iteration.json",
+    "sha256": "513da796956676c7fab3fd38aac46d18106bfa839a2de590a213b5ae9a9275a6",
+    "matched": true
+  },
+  {
+    "file": "ponytail-tcp-reuse-steady.json",
+    "sha256": "c20e069210b66e03d519e0776c190977e69a7ce68f8b18de7f9c96e855a4ef9a",
+    "matched": true
+  },
+  {
+    "file": "ponytail-relay-reuse-steady.json",
+    "sha256": "72968828704373679bf30ec850951c25ff67a93417b009fcab9ef415bac94702",
+    "matched": true
+  },
+  {
+    "file": "ponytail-code-size.json",
+    "sha256": "8119fe4571f219793025fbf3f23cd76946c24786b58683d56abdfcae4bbc56aa",
+    "matched": true
+  },
+  {
+    "file": "ponytail-candidate.patch",
+    "sha256": "22cddbf0f6117b394f653f1325012c2bc94049b8b8ecfc880249789759999160",
+    "matched": true
+  }
+]

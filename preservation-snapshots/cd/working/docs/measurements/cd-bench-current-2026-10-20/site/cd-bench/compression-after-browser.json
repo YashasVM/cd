@@ -1,0 +1,3181 @@
+{
+  "version": 1,
+  "runtime": "direct workerd",
+  "webSocketCompression": false,
+  "startedAt": "2026-10-20T10:56:52.270Z",
+  "runs": 7,
+  "mib": 64,
+  "rows": [
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 70.64052700000002,
+      "receiveStartedAt": 1792493813294.1072,
+      "downloadEventMs": 3655.3724299999994,
+      "downloadSaveMs": 254.11755799999992,
+      "receiverMs": 3909.505822,
+      "durableMs": 3910.0693309999997,
+      "totalMs": 3980.716258,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1330,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2587,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 827,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2863976,
+        "maxRelayBufferedBytes": 1330,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1330,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1330,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 1330,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 39.099999997764826,
+          "window_sampleCount": 5
+        },
+        "maxJSHeapBytes": 73151411,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792493813427,
+        "directLastPayloadAt": 1792493816929
+      },
+      "receiverStats": {
+        "directBytes": 2587,
+        "directPayloadBytes": 0,
+        "relayBytes": 827,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1330,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 867,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 47,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 62174924,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792493813443,
+        "directReceivedLastPayloadAt": 1792493816941
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 48.9637130000001,
+      "receiveStartedAt": 1792493817734.024,
+      "downloadEventMs": 1198.26681,
+      "downloadSaveMs": 96.37736000000041,
+      "receiverMs": 1294.6501639999997,
+      "durableMs": 1295.0600079999995,
+      "totalMs": 1344.0251929999995,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 15.300000000745058,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 100369451,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493817774,
+        "relayLastPayloadAt": 1792493818906
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 160,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 65883423,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493817786,
+        "relayReceivedLastPayloadAt": 1792493818917
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 54.24640499999987,
+      "receiveStartedAt": 1792493819383.6685,
+      "receiverMs": 1992.0986219999995,
+      "durableMs": 1992.3572390000008,
+      "totalMs": 2046.6062189999993,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787847,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3510,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3514308,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787847,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 27,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 90084317,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493819504,
+        "relayLastPayloadAt": 1792493819505,
+        "directFirstPayloadAt": 1792493819508,
+        "directLastPayloadAt": 1792493820959
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3510,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 49.823247000000265,
+      "receiveStartedAt": 1792493821678.7935,
+      "receiverMs": 1088.6639219999997,
+      "durableMs": 1088.9916900000007,
+      "totalMs": 1138.8162929999999,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 17.199999999254942,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 113056239,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493821705,
+        "relayLastPayloadAt": 1792493822758
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 22.760910999999396,
+      "receiveStartedAt": 1792493823119.7117,
+      "downloadEventMs": 1146.238265,
+      "downloadSaveMs": 96.25821799999903,
+      "receiverMs": 1242.5036039999995,
+      "durableMs": 1242.8807980000001,
+      "totalMs": 1265.6427559999993,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 2719,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113411,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2799,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 64524682,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493823213,
+        "relayReceivedLastPayloadAt": 1792493824243
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113411,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 0,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 24.3669289999998,
+      "receiveStartedAt": 1792493824703.3904,
+      "downloadEventMs": 933.6492670000007,
+      "downloadSaveMs": 80.73735599999964,
+      "receiverMs": 1014.3910190000006,
+      "durableMs": 1014.904133,
+      "totalMs": 1039.2721469999997,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 62186599,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493824747,
+        "relayReceivedLastPayloadAt": 1792493825617
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 60.54497300000003,
+      "receiveStartedAt": 1792493826246.9224,
+      "downloadEventMs": 1309.5915659999991,
+      "downloadSaveMs": 100.61884900000041,
+      "receiverMs": 1410.2172439999995,
+      "durableMs": 1410.6747589999995,
+      "totalMs": 1471.2217980000005,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 917860,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 24.599999997764826,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 100402219,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493826289,
+        "relayLastPayloadAt": 1792493827522
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 160,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 66309083,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493826299,
+        "relayReceivedLastPayloadAt": 1792493827534
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 62.75894100000005,
+      "receiveStartedAt": 1792493828032.723,
+      "receiverMs": 1727.6081529999974,
+      "durableMs": 1727.8945920000006,
+      "totalMs": 1790.6550499999976,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1329,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 3510,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3503412,
+        "maxRelayBufferedBytes": 1329,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1329,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1329,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 1329,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4500221,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 30.5,
+          "window_sampleCount": 5
+        },
+        "maxJSHeapBytes": 112125073,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792493828169,
+        "directLastPayloadAt": 1792493829331
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3510,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 39.17166599999837,
+      "receiveStartedAt": 1792493830010.5386,
+      "receiverMs": 718.6417959999999,
+      "durableMs": 719.4038540000001,
+      "totalMs": 758.5787909999999,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 12.199999999254942,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 96669739,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493830031,
+        "relayLastPayloadAt": 1792493830720
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 15.982112000001507,
+      "receiveStartedAt": 1792493831012.3186,
+      "downloadEventMs": 850.4114279999994,
+      "downloadSaveMs": 81.91057300000102,
+      "receiverMs": 932.3269129999971,
+      "durableMs": 932.6688539999996,
+      "totalMs": 948.6523579999994,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2838,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113409,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 528,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 57472165,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connecting",
+            "ice": "connected",
+            "channel": "connecting"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493831087,
+        "relayReceivedLastPayloadAt": 1792493831850
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113409,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 16.08182900000247,
+      "receiveStartedAt": 1792493832227.4292,
+      "downloadEventMs": 846.0352810000004,
+      "downloadSaveMs": 76.1516449999981,
+      "receiverMs": 922.1898609999989,
+      "durableMs": 922.8588170000003,
+      "totalMs": 938.9413520000016,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 80,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 62136563,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493832269,
+        "relayReceivedLastPayloadAt": 1792493833043
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 1,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 43.087626999997156,
+      "receiveStartedAt": 1792493833628.1875,
+      "downloadEventMs": 3318.1833860000006,
+      "downloadSaveMs": 127.67749800000092,
+      "receiverMs": 3445.8645910000014,
+      "durableMs": 3446.0375660000027,
+      "totalMs": 3489.1255280000005,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787846,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 2839,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1079,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3041508,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787846,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 786516,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 40.399999998509884,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 71564420,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493833769,
+        "relayLastPayloadAt": 1792493833771,
+        "directFirstPayloadAt": 1792493833773,
+        "directLastPayloadAt": 1792493836927
+      },
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 1079,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111368,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 787846,
+        "relayReceivedPayloadBytes": 786432,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1119,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 65459820,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493833778,
+        "relayReceivedLastPayloadAt": 1792493833792,
+        "directReceivedFirstPayloadAt": 1792493833783,
+        "directReceivedLastPayloadAt": 1792493836937
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 61.75169499999902,
+      "receiveStartedAt": 1792493837438.2976,
+      "receiverMs": 1372.1142670000008,
+      "durableMs": 1372.3723660000032,
+      "totalMs": 1434.1273690000016,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787844,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3511,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 4179408,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787844,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 5127289,
+          "window_capacity": 4194304,
+          "window_inFlight": 4718592,
+          "window_minRTT": 27.600000001490116,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 102945205,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493837567,
+        "relayLastPayloadAt": 1792493837569,
+        "directFirstPayloadAt": 1792493837571,
+        "directLastPayloadAt": 1792493838361
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3511,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 61.21006900000066,
+      "receiveStartedAt": 1792493839123.0417,
+      "receiverMs": 836.6742000000013,
+      "durableMs": 836.9791790000017,
+      "totalMs": 898.1907790000005,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 918032,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 17.899999998509884,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 100973043,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493839147,
+        "relayLastPayloadAt": 1792493839953
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 16.6045950000007,
+      "receiveStartedAt": 1792493840279.9958,
+      "downloadEventMs": 853.027234000001,
+      "downloadSaveMs": 75.32424299999911,
+      "receiverMs": 928.3545999999988,
+      "durableMs": 928.7038470000007,
+      "totalMs": 945.309276,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2839,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113411,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 550,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 59844150,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connecting",
+            "ice": "connected",
+            "channel": "connecting"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493840383,
+        "relayReceivedLastPayloadAt": 1792493841121
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113411,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 17.274611000000732,
+      "receiveStartedAt": 1792493841494.719,
+      "downloadEventMs": 964.9185910000015,
+      "downloadSaveMs": 167.80090700000073,
+      "receiverMs": 1132.7272570000023,
+      "durableMs": 1133.9819050000006,
+      "totalMs": 1151.2579800000021,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 58244055,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493841535,
+        "relayReceivedLastPayloadAt": 1792493842420
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 50.63458000000173,
+      "receiveStartedAt": 1792493843179.1267,
+      "downloadEventMs": 3480.877220999999,
+      "downloadSaveMs": 83.70218100000056,
+      "receiverMs": 3564.583598000001,
+      "durableMs": 3564.916411000002,
+      "totalMs": 3615.5529670000033,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787848,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 2837,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1077,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2956004,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787848,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 786516,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 40.69999999925494,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 62882311,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493843290,
+        "relayLastPayloadAt": 1792493843292,
+        "directFirstPayloadAt": 1792493843294,
+        "directLastPayloadAt": 1792493846641
+      },
+      "receiverStats": {
+        "directBytes": 2837,
+        "directPayloadBytes": 0,
+        "relayBytes": 1077,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111368,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 787848,
+        "relayReceivedPayloadBytes": 786432,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1117,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived",
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 65463140,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792493843305,
+        "directReceivedLastPayloadAt": 1792493846651,
+        "relayReceivedFirstPayloadAt": 1792493843309,
+        "relayReceivedLastPayloadAt": 1792493843319
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 2,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 42.54966300000524,
+      "receiveStartedAt": 1792493847226.061,
+      "downloadEventMs": 1001.0441419999988,
+      "downloadSaveMs": 74.52362599999469,
+      "receiverMs": 1075.571871,
+      "durableMs": 1075.71213,
+      "totalMs": 1118.2624700000015,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 917688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 16.599999997764826,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 100432595,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493847258,
+        "relayLastPayloadAt": 1792493848199
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 62867675,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493847269,
+        "relayReceivedLastPayloadAt": 1792493848203
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 43.246415000001434,
+      "receiveStartedAt": 1792493848594.6187,
+      "receiverMs": 715.3678419999997,
+      "durableMs": 715.6387749999994,
+      "totalMs": 758.888165999997,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 917688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 12.300000000745058,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 107242671,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493848613,
+        "relayLastPayloadAt": 1792493849302
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 14.698942000002717,
+      "receiveStartedAt": 1792493849590.3154,
+      "downloadEventMs": 1118.7032800000015,
+      "downloadSaveMs": 122.4702249999973,
+      "receiverMs": 1241.1780339999968,
+      "durableMs": 1241.5865330000015,
+      "totalMs": 1256.2867230000047,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 2719,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113409,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2799,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 63742162,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493849683,
+        "relayReceivedLastPayloadAt": 1792493850694
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113409,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 16.49431000000186,
+      "receiveStartedAt": 1792493851125.988,
+      "downloadEventMs": 793.5985409999994,
+      "downloadSaveMs": 125.64499699999578,
+      "receiverMs": 919.2464919999984,
+      "durableMs": 919.7984169999982,
+      "totalMs": 936.2935139999972,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 80,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 55869747,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493851168,
+        "relayReceivedLastPayloadAt": 1792493851905
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 50.24970300000132,
+      "receiveStartedAt": 1792493852502.1152,
+      "downloadEventMs": 3749.997378,
+      "downloadSaveMs": 125.76014600000053,
+      "receiverMs": 3875.761237999999,
+      "durableMs": 3876.1069209999987,
+      "totalMs": 3926.357489000002,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1332,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2838,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1078,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2845252,
+        "maxRelayBufferedBytes": 1332,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1332,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1332,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 1332,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 40.5,
+          "window_sampleCount": 5
+        },
+        "maxJSHeapBytes": 69968544,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792493852640,
+        "directLastPayloadAt": 1792493856231
+      },
+      "receiverStats": {
+        "directBytes": 2838,
+        "directPayloadBytes": 0,
+        "relayBytes": 1078,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1332,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1118,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 69689432,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792493852656,
+        "directReceivedLastPayloadAt": 1792493856243
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 51.40649499999563,
+      "receiveStartedAt": 1792493856917.4495,
+      "downloadEventMs": 1244.6660080000001,
+      "downloadSaveMs": 88.4830060000022,
+      "receiverMs": 1333.1549149999992,
+      "durableMs": 1333.5012570000035,
+      "totalMs": 1384.9089590000003,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786860,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 17.399999998509884,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 87361668,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493856955,
+        "relayLastPayloadAt": 1792493858134
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 65824755,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493856962,
+        "relayReceivedLastPayloadAt": 1792493858143
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 3,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 46.92772600000171,
+      "receiveStartedAt": 1792493858570.8289,
+      "receiverMs": 1848.8992990000042,
+      "durableMs": 1849.172728999998,
+      "totalMs": 1896.101278000002,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787848,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3509,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1049,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 4191468,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787848,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 6603317,
+          "window_capacity": 4194304,
+          "window_inFlight": 5505024,
+          "window_minRTT": 54.899999998509884,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 88361649,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493858693,
+        "relayLastPayloadAt": 1792493858695,
+        "directFirstPayloadAt": 1792493858697,
+        "directLastPayloadAt": 1792493859996
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1049,
+          "directBytes": 3509,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 17.197556999999506,
+      "receiveStartedAt": 1792493860779.5737,
+      "downloadEventMs": 859.386265000001,
+      "downloadSaveMs": 120.78432099999918,
+      "receiverMs": 980.1752259999994,
+      "durableMs": 980.6571180000028,
+      "totalMs": 997.8555599999963,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2839,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113409,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 550,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 59866666,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connecting",
+            "ice": "connected",
+            "channel": "connecting"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493860859,
+        "relayReceivedLastPayloadAt": 1792493861627
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113409,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 18.487733000001754,
+      "receiveStartedAt": 1792493862044.5264,
+      "downloadEventMs": 891.4926930000001,
+      "downloadSaveMs": 87.91254800000024,
+      "receiverMs": 979.4126109999997,
+      "durableMs": 979.9149120000002,
+      "totalMs": 998.4036269999997,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 63758159,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493862084,
+        "relayReceivedLastPayloadAt": 1792493862919
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 54.78074899999774,
+      "receiveStartedAt": 1792493863517.9463,
+      "downloadEventMs": 2950.9796320000023,
+      "downloadSaveMs": 78.34558700000343,
+      "receiverMs": 3029.3279459999976,
+      "durableMs": 3029.4827979999973,
+      "totalMs": 3084.2641989999975,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1329,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2839,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1079,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2962324,
+        "maxRelayBufferedBytes": 1329,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1329,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1329,
+          "maxIncomingBytes": 251,
+          "maxIncomingCount": 1,
+          "retainedBytes": 1329,
+          "incomingBytes": 251,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 38.100000001490116,
+          "window_sampleCount": 5
+        },
+        "maxJSHeapBytes": 71563558,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792493863651,
+        "directLastPayloadAt": 1792493866448
+      },
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 1079,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1329,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1119,
+        "maxRelayBufferedBytes": 550,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 63567254,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792493863669,
+        "directReceivedLastPayloadAt": 1792493866458
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 50.47553900000639,
+      "receiveStartedAt": 1792493867069.3477,
+      "downloadEventMs": 1070.2343379999948,
+      "downloadSaveMs": 124.12739200000215,
+      "receiverMs": 1194.3669939999963,
+      "durableMs": 1194.7730439999941,
+      "totalMs": 1245.2494390000065,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 917860,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 3932160,
+          "window_minRTT": 19.699999999254942,
+          "window_sampleCount": 15
+        },
+        "maxJSHeapBytes": 114127091,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493867107,
+        "relayLastPayloadAt": 1792493868114
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 80,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 64685371,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493867120,
+        "relayReceivedLastPayloadAt": 1792493868121
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 39.816774999999325,
+      "receiveStartedAt": 1792493868557.3716,
+      "receiverMs": 1365.1572279999964,
+      "durableMs": 1365.423302999996,
+      "totalMs": 1405.2410919999966,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787845,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3511,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3214540,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787845,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 25.5,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 93451825,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493868678,
+        "relayLastPayloadAt": 1792493868680,
+        "directFirstPayloadAt": 1792493868682,
+        "directLastPayloadAt": 1792493869906
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3511,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 4,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 40.16062100000272,
+      "receiveStartedAt": 1792493870200.0574,
+      "receiverMs": 708.4709959999964,
+      "durableMs": 708.7696240000005,
+      "totalMs": 748.9323520000034,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786860,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 15.099999997764826,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 95118171,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493870225,
+        "relayLastPayloadAt": 1792493870901
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 17.406895000000077,
+      "receiveStartedAt": 1792493871209.099,
+      "downloadEventMs": 879.5157440000039,
+      "downloadSaveMs": 128.46553900000436,
+      "receiverMs": 1007.984172000004,
+      "durableMs": 1008.2205660000036,
+      "totalMs": 1025.628012000001,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 70811559,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493871250,
+        "relayReceivedLastPayloadAt": 1792493872074
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 51.81472799999756,
+      "receiveStartedAt": 1792493872707.4956,
+      "downloadEventMs": 3409.026859999998,
+      "downloadSaveMs": 132.0214119999946,
+      "receiverMs": 3541.0519970000023,
+      "durableMs": 3541.2215270000015,
+      "totalMs": 3593.036920999999,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787845,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 2839,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1079,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3253504,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787845,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 48,
+          "maxIncomingCount": 1,
+          "retainedBytes": 786516,
+          "incomingBytes": 48,
+          "incomingCount": 1,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 3932160,
+          "window_minRTT": 41.20000000298023,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 67873592,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493872829,
+        "relayLastPayloadAt": 1792493872831,
+        "directFirstPayloadAt": 1792493872833,
+        "directLastPayloadAt": 1792493876093
+      },
+      "receiverStats": {
+        "directBytes": 2839,
+        "directPayloadBytes": 0,
+        "relayBytes": 1079,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111368,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 787845,
+        "relayReceivedPayloadBytes": 786432,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1119,
+        "maxRelayBufferedBytes": 529,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived",
+          "directReceived",
+          "relayReceived",
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 73087348,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493872839,
+        "relayReceivedLastPayloadAt": 1792493872849,
+        "directReceivedFirstPayloadAt": 1792493872848,
+        "directReceivedLastPayloadAt": 1792493876105
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 52.92592299999524,
+      "receiveStartedAt": 1792493876914.0664,
+      "downloadEventMs": 1077.4392940000034,
+      "downloadSaveMs": 134.88156500000332,
+      "receiverMs": 1212.3262620000096,
+      "durableMs": 1212.6793870000038,
+      "totalMs": 1265.606946999993,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786860,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 19.900000002235174,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 100928087,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493876957,
+        "relayLastPayloadAt": 1792493877972
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 57824919,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493876965,
+        "relayReceivedLastPayloadAt": 1792493877977
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 45.31842800001323,
+      "receiveStartedAt": 1792493878438.701,
+      "receiverMs": 1089.7756489999883,
+      "durableMs": 1089.9563469999994,
+      "totalMs": 1135.27536900001,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787845,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3511,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3427704,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787845,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 19.899999998509884,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 109247929,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493878566,
+        "relayLastPayloadAt": 1792493878567,
+        "directFirstPayloadAt": 1792493878570,
+        "directLastPayloadAt": 1792493879513
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3511,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 54.609519999998156,
+      "receiveStartedAt": 1792493879820.9434,
+      "receiverMs": 943.1040400000056,
+      "durableMs": 943.3573599999945,
+      "totalMs": 997.9684689999995,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 18.699999999254942,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 106731047,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493879845,
+        "relayLastPayloadAt": 1792493880756
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 5,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 16.318081000004895,
+      "receiveStartedAt": 1792493881059.9626,
+      "downloadEventMs": 857.8341499999951,
+      "downloadSaveMs": 73.05852599999344,
+      "receiverMs": 930.8956469999976,
+      "durableMs": 931.0859839999903,
+      "totalMs": 947.4044089999952,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2838,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113409,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 550,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 57469149,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connecting",
+            "ice": "connected",
+            "channel": "connecting"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493881143,
+        "relayReceivedLastPayloadAt": 1792493881905
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113409,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "direct",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 49.41090099999565,
+      "receiveStartedAt": 1792493882462.6353,
+      "downloadEventMs": 3720.220555000007,
+      "downloadSaveMs": 80.19117799999367,
+      "receiverMs": 3800.414399000001,
+      "durableMs": 3800.655230999997,
+      "totalMs": 3850.0665579999913,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111312,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 1331,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 2838,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1078,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 2892024,
+        "maxRelayBufferedBytes": 1331,
+        "firstPayloadRoute": "direct",
+        "routes": [
+          "direct"
+        ],
+        "successfulDirectPieces": 1111,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 1331,
+          "directBytes": 67111312,
+          "maxRetainedBytes": 1331,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 1331,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 4194304,
+          "window_inFlight": 3932160,
+          "window_minRTT": 36.80000000074506,
+          "window_sampleCount": 5
+        },
+        "maxJSHeapBytes": 66827567,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "directFirstPayloadAt": 1792493882589,
+        "directLastPayloadAt": 1792493886161
+      },
+      "receiverStats": {
+        "directBytes": 2838,
+        "directPayloadBytes": 0,
+        "relayBytes": 1078,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 67111312,
+        "directReceivedPayloadBytes": 67108864,
+        "relayReceivedBytes": 1331,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 1118,
+        "maxRelayBufferedBytes": 549,
+        "firstPayloadRoute": "directReceived",
+        "routes": [
+          "directReceived"
+        ],
+        "successfulDirectPieces": 48,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 68161468,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connected",
+            "ice": "connected",
+            "channel": "closed"
+          }
+        ],
+        "directReceivedFirstPayloadAt": 1792493882600,
+        "directReceivedLastPayloadAt": 1792493886173
+      },
+      "cliReports": [],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 0,
+      "directGate": true,
+      "actualTransport": "WebRTC"
+    },
+    {
+      "direction": "browser-browser",
+      "route": "relay",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 42.43696099999943,
+      "receiveStartedAt": 1792493886738.904,
+      "downloadEventMs": 966.3798160000006,
+      "downloadSaveMs": 110.88973399999668,
+      "receiverMs": 1077.274728999997,
+      "durableMs": 1077.5351320000045,
+      "totalMs": 1119.9728380000015,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 786688,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 4194304,
+          "window_minRTT": 13.799999997019768,
+          "window_sampleCount": 16
+        },
+        "maxJSHeapBytes": 100432279,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493886774,
+        "relayLastPayloadAt": 1792493887681
+      },
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2648,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67116220,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 160,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 65672779,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493886785,
+        "relayReceivedLastPayloadAt": 1792493887687
+      },
+      "cliReports": [],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "direct",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 69.7188129999995,
+      "receiveStartedAt": 1792493888144.6814,
+      "receiverMs": 918.4842139999964,
+      "durableMs": 918.6445340000064,
+      "totalMs": 988.3638769999961,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 67111368,
+        "directPayloadBytes": 67108864,
+        "relayBytes": 787846,
+        "relayPayloadBytes": 786432,
+        "directReceivedBytes": 3511,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 1050,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 3555356,
+        "maxRelayBufferedBytes": 786516,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay",
+          "direct"
+        ],
+        "successfulDirectPieces": 1113,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 787846,
+          "directBytes": 67111368,
+          "maxRetainedBytes": 786516,
+          "maxIncomingBytes": 452,
+          "maxIncomingCount": 2,
+          "retainedBytes": 786516,
+          "incomingBytes": 452,
+          "incomingCount": 2,
+          "mergerBytes": 0,
+          "window_size": 4714677,
+          "window_capacity": 4367343,
+          "window_inFlight": 4194304,
+          "window_minRTT": 25.800000000745058,
+          "window_sampleCount": 7
+        },
+        "maxJSHeapBytes": 106071101,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "closed",
+            "ice": "closed",
+            "channel": "closed"
+          }
+        ],
+        "relayFirstPayloadAt": 1792493888269,
+        "relayLastPayloadAt": 1792493888271,
+        "directFirstPayloadAt": 1792493888273,
+        "directLastPayloadAt": 1792493889026
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "direct",
+          "relayBytes": 1050,
+          "directBytes": 3511,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "directPayloadBytes": 67108864,
+      "relayPayloadBytes": 786432,
+      "directGate": true,
+      "actualTransport": "relay + WebRTC"
+    },
+    {
+      "direction": "browser-cli",
+      "route": "relay",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 47.38186099998711,
+      "receiveStartedAt": 1792493889346.1375,
+      "receiverMs": 769.545237000013,
+      "durableMs": 769.802050000013,
+      "totalMs": 817.1853579999879,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 67116220,
+        "relayPayloadBytes": 67108864,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 2648,
+        "relayReceivedPayloadBytes": 0,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 787032,
+        "firstPayloadRoute": "relay",
+        "routes": [
+          "relay"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {
+          "relayBytes": 67116220,
+          "directBytes": 0,
+          "maxRetainedBytes": 0,
+          "maxIncomingBytes": 0,
+          "maxIncomingCount": 0,
+          "retainedBytes": 0,
+          "incomingBytes": 0,
+          "incomingCount": 0,
+          "mergerBytes": 0,
+          "window_size": 4194304,
+          "window_capacity": 3932160,
+          "window_inFlight": 2359296,
+          "window_minRTT": 13.800000000745058,
+          "window_sampleCount": 9
+        },
+        "maxJSHeapBytes": 106746259,
+        "peerStates": [],
+        "relayFirstPayloadAt": 1792493889372,
+        "relayLastPayloadAt": 1792493890107
+      },
+      "receiverStats": null,
+      "receiverPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 2648,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "direct",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 16.339128999999957,
+      "receiveStartedAt": 1792493890409.4314,
+      "downloadEventMs": 888.877192999993,
+      "downloadSaveMs": 83.31349200000113,
+      "receiverMs": 972.1935989999911,
+      "durableMs": 972.5930829999998,
+      "totalMs": 988.9330139999947,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 2837,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67113409,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 577,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 59051252,
+        "peerStates": [
+          {
+            "label": "cd-direct",
+            "connection": "connecting",
+            "ice": "connected",
+            "channel": "connecting"
+          }
+        ],
+        "relayReceivedFirstPayloadAt": 1792493890517,
+        "relayReceivedLastPayloadAt": 1792493891288
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67113409,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": false,
+      "actualTransport": "relay"
+    },
+    {
+      "direction": "cli-browser",
+      "route": "relay",
+      "run": 6,
+      "bytes": 67108864,
+      "ok": true,
+      "readyMs": 18.297395999994478,
+      "receiveStartedAt": 1792493891679.8884,
+      "downloadEventMs": 791.2167800000025,
+      "downloadSaveMs": 72.48630899999989,
+      "receiverMs": 863.7056770000054,
+      "durableMs": 864.103707000002,
+      "totalMs": 882.401893000002,
+      "sha256": "0defaa6a4330209fd7105b72f3391392e8b0afca31be44181add4ee3cf775608",
+      "senderStats": null,
+      "receiverStats": {
+        "directBytes": 0,
+        "directPayloadBytes": 0,
+        "relayBytes": 1808,
+        "relayPayloadBytes": 0,
+        "directReceivedBytes": 0,
+        "directReceivedPayloadBytes": 0,
+        "relayReceivedBytes": 67111460,
+        "relayReceivedPayloadBytes": 67108864,
+        "legacyBytes": 0,
+        "maxDirectBufferedBytes": 0,
+        "maxRelayBufferedBytes": 120,
+        "firstPayloadRoute": "relayReceived",
+        "routes": [
+          "relayReceived"
+        ],
+        "successfulDirectPieces": 0,
+        "webSocketExtensions": [
+          ""
+        ],
+        "engineMaxima": {},
+        "maxJSHeapBytes": 58240203,
+        "peerStates": [],
+        "relayReceivedFirstPayloadAt": 1792493891717,
+        "relayReceivedLastPayloadAt": 1792493892459
+      },
+      "senderPhases": null,
+      "cliReports": [
+        {
+          "transport": "relay",
+          "relayBytes": 67111460,
+          "directBytes": 0
+        }
+      ],
+      "directPayloadBytes": 0,
+      "relayPayloadBytes": 67108864,
+      "directGate": null,
+      "actualTransport": "relay"
+    }
+  ],
+  "method": "Preload both pages outside transfer timing. Sender readiness starts at file selection or CLI launch. Receiver timing starts at code entry or CLI launch and ends after browser download save or CLI exit. File and directory fsync added to both; SHA256 checked after timing. Local Worker control and output in tmpfs; not physical persistence. No artificial CPU/decrypt delays.",
+  "cdxSha256": "90cc18ddf508874f3cf3a6ad59a937617f7ceaf7228b11341ce9cb0999a09768",
+  "chromium": "154.0.8037.97",
+  "finishedAt": "2026-10-20T10:58:12.679Z"
+}

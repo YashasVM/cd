@@ -1,0 +1,179 @@
+{
+  "runs": 7,
+  "mib": 32,
+  "chromium": "155.0.8059.84",
+  "profile": "/home/yvm/.cache/cd-opfs-receiver-profile-Iqc0RU",
+  "profileFilesystem": {
+    "type": 2435016766,
+    "bsize": 4096,
+    "frsize": 4096,
+    "blocks": 124497920,
+    "bfree": 76369193,
+    "bavail": 75678205,
+    "files": 0,
+    "ffree": 0
+  },
+  "loadBefore": [
+    1.43,
+    1.48,
+    2.31
+  ],
+  "loadAfter": [
+    2.02,
+    1.68,
+    2.31
+  ],
+  "expected": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026",
+  "rows": [
+    {
+      "mode": "before",
+      "trial": 1,
+      "bytes": 33554509,
+      "milliseconds": 5644.718721999998,
+      "workerWrites": 0,
+      "mibPerSecond": 5.669028876178319,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 1,
+      "bytes": 33554509,
+      "milliseconds": 2638.413773,
+      "workerWrites": 129,
+      "mibPerSecond": 12.12852728423138,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 2,
+      "bytes": 33554509,
+      "milliseconds": 2649.879684000003,
+      "workerWrites": 129,
+      "mibPerSecond": 12.07604768855699,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 2,
+      "bytes": 33554509,
+      "milliseconds": 5608.581204999999,
+      "workerWrites": 0,
+      "mibPerSecond": 5.7055558729174845,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 3,
+      "bytes": 33554509,
+      "milliseconds": 5255.9114340000015,
+      "workerWrites": 0,
+      "mibPerSecond": 6.088396624402168,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 3,
+      "bytes": 33554509,
+      "milliseconds": 2684.569319000002,
+      "workerWrites": 129,
+      "mibPerSecond": 11.920002663534254,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 4,
+      "bytes": 33554509,
+      "milliseconds": 2754.1030660000033,
+      "workerWrites": 129,
+      "mibPerSecond": 11.61905443117586,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 4,
+      "bytes": 33554509,
+      "milliseconds": 5425.761749000005,
+      "workerWrites": 0,
+      "mibPerSecond": 5.897802910129649,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 5,
+      "bytes": 33554509,
+      "milliseconds": 5201.062615000003,
+      "workerWrites": 0,
+      "mibPerSecond": 6.1526029970555065,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 5,
+      "bytes": 33554509,
+      "milliseconds": 2685.6300159999955,
+      "workerWrites": 129,
+      "mibPerSecond": 11.915294825526114,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 6,
+      "bytes": 33554509,
+      "milliseconds": 2672.905208999997,
+      "workerWrites": 129,
+      "mibPerSecond": 11.97201955579054,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 6,
+      "bytes": 33554509,
+      "milliseconds": 5166.522094999993,
+      "workerWrites": 0,
+      "mibPerSecond": 6.193735910641142,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "before",
+      "trial": 7,
+      "bytes": 33554509,
+      "milliseconds": 5149.966839000001,
+      "workerWrites": 0,
+      "mibPerSecond": 6.2136465016803895,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    },
+    {
+      "mode": "after",
+      "trial": 7,
+      "bytes": 33554509,
+      "milliseconds": 2656.965811000002,
+      "workerWrites": 129,
+      "mibPerSecond": 12.04384087308918,
+      "sha256": "8e9b98c994b17567b390e71b07c886bacc95f2490d0c2345d822636a91939026"
+    }
+  ],
+  "medians": {
+    "before": 5255.9114340000015,
+    "after": 2672.905208999997
+  },
+  "speedup": 1.9663665648533695,
+  "hashes": {
+    "baseline": "642fdd37846a758bad773322640fe1e2d06ff15805c099678b4056f8292feeec",
+    "candidate": "053c0c161c81828fc2b53d86a92233a8071e60dedd02b00657dd6328064c9dd4",
+    "cli": "6d23ef0d3d6bdebe860e4a014c6a1791b0d764d7c2a4028384bf454fbf3f435d",
+    "worker": {
+      "worker/index.ts": "4e5c6c3f3396adb47ba7aff9c39794bdeaeb93a6e30aa91ecc1de953b1970a31",
+      "worker/resume-room.ts": "f56df25ecc3fc5711c20986288c9e04d70dc3f230d0db2a2b0d759ae1b702729"
+    },
+    "shared": {
+      "agent-protocol": "d6044d9c6998e009807ecb7aab68cb07262e085679b1ac1027746be601fa344e",
+      "resume-protocol": "03fc1169f48f870ac76e16c9d69809205d8b4562eb38f81067985428d529576b",
+      "incremental-sha256": "6b7f2d282be3af2039766f32e57899ac77f51d2fdd2417cbdaf4eeb3f9f6ef67",
+      "resume-retention": "b0c4b7c04a9a71eb7452f86b66be197fd8af8577da6250c363db54bf5cd68698",
+      "sink": "1cc2ba80c65d2ab09d233c71e7112955e1191b4e68b7540bab667e91144898cd",
+      "resume-opfs": "62841ebac2fc34316c28b724b731a22ad542dc409aaefc4c0c33645dc5d27136",
+      "resume-opfs-worker": "b671cd59638f6989b98cc250f74a1b8e3fcf4eac23766a0dba5a86461315f9fd"
+    }
+  },
+  "method": "Actual CLI resumable sender through local v2 Worker to mountResumableReceiver with native OPFS, strict IndexedDB checkpoints, whole-file verification and browser download. Both receiver variants are source modules over identical current shared sources, preimported before timing. Baseline shares the confirmed 4 MiB + 64 KiB / 32-record inbox compatibility fix; storage is the only receiver difference. Sender readiness and source hashing outside timing. Timing starts at receiver mount, ends at verified receiver completion. Download copied and SHA256 checked after timing. Persistent Chromium profile on home filesystem. One warmup pair followed by alternating measured pairs."
+}

@@ -1,0 +1,90 @@
+receive=8MiB high=4MiB low=1MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 533107173 ns/op	 125.88 MB/s	1370711464 B/op	 4472505 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 490867209 ns/op	 136.71 MB/s	1368191880 B/op	 4433052 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 529168019 ns/op	 126.82 MB/s	1373723040 B/op	 4500765 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.617s
+receive=8MiB high=8MiB low=2MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 523607798 ns/op	 128.17 MB/s	1374373088 B/op	 4518554 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 513575384 ns/op	 130.67 MB/s	1372891904 B/op	 4490029 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 518892803 ns/op	 129.33 MB/s	1367502056 B/op	 4432613 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.608s
+receive=8MiB high=16MiB low=4MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 574954584 ns/op	 116.72 MB/s	1375166008 B/op	 4541156 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 508638362 ns/op	 131.94 MB/s	1371016376 B/op	 4474991 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 536330724 ns/op	 125.13 MB/s	1373584776 B/op	 4548386 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.670s
+receive=16MiB high=4MiB low=1MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 529271074 ns/op	 126.79 MB/s	1371535064 B/op	 4497297 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 546908039 ns/op	 122.71 MB/s	1370233624 B/op	 4487107 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 504878259 ns/op	 132.92 MB/s	1372828560 B/op	 4504599 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.634s
+receive=16MiB high=8MiB low=2MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 533258746 ns/op	 125.85 MB/s	1373295544 B/op	 4548899 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 502997973 ns/op	 133.42 MB/s	1372169632 B/op	 4491179 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 526789622 ns/op	 127.39 MB/s	1372392768 B/op	 4494027 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.613s
+receive=16MiB high=16MiB low=4MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 508908102 ns/op	 131.87 MB/s	1374310240 B/op	 4554246 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 676220782 ns/op	  99.24 MB/s	1385111672 B/op	 4801467 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 547710651 ns/op	 122.53 MB/s	1378989408 B/op	 4611208 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.787s
+receive=24MiB high=4MiB low=1MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	1602013736 ns/op	  41.89 MB/s	1383164616 B/op	 4823610 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 567153038 ns/op	 118.33 MB/s	1368849640 B/op	 4461890 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 551412626 ns/op	 121.70 MB/s	1369811456 B/op	 4487826 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	2.778s
+receive=24MiB high=8MiB low=2MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 546426310 ns/op	 122.81 MB/s	1370690456 B/op	 4503807 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	1428451910 ns/op	  46.98 MB/s	1391538288 B/op	 5007607 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 606279317 ns/op	 110.69 MB/s	1375771760 B/op	 4598936 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	2.644s
+receive=24MiB high=16MiB low=4MiB
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkDirectPathThroughput-12    	       1	 528545217 ns/op	 126.97 MB/s	1371375352 B/op	 4486108 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 493120851 ns/op	 136.09 MB/s	1369091640 B/op	 4450161 allocs/op
+BenchmarkDirectPathThroughput-12    	       1	 494923813 ns/op	 135.59 MB/s	1375549832 B/op	 4536336 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	1.577s

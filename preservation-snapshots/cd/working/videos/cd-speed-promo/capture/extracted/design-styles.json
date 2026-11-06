@@ -1,0 +1,219 @@
+{
+  "typography": [
+    {
+      "role": "display",
+      "fontFamily": "Georgia",
+      "fontSize": "68px",
+      "fontWeight": "400",
+      "lineHeight": "68px",
+      "letterSpacing": "-3.74px",
+      "color": "#E4D4B6",
+      "sampleText": "cd"
+    },
+    {
+      "role": "body",
+      "fontFamily": "Inter",
+      "fontSize": "34px",
+      "fontWeight": "450",
+      "lineHeight": "40.8px",
+      "letterSpacing": "-1.19px",
+      "color": "#E4D4B6",
+      "sampleText": "Direct browser-to-terminalfile transfer."
+    },
+    {
+      "role": "heading",
+      "fontFamily": "Inter",
+      "fontSize": "21px",
+      "fontWeight": "550",
+      "lineHeight": "26.25px",
+      "letterSpacing": "-0.42px",
+      "color": "#E4D4B6",
+      "sampleText": "Send files"
+    },
+    {
+      "role": "code",
+      "fontFamily": "monospace",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "lineHeight": "18.2px",
+      "letterSpacing": "0.28px",
+      "color": "#A28F79",
+      "sampleText": "cdx"
+    },
+    {
+      "role": "link",
+      "fontFamily": "ui-monospace",
+      "fontSize": "11px",
+      "fontWeight": "400",
+      "lineHeight": "normal",
+      "letterSpacing": "normal",
+      "color": "#E4D4B6",
+      "sampleText": "yashas"
+    }
+  ],
+  "spacing": {
+    "observed": [
+      4,
+      8,
+      10,
+      16,
+      20,
+      24,
+      32,
+      96
+    ],
+    "baseUnit": 8
+  },
+  "radius": [
+    "9px"
+  ],
+  "shadows": [
+    {
+      "value": "rgba(255, 230, 210, 0.35) 0px 1px 0px 0px inset, rgba(229, 138, 87, 0.8) 0px 8px 22px -10px",
+      "count": 1
+    },
+    {
+      "value": "rgba(255, 220, 190, 0.06) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.7) 0px 30px 80px -30px, rgba(0, 0, 0, 0.3) 0px 0px 0px 1px",
+      "count": 1
+    }
+  ],
+  "buttons": [
+    {
+      "label": "Get the cdx CLI",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#A28F79",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px none rgb(162, 143, 121)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "height": "18.1875px"
+    },
+    {
+      "label": "$\n              curl -fsSL https://cd.ya",
+      "background": "#160907",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#E4D4B6",
+      "padding": "0px 12px",
+      "borderRadius": "6px",
+      "border": "1px solid rgba(228, 212, 182, 0.15)",
+      "boxShadow": "none",
+      "fontSize": "12px",
+      "fontWeight": "400",
+      "height": "42px"
+    },
+    {
+      "label": "Send",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#E4D4B6",
+      "padding": "8px 16px",
+      "borderRadius": "9px",
+      "border": "0px none rgb(228, 212, 182)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "42px"
+    },
+    {
+      "label": "Receive",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#A28F79",
+      "padding": "8px 16px",
+      "borderRadius": "9px",
+      "border": "0px none rgb(162, 143, 121)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "42px"
+    },
+    {
+      "label": "Choose files",
+      "background": "transparent",
+      "backgroundImage": "linear-gradient(rgb(240, 160, 115), rgb(229, 138, 87))",
+      "backdropFilter": "",
+      "color": "#0D0503",
+      "padding": "10px 24px",
+      "borderRadius": "8px",
+      "border": "1px solid rgba(0, 0, 0, 0)",
+      "boxShadow": "rgba(255, 230, 210, 0.35) 0px 1px 0px 0px inset, rgba(229, 138, 87, 0.8) 0px 8px 22px -10px",
+      "fontSize": "14px",
+      "fontWeight": "550",
+      "height": "44px"
+    }
+  ],
+  "cards": [],
+  "nav": null,
+  "chips": [
+    {
+      "label": "/di·rect/",
+      "background": "transparent",
+      "color": "#A28F79",
+      "padding": "0px",
+      "borderRadius": "0px",
+      "border": "0px none rgb(162, 143, 121)",
+      "boxShadow": "none",
+      "fontSize": "12px",
+      "fontWeight": "400",
+      "height": "15.5938px"
+    }
+  ],
+  "statCells": [],
+  "tabs": [
+    {
+      "label": "Send",
+      "background": "transparent",
+      "color": "#E4D4B6",
+      "padding": "8px 16px",
+      "borderRadius": "9px",
+      "border": "0px none rgb(228, 212, 182)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "42px"
+    },
+    {
+      "label": "Receive",
+      "background": "transparent",
+      "color": "#A28F79",
+      "padding": "8px 16px",
+      "borderRadius": "9px",
+      "border": "0px none rgb(162, 143, 121)",
+      "boxShadow": "none",
+      "fontSize": "14px",
+      "fontWeight": "500",
+      "height": "42px"
+    }
+  ],
+  "backgrounds": [
+    {
+      "value": "linear-gradient(rgb(27, 6, 3) 0%, rgb(18, 5, 4) 60%, rgba(0, 0, 0, 0) 100%)",
+      "area": 2073600
+    },
+    {
+      "value": "radial-gradient(120% 80% at 50% -10%, rgba(229, 138, 87, 0.09), rgba(0, 0, 0, 0) 60%), linear-gradient(rgba(30, 13, 9, 0.92), rgba(20, 8, 6, 0.92))",
+      "area": 220170
+    },
+    {
+      "value": "linear-gradient(rgba(229, 138, 87, 0.26), rgba(229, 138, 87, 0.14))",
+      "area": 30212
+    }
+  ],
+  "glass": [
+    {
+      "backdropFilter": "blur(6px)",
+      "background": "radial-gradient(120% 80% at 50% -10%, rgba(229, 138, 87, 0.09), rgba(0, 0, 0, 0) 60%), linear-gradient(rgba(30, 13, 9, 0.92), rgba(20, 8, 6, 0.92))",
+      "border": "1px solid rgba(228, 212, 182, 0.1)",
+      "borderRadius": "16px",
+      "boxShadow": "rgba(255, 220, 190, 0.06) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.7) 0px 30px 80px -30px, rgba(0, 0, 0, 0.3) 0px 0px 0px 1px",
+      "area": 220170
+    }
+  ]
+}

@@ -1,0 +1,468 @@
+
+> Task :app:dependencyInsight
+androidx.fragment:fragment:1.1.0
+  Variant runtime:
+    | Attribute Name                                  | Provided     | Requested    |
+    |-------------------------------------------------|--------------|--------------|
+    | org.gradle.libraryelements                      | jar          |              |
+    | org.gradle.status                               | release      |              |
+    | org.gradle.category                             | library      | library      |
+    | org.gradle.usage                                | java-runtime | java-runtime |
+    | com.android.build.api.attributes.AgpVersionAttr |              | 8.10.1       |
+    | com.android.build.api.attributes.BuildTypeAttr  |              | debug        |
+    | org.gradle.jvm.environment                      |              | android      |
+    | org.jetbrains.kotlin.platform.type              |              | androidJvm   |
+
+androidx.fragment:fragment:1.1.0
++--- com.google.android.gms:play-services-base:18.9.0
+|    +--- com.google.firebase:firebase-messaging:26.0.0
+|    |    \--- debugRuntimeClasspath
+|    \--- com.google.android.gms:play-services-cloud-messaging:17.4.0
+|         \--- com.google.firebase:firebase-messaging:26.0.0 (*)
+\--- com.google.android.gms:play-services-basement:18.9.0
+     +--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     +--- com.google.android.gms:play-services-cloud-messaging:17.4.0 (*)
+     +--- com.google.android.gms:play-services-base:18.9.0 (*)
+     +--- com.google.firebase:firebase-common:23.0.0
+     |    +--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     |    \--- com.google.firebase:firebase-installations:20.0.0
+     |         \--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     +--- com.google.firebase:firebase-iid-interop:17.1.0 (requested com.google.android.gms:play-services-basement:17.0.0)
+     |    \--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     +--- com.google.firebase:firebase-measurement-connector:19.0.0 (requested com.google.android.gms:play-services-basement:17.0.0)
+     |    \--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     +--- com.google.android.gms:play-services-stats:17.0.2 (requested com.google.android.gms:play-services-basement:18.0.0)
+     |    \--- com.google.firebase:firebase-messaging:26.0.0 (*)
+     \--- com.google.android.gms:play-services-tasks:18.4.0 (requested com.google.android.gms:play-services-basement:18.8.0)
+          +--- com.google.firebase:firebase-messaging:26.0.0 (*)
+          +--- com.google.android.gms:play-services-cloud-messaging:17.4.0 (*)
+          +--- com.google.android.gms:play-services-base:18.9.0 (*)
+          +--- com.google.firebase:firebase-installations:20.0.0 (*)
+          +--- com.google.firebase:firebase-common:23.0.0 (*)
+          +--- com.google.firebase:firebase-iid-interop:17.1.0 (requested com.google.android.gms:play-services-tasks:17.0.0) (*)
+          +--- com.google.firebase:firebase-installations-interop:18.0.0
+          |    +--- com.google.firebase:firebase-messaging:26.0.0 (*)
+          |    \--- com.google.firebase:firebase-installations:20.0.0 (*)
+          \--- org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2 (requested com.google.android.gms:play-services-tasks:16.0.1)
+               +--- com.google.firebase:firebase-common:23.0.0 (*)
+               \--- org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2
+                    +--- org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2
+                    |    +--- androidx.compose.ui:ui-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3)
+                    |    |    +--- androidx.compose:compose-bom:2025.01.01
+                    |    |    |    \--- debugRuntimeClasspath
+                    |    |    \--- androidx.compose.ui:ui:1.7.7
+                    |    |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.ui:ui:1.6.0)
+                    |    |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |    \--- androidx.compose.material3:material3:1.3.1
+                    |    |         |         +--- debugRuntimeClasspath (requested androidx.compose.material3:material3)
+                    |    |         |         \--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         +--- androidx.compose.foundation:foundation-android:1.7.7
+                    |    |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |    \--- androidx.compose.foundation:foundation:1.7.7
+                    |    |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.foundation:foundation:1.7.0) (*)
+                    |    |         |         +--- androidx.compose.material:material-ripple-android:1.7.7
+                    |    |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |    \--- androidx.compose.material:material-ripple:1.7.7
+                    |    |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         \--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.material:material-ripple:1.7.0) (*)
+                    |    |         |         +--- androidx.compose.foundation:foundation-layout-android:1.7.7
+                    |    |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |    \--- androidx.compose.foundation:foundation-layout:1.7.7
+                    |    |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.foundation:foundation-layout:1.7.0) (*)
+                    |    |         |         |         +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         |         |         \--- androidx.compose.animation:animation-android:1.7.7
+                    |    |         |         |              +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |              \--- androidx.compose.animation:animation:1.7.7
+                    |    |         |         |                   +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |                   +--- androidx.compose.material:material-ripple-android:1.7.7 (*)
+                    |    |         |         |                   +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         |         |                   \--- androidx.compose.animation:animation-core-android:1.7.7
+                    |    |         |         |                        +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |                        \--- androidx.compose.animation:animation-core:1.7.7
+                    |    |         |         |                             +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |                             +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.animation:animation-core:1.6.0) (*)
+                    |    |         |         |                             +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         |         |                             \--- androidx.compose.foundation:foundation-layout-android:1.7.7 (requested androidx.compose.animation:animation-core:1.2.1) (*)
+                    |    |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.foundation:foundation-layout-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.animation:animation-core-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.material:material-icons-core-android:1.7.7 (requested androidx.compose.ui:ui:1.6.0)
+                    |    |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |    \--- androidx.compose.material:material-icons-core:1.7.7
+                    |    |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         \--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.material:material-icons-core:1.6.0) (*)
+                    |    |         +--- androidx.compose.ui:ui-unit-android:1.7.7
+                    |    |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |    \--- androidx.compose.ui:ui-unit:1.7.7
+                    |    |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         +--- androidx.compose.foundation:foundation-layout-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.animation:animation-core-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-graphics-android:1.7.7
+                    |    |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |    \--- androidx.compose.ui:ui-graphics:1.7.7
+                    |    |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         |         |         +--- androidx.compose.animation:animation-core-android:1.7.7 (*)
+                    |    |         |         |         +--- androidx.compose.ui:ui-unit-android:1.7.7 (*)
+                    |    |         |         |         +--- androidx.compose.ui:ui-geometry-android:1.7.7
+                    |    |         |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |    \--- androidx.compose.ui:ui-geometry:1.7.7
+                    |    |         |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |         +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         |         |         |         +--- androidx.compose.ui:ui-unit-android:1.7.7 (*)
+                    |    |         |         |         |         +--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         |         |         |         +--- androidx.compose.ui:ui-util-android:1.7.7
+                    |    |         |         |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |         |    \--- androidx.compose.ui:ui-util:1.7.7
+                    |    |         |         |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.ui:ui-util:1.6.0) (*)
+                    |    |         |         |         |         |         +--- androidx.compose.material:material-ripple-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.foundation:foundation-layout-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.animation:animation-core-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.ui:ui-unit-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.ui:ui-geometry-android:1.7.7 (*)
+                    |    |         |         |         |         |         +--- androidx.compose.ui:ui-text-android:1.7.7
+                    |    |         |         |         |         |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |         |         |    \--- androidx.compose.ui:ui-text:1.7.7
+                    |    |         |         |         |         |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.ui:ui-text:1.6.0) (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.ui:ui-unit-android:1.7.7 (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.ui:ui-geometry-android:1.7.7 (*)
+                    |    |         |         |         |         |         |         +--- androidx.compose.ui:ui-util-android:1.7.7 (*)
+                    |    |         |         |         |         |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |         |         |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |         |         |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         |         |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |         |         +--- androidx.compose.ui:ui-util-android:1.7.7 (*)
+                    |    |         |         |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-geometry-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-util-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         |         \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-geometry-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-util-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.compose.ui:ui:1.0.1)
+                    |    |              +--- debugRuntimeClasspath
+                    |    |              +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.activity:activity-compose:1.8.2) (*)
+                    |    |              +--- androidx.activity:activity:1.10.0
+                    |    |              |    +--- androidx.fragment:fragment:1.1.0 (requested androidx.activity:activity:1.0.0) (*)
+                    |    |              |    +--- androidx.activity:activity-ktx:1.10.0
+                    |    |              |    |    +--- androidx.compose.ui:ui-android:1.7.7 (requested androidx.activity:activity-ktx:1.7.0) (*)
+                    |    |              |    |    +--- androidx.activity:activity:1.10.0 (*)
+                    |    |              |    |    \--- androidx.activity:activity-compose:1.10.0 (*)
+                    |    |              |    \--- androidx.activity:activity-compose:1.10.0 (*)
+                    |    |              \--- androidx.activity:activity-ktx:1.10.0 (*)
+                    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3)
+                    |    |    \--- androidx.lifecycle:lifecycle-viewmodel:2.8.3
+                    |    |         +--- androidx.compose.ui:ui-android:1.7.7 (requested androidx.lifecycle:lifecycle-viewmodel:2.6.1) (*)
+                    |    |         +--- androidx.loader:loader:1.0.0 (requested androidx.lifecycle:lifecycle-viewmodel:2.0.0)
+                    |    |         |    +--- androidx.legacy:legacy-support-core-utils:1.0.0
+                    |    |         |    |    \--- com.google.android.gms:play-services-stats:17.0.2 (*)
+                    |    |         |    \--- androidx.fragment:fragment:1.1.0 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3
+                    |    |         |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3
+                    |    |         |    |    \--- androidx.lifecycle:lifecycle-common:2.8.3
+                    |    |         |    |         +--- androidx.savedstate:savedstate:1.2.1 (requested androidx.lifecycle:lifecycle-common:2.6.1)
+                    |    |         |    |         |    +--- androidx.savedstate:savedstate-ktx:1.2.1
+                    |    |         |    |         |    |    +--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |    |         |    |    +--- androidx.savedstate:savedstate:1.2.1 (*)
+                    |    |         |    |         |    |    \--- androidx.activity:activity-ktx:1.10.0 (*)
+                    |    |         |    |         |    +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3
+                    |    |         |    |         |    |    |    \--- androidx.lifecycle:lifecycle-runtime-ktx:2.8.3
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3
+                    |    |         |    |         |    |    |         |    \--- androidx.lifecycle:lifecycle-runtime:2.8.3
+                    |    |         |    |         |    |    |         |         +--- androidx.core:core:1.15.0 (requested androidx.lifecycle:lifecycle-runtime:2.6.2)
+                    |    |         |    |         |    |    |         |         |    +--- com.google.android.gms:play-services-base:18.9.0 (requested androidx.core:core:1.9.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.compose.foundation:foundation-android:1.7.7 (requested androidx.core:core:1.13.1) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.compose.foundation:foundation-layout-android:1.7.7 (requested androidx.core:core:1.7.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.compose.ui:ui-graphics-android:1.7.7 (requested androidx.core:core:1.12.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.compose.ui:ui-text-android:1.7.7 (requested androidx.core:core:1.7.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.compose.ui:ui-android:1.7.7 (requested androidx.core:core:1.12.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.legacy:legacy-support-core-utils:1.0.0 (requested androidx.core:core:1.0.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.loader:loader:1.0.0 (requested androidx.core:core:1.0.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.emoji2:emoji2:1.3.0 (requested androidx.core:core:1.3.0)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.compose.ui:ui-text-android:1.7.7 (requested androidx.emoji2:emoji2:1.2.0) (*)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.compose.ui:ui-android:1.7.7 (requested androidx.emoji2:emoji2:1.2.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.core:core-ktx:1.15.0
+                    |    |         |    |         |    |    |         |         |    |    +--- debugRuntimeClasspath
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.customview:customview-poolingcontainer:1.0.0 (requested androidx.core:core-ktx:1.5.0)
+                    |    |         |    |         |    |    |         |         |    |    |    \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.core:core:1.15.0 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (requested androidx.core:core-ktx:1.2.0) (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.activity:activity:1.10.0 (requested androidx.core:core-ktx:1.13.0) (*)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.activity:activity-compose:1.10.0 (requested androidx.core:core-ktx:1.13.0) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.autofill:autofill:1.0.0 (requested androidx.core:core:1.1.0)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.viewpager:viewpager:1.0.0 (requested androidx.core:core:1.0.0)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.fragment:fragment:1.1.0 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.customview:customview:1.0.0 (requested androidx.core:core:1.0.0)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.viewpager:viewpager:1.0.0 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.graphics:graphics-path:1.0.1 (requested androidx.core:core:1.12.0)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         |    |         |    |    |         |         |    +--- com.google.android.gms:play-services-basement:18.9.0 (requested androidx.core:core:1.2.0) (*)
+                    |    |         |    |         |    |    |         |         |    \--- androidx.fragment:fragment:1.1.0 (requested androidx.core:core:1.1.0) (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-process:2.8.3
+                    |    |         |    |         |    |    |         |         |    +--- androidx.emoji2:emoji2:1.3.0 (requested androidx.lifecycle:lifecycle-process:2.4.1) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.loader:loader:1.0.0 (requested androidx.lifecycle:lifecycle-livedata:2.0.0) (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.lifecycle:lifecycle-common-java8:2.6.1) (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |    \--- androidx.lifecycle:lifecycle-runtime-compose:2.8.3
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    |         \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    |    \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    |    \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    |    \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    |    \--- androidx.activity:activity-ktx:1.10.0 (requested androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1) (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         |    \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         |         +--- androidx.activity:activity:1.10.0 (requested androidx.lifecycle:lifecycle-runtime:2.6.1) (*)
+                    |    |         |    |         |    |    |         |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.lifecycle:lifecycle-runtime:2.6.1) (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         |    |    |         \--- androidx.activity:activity-ktx:1.10.0 (requested androidx.lifecycle:lifecycle-runtime-ktx:2.6.1) (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         |    |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         |    |    \--- androidx.activity:activity:1.10.0 (requested androidx.lifecycle:lifecycle-viewmodel-savedstate:2.6.1) (*)
+                    |    |         |    |         |    +--- androidx.activity:activity:1.10.0 (*)
+                    |    |         |    |         |    \--- androidx.activity:activity-compose:1.10.0 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    |         +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         |    |         +--- androidx.activity:activity:1.10.0 (requested androidx.lifecycle:lifecycle-common:2.6.1) (*)
+                    |    |         |    |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.lifecycle:lifecycle-common:2.6.1) (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         |    +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         |    \--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-process:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-livedata-core:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-common-java8:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (*)
+                    |    |         +--- androidx.fragment:fragment:1.1.0 (requested androidx.lifecycle:lifecycle-viewmodel:2.0.0) (*)
+                    |    |         +--- androidx.activity:activity:1.10.0 (requested androidx.lifecycle:lifecycle-viewmodel:2.6.1) (*)
+                    |    |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.lifecycle:lifecycle-viewmodel:2.6.1) (*)
+                    |    +--- androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3) (*)
+                    |    +--- androidx.lifecycle:lifecycle-runtime-android:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3) (*)
+                    |    +--- androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3) (*)
+                    |    +--- androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3) (*)
+                    |    +--- androidx.compose.runtime:runtime-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3)
+                    |    |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |    \--- androidx.compose.runtime:runtime:1.7.7
+                    |    |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         +--- androidx.compose.material3:material3-android:1.3.1 (requested androidx.compose.runtime:runtime:1.7.0) (*)
+                    |    |         +--- androidx.compose.material:material-ripple-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.foundation:foundation-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.animation:animation-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.foundation:foundation-layout-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.animation:animation-core-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-unit-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-graphics-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-geometry-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         +--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         +--- androidx.lifecycle:lifecycle-runtime-compose-android:2.8.3 (requested androidx.compose.runtime:runtime:1.6.5) (*)
+                    |    |         +--- androidx.compose.runtime:runtime-saveable-android:1.7.7
+                    |    |         |    +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |    \--- androidx.compose.runtime:runtime-saveable:1.7.7
+                    |    |         |         +--- androidx.compose:compose-bom:2025.01.01 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-text-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.ui:ui-android:1.7.7 (*)
+                    |    |         |         +--- androidx.compose.runtime:runtime-android:1.7.7 (*)
+                    |    |         |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.compose.runtime:runtime-saveable:1.7.0) (*)
+                    |    |         \--- androidx.activity:activity-compose:1.10.0 (requested androidx.compose.runtime:runtime:1.7.0) (*)
+                    |    \--- org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2 (*)
+                    +--- org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2
+                    |    +--- org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2
+                    |    |    +--- androidx.compose.animation:animation-core-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.compose.ui:ui-text-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.compose.ui:ui-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.lifecycle:lifecycle-viewmodel-android:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.lifecycle:lifecycle-common-jvm:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.lifecycle:lifecycle-livedata:2.8.3 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.compose.runtime:runtime-android:1.7.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2 (*)
+                    |    |    +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3)
+                    |    |    |    \--- androidx.datastore:datastore-core-okio:1.1.7
+                    |    |    |         +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7
+                    |    |    |         |    +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    +--- androidx.datastore:datastore-core-android:1.1.7
+                    |    |    |         |    |    \--- androidx.datastore:datastore-core:1.1.7
+                    |    |    |         |    |         +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7 (*)
+                    |    |    |         |    |         +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    |         +--- androidx.datastore:datastore-preferences-proto:1.1.7
+                    |    |    |         |    |         |    +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7 (*)
+                    |    |    |         |    |         |    +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    |         |    +--- androidx.datastore:datastore-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    +--- androidx.datastore:datastore-preferences-core-android:1.1.7
+                    |    |    |         |    |         |    |    \--- androidx.datastore:datastore-preferences-core:1.1.7
+                    |    |    |         |    |         |    |         +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7 (*)
+                    |    |    |         |    |         |    |         +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    |         |    |         +--- androidx.datastore:datastore-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         +--- androidx.datastore:datastore-preferences-proto:1.1.7 (*)
+                    |    |    |         |    |         |    |         +--- androidx.datastore:datastore-android:1.1.7
+                    |    |    |         |    |         |    |         |    \--- androidx.datastore:datastore:1.1.7
+                    |    |    |         |    |         |    |         |         +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7 (*)
+                    |    |    |         |    |         |    |         |         +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    |         |    |         |         +--- androidx.datastore:datastore-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         |         +--- androidx.datastore:datastore-preferences-proto:1.1.7 (*)
+                    |    |    |         |    |         |    |         |         +--- androidx.datastore:datastore-preferences-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         |         \--- androidx.datastore:datastore-preferences-android:1.1.7
+                    |    |    |         |    |         |    |         |              \--- androidx.datastore:datastore-preferences:1.1.7
+                    |    |    |         |    |         |    |         |                   +--- com.google.firebase:firebase-installations:20.0.0 (*)
+                    |    |    |         |    |         |    |         |                   +--- com.google.firebase:firebase-common:23.0.0 (*)
+                    |    |    |         |    |         |    |         |                   +--- androidx.datastore:datastore-preferences-external-protobuf:1.1.7 (*)
+                    |    |    |         |    |         |    |         |                   +--- androidx.datastore:datastore-core-okio-jvm:1.1.7 (*)
+                    |    |    |         |    |         |    |         |                   +--- androidx.datastore:datastore-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         |                   +--- androidx.datastore:datastore-preferences-proto:1.1.7 (*)
+                    |    |    |         |    |         |    |         |                   +--- androidx.datastore:datastore-preferences-core-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         |                   \--- androidx.datastore:datastore-android:1.1.7 (*)
+                    |    |    |         |    |         |    |         \--- androidx.datastore:datastore-preferences-android:1.1.7 (*)
+                    |    |    |         |    |         |    +--- androidx.datastore:datastore-android:1.1.7 (*)
+                    |    |    |         |    |         |    \--- androidx.datastore:datastore-preferences-android:1.1.7 (*)
+                    |    |    |         |    |         +--- androidx.datastore:datastore-preferences-core-android:1.1.7 (*)
+                    |    |    |         |    |         +--- androidx.datastore:datastore-android:1.1.7 (*)
+                    |    |    |         |    |         \--- androidx.datastore:datastore-preferences-android:1.1.7 (*)
+                    |    |    |         |    +--- androidx.datastore:datastore-preferences-proto:1.1.7 (*)
+                    |    |    |         |    +--- androidx.datastore:datastore-preferences-core-android:1.1.7 (*)
+                    |    |    |         |    +--- androidx.datastore:datastore-android:1.1.7 (*)
+                    |    |    |         |    \--- androidx.datastore:datastore-preferences-android:1.1.7 (*)
+                    |    |    |         +--- androidx.datastore:datastore-core-android:1.1.7 (*)
+                    |    |    |         +--- androidx.datastore:datastore-preferences-proto:1.1.7 (*)
+                    |    |    |         +--- androidx.datastore:datastore-preferences-core-android:1.1.7 (*)
+                    |    |    |         +--- androidx.datastore:datastore-android:1.1.7 (*)
+                    |    |    |         \--- androidx.datastore:datastore-preferences-android:1.1.7 (*)
+                    |    |    +--- androidx.datastore:datastore-core-android:1.1.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.datastore:datastore-android:1.1.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- androidx.datastore:datastore-preferences-android:1.1.7 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    +--- org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2 (*)
+                    |    |    +--- org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2 (*)
+                    |    |    +--- androidx.activity:activity:1.10.0 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    |    \--- androidx.activity:activity-compose:1.10.0 (requested org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3) (*)
+                    |    \--- org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2 (*)
+                    \--- org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2 (*)
+
+(*) - Indicates repeated occurrences of a transitive dependency subtree. Gradle expands transitive dependency subtrees only once per project; repeat occurrences only display the root of the subtree, followed by this annotation.
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+BUILD SUCCESSFUL in 816ms
+1 actionable task: 1 executed

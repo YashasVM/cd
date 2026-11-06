@@ -1,0 +1,29 @@
+{
+  "name": "cd",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "node scripts/build-design.mjs && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "audit": "npm audit --audit-level=moderate",
+    "test": "node --test src/*.test.js",
+    "test:cli": "go test ./...",
+    "typecheck": "tsc",
+    "verify:agent": "npm run build && node scripts/verify-agent.mjs",
+    "verify:p2p": "npm run build && node scripts/verify-p2p.mjs",
+    "deploy:dry": "npm run build && wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "html5-qrcode": "2.3.8",
+    "peerjs": "1.5.5",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "wrangler": "4.131.1"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "sourceBase": "7d9ed86",
+  "productionChangeRetained": false,
+  "rows": [
+    {
+      "name": "128 KiB frames \u00b7 browser\u2192CLI",
+      "file": "relay-128k-paired.json",
+      "beforeMs": 797.1508449999999,
+      "afterMs": 747.239179,
+      "ratio": 1.0667947658563548
+    },
+    {
+      "name": "128 KiB frames \u00b7 browser\u2192browser",
+      "file": "relay-128k-browser-paired.json",
+      "beforeMs": 1054.374823,
+      "afterMs": 1097.6566730000002,
+      "ratio": 0.9605688635940174
+    },
+    {
+      "name": "1 ms relay polling \u00b7 browser\u2192CLI",
+      "file": "relay-poll-paired.json",
+      "beforeMs": 641.537356,
+      "afterMs": 623.4269299999999,
+      "ratio": 1.0290497973836328
+    },
+    {
+      "name": "1 ms relay polling \u00b7 browser\u2192browser",
+      "file": "relay-poll-browser-paired.json",
+      "beforeMs": 1205.622646,
+      "afterMs": 1443.9555939999998,
+      "ratio": 0.8349444061920371
+    }
+  ],
+  "method": "Seven alternating 64 MiB UI trials per build and path, reversing order each round. Same direct workerd bundle, no WebSocket compression, same native binary, original 4 MiB source reads. Both candidate changes independently regress browser-to-browser, so neither is retained. Baseline builds use source 806bb37 with identical retained frontend code. No profile overhead.",
+  "compatibilityFinding": "Splitting one encrypted record across relay WebSocket messages is not backward compatible: current browser relay handlers pass complete frames directly to createRecordMerger, which validates exact record length. No unnegotiated framing change was made."
+}
