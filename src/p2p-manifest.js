@@ -1,5 +1,7 @@
 export const MAX_P2P_FILES = 100;
-export const MAX_P2P_FILE_BYTES = 256 * 1024 * 1024;
+// 5 GiB per file: streams to disk via file-picker → OPFS, never held in RAM.
+// WebKit blob fallback stays capped at 256 MiB in sink.js with a clear error.
+export const MAX_P2P_FILE_BYTES = 5 * 1024 * 1024 * 1024;
 export const MAX_P2P_FILENAME_BYTES = 255;
 
 const encoder = new TextEncoder();

@@ -20,12 +20,18 @@ test('word list is short plain words', () => {
   }
 });
 
-test('generates a short word deterministically', () => {
-  const a = generateCode({ getRandomValues: (bytes) => bytes.fill(0xff) });
-  const b = generateCode({ getRandomValues: (bytes) => bytes.fill(0xff) });
+test('generates a word pair deterministically', () => {
+  const a = generateCode({ getRandomValues: (bytes) => bytes.fill(0x00) });
+  const b = generateCode({ getRandomValues: (bytes) => bytes.fill(0x00) });
   assert.equal(a, b);
-  assert.ok(P2P_WORDS.includes(a));
+  assert.match(a, /^[a-z]{3,5}-[a-z]{3,5}$/);
   assert.equal(isValidCode(a), true);
+});
+
+test('still accepts legacy single words', () => {
+  assert.equal(isValidCode('river'), true);
+  assert.equal(normalizeCode('RIVER'), 'river');
+  assert.equal(peerIdFor('river'), 'cd-river');
 });
 
 test('ephemeral ids stay random base64url', () => {
@@ -35,14 +41,14 @@ test('ephemeral ids stay random base64url', () => {
 });
 
 test('codes are case-insensitive but links stay lowercase', () => {
-  assert.equal(isValidCode('RIVER'), true);
-  assert.equal(isValidCode('river'), true);
-  assert.equal(normalizeCode('RIVER'), 'river');
-  assert.equal(peerIdFor('RIVER'), 'cd-river');
-  const link = receiveLinkFor('RIVER', 'https://cd.yash0.in/anything?old=1');
-  assert.equal(link, 'https://cd.yash0.in/#p2p.river');
-  assert.equal(codeFromUrl(link), 'river');
-  assert.equal(codeFromUrl('https://cd.yash0.in/#p2p.RIVER'), 'river');
+  assert.equal(isValidCode('RIVER-BRAVE'), true);
+  assert.equal(isValidCode('river-brave'), true);
+  assert.equal(normalizeCode('RIVER-BRAVE'), 'river-brave');
+  assert.equal(peerIdFor('RIVER-BRAVE'), 'cd-river-brave');
+  const link = receiveLinkFor('RIVER-BRAVE', 'https://cd.yash0.in/anything?old=1');
+  assert.equal(link, 'https://cd.yash0.in/#p2p.river-brave');
+  assert.equal(codeFromUrl(link), 'river-brave');
+  assert.equal(codeFromUrl('https://cd.yash0.in/#p2p.RIVER-BRAVE'), 'river-brave');
 });
 
 test('rejects random short strings that are not words', () => {

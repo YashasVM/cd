@@ -85,11 +85,13 @@ voice, mono for machine values. Dark only — there is no light theme.
 | `muted` | `#b3a38c` | Secondary text, descriptions, stats |
 | `faint` | `#a28f79` | Kickers, labels, hints, watermark |
 | `selection` | `#ffe4bf` | Selected text (on `accent-soft`) |
-| `panel` | `#160907` | Cards, share/progress/result panels |
-| `block` | `#1b0d09` | Inner blocks (code, QR frame, stat cells, status) |
+| `panel` | `#160907` | Code blocks and stat cells |
+| `workbench` | `#180a07` | Main transfer surface |
+| `workbench-tab` | `#1e0d09` | Integrated tab strip |
+| `block` | `#1b0d09` | Secondary controls and small inset details |
 | `ink` | `#070707` | Code input, QR canvas, pre blocks |
-| `button` | `#24110c` | Primary buttons; hover `#32170f` |
-| `line` | `rgba(228,212,182,.12)` | Borders, dividers (`#e4d4b6` at 12%) |
+| `button` | `#e58a57` | Primary action; hover `#f4a579` |
+| `line` | `rgba(228,212,182,.15)` | Borders, dividers (`#e4d4b6` at 15%) |
 | `error` | `#ff5d2a` on `#5a160b` | Error marks; error copy in `#ff8a62` |
 
 Rules:
@@ -97,7 +99,7 @@ Rules:
 - Accent is scarce. If everything glows, nothing does — body copy, panels,
   and chrome stay paper-on-ember; orange marks codes, progress, and the one
   primary action per view.
-- Text on accent backgrounds is `#ffe4bf`, never white.
+- Primary buttons use dark text on the accent for contrast.
 - Errors are the only red on screen (`#ff5d2a` / `#ff8a62`).
 - QR codes always sit on near-black (`#070707`) for scan contrast.
 
@@ -111,24 +113,32 @@ Rules:
 
 Rules:
 
-- Share codes are large mono (`clamp(19px, 3.4vw, 25px)`), `user-select: all`,
+- Share codes are 25px mono, `user-select: all`,
   wrapping anywhere — built to be copied, not admired.
 - Kickers and labels are 9–11px uppercase mono with wide letter-spacing.
 - The wordmark is always lowercase `cd` with the `/di·rect/` tagline.
 
 ### Shape and motion
 
-- Panels: 6–8px radius, 1px `line` border, flat `#160907` fill, no translucency
-  and no heavy shadow — the reference is textured, not glassy.
-- Buttons: 4px radius, minimum 44px touch target, lift 1px on hover.
+- The transfer workbench uses one warm surface with a copper top rule and an
+  integrated tab strip. The idle send and receive controls have no inner card.
+  Code and QR blocks keep flat inset surfaces so they remain distinct and easy
+  to scan.
+- Send and Receive share the same resting panel height at each screen size.
+  Their controls sit within that space; transfer details can expand it when
+  needed.
+- Buttons: 5px radius, minimum 44px touch target, lift 1px on hover.
 - Progress is high-contrast on purpose: gradient fill (`accent-soft` to
-  `accent`) with a sheen sweep and a 🦕 rider that bobs above the current
-  position. The one playful element, marking the one thing users watch.
+  `accent`) with a gentle glint and a 🦕 rider that bobs above the current
+  position. The one playful element marks the one thing users watch.
 - One background flourish only: a fixed ember-glow gradient with a sparse dot
-  grid, masked to the top 58% of the viewport.
-- Phone-first: full-width actions, 48px+ controls, safe-area padding, no
-  horizontal overflow at 320px. `prefers-reduced-motion` disables the sheen
-  and the dino.
+  grid, masked to the top 62% of the viewport. Nearby dots ease away from a
+  mouse or pen cursor, then return to the grid. Touch leaves them still.
+- The brand and transfer panel enter once. Tab panels and new transfer states
+  rise a few pixels into place. Buttons respond to hover and press.
+- Phone-first: full-width primary actions, 48px+ controls, safe-area padding, no
+  horizontal overflow at 320px. `prefers-reduced-motion` disables all motion,
+  including cursor response and the dino.
 
 ### Voice
 
