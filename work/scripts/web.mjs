@@ -1,0 +1,14 @@
+import { chromium } from '/home/yvm/code/cd/node_modules/playwright-core/index.mjs';
+const out = process.argv[2];
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true });
+await p.goto('https://cd.yash0.in/', { waitUntil: 'networkidle' });
+await p.waitForTimeout(1500);
+await p.click('#receive-mode-btn');
+await p.waitForTimeout(800);
+await p.screenshot({ path: `${out}/web-receive.png` });
+await p.click('#install-toggle').catch(()=>{});
+await p.click('#send-mode-btn');
+await p.waitForTimeout(800);
+await p.screenshot({ path: `${out}/web-install.png` });
+await b.close();
