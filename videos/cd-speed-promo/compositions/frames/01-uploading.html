@@ -1,0 +1,56 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f1-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f1-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f1-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f1-line { display: block; }
+      .f1-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f1-wi { display: inline-block; }
+      .f1-gap { display: inline-block; width: 0.24em; }
+      .f1-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f1-slot-in { position: absolute; inset: 0; }
+      .f1-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f1-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f1-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f1-accent { color: #E58A57; }
+
+      #f1-s { top: 250px; font-size: 200px; }
+      #f1-slot { width: 2.5em; }
+      #f1-up { position: absolute; left: 34px; right: 34px; top: 26px; display: flex; align-items: center; gap: 16px; font-size: 27px; color: #B3A38C; }
+      #f1-up svg { width: 38px; height: 28px; flex: none; }
+      #f1-name { flex: 1; }
+      #f1-pct { font-variant-numeric: tabular-nums; color: #E4D4B6; }
+      #f1-track { position: absolute; left: 34px; right: 34px; bottom: 30px; height: 12px; border-radius: 6px; background: rgba(228,212,182,0.14); overflow: hidden; }
+      #f1-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: #B3A38C; transform-origin: 0 50%; }
+      #f1-support { top: 650px; }
+
+  </style>
+  <div data-hf-id="hf-fwho" id="root" data-composition-id="01-uploading" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-x6bp" id="f1-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-e273" id="f1-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-ngci" class="f1-sentence" id="f1-s">
+      <span data-hf-id="hf-5juh" class="f1-line"><span data-hf-id="hf-8852" class="f1-w"><span data-hf-id="hf-mzhe" class="f1-wi" id="f1-a0">still</span></span><span data-hf-id="hf-nyyp" class="f1-gap"></span><span data-hf-id="hf-bokz" class="f1-slot" id="f1-slot"><span data-hf-id="hf-6q0v" class="f1-slot-in" id="f1-slot-in">
+        <span data-hf-id="hf-sz4p" id="f1-up"><svg data-hf-id="hf-n2jm" viewBox="0 0 38 28" fill="none" stroke="#B3A38C" stroke-width="2.4" stroke-linejoin="round"><path data-hf-id="hf-f92f" d="M10 25h19a8 8 0 0 0 1-15.9A11 11 0 0 0 9.2 11 7 7 0 0 0 10 25z"/></svg><span data-hf-id="hf-bjqk" id="f1-name">uploading film.mov</span><span data-hf-id="hf-vdvg" id="f1-pct">37%</span></span>
+        <span data-hf-id="hf-7ro7" id="f1-track"><span data-hf-id="hf-4h95" id="f1-fill"></span></span>
+      </span></span></span>
+      <span data-hf-id="hf-zedp" class="f1-line"><span data-hf-id="hf-nu6y" class="f1-w"><span data-hf-id="hf-3sqd" class="f1-wi" id="f1-b0">uploading?</span></span></span>
+    </div>
+    <div data-hf-id="hf-qcwl" class="f1-support" id="f1-support">Big files shouldn’t wait on the cloud.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f1-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+    tl.fromTo("#f1-slot-in", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, B);
+    const f1p = { v: 36.6 };
+    tl.fromTo(f1p, { v: 36.6 }, { v: 38.4, duration: 3.665 - B, ease: "none", onUpdate: () => { document.getElementById("f1-pct").textContent = Math.floor(f1p.v) + "%"; } }, B);
+    tl.fromTo("#f1-fill", { scaleX: 0.366 }, { scaleX: 0.384, duration: 3.665 - B, ease: "none" }, B);
+tl.fromTo("#f1-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 1.374);
+    tl.fromTo("#f1-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 1.832);
+    window.__timelines["01-uploading"] = tl;
+  </script>
+</template>

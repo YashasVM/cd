@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "date": "2026-10-20T08:46:16.703Z",
+  "mib": 256,
+  "runs": 3,
+  "croc": "croc version 10.7.0",
+  "route": "loopback; cdx through local wrangler dev relay (direct WebRTC allowed in \"cdx\"), croc through a local croc relay",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "7.2.8-9-omarchy",
+    "node": "v26.10.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "cores": 12
+  },
+  "summary": {
+    "cdx": {
+      "runs": 3,
+      "medianTotalSeconds": 2.633,
+      "medianTransferSeconds": 2.614,
+      "medianMibPerSecond": 97.934,
+      "trials": [
+        {
+          "totalSeconds": 3.153,
+          "transferSeconds": 3.136,
+          "readySeconds": 0.017,
+          "mibPerSecond": 81.633,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "direct",
+              "relayBytes": 9178304,
+              "directBytes": 265320388
+            },
+            {
+              "transport": "direct",
+              "relayBytes": 1592,
+              "directBytes": 12272
+            }
+          ]
+        },
+        {
+          "totalSeconds": 2.065,
+          "transferSeconds": 2.051,
+          "readySeconds": 0.013,
+          "mibPerSecond": 124.817,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "direct",
+              "relayBytes": 2099663,
+              "directBytes": 268466455
+            },
+            {
+              "transport": "direct",
+              "relayBytes": 1273,
+              "directBytes": 12272
+            }
+          ]
+        },
+        {
+          "totalSeconds": 2.633,
+          "transferSeconds": 2.614,
+          "readySeconds": 0.019,
+          "mibPerSecond": 97.934,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "direct",
+              "relayBytes": 3148351,
+              "directBytes": 268466455
+            },
+            {
+              "transport": "direct",
+              "relayBytes": 1273,
+              "directBytes": 12274
+            }
+          ]
+        }
+      ]
+    },
+    "cdx-relay": {
+      "runs": 3,
+      "medianTotalSeconds": 0.913,
+      "medianTransferSeconds": 0.902,
+      "medianMibPerSecond": 283.814,
+      "trials": [
+        {
+          "totalSeconds": 0.913,
+          "transferSeconds": 0.902,
+          "readySeconds": 0.011,
+          "mibPerSecond": 283.814,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 268464295,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 10308,
+              "directBytes": 0
+            }
+          ]
+        },
+        {
+          "totalSeconds": 0.816,
+          "transferSeconds": 0.803,
+          "readySeconds": 0.013,
+          "mibPerSecond": 318.804,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 268464295,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 10308,
+              "directBytes": 0
+            }
+          ]
+        },
+        {
+          "totalSeconds": 0.932,
+          "transferSeconds": 0.916,
+          "readySeconds": 0.016,
+          "mibPerSecond": 279.476,
+          "routes": [],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 268464295,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 10308,
+              "directBytes": 0
+            }
+          ]
+        }
+      ]
+    },
+    "croc": {
+      "runs": 3,
+      "medianTotalSeconds": 1.386,
+      "medianTransferSeconds": 1.334,
+      "medianMibPerSecond": 191.904,
+      "trials": [
+        {
+          "totalSeconds": 1.307,
+          "transferSeconds": 1.255,
+          "readySeconds": 0.052,
+          "mibPerSecond": 203.984
+        },
+        {
+          "totalSeconds": 1.386,
+          "transferSeconds": 1.334,
+          "readySeconds": 0.051,
+          "mibPerSecond": 191.904
+        },
+        {
+          "totalSeconds": 1.6,
+          "transferSeconds": 1.542,
+          "readySeconds": 0.059,
+          "mibPerSecond": 166.018
+        }
+      ]
+    },
+    "croc-no-compress": {
+      "runs": 3,
+      "medianTotalSeconds": 0.704,
+      "medianTransferSeconds": 0.639,
+      "medianMibPerSecond": 400.626,
+      "trials": [
+        {
+          "totalSeconds": 0.657,
+          "transferSeconds": 0.604,
+          "readySeconds": 0.052,
+          "mibPerSecond": 423.841
+        },
+        {
+          "totalSeconds": 0.704,
+          "transferSeconds": 0.639,
+          "readySeconds": 0.064,
+          "mibPerSecond": 400.626
+        },
+        {
+          "totalSeconds": 0.726,
+          "transferSeconds": 0.663,
+          "readySeconds": 0.063,
+          "mibPerSecond": 386.124
+        }
+      ]
+    }
+  }
+}

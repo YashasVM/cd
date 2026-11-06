@@ -1,0 +1,51 @@
+{
+  "chromium": "155.0.8059.84",
+  "runs": 3,
+  "mib": 32,
+  "verified": true,
+  "method": "Local host-candidate ordered WebRTC, actual CD record assembly and direct.send, 4 MiB native cap. Setup and SHA256 outside timing. No encryption, application ACKs, storage or internet route.",
+  "trials": [
+    {
+      "name": "current",
+      "run": 0,
+      "milliseconds": 1950.9000000059605,
+      "mibPerSecond": 16.40268593977253,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 0,
+      "milliseconds": 647.4000000059605,
+      "mibPerSecond": 49.42848316296785,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 1,
+      "milliseconds": 482.69999998807907,
+      "mibPerSecond": 66.29376424443812,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 1,
+      "milliseconds": 908.8000000119209,
+      "mibPerSecond": 35.211267605171926,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 2,
+      "milliseconds": 481.59999999403954,
+      "mibPerSecond": 66.44518272507484,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 2,
+      "milliseconds": 489.69999998807907,
+      "mibPerSecond": 65.346130285438,
+      "records": 128
+    }
+  ]
+}

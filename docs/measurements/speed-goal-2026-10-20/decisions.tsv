@@ -1,0 +1,14 @@
+ts	phase	decision	why	evidence	result
+2026-10-20T09:00:00Z	baseline	Retain baseline binary and snapshot existing changes	Preserve unrelated work while integrating transport improvements	/tmp/cd-speed-goal-baseline/status.txt	saved
+2026-10-20T09:00:00Z	gates	Gate against faster croc variant and retain durability and crypto	Prevent misleading wins from compression or weaker completion semantics	docs/measurements/speed-goal-2026-10-20/gates.md	defined
+2026-10-20T09:05:03.102Z	experiment	Reverted larger WebSocket buffers	Two trials did not establish a material relay speed gain	docs/measurements/speed-goal-2026-10-20/relay-buffer-matrix.json	reverted
+2026-10-20T09:14:46.533128+00:00	correctness	Confirm TCP winner after sender selection	Prevent peers selecting different simultaneous connections	cmd/cdx/lan_test.go	race regression passed
+2026-10-20T09:14:46.533142+00:00	benchmark	Keep local Worker persistence in RAM for both output suites	Separate local SQLite disk cost from protocol CPU throughput	scripts/bench-croc-matrix.mjs	isolated
+2026-10-20T09:14:46.533145+00:00	protocol	Negotiate larger records while retaining original offer chunk size	Reduce relay event count without breaking legacy clients	cmd/cdx/large_chunks_test.go	compatibility tests passed
+2026-10-20T09:14:46.533147+00:00	baseline	Use official croc11.5.5 for final comparisons	Installed croc10.7 is older than current release	https://github.com/schollz/croc/releases/tag/v11.5.5	official checksum verified
+2026-10-20T09:38:42.721738+00:00	profiling	Use successful heap profiles and reject killed CPU profiles	CPU profiling receives SIGKILL even for version; no CPU stack evidence	docs/measurements/speed-goal-2026-10-20/profiles-analysis.md	allocation evidence only
+2026-10-20T09:38:42.721750+00:00	transport	Preserve forward TCP after reverse failure	One blocked listener must not disable an available direction	cmd/cdx/reverse_lan_fallback_test.go	Go and race tests passed
+2026-10-20T09:38:42.721755+00:00	transport	Wait up to50ms for selected reverse TCP before large-file DATA	Measured8.65MBrelay traffic duplicated TCP bytes on100Mbps LAN	cmd/cdx/reverse_lan_grace_test.go	race tests passed
+2026-10-20T09:38:42.721761+00:00	review	Final small Claude review unavailable	App tool returned parent_not_active after continuation	T3 delegate_task cd-speed-final-trail-review-20261020-r2	not performed
+2026-10-20T09:55:00.447367+00:00	report	Publish completed 504-transfer matrix and physical LAN results	Keep every readiness and throughput miss visible	https://a.yash0.in/cd-bench/	deployed and HTTP data matched; mobile controls verified
+2026-10-20T09:57:19.488878+00:00	experiment	Keep standard-WebSocket relay and TCP-only startup switches opt-in	Relay callback overhead and ICE startup latency remain hypotheses; default compatibility and billing must be preserved	scripts/verify-stream-relay.mjs; CD_WEBRTC=0	pending serialized measurements

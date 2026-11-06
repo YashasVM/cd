@@ -1,0 +1,82 @@
+{
+  "started": "2026-10-26T07:18:21Z",
+  "rows": [
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "d8f3443657472d6790eeef53fffd7b41da7e2499b1053f0694412a88cc2dd3c1",
+      "seconds": 0.1754425370017998,
+      "httpSeconds": 0.161534,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "d8f3443657472d6790eeef53fffd7b41da7e2499b1053f0694412a88cc2dd3c1",
+      "readySeconds": 2.2168820130173117,
+      "seconds": 5.634363243007101,
+      "receiverSeconds": 3.417474024987314,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.41196208700421266,
+      "bridgeSeconds": 6.046325330011314
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "446ac2d08fa67aba20729e234d1120c686084508a3cf9ed706c9b4636f5697bc",
+      "readySeconds": 1.157467398996232,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":0,\"directBytes\":0}\ncdx: \"/home/yvm/immich-cd-bench-20261026/receive/payload.png\" already exists: use --out <path> or --force to overwrite\n"
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "446ac2d08fa67aba20729e234d1120c686084508a3cf9ed706c9b4636f5697bc",
+      "seconds": 0.15146110401838087,
+      "httpSeconds": 0.135012,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "784a5437b683f92fb9e917cda3dd3f53d43a1ca695a9569ddbe9bdcb165c69ae",
+      "seconds": 0.194628711004043,
+      "httpSeconds": 0.177015,
+      "verified": true
+    }
+  ],
+  "immichVersion": {
+    "major": 3,
+    "minor": 3,
+    "patch": 5,
+    "prerelease": null
+  },
+  "cdSha256": "d47726679f2aeb67465c7fb1f5c586b97394718d4ee535baaba674897d357008",
+  "publicImmich": "https://plugins-hearts-transition-films.trycloudflare.com"
+}

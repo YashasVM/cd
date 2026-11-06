@@ -1,0 +1,240 @@
+{
+  "timestamp": "2026-10-17T14:37:24.447Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "runs": 3,
+  "workFilesystemPath": "/tmp/cd-perf-BQc29X",
+  "trials": [
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 17.602788000000146,
+      "seconds": 0.235752344,
+      "mibPerSecond": 33.93391499004566,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 16.934766999999965,
+      "seconds": 0.4512004139999999,
+      "mibPerSecond": 17.730480185242033
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 11.648409000000356,
+      "seconds": 0.22895900399999983,
+      "mibPerSecond": 34.940752974274844,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 17.106494999999995,
+      "seconds": 0.4357135199999998,
+      "mibPerSecond": 18.360688004356632
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 13.612833000000137,
+      "seconds": 0.21680560000000015,
+      "mibPerSecond": 36.89941588224656,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 17.926174000000174,
+      "seconds": 0.4107112739999998,
+      "mibPerSecond": 19.478403702158914
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": false,
+      "readinessMs": 60.72535199999993,
+      "seconds": 0.42223750400000015,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":8389669,\"directBytes\":0}\ncdx: CD relay disconnected: try a fresh transfer\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 67.89905100000033,
+      "seconds": 3.921316197,
+      "mibPerSecond": 2.0401313227738163
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": false,
+      "readinessMs": 68.1066980000005,
+      "seconds": 0.41994662699999935,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":8389669,\"directBytes\":0}\ncdx: CD relay disconnected: try a fresh transfer\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 65.86408800000027,
+      "seconds": 3.8932088569999994,
+      "mibPerSecond": 2.0548602178421485
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": false,
+      "readinessMs": 65.62481599999956,
+      "seconds": 0.39841808500000114,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":8389669,\"directBytes\":0}\ncdx: CD relay disconnected: try a fresh transfer\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 67.46913200000017,
+      "seconds": 3.8839560930000006,
+      "mibPerSecond": 2.059755519486507
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 164.2990170000012,
+      "seconds": 0.9464339900000014,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":8389669,\"directBytes\":0}\ncdx: CD relay disconnected: try a fresh transfer\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 166.29046599999856,
+      "seconds": 10.859156571000003,
+      "mibPerSecond": 0.7367054658153154
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 163.47409600000174,
+      "seconds": 0.9502056539999976,
+      "error": "{\"transport\":\"relay\",\"relayBytes\":8389669,\"directBytes\":0}\ncdx: CD relay disconnected: try a fresh transfer\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 1,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 14.078893000001699,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 8.193916000000172,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 2,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": false,
+      "readinessMs": 13.121710999999777,
+      "error": "cdx: this CD code is invalid: paste the full link from `cdx send` (it looks like https://cd.yash0.in/s/…#v1.…)\n\n\n1 !== 0\n"
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "scenario": "Two random files, browser UI ZIP to actual CLI, forced uncompressed local relay, same Worker/receiver, native file and directory sync, seven alternating order pairs, fresh browser contexts, actual CLI unzip with exact extracted hashes outside timing",
+  "runs": 7,
+  "mib": 64,
+  "chromium": "155.0.8059.84",
+  "hashes": {
+    "baseline": "669e075c2daae0add2bf51df60b05b49aec2a3069f9195f149453cffde96b71b",
+    "candidate": "64517e3edcede2ae91f3bcdf1b7c2936383791fde2e5dc0f860b01a733c7c10f",
+    "worker": "83366a89dfb661d93b0906d035271bb092d4e83cef6d4c83c183e551db8eaafd",
+    "receiver": "6d23ef0d3d6bdebe860e4a014c6a1791b0d764d7c2a4028384bf454fbf3f435d",
+    "payloads": {
+      "alpha.bin": "2fd476e92fdb9582d1124d9b1ba5a749fde66962dbb72967dace36b4ac2b7990",
+      "beta.bin": "ea030b3c06ce8d20c035719a200f0713ce9d91ca0dda6f055cacaaf071c3ea88"
+    }
+  },
+  "rows": [
+    {
+      "mode": "before",
+      "trial": 1,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 148.65410500000007,
+      "receiverMs": 1892.5597009999997,
+      "durableMs": 1893.895833,
+      "senderCompleteMs": 1901.1701339999995,
+      "totalMs": 2048.959436,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 1,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 73.06892299999981,
+      "receiverMs": 1192.9478330000002,
+      "durableMs": 1193.58644,
+      "senderCompleteMs": 1199.4830390000006,
+      "totalMs": 1270.1105689999995,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 2,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 80.01911500000006,
+      "receiverMs": 1246.542594999999,
+      "durableMs": 1247.1470209999989,
+      "senderCompleteMs": 1252.547559999999,
+      "totalMs": 1335.8982509999996,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 2,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 67.07508400000006,
+      "receiverMs": 1333.1200370000006,
+      "durableMs": 1333.6526680000006,
+      "senderCompleteMs": 1338.8501460000007,
+      "totalMs": 1406.1061879999997,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 3,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 78.56792599999972,
+      "receiverMs": 1297.109147000001,
+      "durableMs": 1297.8800810000012,
+      "senderCompleteMs": 1304.1350220000004,
+      "totalMs": 1379.4328290000012,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 3,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 89.12804200000028,
+      "receiverMs": 1258.7175589999988,
+      "durableMs": 1259.0115429999987,
+      "senderCompleteMs": 1263.4656159999995,
+      "totalMs": 1352.6498350000002,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 4,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 73.83348599999954,
+      "receiverMs": 1157.8376910000006,
+      "durableMs": 1158.3848689999995,
+      "senderCompleteMs": 1163.7582359999997,
+      "totalMs": 1234.4190389999985,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 4,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 73.82881700000144,
+      "receiverMs": 1329.4020209999999,
+      "durableMs": 1329.902046000001,
+      "senderCompleteMs": 1335.125012999999,
+      "totalMs": 1407.0496950000015,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 5,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 80.91572200000155,
+      "receiverMs": 1369.7459039999994,
+      "durableMs": 1370.2349030000005,
+      "senderCompleteMs": 1374.6542039999986,
+      "totalMs": 1454.7927030000028,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 5,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 79.71493900000132,
+      "receiverMs": 1485.1502250000012,
+      "durableMs": 1485.5858580000022,
+      "senderCompleteMs": 1489.884599000001,
+      "totalMs": 1570.9073940000017,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 6,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 67.41471100000126,
+      "receiverMs": 1193.7718950000017,
+      "durableMs": 1194.4241250000014,
+      "senderCompleteMs": 1199.9919090000003,
+      "totalMs": 1266.523161000001,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 6,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 65.07896700000128,
+      "receiverMs": 1378.2425609999991,
+      "durableMs": 1379.4100980000003,
+      "senderCompleteMs": 1386.8343280000008,
+      "totalMs": 1446.8084860000017,
+      "verified": true
+    },
+    {
+      "mode": "before",
+      "trial": 7,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 85.03653599999961,
+      "receiverMs": 2219.880491,
+      "durableMs": 2221.5362849999983,
+      "senderCompleteMs": 2228.649699999998,
+      "totalMs": 2312.328107999998,
+      "verified": true
+    },
+    {
+      "mode": "after",
+      "trial": 7,
+      "bytes": 67108910,
+      "archiveBytes": 67109150,
+      "readyMs": 93.47398599999724,
+      "receiverMs": 1149.4264629999998,
+      "durableMs": 1150.006974,
+      "senderCompleteMs": 1156.431837,
+      "totalMs": 1252.9746290000003,
+      "verified": true
+    }
+  ],
+  "medians": {
+    "before": {
+      "readyMs": 78.56792599999972,
+      "durableMs": 1370.2349030000005,
+      "totalMs": 1446.8084860000017
+    },
+    "after": {
+      "readyMs": 79.71493900000132,
+      "durableMs": 1194.4241250000014,
+      "totalMs": 1270.1105689999995
+    }
+  },
+  "speedup": {
+    "readyMs": 0.9856110659508679,
+    "durableMs": 1.1471929227819297,
+    "totalMs": 1.1391201060070875
+  }
+}

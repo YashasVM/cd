@@ -1,0 +1,60 @@
+[p] /di·rect/
+[p] Direct
+[span] terminal
+[span] -to-
+[span] browser
+[p] file transfer.
+[button] Get the
+[code] cdx
+[button] CLI
+[code] curl -fsSL https://cd.yash0.in/install.sh | sh
+[span] copy
+[span] Windows
+[code] irm https://cd.yash0.in/install.ps1 | iex
+[span] state
+[strong] ready
+[button] Send
+[button] Receive
+[h2] Send files
+[p] Drop them here, or pick from your device.
+[button] Choose files
+[span] sending
+[span] share this code
+[p] On the other device, open
+[strong] cd.yash0.in
+[p] → Receive and type it. In a terminal:
+[span] or scan it
+[button] Copy code
+[button] Copy command
+[button] Copy private link
+[span] sending
+[button] Cancel
+[b] speed
+[b] moved
+[b] left
+[p] That didn’t work
+[button] Try again
+[p] Sent
+[button] Send more files
+[h2] Receive files
+[p] Enter the code to start downloading, or scan the QR.
+[label] Share code
+[button] Connect
+[button] Scan QR
+[p] Finding the sender…
+[p] This usually takes a second or two.
+[button] Cancel
+[button] Receive another
+[span] incoming
+[span] receiving
+[button] Cancel
+[b] speed
+[b] moved
+[b] left
+[p] Saved
+[button] Receive another
+[p] That didn’t work
+[button] Try again
+[p] Scan the sender’s QR code
+[p] Starting the camera…
+[button] Close

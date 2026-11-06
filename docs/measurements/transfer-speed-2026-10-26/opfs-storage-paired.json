@@ -1,0 +1,484 @@
+{
+  "startedAt": "2026-10-26T06:05:57.650Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "loadBefore": [
+    5.88,
+    5.21,
+    4.03
+  ],
+  "profile": "/home/yvm/.cache/cd-opfs-bench-C5o64L",
+  "profileFilesystem": {
+    "type": 2435016766,
+    "bsize": 4096,
+    "frsize": 4096,
+    "blocks": 124497920,
+    "bfree": 76325136,
+    "bavail": 75620420,
+    "files": 0,
+    "ffree": 0
+  },
+  "runs": 7,
+  "sizes": [
+    8,
+    32
+  ],
+  "chunkBytes": 262144,
+  "chromium": "155.0.8059.84",
+  "trials": [
+    {
+      "mode": "reopen-stream",
+      "run": 0,
+      "mib": 8,
+      "milliseconds": 183.2999999821186,
+      "mibPerSecond": 43.64429896770552,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        58.599999994039536,
+        124.69999998807907
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 0,
+      "mib": 8,
+      "milliseconds": 75.7999999821186,
+      "mibPerSecond": 105.54089712252268,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        33.80000001192093,
+        36.099999994039536
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 1,
+      "mib": 8,
+      "milliseconds": 82,
+      "mibPerSecond": 97.5609756097561,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        38.5,
+        37.10000002384186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 1,
+      "mib": 8,
+      "milliseconds": 183.2999999821186,
+      "mibPerSecond": 43.64429896770552,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        58.5,
+        124.7999999821186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 2,
+      "mib": 8,
+      "milliseconds": 188.59999999403954,
+      "mibPerSecond": 42.41781548384321,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        64.7999999821186,
+        123.80000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 2,
+      "mib": 8,
+      "milliseconds": 80.5,
+      "mibPerSecond": 99.37888198757764,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        36.29999998211861,
+        38.5
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 3,
+      "mib": 8,
+      "milliseconds": 78,
+      "mibPerSecond": 102.56410256410257,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        34.89999997615814,
+        36.10000002384186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 3,
+      "mib": 8,
+      "milliseconds": 199.30000001192093,
+      "mibPerSecond": 40.14049171862262,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        61.30000001192093,
+        138
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 4,
+      "mib": 8,
+      "milliseconds": 204.19999998807907,
+      "mibPerSecond": 39.17727718152316,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        64.89999997615814,
+        139.30000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 4,
+      "mib": 8,
+      "milliseconds": 75.2000000178814,
+      "mibPerSecond": 106.38297869810803,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        36.60000002384186,
+        32.29999998211861
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 5,
+      "mib": 8,
+      "milliseconds": 86.5,
+      "mibPerSecond": 92.48554913294798,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        34.80000001192093,
+        44.5
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 5,
+      "mib": 8,
+      "milliseconds": 217.19999998807907,
+      "mibPerSecond": 36.83241252504179,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        73.90000000596046,
+        143.2999999821186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 6,
+      "mib": 8,
+      "milliseconds": 173.80000001192093,
+      "mibPerSecond": 46.02991944448378,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        60.10000002384186,
+        113.69999998807907
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 6,
+      "mib": 8,
+      "milliseconds": 74.5,
+      "mibPerSecond": 107.38255033557047,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        38.29999998211861,
+        29.30000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 0,
+      "mib": 32,
+      "milliseconds": 2185.9000000059605,
+      "mibPerSecond": 14.639279015468569,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        49.5,
+        106.40000000596046,
+        166.40000000596046,
+        217.19999998807907,
+        454.30000001192093,
+        326.09999999403954,
+        390.69999998807907,
+        475.30000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 0,
+      "mib": 32,
+      "milliseconds": 304.40000000596046,
+      "mibPerSecond": 105.1248357403857,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        44.30000001192093,
+        30.899999976158142,
+        35.10000002384186,
+        34.5,
+        37.5,
+        37.5,
+        37.599999994039536,
+        40.29999998211861
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 1,
+      "mib": 32,
+      "milliseconds": 240.10000002384186,
+      "mibPerSecond": 133.27780090305043,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        29.400000005960464,
+        26.899999976158142,
+        30.5,
+        29.200000017881393,
+        30.299999982118607,
+        28.700000017881393,
+        29.400000005960464,
+        28.69999998807907
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 1,
+      "mib": 32,
+      "milliseconds": 2478.2999999821186,
+      "mibPerSecond": 12.912076826950283,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        63.400000005960464,
+        112.09999999403954,
+        177.19999998807907,
+        234.59999999403954,
+        301.40000000596046,
+        409.40000000596046,
+        479.90000000596046,
+        700.2999999821186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 2,
+      "mib": 32,
+      "milliseconds": 2466.899999976158,
+      "mibPerSecond": 12.97174591605224,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        53.39999997615814,
+        118.90000000596046,
+        183.2000000178814,
+        225.5,
+        282.89999997615814,
+        352.40000000596046,
+        743.9000000059605,
+        506.69999998807907
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 2,
+      "mib": 32,
+      "milliseconds": 330.7999999821186,
+      "mibPerSecond": 96.73518742965466,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        109.09999999403954,
+        39.599999994039536,
+        27.100000023841858,
+        26.899999976158142,
+        27.900000005960464,
+        29.900000005960464,
+        31.900000005960464,
+        33.099999994039536
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 3,
+      "mib": 32,
+      "milliseconds": 255.69999998807907,
+      "mibPerSecond": 125.14665624361308,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        40.20000001788139,
+        28,
+        31.399999976158142,
+        36,
+        28.200000017881393,
+        27.299999982118607,
+        27.900000005960464,
+        31
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 3,
+      "mib": 32,
+      "milliseconds": 2084.4000000059605,
+      "mibPerSecond": 15.35213970442741,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        52.5,
+        116.69999998807907,
+        166.30000001192093,
+        224.7999999821186,
+        262.5,
+        359.80000001192093,
+        404.69999998807907,
+        497.10000002384186
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 4,
+      "mib": 32,
+      "milliseconds": 2537.2999999821186,
+      "mibPerSecond": 12.611831474490804,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        59.5,
+        114.59999999403954,
+        173.5,
+        214.5,
+        279.5,
+        736,
+        444.2999999821186,
+        515.4000000059605
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 4,
+      "mib": 32,
+      "milliseconds": 378.19999998807907,
+      "mibPerSecond": 84.61131676628409,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        36,
+        36.19999998807907,
+        33.70000001788139,
+        51.900000005960464,
+        53.39999997615814,
+        64.80000001192093,
+        51.69999998807907,
+        42.30000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 5,
+      "mib": 32,
+      "milliseconds": 279.69999998807907,
+      "mibPerSecond": 114.40829460623472,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        36.400000005960464,
+        31.299999982118607,
+        46.900000005960464,
+        37,
+        30.599999994039536,
+        28.30000001192093,
+        29.400000005960464,
+        31.799999982118607
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 5,
+      "mib": 32,
+      "milliseconds": 2377.5999999940395,
+      "mibPerSecond": 13.458950201917993,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        56.099999994039536,
+        120.2999999821186,
+        170.40000000596046,
+        241.2000000178814,
+        319.89999997615814,
+        449,
+        451.10000002384186,
+        569.5999999940395
+      ],
+      "verified": true
+    },
+    {
+      "mode": "reopen-stream",
+      "run": 6,
+      "mib": 32,
+      "milliseconds": 2348,
+      "mibPerSecond": 13.62862010221465,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        58.19999998807907,
+        371.5,
+        183.30000001192093,
+        232.09999999403954,
+        301.40000000596046,
+        333.09999999403954,
+        379.09999999403954,
+        489.30000001192093
+      ],
+      "verified": true
+    },
+    {
+      "mode": "sync-worker",
+      "run": 6,
+      "mib": 32,
+      "milliseconds": 237.19999998807907,
+      "mibPerSecond": 134.9072512715355,
+      "quarterMiB": 4,
+      "quarterTimes": [
+        33.20000001788139,
+        28.899999976158142,
+        26.700000017881393,
+        28.099999994039536,
+        26.099999994039536,
+        26.5,
+        26,
+        35.099999994039536
+      ],
+      "verified": true
+    }
+  ],
+  "method": "Chromium profile under reported path. Sequential 256 KiB writes. Baseline reopens keepExistingData writable, seeks, writes and closes every chunk. Candidate uses one dedicated-worker sync access handle, writes and flushes each chunk, and waits for its reply before next chunk. Includes worker startup, message clone and final close. SHA256, source setup and deletion outside timing. No encryption, hashing, checkpoint IDB or network in timed region. One warmup pair per size; measured pair order alternates.",
+  "finishedAt": "2026-10-26T06:06:22.470Z",
+  "loadAfter": [
+    5.7,
+    5.21,
+    4.06
+  ]
+}

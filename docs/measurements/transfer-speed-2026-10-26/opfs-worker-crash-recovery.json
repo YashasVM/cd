@@ -1,0 +1,12 @@
+{
+  "interrupted": {
+    "error": "Uncaught Error: Simulated OPFS worker crash after flush",
+    "checkpointOffset": 0
+  },
+  "recovered": {
+    "bytes": 262163,
+    "offset": 0,
+    "verified": true
+  },
+  "chromium": "155.0.8059.84"
+}

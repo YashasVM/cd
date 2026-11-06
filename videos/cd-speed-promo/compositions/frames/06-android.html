@@ -1,0 +1,69 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f6-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f6-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f6-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f6-line { display: block; }
+      .f6-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f6-wi { display: inline-block; }
+      .f6-gap { display: inline-block; width: 0.24em; }
+      .f6-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f6-slot-in { position: absolute; inset: 0; }
+      .f6-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f6-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f6-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f6-accent { color: #E58A57; }
+
+      #f6-s { top: 250px; font-size: 176px; }
+      #f6-slot { width: 2.7em; }
+      #f6-app { position: absolute; inset: 0; padding: 22px 30px 0; }
+      #f6-top { display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: #B3A38C; }
+      #f6-state { display: inline-flex; align-items: center; gap: 10px; }
+      #f6-dot { width: 12px; height: 12px; border-radius: 50%; background: #E58A57; }
+      #f6-file { margin-top: 12px; display: flex; justify-content: space-between; align-items: baseline; font-size: 28px; color: #E4D4B6; }
+      #f6-size { font-size: 22px; color: #B3A38C; }
+      #f6-track { position: absolute; left: 30px; right: 30px; bottom: 20px; height: 10px; border-radius: 5px; background: rgba(228,212,182,0.14); overflow: hidden; }
+      #f6-fill { position: absolute; inset: 0; background: #E58A57; transform-origin: 0 50%; }
+      #f6-saved { position: absolute; left: 30px; right: 30px; top: 62px; display: flex; align-items: center; gap: 10px; font-size: 22px; color: #E4D4B6; font-weight: 600; }
+      #f6-saved svg { width: 26px; height: 26px; }
+      #f6-saved { font-size: 26px; }
+      #f6-support { top: 620px; }
+
+  </style>
+  <div data-hf-id="hf-m7gd" id="root" data-composition-id="06-android" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-cud8" id="f6-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-rlxk" id="f6-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-dd6s" class="f6-sentence" id="f6-s">
+      <span data-hf-id="hf-v424" class="f6-line"><span data-hf-id="hf-n3u9" class="f6-w"><span data-hf-id="hf-t2n5" class="f6-wi" id="f6-a0">your</span></span><span data-hf-id="hf-lt5a" class="f6-gap"></span><span data-hf-id="hf-8ap1" class="f6-w"><span data-hf-id="hf-iuqd" class="f6-wi" id="f6-a1">phone</span></span><span data-hf-id="hf-4rma" class="f6-gap"></span><span data-hf-id="hf-xjgh" class="f6-slot" id="f6-slot"><span data-hf-id="hf-dld7" class="f6-slot-in" id="f6-slot-in">
+        <span data-hf-id="hf-904u" id="f6-app" data-layout-allow-overlap><span data-hf-id="hf-5gz4" id="f6-top"><span data-hf-id="hf-l0i6" id="f6-state"><span data-hf-id="hf-kpr8" id="f6-dot"></span><span data-hf-id="hf-y9m3" id="f6-label">Receiving</span></span><span data-hf-id="hf-ws80">CD Beta</span></span>
+        <span data-hf-id="hf-eyil" id="f6-file"><span data-hf-id="hf-36bf">film.mov</span><span data-hf-id="hf-xwu9" id="f6-size">1 GiB</span></span></span>
+        <span data-hf-id="hf-7f00" id="f6-track"><span data-hf-id="hf-5mgc" id="f6-fill"></span></span>
+        <span data-hf-id="hf-zoe5" id="f6-saved"><svg data-hf-id="hf-5uek" viewBox="0 0 24 24" fill="none" stroke="#E58A57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-s5bw" d="M5 12.5l4.5 4.5L19 7.5"/></svg>Saved to Downloads/CD</span>
+      </span></span></span>
+      <span data-hf-id="hf-rtyc" class="f6-line"><span data-hf-id="hf-9hm4" class="f6-w"><span data-hf-id="hf-wu5q" class="f6-wi" id="f6-b0">catches</span></span><span data-hf-id="hf-55xb" class="f6-gap"></span><span data-hf-id="hf-93b3" class="f6-w"><span data-hf-id="hf-c3hn" class="f6-wi" id="f6-b1">it.</span></span></span>
+    </div>
+    <div data-hf-id="hf-8byq" class="f6-support" id="f6-support">CD for Android is in beta. Android 10 and up.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f6-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+tl.fromTo("#f6-a1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.080);
+    tl.fromTo("#f6-slot-in", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, B);
+    tl.fromTo("#f6-fill", { scaleX: 0 }, { scaleX: 1, duration: 3 * B, ease: "power1.inOut" }, B + 0.1);
+    tl.set("#f6-saved", { opacity: 0 }, 0);
+    tl.to("#f6-track", { opacity: 0, duration: 0.1 }, 4 * B + 0.1);
+    tl.to("#f6-file", { opacity: 0, duration: 0.1 }, 4 * B + 0.1);
+    tl.fromTo("#f6-saved", { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.25, ease: "power2.out" }, 4 * B + 0.1);
+    tl.set("#f6-label", { textContent: "Received" }, 4 * B + 0.1);
+    tl.set("#f6-label", { textContent: "Receiving" }, 0);
+tl.fromTo("#f6-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 2.291);
+tl.fromTo("#f6-b1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 2.371);
+    tl.fromTo("#f6-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.749);
+    window.__timelines["06-android"] = tl;
+  </script>
+</template>

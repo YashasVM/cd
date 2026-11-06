@@ -296,6 +296,9 @@ func (link *recordLink) sendReleasable(kind messageKind, payload []byte, release
 		return err
 	}
 	link.relayBytes.Add(uint64(len(record)))
+	if len(link.retained) == 0 {
+		link.sendBuffer = record
+	}
 	return nil
 }
 
@@ -314,6 +317,22 @@ func (link *recordLink) acknowledged(bytes uint64) {
 
 // next returns the next record in sequence order, waiting up to timeout.
 func (link *recordLink) next(ctx context.Context, timeout time.Duration) (messageKind, []byte, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, nil, err
+	}
+	if kind, plaintext, ok, err := link.ready(); ok || err != nil {
+		return kind, plaintext, err
+	}
+	select {
+	case item := <-link.items:
+		if err := link.accept(item); err != nil {
+			return 0, nil, err
+		}
+		if kind, plaintext, ok, err := link.ready(); ok || err != nil {
+			return kind, plaintext, err
+		}
+	default:
+	}
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	for {
@@ -418,6 +437,8 @@ func (link *recordLink) close() {
 // on it is delivered); both sides then do the WebSocket close handshake,
 // whose reply arrives only after the relay processed every earlier frame.
 func (link *recordLink) finish(waitForPeer bool) {
+	timing := newTransferTiming("finish")
+	timing.mark("start")
 	defer link.reportTransport()
 	link.stopOnce.Do(func() { close(link.stop) })
 	deadline := time.Now().Add(closeWait)
@@ -426,21 +447,26 @@ func (link *recordLink) finish(waitForPeer bool) {
 	link.writeMu.Unlock()
 	if path != nil {
 		if waitForPeer && link.directUsed.Load() {
+			timing.mark("peer-close-wait-start")
 			select {
 			case <-path.lost:
 			case <-time.After(time.Until(deadline)):
 			}
+			timing.mark("peer-close-wait-done")
 		}
 		path.close()
+		timing.mark("direct-closed")
 	}
 	message := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "done")
 	if err := link.connection.WriteControl(websocket.CloseMessage, message, deadline); err != nil {
 		return
 	}
+	timing.mark("relay-close-sent")
 	select {
 	case <-link.readerDone:
 	case <-time.After(time.Until(deadline) + 100*time.Millisecond):
 	}
+	timing.mark("done")
 }
 
 func (link *recordLink) reportTransport() {

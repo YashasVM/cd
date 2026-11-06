@@ -1,0 +1,533 @@
+{
+  "started": "2026-10-26T07:19:21Z",
+  "rows": [
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "14aeefed9f8781320ed7f3f4a8f789e24e3d0bb3d20c5cf93b9b346e9113b825",
+      "seconds": 0.19860869497642852,
+      "httpSeconds": 0.183652,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "14aeefed9f8781320ed7f3f4a8f789e24e3d0bb3d20c5cf93b9b346e9113b825",
+      "readySeconds": 2.115776819002349,
+      "seconds": 6.140638254000805,
+      "receiverSeconds": 4.024845786014339,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6127401420089882,
+      "bridgeSeconds": 6.7533783960097935
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "9ccf5e3d0b48ccacc54c75cccebaaceb85200618cb8247bc00a9385b8a0e1807",
+      "readySeconds": 1.6840043159900233,
+      "seconds": 5.520763287990121,
+      "receiverSeconds": 3.8367452599923126,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.659593505988596,
+      "bridgeSeconds": 6.180356793978717
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "9ccf5e3d0b48ccacc54c75cccebaaceb85200618cb8247bc00a9385b8a0e1807",
+      "seconds": 0.22790755101596005,
+      "httpSeconds": 0.192059,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "b377f442b01f97cac9521950b2bd011ed82067c82e28ed733bd77f3912150931",
+      "seconds": 0.23223074999987148,
+      "httpSeconds": 0.162647,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "b377f442b01f97cac9521950b2bd011ed82067c82e28ed733bd77f3912150931",
+      "readySeconds": 2.0997560159885325,
+      "seconds": 6.7015910589834675,
+      "receiverSeconds": 4.601820593001321,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.8329167650081217,
+      "bridgeSeconds": 7.534507823991589
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "08888cfc7f2f2715232799cce1f6c80cd5ec77270ebf5a0c5665e4b0d7fe6ef1",
+      "seconds": 1.162764544977108,
+      "httpSeconds": 1.148364,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "08888cfc7f2f2715232799cce1f6c80cd5ec77270ebf5a0c5665e4b0d7fe6ef1",
+      "readySeconds": 1.6616045009868685,
+      "seconds": 7.029508042993257,
+      "receiverSeconds": 5.3678917920042295,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591355,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.6820103560166899,
+      "bridgeSeconds": 7.711518399009947
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "bb23d0d9c41243549d0cf02b3e4ace6b3871b83b0fac8a70455893497f729d7b",
+      "readySeconds": 1.610951862996444,
+      "seconds": 7.2164714979880955,
+      "receiverSeconds": 5.6055136600043625,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.1110820200119633,
+      "bridgeSeconds": 8.327553518000059
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "bb23d0d9c41243549d0cf02b3e4ace6b3871b83b0fac8a70455893497f729d7b",
+      "seconds": 1.2577533050207421,
+      "httpSeconds": 1.232578,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "da414405a3c6695ff18f53d5d3f776ec33566ee1919999daf18b2e7c34f7c761",
+      "seconds": 1.1413848079973832,
+      "httpSeconds": 1.130381,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "da414405a3c6695ff18f53d5d3f776ec33566ee1919999daf18b2e7c34f7c761",
+      "readySeconds": 1.8181481389910914,
+      "seconds": 6.54846605900093,
+      "receiverSeconds": 4.730304883996723,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.4866199539974332,
+      "bridgeSeconds": 7.035086012998363
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "1ee3524ebefbe3bbdd4d3f89c8008c832c68fe8cfe35da5d11c14fde5b1b0dda",
+      "seconds": 4.419576047017472,
+      "httpSeconds": 4.400983,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "1ee3524ebefbe3bbdd4d3f89c8008c832c68fe8cfe35da5d11c14fde5b1b0dda",
+      "readySeconds": 1.7131994030205533,
+      "seconds": 13.045248241018271,
+      "receiverSeconds": 11.332036773004802,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 33819768,
+          "directBytes": 22042400,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 7093,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.0625498309964314,
+      "bridgeSeconds": 14.107798072014702
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "2189a37247c413b668557413e194de6f74e706a995c6424bf4f33fa4b0a48b80",
+      "readySeconds": 1.663758267997764,
+      "seconds": 11.045477337000193,
+      "receiverSeconds": 9.38171005199547,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 25955168,
+          "directBytes": 26761160,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6892,
+          "directBytes": 6947,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.0698505240143277,
+      "bridgeSeconds": 12.11532786101452
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "2189a37247c413b668557413e194de6f74e706a995c6424bf4f33fa4b0a48b80",
+      "seconds": 4.424453031999292,
+      "httpSeconds": 4.413507,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 50351112,
+      "sha256": "c551c008659df3a924e6f087a1615cdf540fc68ccafa116754a9c6cc6b6c02a3",
+      "seconds": 4.42714069201611,
+      "httpSeconds": 4.416768,
+      "verified": true
+    },
+    {
+      "route": "lan",
+      "size": "large-file",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 50351112,
+      "sha256": "c551c008659df3a924e6f087a1615cdf540fc68ccafa116754a9c6cc6b6c02a3",
+      "readySeconds": 1.6111340999777894,
+      "seconds": 11.876691273995675,
+      "receiverSeconds": 10.26554935699096,
+      "transport": [
+        {
+          "transport": "direct",
+          "relayBytes": 29887468,
+          "directBytes": 25188240,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6933,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 1.2195265409827698,
+      "bridgeSeconds": 13.096217814978445
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "e144b0e0a6899ba597f9c22b6c00536fe6e9afcb2b6c143f3cd7a5c7a4324d43",
+      "error": "Command '['curl', '--silent', '--show-error', '--fail-with-body', '--max-time', '180', '--config', '/tmp/immich-cd-bench-x0w5_yvd/public-immich.conf', '-F', 'assetData=@/tmp/immich-cd-bench-x0w5_yvd/payload.png', '-F', 'fileCreatedAt=2026-10-26T00:00:00.000Z', '-F', 'fileModifiedAt=2026-10-26T00:00:00.000Z', '-o', '/tmp/immich-cd-bench-x0w5_yvd/response.json', '-w', '%{time_total}', 'https://plugins-hearts-transition-films.trycloudflare.com/api/assets']' returned non-zero exit status 22."
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "e144b0e0a6899ba597f9c22b6c00536fe6e9afcb2b6c143f3cd7a5c7a4324d43",
+      "readySeconds": 1.159858668979723,
+      "seconds": 4.3547354719776195,
+      "receiverSeconds": 3.194864234974375,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.3868133020005189,
+      "bridgeSeconds": 4.741548773978138
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "02cedd0566d50b9a6b4be24db8391fd1af9bda9eba6956d9fd5598c22f465998",
+      "readySeconds": 1.764272731001256,
+      "seconds": 5.071138276980491,
+      "receiverSeconds": 3.3068584429856855,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.3849313009995967,
+      "bridgeSeconds": 5.456069577980088
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "02cedd0566d50b9a6b4be24db8391fd1af9bda9eba6956d9fd5598c22f465998",
+      "error": "Command '['curl', '--silent', '--show-error', '--fail-with-body', '--max-time', '180', '--config', '/tmp/immich-cd-bench-x0w5_yvd/public-immich.conf', '-F', 'assetData=@/tmp/immich-cd-bench-x0w5_yvd/payload.png', '-F', 'fileCreatedAt=2026-10-26T00:00:00.000Z', '-F', 'fileModifiedAt=2026-10-26T00:00:00.000Z', '-o', '/tmp/immich-cd-bench-x0w5_yvd/response.json', '-w', '%{time_total}', 'https://plugins-hearts-transition-films.trycloudflare.com/api/assets']' returned non-zero exit status 22."
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 3,
+      "method": "immich",
+      "bytes": 787247,
+      "sha256": "4d3537fd7cab81845bc4e0c1cdc21794dc8e1a4fc6e657cdf69176a33269d348",
+      "error": "Command '['curl', '--silent', '--show-error', '--fail-with-body', '--max-time', '180', '--config', '/tmp/immich-cd-bench-x0w5_yvd/public-immich.conf', '-F', 'assetData=@/tmp/immich-cd-bench-x0w5_yvd/payload.png', '-F', 'fileCreatedAt=2026-10-26T00:00:00.000Z', '-F', 'fileModifiedAt=2026-10-26T00:00:00.000Z', '-o', '/tmp/immich-cd-bench-x0w5_yvd/response.json', '-w', '%{time_total}', 'https://plugins-hearts-transition-films.trycloudflare.com/api/assets']' returned non-zero exit status 22."
+    },
+    {
+      "route": "public",
+      "size": "photo",
+      "trial": 3,
+      "method": "cd",
+      "bytes": 787247,
+      "sha256": "4d3537fd7cab81845bc4e0c1cdc21794dc8e1a4fc6e657cdf69176a33269d348",
+      "readySeconds": 1.7140118030074518,
+      "seconds": 3.8866173179994803,
+      "receiverSeconds": 2.172591854003258,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.41267628999776207,
+      "bridgeSeconds": 4.299293607997242
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "230550bc580809fd17399b22e604552f2f51b9d2d3eb434cb44f7ed22d630cef",
+      "error": "Command '['curl', '--silent', '--show-error', '--fail-with-body', '--max-time', '180', '--config', '/tmp/immich-cd-bench-x0w5_yvd/public-immich.conf', '-F', 'assetData=@/tmp/immich-cd-bench-x0w5_yvd/payload.png', '-F', 'fileCreatedAt=2026-10-26T00:00:00.000Z', '-F', 'fileModifiedAt=2026-10-26T00:00:00.000Z', '-o', '/tmp/immich-cd-bench-x0w5_yvd/response.json', '-w', '%{time_total}', 'https://plugins-hearts-transition-films.trycloudflare.com/api/assets']' returned non-zero exit status 22."
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 1,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "230550bc580809fd17399b22e604552f2f51b9d2d3eb434cb44f7ed22d630cef",
+      "readySeconds": 1.3120797890005633,
+      "seconds": 6.626762111001881,
+      "receiverSeconds": 5.314670899009798,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.47035703001893125,
+      "bridgeSeconds": 7.097119141020812
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "cd",
+      "bytes": 12588853,
+      "sha256": "89fee063418d0892ff661be3d74f82ba0d306dba504ed5d45cc84f81be9966ff",
+      "readySeconds": 1.312281949998578,
+      "seconds": 7.153147539997008,
+      "receiverSeconds": 5.84085263198358,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      "verified": true,
+      "localImportSeconds": 0.599716854019789,
+      "bridgeSeconds": 7.752864394016797
+    },
+    {
+      "route": "public",
+      "size": "large-photo",
+      "trial": 2,
+      "method": "immich",
+      "bytes": 12588853,
+      "sha256": "89fee063418d0892ff661be3d74f82ba0d306dba504ed5d45cc84f81be9966ff",
+      "error": "Command '['curl', '--silent', '--show-error', '--fail-with-body', '--max-time', '180', '--config', '/tmp/immich-cd-bench-x0w5_yvd/public-immich.conf', '-F', 'assetData=@/tmp/immich-cd-bench-x0w5_yvd/payload.png', '-F', 'fileCreatedAt=2026-10-26T00:00:00.000Z', '-F', 'fileModifiedAt=2026-10-26T00:00:00.000Z', '-o', '/tmp/immich-cd-bench-x0w5_yvd/response.json', '-w', '%{time_total}', 'https://plugins-hearts-transition-films.trycloudflare.com/api/assets']' returned non-zero exit status 22."
+    }
+  ],
+  "immichVersion": {
+    "major": 3,
+    "minor": 3,
+    "patch": 5,
+    "prerelease": null
+  },
+  "cdSha256": "d47726679f2aeb67465c7fb1f5c586b97394718d4ee535baaba674897d357008",
+  "publicImmich": "https://plugins-hearts-transition-films.trycloudflare.com"
+}

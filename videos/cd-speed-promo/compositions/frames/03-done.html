@@ -1,0 +1,64 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f3-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f3-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f3-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f3-line { display: block; }
+      .f3-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f3-wi { display: inline-block; }
+      .f3-gap { display: inline-block; width: 0.24em; }
+      .f3-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f3-slot-in { position: absolute; inset: 0; }
+      .f3-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f3-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f3-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f3-accent { color: #E58A57; }
+
+      #f3-s { top: 250px; font-size: 200px; }
+      #f3-slot { width: 3.1em; }
+      #f3-in { position: absolute; inset: 0; transform-origin: 0 50%; }
+      #f3-row { position: absolute; left: 36px; right: 36px; top: 24px; display: flex; align-items: center; justify-content: space-between; font-size: 30px; color: #E4D4B6; }
+      #f3-time { font-size: 32px; font-weight: 600; color: #E4D4B6; }
+      #f3-track { position: absolute; left: 36px; right: 36px; bottom: 32px; height: 22px; border-radius: 11px; background: rgba(228,212,182,0.14); overflow: hidden; }
+      #f3-fill { position: absolute; inset: 0; background: #E58A57; transform-origin: 0 50%; }
+      #f3-check { display: inline-flex; align-items: center; gap: 10px; color: #E58A57; font-weight: 600; }
+      #f3-check svg { width: 30px; height: 30px; }
+      #f3-support { top: 650px; }
+      #f3-support b { color: #E4D4B6; font-weight: 600; }
+
+  </style>
+  <div data-hf-id="hf-uq7b" id="root" data-composition-id="03-done" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-juvr" id="f3-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-0j1h" id="f3-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-7cei" class="f3-sentence" id="f3-s">
+      <span data-hf-id="hf-t1r3" class="f3-line"><span data-hf-id="hf-rpcg" class="f3-w"><span data-hf-id="hf-5prr" class="f3-wi" id="f3-a0">1</span></span><span data-hf-id="hf-bxrf" class="f3-gap"></span><span data-hf-id="hf-vje0" class="f3-w"><span data-hf-id="hf-9mq5" class="f3-wi" id="f3-a1">gib</span></span><span data-hf-id="hf-1rpn" class="f3-gap"></span><span data-hf-id="hf-59zn" class="f3-slot" id="f3-slot"><span data-hf-id="hf-5lub" class="f3-slot-in" id="f3-in" data-layout-allow-overflow>
+        <span data-hf-id="hf-njzo" id="f3-row"><span data-hf-id="hf-yq43" id="f3-name">film.mov</span><span data-hf-id="hf-njta" id="f3-check"><svg data-hf-id="hf-cwwv" viewBox="0 0 30 30" fill="none" stroke="#E58A57" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-9xia" d="M7 15.5l5.5 5.5L23.5 9"/></svg>sent</span><span data-hf-id="hf-9d0s" id="f3-time" class="f3-mono">0.00 s</span></span>
+        <span data-hf-id="hf-quth" id="f3-track"><span data-hf-id="hf-m44z" id="f3-fill"></span></span>
+      </span></span></span>
+      <span data-hf-id="hf-6i73" class="f3-line"><span data-hf-id="hf-ucgx" class="f3-w"><span data-hf-id="hf-x06t" class="f3-wi" id="f3-b0">done.</span></span></span>
+    </div>
+    <div data-hf-id="hf-sy95" class="f3-support" id="f3-support">Sent in <b data-hf-id="hf-4slq">0.75 seconds</b> over the new same-network lane.</div>
+    <div data-hf-id="hf-kwx6" class="f3-foot" id="f3-foot">1 GiB, cdx to cdx, both ends on one laptop, received to RAM. Median of 5 runs.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+    tl.fromTo("#f3-a0, #f3-a1", { yPercent: 140 }, { yPercent: 0, duration: 0.26, ease: "expo.out", stagger: 0.04 }, 0);
+    // Signature move: the shutter. The slot opens from the left while its contents settle.
+    tl.fromTo("#f3-slot", { clipPath: "inset(0 100% 0 0 round 0.12em)" }, { clipPath: "inset(0 0% 0 0 round 0.12em)", duration: 1.1, ease: "expo.out" }, 0.02);
+    tl.fromTo("#f3-in", { scale: 1.12 }, { scale: 1, duration: 1.1, ease: "expo.out" }, 0.02);
+    tl.fromTo("#f3-check", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.25, ease: "back.out(2)" }, 0.93);
+    tl.set("#f3-check", { opacity: 0 }, 0);
+    const f3t = { v: 0 };
+    tl.fromTo("#f3-fill", { scaleX: 0 }, { scaleX: 1, duration: 0.75, ease: "none" }, 0.18);
+    tl.fromTo(f3t, { v: 0 }, { v: 0.75, duration: 0.75, ease: "none", onUpdate: () => { document.getElementById("f3-time").textContent = f3t.v.toFixed(2) + " s"; } }, 0.18);
+tl.fromTo("#f3-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.3, ease: "expo.out" }, 0.916);
+    tl.fromTo("#f3-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 1.832);
+    tl.fromTo("#f3-foot", { opacity: 0, y: 0 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.291);
+    window.__timelines["03-done"] = tl;
+  </script>
+</template>

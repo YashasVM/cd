@@ -101,6 +101,14 @@ func endpointBase() (string, string, error) {
 	return relay, public, nil
 }
 
+func relayTransferEndpoint(base, id string) string {
+	endpoint := base + "/" + id
+	if os.Getenv("CD_RELAY_STREAMING") == "1" {
+		endpoint += "?stream=1"
+	}
+	return endpoint
+}
+
 func isLoopbackHost(host string) bool {
 	if strings.EqualFold(host, "localhost") {
 		return true
@@ -265,7 +273,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
+	connection, err := dialRelay(ctx, relayTransferEndpoint(relayBase, invitation.encodedID()))
 	if err != nil {
 		return err
 	}
@@ -341,7 +349,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	defer link.close()
 	// Gather direct-path candidates while waiting for the receiver.
 	var offerSDP chan string
-	if directEnabled() && source.size >= directMinBytes {
+	if directEnabled() && os.Getenv("CD_WEBRTC") != "0" && source.size >= directMinBytes {
 		if path, err := newDirectPath(link.directRecord, link.directLost); err == nil {
 			link.attachDirect(path)
 			offerSDP = make(chan string, 1)

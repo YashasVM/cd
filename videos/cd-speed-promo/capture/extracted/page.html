@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<style>:root{--lightningcss-light: ;--lightningcss-dark:initial;color-scheme:dark;--bg:#0d0503;--panel:#160907;--workbench:#180a07;--workbench-tab:#1e0d09;--block:#1b0d09;--ink:#070707;--text:#e4d4b6;--muted:#b3a38c;--faint:#a28f79;--accent:#e58a57;--accent-soft:#6b2f1c;--line:#e4d4b626;--mono:ui-monospace, SFMono-Regular, Menlo, monospace}*{box-sizing:border-box}html{background:var(--bg);min-width:320px}body{background:var(--bg);min-height:100svh;color:var(--text);-webkit-font-smoothing:antialiased;flex-direction:column;margin:0;font:15px/1.5 Inter,system-ui,sans-serif;display:flex;overflow-x:hidden}body:before{z-index:0;pointer-events:none;content:"";background:linear-gradient(#1b0603 0%,#120504 60%,#0000 100%);height:62vh;position:fixed;inset:0 0 auto;-webkit-mask-image:linear-gradient(#000 0 45%,#0000 100%);mask-image:linear-gradient(#000 0 45%,#0000 100%)}.ambient-dots{z-index:0;pointer-events:none;width:100%;height:62vh;position:fixed;inset:0 0 auto;-webkit-mask-image:linear-gradient(#000 0 42%,#0000 100%);mask-image:linear-gradient(#000 0 42%,#0000 100%)}::selection{background:var(--accent-soft);color:#ffe4bf}button,input{font:inherit}button{color:inherit}button:disabled{opacity:.55;cursor:wait}button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}[hidden],.hidden{display:none!important}.shell{z-index:1;flex:1;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);align-items:center;gap:clamp(40px,6vw,96px);width:min(1080px,100% - 64px);min-height:0;margin:0 auto;padding:56px 0 36px;display:grid;position:relative}.brand-rail{min-width:0;animation:.65s cubic-bezier(.2,.8,.2,1) both enter}.brand-name{align-items:baseline;gap:16px;display:flex}.brand-name h1,.brand-lockup h1{letter-spacing:-.055em;margin:0;font:400 68px/1 Georgia,Times New Roman,serif}.tagline{color:var(--faint);font:12px/1.3 var(--mono);letter-spacing:.04em;margin:0}.brand-intro{letter-spacing:-.035em;max-width:none;margin:26px 0 16px;font-size:clamp(23px,2.7vw,34px);font-weight:450;line-height:1.2}.route{white-space:nowrap}.swap{color:var(--accent);vertical-align:bottom;transition:width .5s cubic-bezier(.65,0,.35,1);display:inline-block}.swap.out{animation:.32s cubic-bezier(.55,0,1,.45) forwards swap-out}.swap.in{animation:.5s cubic-bezier(.2,.8,.2,1) both swap-in}@keyframes swap-out{to{opacity:0;filter:blur(4px);transform:translateY(-.35em)}}@keyframes swap-in{0%{opacity:0;filter:blur(4px);transform:translateY(.35em)}}.brand-note{border:1px solid var(--line);width:fit-content;color:var(--muted);font:11px/1.3 var(--mono);border-radius:4px;margin:0;padding:5px 9px}.install{grid-template-columns:minmax(0,1fr);min-width:0;max-width:380px;margin-top:22px;display:grid}.install-toggle{width:fit-content;color:var(--faint);font:14px/1.3 var(--mono);letter-spacing:.02em;cursor:pointer;background:0 0;border:0;align-items:center;gap:8px;padding:0;transition:color .2s;display:inline-flex}.install-toggle:hover,.install-toggle:focus-visible,.install-toggle[aria-expanded=true]{color:var(--muted);outline:none}.install-toggle code{color:inherit}.install-dot{background:#4ade80;border-radius:50%;width:8px;height:8px;margin-right:2px;animation:2.4s ease-out infinite install-pulse;box-shadow:0 0 #4ade808c}@keyframes install-pulse{70%,to{box-shadow:0 0 0 6px #4ade8000}}.install-chevron{border-bottom:1px solid;border-right:1px solid;width:6px;height:6px;margin-left:2px;transition:transform .35s cubic-bezier(.2,.8,.2,1);transform:translateY(-2px)rotate(45deg)}.install-toggle[aria-expanded=true] .install-chevron{transform:translateY(1px)rotate(-135deg)}.install-panel{opacity:0;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1),opacity .3s;display:grid}.install-panel.open{opacity:1;grid-template-rows:1fr}.install-body{grid-template-columns:minmax(0,1fr);gap:8px;min-height:0;display:grid;overflow:hidden}.install-body>:first-child{margin-top:10px}.install-cmd{border:1px solid var(--line);width:100%;min-height:42px;color:var(--text);font:12px/1.3 var(--mono);text-align:left;cursor:pointer;background:#160907b3;border-radius:6px;align-items:center;gap:10px;padding:0 12px;transition:border-color .2s,background-color .2s;display:flex;position:relative;overflow:hidden}.install-cmd:hover,.install-cmd:focus-visible{background:var(--panel);border-color:#e58a578c;outline:none}.install-prompt{color:var(--accent);flex:none}.install-cmd code{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.install-hint{color:var(--accent);letter-spacing:.06em;text-transform:uppercase;background:#e58a571f;border-radius:4px;flex:none;padding:3px 7px;font-size:10px;transition:background-color .2s}.install-cmd:hover .install-hint{background:#e58a5733}.install-cmd.copied{border-color:#4ade8099;animation:1.2s ease-out copied-glow}.install-cmd:after{pointer-events:none;content:"";background:linear-gradient(100deg,#0000 20%,#4ade8047 50%,#0000 80%);position:absolute;inset:0;transform:translate(-100%)}.install-cmd.copied:after{animation:.7s cubic-bezier(.4,0,.2,1) copied-sweep}.install-cmd.copied .install-hint{color:#4ade80;background:#4ade8029;animation:.45s cubic-bezier(.3,1.6,.5,1) copied-pop}.install-cmd.copied .install-hint:before{content:"✓ "}.install-cmd.copied .install-prompt{color:#4ade80}@keyframes copied-sweep{to{transform:translate(100%)}}@keyframes copied-pop{0%{transform:scale(.7)}to{transform:scale(1)}}@keyframes copied-glow{0%{box-shadow:0 0 #4ade8073}to{box-shadow:0 0 0 10px #4ade8000}}.install-alt{color:var(--faint);font:11px/1.4 var(--mono);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.install-alt code{color:var(--muted);margin-left:4px}.state-board[hidden]{display:none}.state-board{width:fit-content;color:var(--faint);font:11px/1.3 var(--mono);letter-spacing:.04em;align-items:center;gap:8px;margin-top:38px;display:flex}.state-board:before{background:var(--accent);content:"";border-radius:50%;width:7px;height:7px;box-shadow:0 0 0 3px #e58a571f}.state-label{text-transform:uppercase}.state-label:after{content:" /"}.state-board strong{color:var(--accent);font-weight:400}.state-board:has([data-state=transferring],[data-state=connecting],[data-state=waiting]):before{animation:1.2s ease-in-out infinite state-pulse}.state-board:has([data-state=complete]):before{background:#7fd18b;box-shadow:0 0 0 3px #7fd18b24}.state-board:has([data-state=complete]) strong{color:#7fd18b}.state-board:has([data-state=failed]):before{background:#ff5d2a;box-shadow:0 0 0 3px #ff5d2a29}.state-board:has([data-state=failed]) strong{color:#ff8a62}@keyframes state-pulse{50%{opacity:.35}}.workbench{-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);background:radial-gradient(120% 80% at 50% -10%,#e58a5717,#0000 60%),linear-gradient(#1e0d09eb,#140806eb);border:1px solid #e4d4b61a;border-radius:16px;min-width:0;padding:0 16px 16px;animation:.7s cubic-bezier(.2,.8,.2,1) 90ms both enter;position:relative;box-shadow:inset 0 1px #ffdcbe0f,0 30px 80px -30px #000000b3,0 0 0 1px #0000004d}@keyframes enter{0%{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.mode-selector{border:1px solid var(--line);background:#0703028c;border-radius:12px;grid-template-columns:1fr 1fr;width:100%;margin:16px 0 10px;padding:4px;display:grid;position:relative}.mode-selector:before{content:"";background:linear-gradient(#e58a5742,#e58a5724);border-radius:9px;width:calc(50% - 4px);transition:transform .4s cubic-bezier(.65,0,.35,1);position:absolute;top:4px;bottom:4px;left:4px;box-shadow:inset 0 0 0 1px #e58a5766,0 6px 18px -6px #e58a5773}.mode-selector:has(#receive-mode-btn.active):before{transform:translate(100%)}.mode-btn{z-index:1;min-height:42px;color:var(--faint);cursor:pointer;background:0 0;border:0;border-radius:9px;justify-content:center;align-items:center;gap:8px;padding:8px 16px;font-size:14px;font-weight:500;transition:color .25s;display:inline-flex;position:relative}.mode-btn:hover{color:var(--text)}.mode-btn svg{transition:transform .35s cubic-bezier(.2,.8,.2,1),color .25s}.mode-btn.active svg{color:var(--accent)}#send-mode-btn.active svg{transform:translateY(-1px)}#receive-mode-btn.active svg{transform:translateY(1px)}.mode-btn.active{color:var(--text)}.mode-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.view{min-width:0;display:none}.view.active{flex-direction:column;justify-content:center;min-height:262px;animation:.36s cubic-bezier(.2,.8,.2,1) both reveal;display:flex}@keyframes reveal{0%{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}.drop-zone{text-align:left;cursor:pointer;background:#07030247;border:1.5px dashed #e58a5747;border-radius:12px;flex:1;grid-template-rows:auto auto;grid-template-columns:minmax(0,1fr) auto;align-content:center;align-items:center;gap:24px 32px;min-height:0;margin-top:4px;padding:32px;transition:border-color .25s,background-color .25s,box-shadow .25s;display:grid;position:relative}.drop-zone:hover{background:#e58a5709;border-color:#e58a578c}.drop-zone.drag-over{border-color:var(--accent);background:#e58a5712;border-style:solid;box-shadow:0 0 0 4px #e58a571a,inset 0 0 40px -6px #e58a5759}.drop-mark{width:56px;height:56px;color:var(--accent);background:radial-gradient(circle at 50% 30%,#e58a5738,#e58a570d);border:1px solid #e58a5766;border-radius:50%;place-items:center;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .35s;display:grid}.drop-zone:hover .drop-mark,.drop-zone.drag-over .drop-mark{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 24px -8px #e58a5780}.drop-zone.drag-over .drop-mark svg{animation:.9s ease-in-out infinite nudge-up}@keyframes nudge-up{50%{transform:translateY(-3px)}}body.dragging-files:after{content:"";z-index:100;border:1.5px solid var(--accent);pointer-events:none;background:#e58a570d;border-radius:16px;position:fixed;inset:8px;box-shadow:0 0 0 4px #e58a571a,inset 0 0 80px -12px #e58a5759}.drop-copy{grid-area:1/1;min-width:0}.drop-mark{grid-area:1/2/span 2}.drop-mark svg{width:22px;height:22px}.drop-zone h2{letter-spacing:-.02em;margin:0 0 8px;font-size:21px;font-weight:550;line-height:1.25}.drop-zone p{max-width:320px;color:var(--muted);margin:0;font-size:14px}.drop-zone .primary-btn{grid-area:2/1;justify-self:start;padding-inline:24px}.primary-btn,.secondary-btn,.cancel-btn{cursor:pointer;border:1px solid #0000;border-radius:8px;justify-content:center;align-items:center;min-height:44px;padding:10px 16px;font-size:14px;font-weight:550;line-height:1.2;text-decoration:none;transition:background .2s,border-color .2s,color .2s,transform .2s;display:inline-flex}.primary-btn{background:linear-gradient(180deg, #f0a073, var(--accent));color:var(--bg);box-shadow:inset 0 1px #ffe6d259,0 8px 22px -10px #e58a57cc}.primary-btn:hover{background:linear-gradient(#f6b088,#ec9566);transform:translateY(-1px);box-shadow:inset 0 1px #ffe6d266,0 12px 28px -10px #e58a57e6}.primary-btn:active,.secondary-btn:active,.cancel-btn:active{transform:translateY(1px)scale(.98)}.secondary-btn,.cancel-btn{border-color:var(--line);background:var(--block);color:var(--text)}.secondary-btn:hover,.cancel-btn:hover,.secondary-btn.copied{border-color:var(--accent);color:var(--accent)}.file-info,.share-panel,.progress-section,.result-section,.input-section,.connecting-section{min-width:0}.view>:not(.hidden,[hidden])~:is(.file-info,.share-panel,.progress-section,.result-section,.input-section,.connecting-section):not(.hidden){border-top:1px solid var(--line);margin-top:18px;padding-top:20px}.file-info:not(.hidden),.share-panel:not(.hidden),.progress-section:not(.hidden),.result-section:not(.hidden),.connecting-section:not(.hidden),.agent-offer:not([hidden]){animation:.38s cubic-bezier(.2,.8,.2,1) both reveal}.panel-kicker,.input-section label{color:var(--faint);font:11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px;display:block}.file-header{justify-content:space-between;align-items:baseline;gap:12px;display:flex}.file-name{overflow-wrap:anywhere;min-width:0;font-size:16px;font-weight:550}.file-size{color:var(--accent);font:12px var(--mono);flex:none}.file-subtext{color:var(--muted);overflow-wrap:anywhere;margin-top:5px;font-size:13px;display:block}.share-grid{grid-template-columns:minmax(0,1fr) 168px;gap:12px;display:grid}.code-block{flex-direction:column;justify-content:center;display:flex}.code-block,.qr-block{border:1px solid var(--line);background:var(--panel);border-radius:6px;min-width:0;padding:16px}.code-block #share-code{color:var(--accent);font:600 clamp(34px, 4vw, 44px)/1.15 var(--mono);letter-spacing:.12em;overflow-wrap:anywhere;-webkit-user-select:all;user-select:all;margin-top:6px;display:block}.receive-command{border:1px solid var(--line);background:var(--ink);width:fit-content;max-width:100%;color:var(--text);font:13px var(--mono);overflow-wrap:anywhere;-webkit-user-select:all;user-select:all;border-radius:5px;margin-top:8px;padding:6px 10px;display:block}.drop-zone p code{font:13px var(--mono);color:var(--text)}.code-help strong{color:var(--text);font-weight:550}.code-help{max-width:320px;color:var(--muted);margin:12px 0 0;font-size:13px;line-height:1.45}.qr-block{background:var(--ink);flex-direction:column;justify-content:center;align-items:center;display:flex}.qr-block .panel-kicker{align-self:stretch}#share-qr{aspect-ratio:1;image-rendering:pixelated;display:block;width:min(100%,132px)!important;height:auto!important}.share-actions{flex-wrap:wrap;gap:8px;margin-top:14px;display:flex}.status{border-left:1px solid var(--accent-soft);color:var(--muted);font:12px/1.5 var(--mono);overflow-wrap:anywhere;margin:14px 0 0;padding:6px 12px}.input-section{text-align:left;border:1px solid var(--line);background:#07030247;border-radius:12px;flex-direction:column;flex:1;justify-content:center;align-items:stretch;margin-top:4px;padding:20px 22px;display:flex}.section-title{letter-spacing:-.02em;margin:0 0 5px;font-size:21px;font-weight:550;line-height:1.25}.section-subtitle{max-width:420px;color:var(--muted);margin:0 0 16px;font-size:14px}.visually-hidden{clip-path:inset(50%);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}.code-input-wrapper{grid-template-columns:minmax(0,1fr) auto;gap:10px;display:grid}#code-input{border:1px solid var(--line);background:var(--ink);width:100%;min-width:0;min-height:52px;color:var(--text);font:22px/1.3 var(--mono);letter-spacing:.18em;border-radius:8px;padding:10px 16px;transition:border-color .2s,box-shadow .2s}#code-input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px #e58a5726}#code-input::placeholder{color:#a28f7973;letter-spacing:.04em;font-size:16px}#code-input[aria-invalid=true]{border-color:#ff8a62}.scanner-panel{justify-items:start;gap:8px;margin-top:12px;display:grid}.scanner-panel .secondary-btn{min-height:0;color:var(--muted);background:0 0;border-color:#0000;padding:6px 0;font-weight:500}.scanner-status:empty{display:none}.scanner-status{min-width:0;color:var(--muted);margin:0;font-size:13px}html.scanning,html.scanning body{overflow:hidden}.scanner-overlay{z-index:50;background:#000;height:100dvh;position:fixed;inset:0}.scanner-video{object-fit:cover;width:100%;height:100%;position:absolute;inset:0}.scanner-frame{aspect-ratio:1;width:min(68vw,46dvh,320px);box-shadow:0 0 0 100vmax #0000008c, inset 0 0 0 2px var(--accent);pointer-events:none;border-radius:18px;position:absolute;top:42%;left:50%;transform:translate(-50%,-50%)}.scanner-bar{padding:18px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));background:linear-gradient(#0000,#000c 35%);justify-content:space-between;align-items:center;gap:16px;display:flex;position:absolute;bottom:0;left:0;right:0}.scanner-title{color:var(--text);margin:0;font-size:16px;font-weight:550}.scanner-live{color:var(--muted);margin:2px 0 0;font-size:13px}.spinner{border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;width:22px;height:22px;animation:.8s linear infinite spin;display:block}@keyframes spin{to{transform:rotate(360deg)}}.progress-topline{align-items:baseline;gap:12px;display:flex}.progress-mode{color:var(--faint);font:11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;flex:1}.progress-percent{color:var(--text);font:600 32px/1 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums;order:-1}.cancel-btn{min-height:44px;font:12px var(--mono);padding:7px 11px}.progress-bar{border:1px solid var(--line);background:var(--ink);border-radius:99px;height:8px;margin:16px 0 14px;position:relative;overflow:visible}.progress-fill{border-radius:inherit;background:linear-gradient(90deg, var(--accent-soft), var(--accent));transform-origin:0;width:100%;height:100%;transition:transform .14s ease-out;position:relative;overflow:hidden;transform:scaleX(0)}.progress-fill:after{content:"";background:linear-gradient(100deg,#0000 30%,#ffe4bf52 50%,#0000 70%);animation:2.6s ease-in-out infinite progress-glint;position:absolute;inset:0;transform:translate(-100%)}@keyframes progress-glint{to{transform:translate(100%)}}.progress-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;display:grid}.progress-stats span{border:1px solid var(--line);background:var(--panel);border-radius:5px;gap:4px;min-width:0;padding:10px;display:grid}.progress-stats b{color:var(--faint);font:10px var(--mono);text-transform:uppercase}.progress-stats em{font-variant-numeric:tabular-nums;min-width:0;color:var(--text);font:12px var(--mono);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.result-mark{width:52px;height:52px;color:var(--accent);border:1px solid #e58a5766;border-radius:6px;place-items:center;display:inline-grid}.result-section,.connecting-section{text-align:left;grid-template-columns:52px minmax(0,1fr);align-content:center;align-items:start;gap:18px;min-height:210px;padding:26px 0 4px;display:grid}.result-copy{min-width:0}.result-title{color:var(--text);letter-spacing:-.02em;overflow-wrap:anywhere;margin:0;font-size:21px;font-weight:550;line-height:1.25}.result-actions{flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;display:flex}.result-section:not(.hidden) .result-mark{animation:.45s cubic-bezier(.2,.8,.2,1) both mark-in}@keyframes mark-in{0%{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}.result-section.error .result-mark{color:#ff8a62;background:#5a160b99;border-color:#ff5d2a80}.result-detail{color:var(--muted);font:12px/1.5 var(--mono);overflow-wrap:anywhere;margin:4px 0 0}.complete-section .result-mark{color:#7fd18b;border-color:#7fd18b66}.redownload-list .secondary-btn{text-overflow:ellipsis;white-space:nowrap;max-width:100%;overflow:hidden}.result-section .error-message{color:#ffb08f;font:14px/1.5 Inter,system-ui,sans-serif}.redownload-list{flex-wrap:wrap;gap:8px;margin:0;display:flex}.redownload-list a{border:1px solid var(--line);max-width:100%;color:var(--text);text-overflow:ellipsis;white-space:nowrap;border-radius:5px;padding:10px 14px;text-decoration:none;overflow:hidden}.redownload-list a:hover{border-color:var(--accent)}.watermark{z-index:1;color:var(--faint);font:11px var(--mono);text-align:center;margin:0 auto;padding:0 20px 20px;position:relative}.watermark a{color:var(--text)}.noscript-message{background:var(--block);color:var(--text);text-align:center;padding:16px;position:fixed;bottom:16px;left:16px;right:16px}.share-transfer-page .brand-lockup h1{display:inline}.share-transfer-page .tagline{margin-left:16px;display:inline}.share-transfer-page .brand-note{margin-top:28px}.share-description{letter-spacing:-.035em;max-width:350px;margin:16px 0 0;font-size:clamp(23px,2.7vw,34px);line-height:1.2}.share-transfer-page .share-panel{border-top:0;margin-top:0;padding-top:20px}.share-transfer-page .status{margin-top:0}.share-download{margin-top:16px}.bundle-files{border-top:1px solid var(--line);gap:6px;margin:14px 0 0;padding:12px 0 0;list-style:none;display:grid}.bundle-files li{justify-content:space-between;gap:14px;min-width:0;display:flex}.bundle-files a{overflow-wrap:anywhere;min-width:0;color:inherit}.bundle-files span{color:var(--muted);font:12px var(--mono);flex:none}.agent-offer{border-top:1px solid var(--line);grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 14px;margin-top:16px;padding:16px 0 0;display:grid}.agent-offer strong{overflow-wrap:anywhere;min-width:0}.agent-offer span{color:var(--muted);font:12px var(--mono);grid-column:1}.agent-offer button{grid-area:1/2/span 2}.agent-progress{margin-top:18px}.agent-progress .progress-bar{margin:10px 0}.agent-progress>span{color:var(--muted);font:12px var(--mono)}.terminal-share{border-top:1px solid var(--line);gap:10px;margin-top:16px;padding:16px 0 0;display:grid}.terminal-share #share-code{letter-spacing:.12em;font-size:clamp(38px,5vw,52px);font-weight:700;line-height:1}.terminal-share .code-help{max-width:none;margin:0}.terminal-share #receive-command{border:1px solid var(--line);background:var(--block);color:var(--text);font:13px var(--mono);overflow-wrap:anywhere;border-radius:8px;padding:10px 12px;display:block}.terminal-share #share-link{min-width:0;color:var(--muted);overflow-wrap:anywhere;font-size:12px;font-weight:400}.terminal-share .result-actions{flex-wrap:wrap;gap:8px;display:flex}.share-transfer-page .watermark{grid-column:1/-1;padding:0}@media (width<=760px){.shell{flex-direction:column;justify-content:center;width:min(600px,100% - 40px);padding:32px 0 28px;display:flex}.brand-rail,.workbench{width:100%}.brand-name h1,.brand-lockup h1{font-size:44px}.brand-intro{max-width:none;margin:16px 0 12px;font-size:22px}.state-board{margin-top:18px}.workbench{margin-top:28px}.share-description{max-width:none;margin-top:12px;font-size:22px}.share-transfer-page .brand-note{margin-top:14px}.share-transfer-page .watermark{margin-top:22px}}@media (width<=480px){.shell{width:100%;padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));justify-content:flex-start}.brand-rail{padding:0 4px}.brand-name h1,.brand-lockup h1{font-size:39px}.brand-intro{margin:8px 0 0;font-size:20px}.install{margin-top:16px}.brand-note,.install-alt{display:none}.state-board{margin-top:12px}.workbench{border-radius:14px;margin-top:24px;padding:0 12px 12px}.mode-selector{width:100%;margin:12px 0 8px}.mode-btn{min-height:42px}.view.active{min-height:272px}.drop-zone{grid-template-rows:none;grid-template-columns:minmax(0,1fr);gap:16px;padding:24px}.drop-mark{grid-area:1/1;width:44px;height:44px}.drop-copy{grid-row:2}.drop-mark svg{width:18px;height:18px}.drop-zone h2{font-size:18px}.drop-zone p{font-size:14px}.drop-zone .primary-btn{grid-area:3/1;justify-self:stretch;width:100%}.result-section,.connecting-section{grid-template-columns:44px minmax(0,1fr);gap:12px;min-height:0;padding:23px 0 4px}.result-mark{width:44px;height:44px}.result-title{font-size:18px}.result-actions{flex-direction:column;align-items:stretch}.result-actions .primary-btn{width:100%}.redownload-list{flex-direction:column;align-items:stretch;width:100%}.redownload-list a{text-align:center;width:100%}.primary-btn,.secondary-btn{min-height:48px}.input-section{padding:24px}.section-title{font-size:18px}.section-subtitle{margin-bottom:16px;font-size:14px}.progress-percent{font-size:26px}.file-header{gap:4px;display:grid}.share-grid{grid-template-columns:1fr}.qr-block{padding:14px}#share-qr{width:min(100%,148px)!important}.code-block #share-code{font-size:38px}.share-actions{grid-template-columns:repeat(2,minmax(0,1fr));display:grid}.code-input-wrapper{grid-template-columns:1fr}.scanner-panel{justify-items:start}.scanner-panel button{width:auto}.progress-mode{font-size:15px}.cancel-btn{min-height:48px}.progress-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.progress-stats span:last-child{grid-column:1/-1}.agent-offer{grid-template-columns:1fr}.agent-offer span,.agent-offer button{grid-area:auto/1}.agent-offer button{width:100%;margin-top:8px}.watermark{padding-bottom:calc(18px + env(safe-area-inset-bottom))}}@media (prefers-reduced-motion:reduce){*,:before,:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+<script type="module" crossorigin="" src="/assets/index-CAq_iO25.js"></script>
+</head>
+<body>
+
+    <canvas id="ambient-dots" class="ambient-dots" aria-hidden="true" width="1920" height="670"></canvas>
+    <main class="shell">
+      <section class="brand-rail" aria-label="cd status board">
+        <div class="brand-lockup">
+          <div class="brand-name">
+            <h1>cd</h1>
+            <p class="tagline">/di·rect/</p>
+          </div>
+          <p class="brand-intro">
+            Direct <span class="route"><span class="swap in">terminal</span>-to-<span class="swap in">browser</span></span><br>file transfer.
+          </p>
+          <div class="install">
+            <button id="install-toggle" class="install-toggle" type="button" aria-expanded="false" aria-controls="install-panel">
+              <span class="install-dot" aria-hidden="true"></span>Get the <code>cdx</code> CLI<span class="install-chevron" aria-hidden="true"></span>
+            </button>
+            <div id="install-panel" class="install-panel" inert="">
+            <div class="install-body">
+            <button id="install-copy" class="install-cmd" type="button" aria-label="Copy install command">
+              <span class="install-prompt" aria-hidden="true">$</span>
+              <code>curl -fsSL https://cd.yash0.in/install.sh | sh</code>
+              <span class="install-hint">copy</span>
+            </button>
+            <span class="install-alt"><span class="install-alt-os">Windows</span> <code>irm https://cd.yash0.in/install.ps1 | iex</code></span>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="state-board" aria-live="polite" hidden>
+          <span class="state-label">state</span>
+          <strong id="app-state" data-state="idle">ready</strong>
+        </div>
+      </section>
+
+      <section class="workbench" aria-label="file transfer app">
+        <div class="mode-selector" role="tablist" aria-label="Choose transfer mode">
+          <button id="send-mode-btn" class="mode-btn active" type="button" role="tab" aria-selected="true" aria-controls="sender-view" tabindex="0">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>Send
+          </button>
+          <button id="receive-mode-btn" class="mode-btn" type="button" role="tab" aria-selected="false" aria-controls="receiver-view" tabindex="-1">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>Receive
+          </button>
+        </div>
+
+        <section id="sender-view" class="view active" role="tabpanel" aria-labelledby="send-mode-btn">
+          <div id="drop-zone" class="drop-zone">
+            <input id="file-input" type="file" multiple hidden>
+            <span class="drop-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6.5 9.5L12 4l5.5 5.5" /><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg></span>
+            <div class="drop-copy">
+              <h2>Send files</h2>
+              <p>Drop them here, or pick from your device.</p>
+            </div>
+            <button id="select-file-btn" class="primary-btn" type="button">Choose files</button>
+          </div>
+
+          <div id="sender-file-info" class="file-info hidden">
+            <span class="panel-kicker">sending</span>
+            <div class="file-header">
+              <span class="file-name"></span>
+              <span class="file-size"></span>
+            </div>
+            <span class="file-subtext"></span>
+          </div>
+
+          <div id="sender-code-section" class="share-panel hidden">
+            <div class="share-grid">
+              <div class="code-block">
+                <span class="panel-kicker">share this code</span>
+                <strong id="share-code"></strong>
+                <p class="code-help">On the other device, open <strong>cd.yash0.in</strong> → Receive and type it. In a terminal:</p>
+                <code id="receive-command" class="receive-command"></code>
+              </div>
+              <div class="qr-block">
+                <span class="panel-kicker">or scan it</span>
+                <canvas id="share-qr" width="220" height="220" aria-label="QR code that opens this transfer"></canvas>
+              </div>
+            </div>
+
+            <div class="share-actions">
+              <button id="copy-code-btn" class="secondary-btn" type="button">Copy code</button>
+              <button id="copy-cmd-btn" class="secondary-btn" type="button">Copy command</button>
+              <button id="copy-link-btn" class="secondary-btn" type="button">Copy private link</button>
+            </div>
+
+            <p class="status" role="status" id="sender-status"></p>
+          </div>
+
+          <div id="sender-progress" class="progress-section hidden">
+            <div class="progress-topline">
+              <span class="progress-mode">sending</span>
+              <strong class="progress-percent">0%</strong>
+              <button id="sender-cancel-btn" class="cancel-btn" type="button">Cancel</button>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+              <span><b>speed</b><em class="progress-speed">–</em></span>
+              <span><b>moved</b><em class="progress-transferred">–</em></span>
+              <span><b>left</b><em class="progress-eta">–</em></span>
+            </div>
+          </div>
+
+          <div id="sender-error" class="result-section error hidden" role="alert">
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg></span>
+            <div class="result-copy">
+              <p class="result-title">That didn’t work</p>
+              <p class="error-message result-detail"></p>
+              <div class="result-actions">
+                <button id="sender-retry-btn" class="primary-btn" type="button">Try again</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="sender-complete" class="result-section complete-section hidden">
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <div class="result-copy">
+              <p id="sender-complete-message" class="result-title">Sent</p>
+              <p id="sender-complete-detail" class="result-detail"></p>
+              <div class="result-actions">
+                <button id="send-another-btn" class="primary-btn" type="button">Send more files</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="receiver-view" class="view hidden" role="tabpanel" aria-labelledby="receive-mode-btn">
+          <div id="receiver-input-section" class="input-section">
+            <h2 class="section-title">Receive files</h2>
+            <p class="section-subtitle">Enter the code to start downloading, or scan the QR.</p>
+            <label for="code-input" class="visually-hidden">Share code</label>
+            <div class="code-input-wrapper">
+              <input id="code-input" type="text" maxlength="512" placeholder="Enter code" aria-describedby="scanner-status" autocomplete="off" autocapitalize="none" autocorrect="off" enterkeyhint="go" spellcheck="false" inputmode="numeric">
+              <button id="connect-btn" class="primary-btn" type="button">Connect</button>
+            </div>
+
+            <div class="scanner-panel">
+              <button id="scan-qr-btn" class="secondary-btn" type="button">Scan QR</button>
+              <p id="scanner-status" class="scanner-status" role="status"></p>
+            </div>
+          </div>
+
+          <div id="receiver-connecting" class="connecting-section hidden">
+            <span class="result-mark" aria-hidden="true"><span class="spinner"></span></span>
+            <div class="result-copy">
+              <p class="result-title">Finding the sender…</p>
+              <p class="result-detail">This usually takes a second or two.</p>
+              <div class="result-actions">
+                <button id="receiver-connecting-cancel-btn" class="secondary-btn" type="button">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="receiver-relay" class="hidden">
+            <div id="receiver-relay-panel"></div>
+            <div class="result-actions">
+              <button id="relay-done-btn" class="secondary-btn" type="button">Receive another</button>
+            </div>
+          </div>
+
+          <div id="receiver-file-info" class="file-info hidden">
+            <span class="panel-kicker">incoming</span>
+            <div class="file-header">
+              <span class="file-name"></span>
+              <span class="file-size"></span>
+            </div>
+            <span class="file-subtext"></span>
+          </div>
+
+          <div id="receiver-progress" class="progress-section hidden">
+            <div class="progress-topline">
+              <span class="progress-mode">receiving</span>
+              <strong class="progress-percent">0%</strong>
+              <button id="receiver-cancel-btn" class="cancel-btn" type="button">Cancel</button>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-fill"></div>
+            </div>
+            <div class="progress-stats">
+              <span><b>speed</b><em class="progress-speed">–</em></span>
+              <span><b>moved</b><em class="progress-transferred">–</em></span>
+              <span><b>left</b><em class="progress-eta">–</em></span>
+            </div>
+          </div>
+
+          <div id="receiver-complete" class="result-section complete-section hidden">
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <div class="result-copy">
+              <p id="receiver-complete-message" class="result-title">Saved</p>
+              <p id="receiver-complete-detail" class="result-detail"></p>
+              <div class="result-actions">
+                <button id="receive-another-btn" class="primary-btn" type="button">Receive another</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="receiver-error" class="result-section error hidden" role="alert">
+            <span class="result-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg></span>
+            <div class="result-copy">
+              <p class="result-title">That didn’t work</p>
+              <p class="error-message result-detail"></p>
+              <div class="result-actions">
+                <button id="retry-btn" class="primary-btn" type="button">Try again</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="qr-reader" class="scanner-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="scanner-title">
+      <video id="qr-video" class="scanner-video" muted playsinline></video>
+      <div class="scanner-frame" aria-hidden="true"></div>
+      <div class="scanner-bar">
+        <div>
+          <p id="scanner-title" class="scanner-title">Scan the sender’s QR code</p>
+          <p id="scanner-live" class="scanner-live" role="status">Starting the camera…</p>
+        </div>
+        <button id="stop-scan-btn" class="secondary-btn" type="button">Close</button>
+      </div>
+    </div>
+
+    <footer class="watermark">
+      Made by <a href="https://yash0.in" target="_blank" rel="noreferrer">yashas</a>
+    </footer>
+
+    <noscript><p class="noscript-message">Enable JavaScript to send and receive files.</p></noscript>
+  <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d64ef5ea50c6f3',t:'MTc5MjQ4MTMzNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;d0af7d476b374efb92ca98ab43a5c182&quot;,&quot;r&quot;:1,&quot;spa&quot;:2}" crossorigin="anonymous"></script>
+
+
+
+</body>
+</html>

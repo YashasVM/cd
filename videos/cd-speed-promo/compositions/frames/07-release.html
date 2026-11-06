@@ -1,0 +1,56 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f7-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f7-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f7-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f7-line { display: block; }
+      .f7-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f7-wi { display: inline-block; }
+      .f7-gap { display: inline-block; width: 0.24em; }
+      .f7-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f7-slot-in { position: absolute; inset: 0; }
+      .f7-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f7-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f7-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f7-accent { color: #E58A57; }
+
+      #f7-s { top: 250px; font-size: 176px; }
+      #f7-slot { width: 2.7em; }
+      .f7-item { position: absolute; left: 30px; right: 26px; top: 50%; margin-top: -42px; height: 84px; display: flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 550; color: #E4D4B6; line-height: 1.15; }
+      .f7-bullet { flex: none; width: 16px; height: 16px; border-radius: 50%; background: #E58A57; }
+      #f7-support { top: 620px; }
+
+  </style>
+  <div data-hf-id="hf-8to4" id="root" data-composition-id="07-release" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-20n7" id="f7-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-b3ch" id="f7-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-ns0q" class="f7-sentence" id="f7-s">
+      <span data-hf-id="hf-1r4r" class="f7-line"><span data-hf-id="hf-2z84" class="f7-w"><span data-hf-id="hf-ine7" class="f7-wi" id="f7-a0">the</span></span><span data-hf-id="hf-m7v3" class="f7-gap"></span><span data-hf-id="hf-vu98" class="f7-w"><span data-hf-id="hf-ahjr" class="f7-wi" id="f7-a1">rest</span></span><span data-hf-id="hf-j5v3" class="f7-gap"></span><span data-hf-id="hf-mkhf" class="f7-slot" id="f7-slot"><span data-hf-id="hf-9ipv" class="f7-slot-in" id="f7-slot-in"><span data-hf-id="hf-w4cz" class="f7-item" id="f7-i0"><span data-hf-id="hf-1r3d" class="f7-bullet"></span><span data-hf-id="hf-v69t">direct links across networks</span></span><span data-hf-id="hf-s68y" class="f7-item" id="f7-i1"><span data-hf-id="hf-yyql" class="f7-bullet"></span><span data-hf-id="hf-4vq4">browser sends that keep moving</span></span><span data-hf-id="hf-o84x" class="f7-item" id="f7-i2"><span data-hf-id="hf-05no" class="f7-bullet"></span><span data-hf-id="hf-a9gc">resumable sends to your phone</span></span></span></span></span>
+      <span data-hf-id="hf-zumz" class="f7-line"><span data-hf-id="hf-unc5" class="f7-w"><span data-hf-id="hf-5y7p" class="f7-wi" id="f7-b0">got</span></span><span data-hf-id="hf-irk2" class="f7-gap"></span><span data-hf-id="hf-v1n6" class="f7-w"><span data-hf-id="hf-mm20" class="f7-wi" id="f7-b1">better.</span></span></span>
+    </div>
+    <div data-hf-id="hf-7pju" class="f7-support" id="f7-support">Plus every fix in the latest release.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f7-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+tl.fromTo("#f7-a1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.080);
+    tl.fromTo("#f7-slot-in", { opacity: 0 }, { opacity: 1, duration: 0.2 }, B);
+    tl.set("#f7-i0", { opacity: 0 }, 0);
+    tl.fromTo("#f7-i0", { opacity: 0, yPercent: 40 }, { opacity: 1, yPercent: 0, duration: 0.22, ease: "power3.out" }, 0.458);
+    tl.to("#f7-i0", { opacity: 0, yPercent: -40, duration: 0.12, ease: "power2.in" }, 1.234);
+    tl.set("#f7-i1", { opacity: 0 }, 0);
+    tl.fromTo("#f7-i1", { opacity: 0, yPercent: 40 }, { opacity: 1, yPercent: 0, duration: 0.22, ease: "power3.out" }, 1.374);
+    tl.to("#f7-i1", { opacity: 0, yPercent: -40, duration: 0.12, ease: "power2.in" }, 2.151);
+    tl.set("#f7-i2", { opacity: 0 }, 0);
+    tl.fromTo("#f7-i2", { opacity: 0, yPercent: 40 }, { opacity: 1, yPercent: 0, duration: 0.22, ease: "power3.out" }, 2.291);
+tl.fromTo("#f7-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.916);
+tl.fromTo("#f7-b1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.996);
+    tl.fromTo("#f7-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.291);
+    window.__timelines["07-release"] = tl;
+  </script>
+</template>

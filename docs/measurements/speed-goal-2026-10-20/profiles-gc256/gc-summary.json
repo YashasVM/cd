@@ -1,0 +1,18 @@
+{
+  "sender": {
+    "gcCycles": 87,
+    "nonForcedCycles": 86,
+    "lastGCStartSeconds": 0.998,
+    "lastGCCPUPercentage": 1,
+    "totalSTWMilliseconds": 4.021,
+    "totalConcurrentMarkWallMilliseconds": 63.78
+  },
+  "receiver": {
+    "gcCycles": 95,
+    "nonForcedCycles": 94,
+    "lastGCStartSeconds": 0.974,
+    "lastGCCPUPercentage": 1,
+    "totalSTWMilliseconds": 10.082,
+    "totalConcurrentMarkWallMilliseconds": 35.32
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "cmd/cdx/sender.go": "1df4cf12a4ff71294073ee062636d8157ea8811d5e3a5d8d5792c93113fb0e56",
+  "cmd/cdx/direct_candidates_test.go": "b0f2cd2f9f8a84be5af09f048f883dabb3c8b83581bc651afcf3381368575047",
+  "src/direct-link.js": "873b12ad8cc13fd9952ef142af3b40b986a70ded3e0ece1aede856de4fa72621",
+  "src/direct-link.test.js": "7556a82781687c0be27560d0bc2d92be8322a4ed7d0039a42b13e2f754901c02",
+  "src/relay-sender.js": "39296e4c0f326f66f8549b9cd319c37f0c705c319e444aa25048c7ea9909b965",
+  "src/relay-sender.test.js": "b0fef7c01b55c0e0935ccd7f6d9515ef534b5660099a9fa5dd9183d0784cc046",
+  "scripts/verify-transports.mjs": "fbf65877c2b3cd18f8b3a219f0730d7b60adce086dd14287888446a61ea4c4d4",
+  "scripts/bench-assembly.mjs": "40fb14ebc28520889db5bc2b18762f7ecde2e644218c8484a2f58ec5e4b4ede3"
+}

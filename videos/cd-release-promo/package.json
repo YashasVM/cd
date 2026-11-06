@@ -1,0 +1,11 @@
+{
+  "name": "cd-release-promo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.177 preview",
+    "check": "npx --yes hyperframes@0.8.177 check",
+    "render": "npx --yes hyperframes@0.8.177 render",
+    "publish": "npx --yes hyperframes@0.8.177 publish"
+  }
+}

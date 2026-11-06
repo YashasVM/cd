@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.yash0.cd",
+      "sha256_cert_fingerprints": [
+        "4E:F6:3D:E6:18:1F:DA:39:F9:86:47:83:B2:03:C7:74:B2:03:2A:25:E4:35:7F:77:4A:AE:86:29:EC:2D:BE:77"
+      ]
+    }
+  }
+]

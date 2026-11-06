@@ -43,3 +43,7 @@ test('rechunk emits fixed-size pieces', async () => {
   for await (const piece of rechunk(source.stream(), 4096)) sizes.push(piece.length);
   assert.deepEqual(sizes, [4096, 4096, 1808]);
 });
+
+test('zip rejects names that overflow the UTF-8 filename length field', () => {
+  assert.throws(() => createZipBundle([new File(['x'], 'é'.repeat(32768))]), /name too long/);
+});

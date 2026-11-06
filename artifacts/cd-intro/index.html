@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script><style>*{box-sizing:border-box;margin:0}body{width:1920px;height:1080px;overflow:hidden;background:#fafafa;color:#202020;font-family:Inter}#world{position:absolute;inset:0;transform-origin:960px 540px}.title{position:absolute;left:180px;top:160px;font-size:125px;font-weight:500;letter-spacing:-7px;line-height:1.08;overflow:hidden}.title span{display:inline-block}.note{font-size:30px;letter-spacing:-.7px;color:#777;position:absolute;left:185px;top:325px}#file{position:absolute;left:810px;top:450px;width:300px;height:360px;background:#e9e9ed;border-radius:24px;transform-origin:center;box-shadow:0 16px 30px #00000008;overflow:hidden}#fold{position:absolute;right:0;top:0;width:70px;height:70px;background:#d2d2d8;clip-path:polygon(0 0,100% 100%,0 100%)}.line{position:absolute;left:45px;width:150px;height:10px;border-radius:5px;background:#babac3}#filename{position:absolute;bottom:40px;left:42px;font-size:29px;color:#555}#code{position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:24px;font-size:100px;letter-spacing:-5px;font-weight:500}#code span{display:inline-block}#devices{position:absolute;inset:0}.device{position:absolute;top:410px;width:350px;height:310px;border:5px solid #dadade;border-radius:25px;background:#f3f3f5}.device:after{content:'';position:absolute;left:80px;right:80px;bottom:-35px;height:6px;background:#dadade;border-radius:10px}#left{left:220px}#right{left:1350px}#track{position:absolute;left:550px;top:560px;width:820px;height:4px;background:#e0e0e5}#trackfill{height:100%;background:#20b66b;transform-origin:left}#check{position:absolute;left:66px;top:56px;font-size:160px;color:white}#flood{position:absolute;width:220px;height:220px;border-radius:50%;background:#20b66b;left:1330px;top:450px}#finish{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}#brand{font-size:260px;font-weight:600;letter-spacing:-18px;color:white}#tag{font-size:37px;color:white;margin-top:18px;letter-spacing:-1px}#url{font-size:28px;color:white;margin-top:80px}#sent{position:absolute;left:230px;top:765px;font-size:30px;color:#777}#received{position:absolute;left:1360px;top:765px;font-size:30px;color:#169855}</style></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="16" data-width="1920" data-height="1080"><div id="stage" class="clip" data-start="0" data-duration="16"><div id="world"><div id="t1" class="title"><span>Files.</span> <span>On the move.</span></div><div id="n1" class="note">Meet cd.</div><div id="t2" class="title"><span>One file.</span> <span>One code.</span></div><div id="t3" class="title"><span>From you.</span> <span>To them.</span></div><div id="devices"><div id="track"><div id="trackfill"></div></div><div id="left" class="device"></div><div id="right" class="device"></div><div id="sent">Your device</div><div id="received">Their device</div></div><div id="file"><div id="fold"></div><div class="line" style="top:110px"></div><div class="line" style="top:145px;width:205px"></div><div class="line" style="top:180px;width:120px"></div><div id="filename">hello.zip</div><div id="code"><span>4</span><span>8</span><span>2</span><span>9</span><span>1</span></div><div id="check">✓</div></div></div><div id="flood"></div><div id="finish"><div id="brand">cd</div><div id="tag">Fast, private file handoffs.</div><div id="url">cd.yash0.in</div></div></div></div><script>
+const tl=gsap.timeline({paused:true});
+tl.set('#t2,#t3,#devices,#code,#check,#flood,#finish',{opacity:0},0);
+tl.fromTo('#t1 span',{y:160},{y:0,duration:.85,stagger:.12,ease:'power4.out'},.1);
+tl.fromTo('#n1',{opacity:0},{opacity:1,duration:.4},.65);
+tl.fromTo('#file',{x:-1200,y:220,rotation:-35,scale:.7},{x:0,y:0,rotation:0,scale:1,duration:1.3,ease:'power4.out'},.35);
+tl.to('#file',{x:150,y:-45,rotation:9,duration:.65,ease:'power2.inOut'},1.8);
+tl.to('#t1 span',{y:-160,stagger:.05,duration:.45,ease:'power3.in'},2.4);tl.to('#n1',{opacity:0,duration:.2},2.45);
+tl.set('#t2',{opacity:1},2.6);tl.fromTo('#t2 span',{y:160},{y:0,duration:.8,stagger:.1,ease:'power4.out'},2.6);
+tl.to('#file',{x:-190,y:15,rotation:0,width:680,height:210,borderRadius:105,duration:.9,ease:'power3.inOut'},2.65);
+
+tl.to('#fold,.line,#filename',{opacity:0,scale:.7,duration:.3},2.7);
+tl.to('#code',{opacity:1,duration:.2},3.1);tl.fromTo('#code span',{y:140,rotation:12},{y:0,rotation:0,duration:.75,stagger:.065,ease:'power4.out'},3.05);
+tl.to('#world',{scale:1.12,x:-50,y:-30,duration:.7,ease:'power2.inOut'},4.25);
+tl.to('#code span',{y:-140,stagger:.04,duration:.4,ease:'power3.in'},5.05);
+tl.to('#t2 span',{y:-160,stagger:.06,duration:.4,ease:'power3.in'},5.05);
+tl.to('#world',{scale:1,x:0,y:0,duration:.85,ease:'power3.inOut'},5.1);
+tl.to('#file',{x:-515,y:10,width:200,height:210,borderRadius:18,duration:.9,ease:'power3.inOut'},5.1);
+tl.to('#fold,.line',{opacity:1,scale:.6,duration:.35},5.55);
+tl.to('#devices',{opacity:1,duration:.5},5.4);tl.fromTo('.device',{scale:.8},{scale:1,duration:.8,ease:'power4.out'},5.35);
+tl.set('#t3',{opacity:1},5.4);tl.fromTo('#t3 span',{y:160},{y:0,stagger:.15,duration:.8,ease:'power4.out'},5.4);
+tl.fromTo('#trackfill',{scaleX:0},{scaleX:1,duration:1.8,ease:'power2.inOut'},6.5);
+tl.to('#file',{x:50,y:-45,rotation:-8,duration:.85,ease:'power2.in'},6.6);
+tl.to('#file',{x:615,y:10,rotation:0,duration:1,ease:'power4.out'},7.45);
+tl.to('#file',{backgroundColor:'#20b66b',borderRadius:100,duration:.45},8.35);tl.to('#fold,.line',{opacity:0,duration:.2},8.35);
+tl.to('#check',{opacity:1,duration:.2},8.55);tl.fromTo('#check',{scale:.2,rotation:-25},{scale:.7,rotation:0,duration:.7,ease:'back.out(1.3)'},8.45);
+tl.to('#t3 span',{y:-160,stagger:.06,duration:.5,ease:'power3.in'},9.15);
+tl.set('#flood',{opacity:1},9.45);tl.fromTo('#flood',{scale:0},{scale:14,duration:1.2,ease:'power3.inOut'},9.45);
+tl.set('#finish',{opacity:1},10.25);tl.fromTo('#brand',{y:180,scale:.65,opacity:0},{y:0,scale:1,opacity:1,duration:.95,ease:'power4.out'},10.25);
+tl.fromTo('#tag',{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0 0% 0 0)',duration:.8,ease:'power2.inOut'},10.85);
+tl.fromTo('#url',{opacity:0},{opacity:1,duration:.6},11.5);
+window.__timelines={main:tl};</script></body></html>

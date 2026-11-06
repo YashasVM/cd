@@ -1,0 +1,71 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f2-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f2-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f2-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f2-line { display: block; }
+      .f2-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f2-wi { display: inline-block; }
+      .f2-gap { display: inline-block; width: 0.24em; }
+      .f2-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f2-slot-in { position: absolute; inset: 0; }
+      .f2-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f2-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f2-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f2-accent { color: #E58A57; }
+
+      #f2-s { top: 250px; font-size: 200px; }
+      #f2-slot { width: 2.75em; }
+      #f2-term { position: absolute; left: 34px; right: 20px; top: 50%; margin-top: -24px; height: 48px; display: flex; align-items: center; font-size: 37px; font-weight: 500; color: #E4D4B6; white-space: nowrap; }
+      #f2-prompt { color: #E58A57; margin-right: 0.6em; }
+      .f2-c { display: none; }
+      #f2-caret { display: inline-block; width: 0.55em; height: 1.05em; margin-left: 0.08em; background: #E4D4B6; }
+      #f2-support { top: 650px; }
+
+  </style>
+  <div data-hf-id="hf-bagp" id="root" data-composition-id="02-watch" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-bc74" id="f2-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-xht8" id="f2-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-q85g" class="f2-sentence" id="f2-s">
+      <span data-hf-id="hf-rk1s" class="f2-line"><span data-hf-id="hf-k3jx" class="f2-w"><span data-hf-id="hf-20ph" class="f2-wi" id="f2-a0">watch</span></span><span data-hf-id="hf-cq1m" class="f2-gap"></span><span data-hf-id="hf-7kg9" class="f2-slot" id="f2-slot"><span data-hf-id="hf-r58z" class="f2-slot-in" id="f2-slot-in">
+        <span data-hf-id="hf-ppi4" id="f2-term" class="f2-mono"><span data-hf-id="hf-pdsv" id="f2-prompt">$</span><span data-hf-id="hf-7772" class="f2-c" id="f2-c0">c</span><span data-hf-id="hf-oi4c" class="f2-c" id="f2-c1">d</span><span data-hf-id="hf-x2l5" class="f2-c" id="f2-c2">x</span><span data-hf-id="hf-qj3e" class="f2-c" id="f2-c3">&nbsp;</span><span data-hf-id="hf-y3qi" class="f2-c" id="f2-c4">s</span><span data-hf-id="hf-fvvn" class="f2-c" id="f2-c5">e</span><span data-hf-id="hf-qkcj" class="f2-c" id="f2-c6">n</span><span data-hf-id="hf-2vmm" class="f2-c" id="f2-c7">d</span><span data-hf-id="hf-e0kx" class="f2-c" id="f2-c8">&nbsp;</span><span data-hf-id="hf-um8a" class="f2-c" id="f2-c9">f</span><span data-hf-id="hf-3o77" class="f2-c" id="f2-c10">i</span><span data-hf-id="hf-59qv" class="f2-c" id="f2-c11">l</span><span data-hf-id="hf-ibil" class="f2-c" id="f2-c12">m</span><span data-hf-id="hf-ucvr" class="f2-c" id="f2-c13">.</span><span data-hf-id="hf-w2n7" class="f2-c" id="f2-c14">m</span><span data-hf-id="hf-wni6" class="f2-c" id="f2-c15">o</span><span data-hf-id="hf-n1gg" class="f2-c" id="f2-c16">v</span><span data-hf-id="hf-3g54" id="f2-caret"></span></span>
+      </span></span></span>
+      <span data-hf-id="hf-0jeg" class="f2-line"><span data-hf-id="hf-xtsh" class="f2-w"><span data-hf-id="hf-wflz" class="f2-wi" id="f2-b0">this.</span></span></span>
+    </div>
+    <div data-hf-id="hf-gp8g" class="f2-support" id="f2-support">1 GiB. cdx to cdx, same network.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f2-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+    tl.fromTo("#f2-slot-in", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, B);
+    tl.set("#f2-c0", { display: "inline-block" }, 0.608);
+    tl.set("#f2-c1", { display: "inline-block" }, 0.723);
+    tl.set("#f2-c2", { display: "inline-block" }, 0.837);
+    tl.set("#f2-c3", { display: "inline-block" }, 0.952);
+    tl.set("#f2-c4", { display: "inline-block" }, 1.066);
+    tl.set("#f2-c5", { display: "inline-block" }, 1.181);
+    tl.set("#f2-c6", { display: "inline-block" }, 1.295);
+    tl.set("#f2-c7", { display: "inline-block" }, 1.410);
+    tl.set("#f2-c8", { display: "inline-block" }, 1.524);
+    tl.set("#f2-c9", { display: "inline-block" }, 1.639);
+    tl.set("#f2-c10", { display: "inline-block" }, 1.753);
+    tl.set("#f2-c11", { display: "inline-block" }, 1.868);
+    tl.set("#f2-c12", { display: "inline-block" }, 1.982);
+    tl.set("#f2-c13", { display: "inline-block" }, 2.097);
+    tl.set("#f2-c14", { display: "inline-block" }, 2.211);
+    tl.set("#f2-c15", { display: "inline-block" }, 2.326);
+    tl.set("#f2-c16", { display: "inline-block" }, 2.441);
+    tl.set("#f2-caret", { opacity: 0 }, 2.555);
+    tl.set("#f2-caret", { opacity: 1 }, 2.784);
+    tl.set("#f2-caret", { opacity: 0 }, 3.013);
+    tl.set("#f2-caret", { opacity: 1 }, 3.242);
+    tl.fromTo("#f2-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 1.832);
+tl.fromTo("#f2-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 2.749);
+    window.__timelines["02-watch"] = tl;
+  </script>
+</template>

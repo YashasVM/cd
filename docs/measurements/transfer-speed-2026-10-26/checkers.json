@@ -1,0 +1,263 @@
+{
+  "root": "/home/yvm/code/cd",
+  "versions": {
+    "typescript": "Version 7.0.2",
+    "tsc-rs": "Version 7.1.0-dev",
+    "tsrs": "Version 7.1.0-dev.20260930.4 (tsrs 0.18.0-ts7.1.0-dev.20260929, microsoft/TypeScript@b85298b6a81f)"
+  },
+  "samples": [
+    {
+      "round": 0,
+      "name": "typescript",
+      "ms": 83.917672,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 0,
+      "name": "tsc-rs",
+      "ms": 37.626761,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 0,
+      "name": "tsrs",
+      "ms": 76.101716,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "name": "tsc-rs",
+      "ms": 44.657011,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "name": "tsrs",
+      "ms": 69.616556,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 1,
+      "name": "typescript",
+      "ms": 95.436749,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "name": "tsrs",
+      "ms": 65.075365,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "name": "typescript",
+      "ms": 83.613207,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 2,
+      "name": "tsc-rs",
+      "ms": 34.978164,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "name": "typescript",
+      "ms": 91.709073,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "name": "tsc-rs",
+      "ms": 35.706056,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 3,
+      "name": "tsrs",
+      "ms": 74.929454,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 4,
+      "name": "tsc-rs",
+      "ms": 36.735502,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 4,
+      "name": "tsrs",
+      "ms": 78.397241,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 4,
+      "name": "typescript",
+      "ms": 80.862232,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 5,
+      "name": "tsrs",
+      "ms": 61.141853,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 5,
+      "name": "typescript",
+      "ms": 76.049002,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 5,
+      "name": "tsc-rs",
+      "ms": 33.02257,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 6,
+      "name": "typescript",
+      "ms": 79.583287,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 6,
+      "name": "tsc-rs",
+      "ms": 32.517761,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 6,
+      "name": "tsrs",
+      "ms": 61.1707,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 7,
+      "name": "tsc-rs",
+      "ms": 34.890352,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 7,
+      "name": "tsrs",
+      "ms": 54.961199,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 7,
+      "name": "typescript",
+      "ms": 76.262687,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 8,
+      "name": "tsrs",
+      "ms": 63.650194,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 8,
+      "name": "typescript",
+      "ms": 76.487056,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "round": 8,
+      "name": "tsc-rs",
+      "ms": 40.63428,
+      "status": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "diagnostics": {
+    "typescript": {
+      "ms": 57.388639,
+      "status": 1,
+      "stdout": "../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.\n../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(2,7): error TS2741: Property 'required' is missing in type '{}' but required in type '{ required: string; }'.\n",
+      "stderr": ""
+    },
+    "tsc-rs": {
+      "ms": 28.293635,
+      "status": 2,
+      "stdout": "../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.\n../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(2,7): error TS2741: Property 'required' is missing in type '{}' but required in type '{ required: string; }'.\n",
+      "stderr": ""
+    },
+    "tsrs": {
+      "ms": 52.658809,
+      "status": 2,
+      "stdout": "../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(1,7): error TS2322: Type 'string' is not assignable to type 'number'.\n../../../../tmp/cd-checker-diagnostics-NlNayU/bad.ts(2,7): error TS2741: Property 'required' is missing in type '{}' but required in type '{ required: string; }'.\n",
+      "stderr": ""
+    }
+  },
+  "summary": {
+    "typescript": {
+      "medianMs": 80.862232,
+      "minMs": 76.049002,
+      "maxMs": 95.436749
+    },
+    "tsc-rs": {
+      "medianMs": 35.706056,
+      "minMs": 32.517761,
+      "maxMs": 44.657011
+    },
+    "tsrs": {
+      "medianMs": 65.075365,
+      "minMs": 54.961199,
+      "maxMs": 78.397241
+    }
+  }
+}

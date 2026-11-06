@@ -1,0 +1,115 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 9
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 17.197,
+        "selector": "#f5-b2",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 818.84,
+          "top": 468.83,
+          "right": 1228.34,
+          "bottom": 681.83,
+          "width": 409.5,
+          "height": 213
+        },
+        "containerSelector": "#f5-bg",
+        "text": "send.",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.33,
+        "dataAttributes": {},
+        "sourceFile": "compositions/frames/05-pair.html",
+        "bbox": {
+          "x": 818.84,
+          "y": 468.83,
+          "width": 409.5,
+          "height": 213
+        },
+        "firstSeen": 17.197,
+        "lastSeen": 17.197,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          17.197
+        ]
+      }
+    ],
+    "duration": 28.141,
+    "samples": [
+      1.563,
+      4.69,
+      7.817,
+      10.944,
+      14.071,
+      17.197,
+      20.324,
+      23.451,
+      26.578
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.563,
+      7.817,
+      14.071,
+      20.324,
+      26.578
+    ],
+    "checked": 33,
+    "passed": 33
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

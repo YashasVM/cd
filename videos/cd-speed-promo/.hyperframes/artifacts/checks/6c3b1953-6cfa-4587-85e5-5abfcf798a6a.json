@@ -1,0 +1,241 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "gsap_repeated_fromto_without_baseline",
+        "severity": "warning",
+        "message": "3 tl.fromTo() calls target \"proxy (unresolved DOM association)\" with no stable baseline. The last-authored fromTo \"from\" values become the element's resting state for any seek before the first tween actually runs, because GSAP applies fromTo from-values at authoring time (immediateRender), not at tween position.",
+        "selector": "proxy (unresolved DOM association)",
+        "dataAttributes": {},
+        "sourceFile": "/home/yvm/code/cd/videos/cd-speed-promo/compositions/frames/04-croc.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Add `immediateRender: false` to every fromTo except the earliest-positioned one (at 0.916s), so pre-first-tween seeks keep its \"from\" values. A hiding `tl.set(..., 0)` baseline trips gsap_timeline_set_initial_hide, and a `gsap.set` authored before the fromTo calls is overwritten by them."
+      }
+    ],
+    "filesScanned": 9
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 4,
+    "findings": [
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 6.446,
+        "selector": "#f2-b0",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 106,
+          "top": 547.54,
+          "right": 465.58,
+          "bottom": 789.54,
+          "width": 359.58,
+          "height": 242
+        },
+        "containerSelector": "#f2-support",
+        "text": "this.",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/frames/02-watch.html",
+        "bbox": {
+          "x": 106,
+          "y": 547.54,
+          "width": 359.58,
+          "height": 242
+        },
+        "firstSeen": 6.446,
+        "lastSeen": 6.446,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          6.446
+        ]
+      },
+      {
+        "code": "container_overflow",
+        "severity": "info",
+        "time": 7.817,
+        "selector": "#f3-in",
+        "message": "Element extends outside a clipping layout container.",
+        "rect": {
+          "left": 538.88,
+          "top": 265.53,
+          "right": 1162.78,
+          "bottom": 414.47,
+          "width": 623.91,
+          "height": 148.93
+        },
+        "containerSelector": "#f3-slot",
+        "fixHint": "Resize/reposition the child or container, or mark intentional overflow with data-layout-allow-overflow.",
+        "containerRect": {
+          "left": 538.88,
+          "top": 266,
+          "right": 1158.88,
+          "bottom": 414,
+          "width": 620,
+          "height": 148
+        },
+        "overflow": {
+          "right": 3.9
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/frames/03-done.html",
+        "bbox": {
+          "x": 538.88,
+          "y": 265.53,
+          "width": 623.91,
+          "height": 148.93
+        },
+        "firstSeen": 7.817,
+        "lastSeen": 7.817,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          7.817
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 17.197,
+        "selector": "#f5-b2",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 818.84,
+          "top": 451.06,
+          "right": 1228.34,
+          "bottom": 664.06,
+          "width": 409.5,
+          "height": 213
+        },
+        "containerSelector": "#f5-bg",
+        "text": "send.",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.33,
+        "dataAttributes": {},
+        "sourceFile": "compositions/frames/05-pair.html",
+        "bbox": {
+          "x": 818.84,
+          "y": 451.06,
+          "width": 409.5,
+          "height": 213
+        },
+        "firstSeen": 17.197,
+        "lastSeen": 17.197,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          17.197
+        ]
+      },
+      {
+        "code": "content_overlap",
+        "severity": "info",
+        "time": 23.425,
+        "selector": "#f7-i0 > span:nth-of-type(2)",
+        "message": "Two text blocks overlap and may render unreadable.",
+        "rect": {
+          "left": 803.31,
+          "top": 277.27,
+          "right": 1061.09,
+          "bottom": 353.07,
+          "width": 257.78,
+          "height": 75.8
+        },
+        "containerSelector": "#f7-i1 > span:nth-of-type(2)",
+        "text": "direct links across networks",
+        "fixHint": "Give each block its own zone, or put data-layout-allow-overlap on the text or on a container inside the scene. A marker on the scene root does not apply.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/frames/07-release.html",
+        "bbox": {
+          "x": 803.31,
+          "y": 277.27,
+          "width": 257.78,
+          "height": 75.8
+        },
+        "firstSeen": 23.425,
+        "lastSeen": 23.425,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          23.425
+        ]
+      }
+    ],
+    "duration": 28.141,
+    "samples": [
+      1.563,
+      4.69,
+      7.817,
+      10.944,
+      14.071,
+      17.197,
+      20.324,
+      23.451,
+      26.578
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 4,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.563,
+      7.817,
+      14.071,
+      20.324,
+      26.578
+    ],
+    "checked": 33,
+    "passed": 33
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

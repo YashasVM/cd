@@ -1,0 +1,320 @@
+[
+  {
+    "route": "lan",
+    "size": "photo",
+    "MiB": 0.7507772445678711,
+    "immichSeconds": 0.22790755101596005,
+    "cdSeconds": 6.140638254000805,
+    "bridgeSeconds": 6.7533783960097935,
+    "immichMiBs": 3.294218384696237,
+    "cdMiBs": 0.12226371486363291,
+    "bridgeScoreImmich100": 3.3747191057829413,
+    "cdSpeedup": 0.03711463557838986,
+    "bridgeSpeedup": 0.03374719105782941,
+    "cdRoutes": [
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ]
+    ]
+  },
+  {
+    "route": "lan",
+    "size": "large-photo",
+    "MiB": 12.00566577911377,
+    "immichSeconds": 1.162764544977108,
+    "cdSeconds": 7.029508042993257,
+    "bridgeSeconds": 7.711518399009947,
+    "immichMiBs": 10.325104795270596,
+    "cdMiBs": 1.7078955889495788,
+    "bridgeScoreImmich100": 15.078282704044264,
+    "cdSpeedup": 0.16541193748773173,
+    "bridgeSpeedup": 0.15078282704044266,
+    "cdRoutes": [
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12591355,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12591357,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 585,
+          "directBytes": 0
+        }
+      ]
+    ]
+  },
+  {
+    "route": "lan",
+    "size": "large-file",
+    "MiB": 48.01856231689453,
+    "immichSeconds": 4.424453031999292,
+    "cdSeconds": 11.876691273995675,
+    "bridgeSeconds": 13.096217814978445,
+    "immichMiBs": 10.852994024257102,
+    "cdMiBs": 4.043092575962838,
+    "bridgeScoreImmich100": 33.78420468036919,
+    "cdSpeedup": 0.3725324612661059,
+    "bridgeSpeedup": 0.33784204680369195,
+    "cdRoutes": [
+      [
+        {
+          "transport": "direct",
+          "relayBytes": 33819768,
+          "directBytes": 22042400,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 7093,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "direct internet path"
+        }
+      ],
+      [
+        {
+          "transport": "direct",
+          "relayBytes": 25955168,
+          "directBytes": 26761160,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6892,
+          "directBytes": 6947,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ],
+      [
+        {
+          "transport": "direct",
+          "relayBytes": 29887468,
+          "directBytes": 25188240,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 6933,
+          "directBytes": 6948,
+          "directProtocol": "webrtc",
+          "route": "same network"
+        }
+      ]
+    ]
+  },
+  {
+    "route": "public",
+    "size": "photo",
+    "MiB": 0.7507772445678711,
+    "immichSeconds": 0.9733109009976033,
+    "cdSeconds": 4.731636050972156,
+    "bridgeSeconds": 5.122321965987794,
+    "immichMiBs": 0.7713642617157124,
+    "cdMiBs": 0.15867180748477416,
+    "bridgeScoreImmich100": 19.001361247113817,
+    "cdSpeedup": 0.2057028246704706,
+    "bridgeSpeedup": 0.19001361247113818,
+    "cdRoutes": [
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 787474,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 128,
+          "directBytes": 0
+        }
+      ]
+    ]
+  },
+  {
+    "route": "public",
+    "size": "large-photo",
+    "MiB": 12.00566577911377,
+    "immichSeconds": 5.453695037984289,
+    "cdSeconds": 5.656265042023733,
+    "bridgeSeconds": 6.350942682998721,
+    "immichMiBs": 2.2013819429755133,
+    "cdMiBs": 2.122543001418178,
+    "bridgeScoreImmich100": 85.87221315323258,
+    "cdSpeedup": 0.9641866138636659,
+    "bridgeSpeedup": 0.8587221315323258,
+    "cdRoutes": [
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 12589502,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 448,
+          "directBytes": 0
+        }
+      ]
+    ]
+  },
+  {
+    "route": "public",
+    "size": "large-file",
+    "MiB": 48.01856231689453,
+    "immichSeconds": 18.02209117100574,
+    "cdSeconds": 12.442925733019365,
+    "bridgeSeconds": 13.585662024997873,
+    "immichMiBs": 2.6644278880437384,
+    "cdMiBs": 3.859105434461392,
+    "bridgeScoreImmich100": 132.65522974033033,
+    "cdSpeedup": 1.4483805141728956,
+    "bridgeSpeedup": 1.3265522974033033,
+    "cdRoutes": [
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ],
+      [
+        {
+          "transport": "relay",
+          "relayBytes": 50353105,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 1408,
+          "directBytes": 0
+        }
+      ]
+    ]
+  }
+]

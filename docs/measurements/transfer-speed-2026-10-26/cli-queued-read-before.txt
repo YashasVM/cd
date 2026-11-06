@@ -1,0 +1,12 @@
+Captured from tool output, original working tree, before the next() fast path.
+Command: go test ./cmd/cdx -run '^$' -bench '^BenchmarkLinkNextQueued$' -benchmem -benchtime=1s -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: 13th Gen Intel(R) Core(TM) i5-13420H
+BenchmarkLinkNextQueued-12    3400813  361.4 ns/op  296 B/op  5 allocs/op
+BenchmarkLinkNextQueued-12    3330268  376.6 ns/op  296 B/op  5 allocs/op
+BenchmarkLinkNextQueued-12    3369717  348.3 ns/op  296 B/op  5 allocs/op
+PASS
+ok github.com/YashasVM/cd/cmd/cdx 4.748s

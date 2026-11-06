@@ -1,0 +1,26 @@
+{
+  "completed": false,
+  "reason": "croc receiver timed out after 180 seconds with default public rendezvous; no comparative LAN result",
+  "trials": [
+    {
+      "mode": "cdx",
+      "run": 0,
+      "seconds": 12.560476888,
+      "mibPerSecond": 5.095347937079059,
+      "readinessSeconds": 3.1127785119999998,
+      "sha256Verified": true,
+      "reports": [
+        {
+          "transport": "direct",
+          "relayBytes": 526630,
+          "directBytes": 67118358
+        },
+        {
+          "transport": "direct",
+          "relayBytes": 7935,
+          "directBytes": 10507
+        }
+      ]
+    }
+  ]
+}

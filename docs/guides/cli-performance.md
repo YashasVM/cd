@@ -24,8 +24,11 @@ Local Worker persistence defaults to RAM through `--control-dir /dev/shm`. This 
 To isolate paths or record sizing, set these variables for both sender and receiver:
 
 - `CD_DIRECT=0` forces the relay.
+- `CD_WEBRTC=0` skips the sender's WebRTC offer and ICE gathering for ordinary sends while retaining authenticated TCP LAN negotiation and relay fallback. This is an opt-in diagnostic; the default still offers WebRTC, and resumable transfers are unaffected.
 - `CD_LAN=0` disables the TCP lane while allowing WebRTC.
 - `CD_LARGE_RECORDS=0` disables the optional larger chunk negotiation.
+- `CD_LAN_GRACE=0` disables the bounded 50 ms setup grace for selected reverse TCP transfers of at least 8 MiB. This is an A/B diagnostic; the default grace avoids sending duplicate payload over the relay while TCP connects.
 - `CD_TRANSPORT_REPORT=1` emits byte counters, direct protocol, and route labels to stderr.
+- `CD_TIMING_DEBUG=1` emits JSON phase timings to stderr for receiver setup, payload receipt, fsync, and connection closure. Events contain role, fixed stage labels, and elapsed milliseconds, without file names or transfer secrets.
 
 A loopback score measures this machine's protocol, CPU, and storage behavior. It does not establish internet, browser, Android, or physical LAN performance. A saturated shared link or disk prevents a universal 1.5x multiplier. Publish per-case results and failures instead of extending a measured win to untested paths.

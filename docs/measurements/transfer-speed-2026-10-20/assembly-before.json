@@ -1,0 +1,36 @@
+{
+  "moduleURL": "file:///home/yvm/code/cd/src/direct-link.js",
+  "node": "v26.10.0",
+  "payloadMiB": 128,
+  "verified": true,
+  "trials": [
+    {
+      "milliseconds": 191.72207600000002,
+      "mibPerSecond": 667.6330794582049
+    },
+    {
+      "milliseconds": 251.52957299999997,
+      "mibPerSecond": 508.886483896667
+    },
+    {
+      "milliseconds": 230.706732,
+      "mibPerSecond": 554.8169266252708
+    },
+    {
+      "milliseconds": 208.23310000000004,
+      "mibPerSecond": 614.6957424155909
+    },
+    {
+      "milliseconds": 259.4305589999999,
+      "mibPerSecond": 493.3882904673541
+    },
+    {
+      "milliseconds": 243.44834300000002,
+      "mibPerSecond": 525.7788918283991
+    },
+    {
+      "milliseconds": 197.856362,
+      "mibPerSecond": 646.9339611126582
+    }
+  ]
+}

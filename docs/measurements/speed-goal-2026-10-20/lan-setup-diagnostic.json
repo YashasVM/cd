@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "date": "2026-10-20T09:13:12.221Z",
+  "options": {
+    "cdx": "/tmp/cd-speed-goal-candidate",
+    "croc": "/tmp/croc-bench-latest/croc",
+    "remote": "yvm@192.168.1.8",
+    "address": "192.168.1.8",
+    "mib": 64,
+    "runs": 3,
+    "timeout": 180000,
+    "output": "docs/measurements/speed-goal-2026-10-20/lan-latest.json"
+  },
+  "rows": [
+    {
+      "tool": "cd",
+      "run": 0,
+      "ok": false,
+      "error": "AssertionError [ERR_ASSERTION]: CD actual TCP-lane telemetry missing; LAN row invalid\n    at file:///home/yvm/code/cd/scripts/bench-croc-lan.mjs:185:35\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "diagnostics": {
+        "sender": "{\"transport\":\"direct\",\"relayBytes\":21236773,\"directBytes\":52957385,\"directProtocol\":\"webrtc\",\"route\":\"same network\"}\n",
+        "receiver": "{\"transport\":\"direct\",\"relayBytes\":7527,\"directBytes\":9426,\"directProtocol\":\"webrtc\",\"route\":\"same network\"}\n"
+      }
+    },
+    {
+      "tool": "croc",
+      "run": 0,
+      "ok": false,
+      "error": "Error: sender not ready: On the other computer, run:\n  croc --relay 192.168.1.8:39834 --pass [ephemeral relay password] lan-ffd8989b978c55b293c50874\n\nOr open:\n  https://getcroc.com/?code=lan-ffd8989b978c55b293c50874\n\r                                 \rSending 0 files (0 B)\r                                 \rSending 'stdin' (0 B)\n\n    at ready (file:///home/yvm/code/cd/scripts/bench-croc-lan.mjs:58:58)\n    at async file:///home/yvm/code/cd/scripts/bench-croc-lan.mjs:169:22",
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 192.168.1.8:39834 --pass [ephemeral relay password] lan-ffd8989b978c55b293c50874\n\nOr open:\n  https://getcroc.com/?code=lan-ffd8989b978c55b293c50874\n\r                                 \rSending 0 files (0 B)\r                                 \rSending 'stdin' (0 B)\n"
+      }
+    },
+    {
+      "tool": "croc-no-compress",
+      "run": 0,
+      "ok": false,
+      "error": "Error: sender not ready: On the other computer, run:\n  croc --relay 192.168.1.8:39834 --pass [ephemeral relay password] lan-d7bc1013ccc5e0346948b94b\n\nOr open:\n  https://getcroc.com/?code=lan-d7bc1013ccc5e0346948b94b\n\r                                 \rSending 0 files (0 B)\r                                 \rSending 'stdin' (0 B)\n\n    at ready (file:///home/yvm/code/cd/scripts/bench-croc-lan.mjs:58:58)\n    at async file:///home/yvm/code/cd/scripts/bench-croc-lan.mjs:169:22",
+      "diagnostics": {
+        "sender": "On the other computer, run:\n  croc --relay 192.168.1.8:39834 --pass [ephemeral relay password] lan-d7bc1013ccc5e0346948b94b\n\nOr open:\n  https://getcroc.com/?code=lan-d7bc1013ccc5e0346948b94b\n\r                                 \rSending 0 files (0 B)\r                                 \rSending 'stdin' (0 B)\n"
+      }
+    }
+  ],
+  "method": {
+    "topology": "PC sender to Ubuntu receiver over physical LAN. CD uses a local Worker through reverse SSH only for rendezvous/fallback; valid CD rows must show direct bytes. croc uses a private TCP relay on the receiver machine with --no-local. Both carry bulk bytes over the LAN once; their rendezvous topology differs.",
+    "timing": "Receiver duration starts before SSH receiver launch, ends after receiver process exits. Durable duration also includes remote file and output-directory fsync before SSH exits. Readiness and total measured separately. SHA256 verification runs over a separate SSH command outside all transfer timings.",
+    "limitations": "Three trials by default, one physical LAN, no WAN/browser/concurrency claim. Both tools use identical staged binaries at both ends. croc default and no-compress both measured. Remote infrastructure uses disk, local Worker SQLite uses RAM. SSH launch overhead is present in each receiver duration.",
+    "durability": "Native receiver exit observed by remote launcher; file/directory fsync added equally for both tools. Existing internal fsync differences remain included."
+  },
+  "binaries": {
+    "cdSha256": "35ef82d9e5767e8de7c0d0589796b774250e937dabe51c242e02b4bacd8c7666",
+    "crocSha256": "6683a1fbaada19b4b48bcb92244722d7b8a11eb617558e67ee493417214a051c",
+    "crocVersion": "croc version 11.5.5"
+  },
+  "infrastructure": {
+    "remoteRoot": "/home/yvm/cd-bench-20261020/run-rLOgiYr4",
+    "relayAddress": "192.168.1.8:39834",
+    "localWorkerStorage": "tmpfs",
+    "remoteWorkerForward": "127.0.0.1:39839",
+    "relayPassword": "ephemeral, redacted, never persisted"
+  },
+  "interrupted": "SIGTERM"
+}

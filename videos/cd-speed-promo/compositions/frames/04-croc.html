@@ -1,0 +1,80 @@
+<template>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/Inter.ttf") format("truetype"); font-weight: 100 900; font-style: normal; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-style: normal; }
+      #root { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: #E4D4B6; }
+      #f4-bg { position: absolute; inset: 0; background: #0D0503; }
+      #f4-mark { position: absolute; left: 106px; top: 56px; width: 44px; height: 44px; border-radius: 10px; }
+      .f4-sentence { position: absolute; left: 106px; right: 106px; font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; white-space: nowrap; }
+      .f4-line { display: block; }
+      .f4-w { display: inline-block; padding: 0.12em 0.04em 0.2em; margin: -0.12em -0.04em -0.2em; clip-path: inset(0); vertical-align: baseline; }
+      .f4-wi { display: inline-block; }
+      .f4-gap { display: inline-block; width: 0.24em; }
+      .f4-slot { display: inline-block; vertical-align: baseline; height: 0.74em; border-radius: 0.12em; background: #1B0D09; overflow: hidden; position: relative; letter-spacing: 0; font-weight: 500; line-height: 1.2; white-space: normal; }
+      .f4-slot-in { position: absolute; inset: 0; }
+      .f4-support { position: absolute; left: 106px; font-size: 31px; font-weight: 450; line-height: 1.4; color: #B3A38C; letter-spacing: -0.005em; }
+      .f4-foot { position: absolute; left: 106px; top: 842px; font-size: 18px; font-weight: 450; line-height: 1.4; color: #A28F79; }
+      .f4-mono { font-family: "JetBrains Mono", monospace; letter-spacing: 0; }
+      .f4-accent { color: #E58A57; }
+
+      #f4-s { top: 286px; font-size: 132px; }
+      #f4-proof { position: absolute; left: 1000px; width: 814px; top: 300px; }
+      .f4-row { margin-bottom: 44px; }
+      .f4-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 30px; font-weight: 500; margin-bottom: 14px; }
+      .f4-name { font-weight: 600; }
+      .f4-note { font-weight: 450; color: #A28F79; margin-left: 14px; font-size: 24px; }
+      .f4-val { font-variant-numeric: tabular-nums; }
+      .f4-bar { position: relative; height: 30px; }
+      .f4-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; transform-origin: 0 50%; }
+      #f4-support { top: 590px; max-width: 760px; }
+
+  </style>
+  <div data-hf-id="hf-gbrb" id="root" data-composition-id="04-croc" data-width="1920" data-height="1080" data-duration="3.665">
+    <div data-hf-id="hf-crjm" id="f4-bg" class="clip" data-start="0" data-duration="3.665" data-track-index="0"></div>
+    <img data-hf-id="hf-10jm" id="f4-mark" src="assets/cd-icon.png" alt="" />
+    <div data-hf-id="hf-bm88" class="f4-sentence" id="f4-s">
+      <span data-hf-id="hf-ar52" class="f4-line"><span data-hf-id="hf-peon" class="f4-w"><span data-hf-id="hf-i6gm" class="f4-wi" id="f4-a0"><span data-hf-id="hf-bmou" class="f4-accent">5.6×</span></span></span><span data-hf-id="hf-gtd0" class="f4-gap"></span><span data-hf-id="hf-a3kn" class="f4-w"><span data-hf-id="hf-ue16" class="f4-wi" id="f4-a1">faster</span></span></span>
+      <span data-hf-id="hf-u3qi" class="f4-line"><span data-hf-id="hf-9p9m" class="f4-w"><span data-hf-id="hf-urcc" class="f4-wi" id="f4-b0">than</span></span><span data-hf-id="hf-twf0" class="f4-gap"></span><span data-hf-id="hf-9ayl" class="f4-w"><span data-hf-id="hf-fm55" class="f4-wi" id="f4-b1">croc.</span></span></span>
+    </div>
+    <div data-hf-id="hf-necq" id="f4-proof">
+        <div data-hf-id="hf-o0qe" class="f4-row" id="f4-row0">
+          <div data-hf-id="hf-hr29" class="f4-head"><span data-hf-id="hf-k9kz" class="f4-name" style="color:#E4D4B6">cdx<span data-hf-id="hf-gjf9" class="f4-note">same-network lane</span></span><span data-hf-id="hf-611o" class="f4-val" id="f4-val0" style="color:#E4D4B6">0 MiB/s</span></div>
+          <div data-hf-id="hf-kjzi" class="f4-bar"><span data-hf-id="hf-n3q7" class="f4-fill" id="f4-fill0" style="width:760px;background:#E58A57"></span></div>
+        </div>
+        <div data-hf-id="hf-ryuf" class="f4-row" id="f4-row1">
+          <div data-hf-id="hf-pd91" class="f4-head"><span data-hf-id="hf-oej8" class="f4-name" style="color:#B3A38C">croc --no-compress</span><span data-hf-id="hf-wrr4" class="f4-val" id="f4-val1" style="color:#B3A38C">0 MiB/s</span></div>
+          <div data-hf-id="hf-gt9u" class="f4-bar"><span data-hf-id="hf-7zuo" class="f4-fill" id="f4-fill1" style="width:374px;background:#B3A38C"></span></div>
+        </div>
+        <div data-hf-id="hf-jayk" class="f4-row" id="f4-row2">
+          <div data-hf-id="hf-qk64" class="f4-head"><span data-hf-id="hf-0xw8" class="f4-name" style="color:#B3A38C">croc<span data-hf-id="hf-rthq" class="f4-note">default settings</span></span><span data-hf-id="hf-17el" class="f4-val" id="f4-val2" style="color:#B3A38C">0 MiB/s</span></div>
+          <div data-hf-id="hf-h7kv" class="f4-bar"><span data-hf-id="hf-x3om" class="f4-fill" id="f4-fill2" style="width:137px;background:#B3A38C"></span></div>
+        </div>
+    </div>
+    <div data-hf-id="hf-hafx" class="f4-support" id="f4-support">2× faster than croc even with its compression off.</div>
+    <div data-hf-id="hf-khon" class="f4-foot" id="f4-foot">1 GiB on one laptop, received to RAM, median of 5 runs. cdx with the same-network lane vs croc 10.7.0.</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = 0.4581;
+tl.fromTo("#f4-a0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.000);
+tl.fromTo("#f4-a1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.229);
+tl.fromTo("#f4-b0", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.458);
+tl.fromTo("#f4-b1", { yPercent: 140 }, { yPercent: 0, duration: 0.38, ease: "expo.out" }, 0.687);
+    tl.fromTo("#f4-fill0", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out" }, 0.916);
+    tl.fromTo("#f4-row0 .f4-head", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.916);
+    const f4v0 = { v: 0 };
+    tl.fromTo(f4v0, { v: 0 }, { v: 1358, duration: 0.7, ease: "power3.out", immediateRender: true, onUpdate: () => { document.getElementById("f4-val0").textContent = Math.round(f4v0.v).toLocaleString("en-US") + " MiB/s"; } }, 0.916);
+    tl.fromTo("#f4-fill1", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out" }, 1.374);
+    tl.fromTo("#f4-row1 .f4-head", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 1.374);
+    const f4v1 = { v: 0 };
+    tl.fromTo(f4v1, { v: 0 }, { v: 668, duration: 0.7, ease: "power3.out", immediateRender: false, onUpdate: () => { document.getElementById("f4-val1").textContent = Math.round(f4v1.v).toLocaleString("en-US") + " MiB/s"; } }, 1.374);
+    tl.fromTo("#f4-fill2", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out" }, 1.832);
+    tl.fromTo("#f4-row2 .f4-head", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 1.832);
+    const f4v2 = { v: 0 };
+    tl.fromTo(f4v2, { v: 0 }, { v: 245, duration: 0.7, ease: "power3.out", immediateRender: false, onUpdate: () => { document.getElementById("f4-val2").textContent = Math.round(f4v2.v).toLocaleString("en-US") + " MiB/s"; } }, 1.832);
+    tl.fromTo("#f4-support", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.291);
+    tl.fromTo("#f4-foot", { opacity: 0, y: 0 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 2.749);
+    window.__timelines["04-croc"] = tl;
+  </script>
+</template>

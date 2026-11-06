@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CD performance bottlenecks</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:var(--foreground,#202124);font:15px/1.55 var(--font-sans,system-ui);background:transparent}p{margin:0 0 14px}h2{font-size:17px;margin:26px 0 10px}h3{font-size:15px;margin:0 0 7px}small,.muted{color:var(--muted-foreground,#656972)}strong{font-weight:650}code{font:12px/1.5 var(--font-mono,monospace);overflow-wrap:anywhere}a{color:var(--accent-foreground,#3769bd)}.finding{border-top:1px solid var(--border,#ddd);padding:16px 0}.finding p:last-child{margin-bottom:0}.label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground,#656972)}.metric{font-variant-numeric:tabular-nums;font-weight:650}.controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}button{font:inherit;font-size:13px;border:1px solid var(--border,#ccc);border-radius:6px;padding:5px 10px;background:transparent;color:inherit;cursor:pointer}button[aria-pressed=true]{background:var(--secondary,#e9edf2);font-weight:650}.row{display:grid;grid-template-columns:100px 1fr 100px;gap:10px;align-items:center;margin:12px 0;font-size:13px}.track{height:18px;background:var(--muted,#e9edf2);border-radius:3px;overflow:hidden}.bar{height:100%;background:var(--chart-1,#4787c5);min-width:2px}.resume{background:var(--chart-2,#c88d36)}.speed{text-align:right;font-variant-numeric:tabular-nums}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 5px;border-bottom:1px solid var(--border,#ddd);vertical-align:top}th:first-child,td:first-child{padding-left:0}th:last-child,td:last-child{text-align:right;padding-right:0;white-space:nowrap}details{border-top:1px solid var(--border,#ddd);padding:12px 0;margin-top:10px}summary{cursor:pointer;font-weight:600}details p{margin-top:12px}pre{white-space:pre-wrap;font-size:12px;padding:16px;background:var(--muted,#f0f1f3);border-radius:var(--radius,8px)}@media(max-width:420px){.row{grid-template-columns:76px 1fr 86px;gap:7px}body{font-size:14px}}
+</style>
+<p><strong>The largest confirmed bottlenecks are in resumable transfers.</strong> The best first changes are to pipeline chunks and replace the browser's repeated file-commit cycle. Browser hashing is a separate CPU limit. A complete Rust rewrite has no measured justification from this audit.</p>
+<p class="muted">Measured on this checkout on 17 October 2026. All speeds below are MiB/s. Improvements to isolated operations are not whole-app speedup promises.</p>
+
+<div class="finding">
+<div class="label">Priority 1 · confirmed protocol limit</div>
+<h3>Resume waits an entire round trip after every 256 KiB</h3>
+<p>At 300 ms of added ACK round-trip delay, ordinary CLI transfers measured <span class="metric">7.98 MiB/s</span>; resumable transfers measured <span class="metric">0.72 MiB/s</span>. Each result is the median of three verified 8 MiB transfers through the same local proxy. This compares existing modes, not a before-and-after fix.</p>
+<p>Send multiple chunks within a bounded window and acknowledge committed progress cumulatively. Keep acknowledgements behind durable storage. This needs compatible protocol negotiation and crash/restart verification.</p>
+<small>Source: <code>cmd/cdx/resume.go:423–449</code> and <code>src/resume-browser.js:449–470</code>.</small>
+</div>
+
+<div class="label">Measured CLI transfer rates · choose added ACK RTT</div>
+<div class="controls" role="group" aria-label="Added acknowledgement round-trip delay">
+<button data-rtt="0" aria-pressed="false">0 ms</button><button data-rtt="100" aria-pressed="false">100 ms</button><button data-rtt="300" aria-pressed="true">300 ms</button>
+</div>
+<div role="img" id="rates" aria-label="Ordinary CLI 7.98 MiB/s, resumable CLI 0.72 MiB/s at 300 ms added ACK round trip">
+<div class="row"><span>Ordinary CLI</span><div class="track"><div id="v1bar" class="bar" style="width:39.89%"></div></div><span id="v1value" class="speed">7.98 MiB/s</span></div>
+<div class="row"><span>Resume CLI</span><div class="track"><div id="v2bar" class="bar resume" style="width:3.61%"></div></div><span id="v2value" class="speed">0.72 MiB/s</span></div>
+</div>
+<small>Fixed bar scale: 20 MiB/s. Three successes out of three per mode and delay. Includes connection and transfer completion. No bandwidth cap or loss was imposed. Shared CPU load varied, so ordinary-mode rates are not a latency curve.</small>
+
+<div class="finding">
+<div class="label">Priority 2 · confirmed storage overhead · prototype tested</div>
+<h3>Browser resume repeatedly reopens the growing staging file</h3>
+<p>It calls <code>createWritable({keepExistingData:true})</code>, writes 256 KiB, and closes the file for every chunk. This API preserves the old contents through a temporary file. The repeated preservation creates increasing work as the file grows. See the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createWritable">API documentation</a>.</p>
+<table><thead><tr><th>Storage-only experiment</th><th>Median of 3</th></tr></thead><tbody>
+<tr><td>Reopen and close after every chunk</td><td>13.57 MiB/s</td></tr>
+<tr><td>One worker access handle, flush every chunk</td><td>172.23 MiB/s</td></tr>
+</tbody></table>
+<p style="margin-top:12px">The worker prototype was <span class="metric">12.7× faster for this storage task</span>. Both wrote and verified 16 MiB. It excludes resume authentication and checkpointing, and includes worker startup, data cloning, final verification, and cleanup. No production storage code was changed.</p>
+<p>Use a persistent worker-owned OPFS access handle where available, or commit bounded groups of chunks with a compatible fallback. Preserve the order of data flush, authenticated checkpoint persistence, then ACK. <a href="https://developer.chrome.com/blog/sync-methods-for-accesshandles">Worker access-handle documentation</a>.</p>
+<small>Source: <code>src/resume-browser.js:149–160</code>. One actual resume-stage run took 410, 780, 1,017, and 1,371 ms for successive 4 MiB sections.</small>
+</div>
+
+<div class="finding">
+<div class="label">Priority 3 · confirmed CPU limit · replacement unmeasured</div>
+<h3>The incremental browser SHA-256 is slow</h3>
+<p>The current hasher processed a median <span class="metric">38.84 MiB/s</span>, or <span class="metric">7.86 MiB/s</span> with 4× renderer CPU throttling. Three runs per setting processed 16 MiB and checked the digest against WebCrypto.</p>
+<p>Benchmark a faster bounded-memory implementation and move hashing off the UI thread. This is a reasonable place to test WASM, including Rust compiled to WASM. There is no measured Rust or WASM speedup yet.</p>
+<small>Source: <code>src/incremental-sha256.js</code>. It allocates a new schedule array for every 64-byte block. Resume also hashes before sending, during sending, and rechecks the staged file on receipt. Native WebCrypto measured 993.79 MiB/s for a full 16 MiB buffer, but <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest">does not support streaming input</a>; loading whole large files into memory is not an equivalent replacement.</small>
+</div>
+
+<details>
+<summary>Baselines, limits, and lower-priority candidates</summary>
+<table><thead><tr><th>Existing workload</th><th>Verified trials</th><th>Median</th></tr></thead><tbody>
+<tr><td>CLI relay, 64 MiB, loopback, tmpfs</td><td>5/5</td><td>286.00 MiB/s</td></tr>
+<tr><td>Browser relay, 64 MiB, loopback</td><td>5/5</td><td>32.58 MiB/s</td></tr>
+<tr><td>Later browser direct, 64 MiB, busy host</td><td>3/3</td><td>14.96 MiB/s</td></tr>
+<tr><td>Later browser relay, same invocation</td><td>3/3</td><td>9.13 MiB/s</td></tr>
+<tr><td>CLI relay, 8 MiB, Btrfs, proxy, busy host</td><td>3/3</td><td>16.64 MiB/s</td></tr>
+<tr><td>CLI resume, same Btrfs invocation</td><td>3/3</td><td>8.59 MiB/s</td></tr>
+</tbody></table>
+<p>The early CLI/browser difference is worth profiling, but these measurements do not identify its root cause. Browser source reads, serial async crypto/storage calls, buffer polling, record copying, and SCTP need separate profiles. The pure-JS resume hasher is not used by ordinary v1 transfers, so it does not explain that gap.</p>
+<p>CLI resume performs a staging-file sync, checkpoint-file sync, and directory sync for each chunk. Batching these barriers is a candidate, but the real-disk run did not isolate their cost. Do not claim a measured fsync speedup.</p>
+<p>The ordinary send windows also have finite throughput ceilings on high-delay links. Larger windows require measurement against the relay's 32 MiB buffer limit. Increasing buffers without bounds can turn throughput problems into memory failures.</p>
+<p>Direct transfer setup can delay the first offer while gathering candidates. Folder preparation, large-file memory use, startup, production relay geography, multi-transfer concurrency, packet loss, mobile hardware, Safari, and Firefox remain unmeasured here. No finding establishes that the application can never be a bottleneck.</p>
+</details>
+
+<details>
+<summary>Reproduce and assess the evidence</summary>
+<p>Intel i5-13420H, Linux amd64, Go 1.26.8, Node 26.10.0, local Wrangler and Chromium. The checkout contains pre-existing uncommitted changes. Source fingerprints and exact environment details accompany the raw JSON files.</p>
+<p>The first relay baseline was less loaded. Emulator and Java activity increased later host load substantially. Do not treat rates from different invocations as controlled comparisons. CPU throttling is an emulation setting, not a real phone benchmark; native I/O and worker work need not scale by the same factor.</p>
+<p>The network audit delays every complete WebSocket message independently by 0, 25, or 75 ms per proxy hop. Four hops add 0, 100, or 300 ms to a payload/ACK round trip. Payloads are incompressible random bytes, and complete received files are SHA-256 checked. Browser microbenchmarks use a random 256 KiB block repeated to 16 MiB. Prototype results verify actual OPFS bytes; they are not full transfers.</p>
+<pre>npm run build
+CD_BENCH_ONLY=relay,tunnel CD_BENCH_MIB=64 CD_BENCH_RUNS=5 node scripts/bench.mjs
+CD_PERF_ONLY=network node scripts/perf-audit.mjs
+CD_PERF_ONLY=browser node scripts/perf-audit.mjs
+CD_PERF_ONLY=browser CD_PERF_BROWSER_MODES=opfs-reopen,opfs-sync-worker node scripts/perf-audit.mjs
+CD_PERF_ONLY=network CD_PERF_DELAYS=0 CD_PERF_WORK_ROOT="$PWD" node scripts/perf-audit.mjs</pre>
+<p>Run one workload at a time, preferably on an otherwise idle host. The audit creates and removes its own temporary files and local Worker instances. It does not modify production settings.</p>
+<p>Build and five benchmark-helper tests passed. All retained final transfer trials completed and verified bytes. An initial proxy mishandled close ordering, and another early invocation exceeded the local connection admission limit; those runs are retained separately as invalid measurements. The final harness fixes both issues. A Go CPU-profiling attempt and a constrained retry received SIGKILL before producing usable data; their output supplies no performance evidence.</p>
+</details>
+<script>
+const values={0:[14.7901551617,6.9512709183],100:[18.7793251780,2.0351077579],300:[7.9774593138,.7227015166]};
+document.querySelectorAll('[data-rtt]').forEach(button=>button.addEventListener('click',()=>{
+ const rtt=button.dataset.rtt;const speeds=values[rtt];
+ document.querySelectorAll('[data-rtt]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+ ['v1','v2'].forEach((id,i)=>{document.getElementById(id+'bar').style.width=(100*speeds[i]/20)+'%';document.getElementById(id+'value').textContent=speeds[i].toFixed(2)+' MiB/s';});
+ document.getElementById('rates').setAttribute('aria-label',`Ordinary CLI ${speeds[0].toFixed(2)} MiB/s, resumable CLI ${speeds[1].toFixed(2)} MiB/s at ${rtt} ms added ACK round trip`);
+}));
+</script>
+</html>

@@ -162,3 +162,41 @@ docs/      protocol spec, recovery runbook, audit notes
 ```
 
 MIT licensed. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
+
+Receive a transfer in the background with `cdx receive --detach <code> --out ~/Downloads/`.
+The command prints the receiver PID and a private log containing completion output or errors.
+With `--json`, it prints `{"pid":123,"log":"..."}`. Successful launch means the process
+started; inspect the log to confirm the download completed. For retained progress, use
+`cdx receive --detach --resume '<private-v2-link>' --out ./report.pdf`.
+
+### Account receiving preview
+
+Sign in once with `cdx login`. In the Android app, choose **Sign in with Clerk**
+using the same account and keep receiving enabled. Signing in on Android authorizes
+terminals on that account to establish trusted channels. Then send directly:
+
+```sh
+cdx send --to phone --json ./report.pdf
+```
+
+An agent gets a background process PID and private log path. The log reports
+`phase: verified` after receipt. Use `--wait` to keep the sender in the foreground.
+The sender automatically reconnects and resumes verified progress when the phone
+returns. Keep the source file and sender process available. Transfer progress
+currently expires after 24 hours; user-paused, corrupt or expired transfers remain
+paused. Android attempts to restart enabled receiving after a reboot or app update;
+force-stop requires opening the app again.
+
+Account discovery uses `cd-test.yash0.in` and the existing Clerk development instance
+in this preview. The production website is unchanged. Pairing invitations are
+scoped to the verified Clerk account and encrypted to the phone's P-256 public key.
+The server checks the OAuth client and token activity with Clerk before accessing
+that account's directory. Terminal tokens are private files; Android credentials
+and its pairing private key live in the encrypted app vault. Sign out on Android
+to revoke its account pairs locally. `cdx logout` removes terminal login credentials.
+Previously paired QR devices retain their existing explicit trust.
+
+Use `cdx account devices` to list registered phones and `cdx account revoke phone`
+to revoke one remotely. The phone removes account trust at its next successful poll.
+If an offline sign-out or reinstall leaves the name registered, revoke that old entry
+before signing in again. This preview registers one phone under the name `phone`.

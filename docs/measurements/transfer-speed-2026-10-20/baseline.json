@@ -1,0 +1,121 @@
+{
+  "timestamp": "2026-10-19T20:17:17.736Z",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "node": "v26.10.0",
+  "runs": 1,
+  "workFilesystemPath": "/tmp/cd-perf-92fJNr",
+  "loadAverageBefore": [
+    1.78,
+    2.52,
+    5.56
+  ],
+  "trials": [
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 54.35194500000034,
+      "seconds": 0.8296484940000001,
+      "mibPerSecond": 9.64263788562967,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 0,
+      "completed": true,
+      "readinessMs": 78.81523899999956,
+      "seconds": 0.8146964299999999,
+      "mibPerSecond": 9.819608513566214
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 96.81430399999954,
+      "seconds": 0.8647677640000002,
+      "mibPerSecond": 9.251038640704925,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 100,
+      "completed": true,
+      "readinessMs": 114.49883500000033,
+      "seconds": 1.0495746529999996,
+      "mibPerSecond": 7.62213528797937
+    },
+    {
+      "suite": "network",
+      "mode": "v1",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 197.05155000000013,
+      "seconds": 1.2330659960000012,
+      "mibPerSecond": 6.48789280213027,
+      "transport": [
+        {
+          "transport": "relay",
+          "relayBytes": 8389669,
+          "directBytes": 0
+        },
+        {
+          "transport": "relay",
+          "relayBytes": 388,
+          "directBytes": 0
+        }
+      ]
+    },
+    {
+      "suite": "network",
+      "mode": "v2",
+      "run": 0,
+      "payloadMiB": 8,
+      "addedAckRTTMs": 300,
+      "completed": true,
+      "readinessMs": 202.37589499999922,
+      "seconds": 1.7765173969999997,
+      "mibPerSecond": 4.503192602284435
+    }
+  ],
+  "loadAverageAfter": [
+    2.24,
+    2.58,
+    5.52
+  ]
+}

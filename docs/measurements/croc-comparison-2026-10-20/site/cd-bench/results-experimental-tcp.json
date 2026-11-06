@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "date": "2026-10-20T08:46:34.031Z",
+  "mib": 256,
+  "runs": 3,
+  "croc": "croc version 10.7.0",
+  "route": "loopback; cdx through local wrangler dev relay (direct WebRTC allowed in \"cdx\"), croc through a local croc relay",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "7.2.8-9-omarchy",
+    "node": "v26.10.0",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "cores": 12
+  },
+  "summary": {
+    "cdx": {
+      "runs": 3,
+      "medianTotalSeconds": 0.298,
+      "medianTransferSeconds": 0.28,
+      "medianMibPerSecond": 914.286,
+      "trials": [
+        {
+          "totalSeconds": 0.293,
+          "transferSeconds": 0.272,
+          "readySeconds": 0.021,
+          "mibPerSecond": 941.176,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 0.307,
+          "transferSeconds": 0.294,
+          "readySeconds": 0.013,
+          "mibPerSecond": 870.748,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 0.298,
+          "transferSeconds": 0.28,
+          "readySeconds": 0.019,
+          "mibPerSecond": 914.286,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        }
+      ]
+    },
+    "cdx-webrtc": {
+      "runs": 3,
+      "medianTotalSeconds": 1.337,
+      "medianTransferSeconds": 1.32,
+      "medianMibPerSecond": 193.939,
+      "trials": [
+        {
+          "totalSeconds": 1.337,
+          "transferSeconds": 1.32,
+          "readySeconds": 0.017,
+          "mibPerSecond": 193.939,
+          "routes": [
+            "switched to a direct connection (direct internet path)",
+            "switched to a direct connection (same network)"
+          ]
+        },
+        {
+          "totalSeconds": 1.464,
+          "transferSeconds": 1.445,
+          "readySeconds": 0.018,
+          "mibPerSecond": 177.163,
+          "routes": [
+            "switched to a direct connection (direct internet path)",
+            "switched to a direct connection (direct internet path)"
+          ]
+        },
+        {
+          "totalSeconds": 1.054,
+          "transferSeconds": 1.041,
+          "readySeconds": 0.013,
+          "mibPerSecond": 245.917,
+          "routes": [
+            "switched to a direct connection (same network)",
+            "switched to a direct connection (same network)"
+          ]
+        }
+      ]
+    },
+    "croc": {
+      "runs": 3,
+      "medianTotalSeconds": 1.307,
+      "medianTransferSeconds": 1.249,
+      "medianMibPerSecond": 204.964,
+      "trials": [
+        {
+          "totalSeconds": 1.307,
+          "transferSeconds": 1.249,
+          "readySeconds": 0.059,
+          "mibPerSecond": 204.964
+        },
+        {
+          "totalSeconds": 1.369,
+          "transferSeconds": 1.294,
+          "readySeconds": 0.075,
+          "mibPerSecond": 197.836
+        },
+        {
+          "totalSeconds": 1.242,
+          "transferSeconds": 1.188,
+          "readySeconds": 0.054,
+          "mibPerSecond": 215.488
+        }
+      ]
+    },
+    "croc-no-compress": {
+      "runs": 3,
+      "medianTotalSeconds": 0.614,
+      "medianTransferSeconds": 0.561,
+      "medianMibPerSecond": 456.328,
+      "trials": [
+        {
+          "totalSeconds": 0.614,
+          "transferSeconds": 0.561,
+          "readySeconds": 0.053,
+          "mibPerSecond": 456.328
+        },
+        {
+          "totalSeconds": 0.629,
+          "transferSeconds": 0.577,
+          "readySeconds": 0.053,
+          "mibPerSecond": 443.674
+        },
+        {
+          "totalSeconds": 0.607,
+          "transferSeconds": 0.554,
+          "readySeconds": 0.053,
+          "mibPerSecond": 462.094
+        }
+      ]
+    }
+  }
+}

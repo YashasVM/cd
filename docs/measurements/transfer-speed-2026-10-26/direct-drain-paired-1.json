@@ -1,0 +1,107 @@
+{
+  "chromium": "155.0.8059.84",
+  "runs": 7,
+  "mib": 32,
+  "verified": true,
+  "method": "Local host-candidate ordered WebRTC, actual CD record assembly and direct.send, 4 MiB native cap. Setup and SHA256 outside timing. No encryption, application ACKs, storage or internet route.",
+  "trials": [
+    {
+      "name": "current",
+      "run": 0,
+      "milliseconds": 433.5,
+      "mibPerSecond": 73.81776239907728,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 0,
+      "milliseconds": 7425.399999976158,
+      "mibPerSecond": 4.3095321464301914,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 1,
+      "milliseconds": 490.7000000178814,
+      "mibPerSecond": 65.21296107363746,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 1,
+      "milliseconds": 459.40000000596046,
+      "mibPerSecond": 69.65607313797304,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 2,
+      "milliseconds": 494.59999999403954,
+      "mibPerSecond": 64.69874646256699,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 2,
+      "milliseconds": 1255.4000000059605,
+      "mibPerSecond": 25.489883702284587,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 3,
+      "milliseconds": 431.7000000178814,
+      "mibPerSecond": 74.12555014749718,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 3,
+      "milliseconds": 521.0999999940395,
+      "mibPerSecond": 61.40855881858764,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 4,
+      "milliseconds": 447.59999999403954,
+      "mibPerSecond": 71.49240393303424,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 4,
+      "milliseconds": 529.9000000059605,
+      "mibPerSecond": 60.38875259414994,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 5,
+      "milliseconds": 453.40000000596046,
+      "mibPerSecond": 70.57785619669016,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 5,
+      "milliseconds": 462.2000000178814,
+      "mibPerSecond": 69.23409779048463,
+      "records": 128
+    },
+    {
+      "name": "current",
+      "run": 6,
+      "milliseconds": 451.7999999821186,
+      "mibPerSecond": 70.82779991426848,
+      "records": 128
+    },
+    {
+      "name": "before",
+      "run": 6,
+      "milliseconds": 491.2000000178814,
+      "mibPerSecond": 65.1465798021887,
+      "records": 128
+    }
+  ]
+}

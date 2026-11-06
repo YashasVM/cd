@@ -60,7 +60,8 @@ async function ready(proc, predicate) {
     await delay(5);
   }
 }
-const report = { version: 1, date: new Date().toISOString(), options, rows: [], method: {
+const report = { version: 1, date: new Date().toISOString(), options,
+  transferFlags: Object.fromEntries(['CD_WEBRTC', 'CD_LAN_GRACE', 'CD_LARGE_RECORDS'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]])), rows: [], method: {
   topology: 'PC sender to Ubuntu receiver over physical LAN. CD uses a local Worker through reverse SSH only for rendezvous/fallback; CD actual transport telemetry is recorded; default strict mode requires TCP direct bytes. --require-tcp0 permits annotated fallback diagnostics. croc uses a private TCP relay on the receiver machine with --no-local. Both carry bulk bytes over the LAN once; their rendezvous topology differs.',
   timing: 'Receiver duration starts before SSH receiver launch, ends after receiver process exits. Durable duration also includes remote file and output-directory fsync before SSH exits. Readiness and total measured separately. SHA256 verification runs over a separate SSH command outside all transfer timings.',
   limitations: 'Three trials by default, one physical LAN, no WAN/browser/concurrency claim. Both tools use identical staged binaries at both ends. croc default and no-compress both measured. Remote infrastructure uses disk, local Worker SQLite uses RAM. SSH launch overhead is present in each receiver duration.',

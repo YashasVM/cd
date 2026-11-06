@@ -1,0 +1,1 @@
+No website capture requested. Source is the local product brief and implementation. Brand icon copied from public/icon-512.png. Android and CLI screens are stylized demonstrations based on local source.

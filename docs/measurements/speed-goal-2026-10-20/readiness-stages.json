@@ -1,0 +1,367 @@
+{
+  "binary": "/tmp/cd-speed-goal-candidate",
+  "runs": 12,
+  "method": "Warm serial 4KiB source. Exact stdout first-line event; transparent local TCP proxy adds one connection hop. HTTP request starts after subprocess startup, file stat and token derivation. Admission includes room creation/join and code-shard claim in code mode. No source modifications; no early/unregistered code. Link mode is diagnostic and is not interchangeable with code-mode readiness.",
+  "summary": {
+    "version": {
+      "readyMs": 4.19701699999996,
+      "spawnMs": 1.681966999999986
+    },
+    "link": {
+      "readyMs": 11.5486199999998,
+      "spawnMs": 1.636878999999908,
+      "requestMs": 4.627533000000085,
+      "upgradeMs": 5.883739999999989,
+      "joinAfterUpgradeMs": 0.17666000000008353,
+      "admissionMs": 1.2090580000000273,
+      "outputAfterAdmissionMs": 0.1281619999999748
+    },
+    "code": {
+      "readyMs": 12.103204000000005,
+      "spawnMs": 1.8007979999999861,
+      "requestMs": 4.168775000000096,
+      "upgradeMs": 4.823822999999948,
+      "joinAfterUpgradeMs": 0.17134499999997388,
+      "admissionMs": 3.342604000000051,
+      "outputAfterAdmissionMs": 0.14525800000001254
+    }
+  },
+  "rows": [
+    {
+      "mode": "version",
+      "iteration": 0,
+      "readyMs": 4.755416999999966,
+      "spawnMs": 1.7487840000000006
+    },
+    {
+      "mode": "link",
+      "iteration": 0,
+      "readyMs": 15.006898999999976,
+      "spawnMs": 1.8628699999999299,
+      "requestMs": 5.569008999999937,
+      "upgradeMs": 6.921246999999994,
+      "joinAfterUpgradeMs": 0.17666000000008353,
+      "admissionMs": 2.1774339999999484,
+      "outputAfterAdmissionMs": 0.1625490000000127
+    },
+    {
+      "mode": "code",
+      "iteration": 0,
+      "readyMs": 15.970951000000014,
+      "spawnMs": 1.8007979999999861,
+      "requestMs": 5.655850999999984,
+      "upgradeMs": 5.131089999999972,
+      "joinAfterUpgradeMs": 0.23536200000000917,
+      "admissionMs": 4.754575000000045,
+      "outputAfterAdmissionMs": 0.19407300000000305
+    },
+    {
+      "mode": "version",
+      "iteration": 1,
+      "readyMs": 4.276005000000055,
+      "spawnMs": 1.754784000000086
+    },
+    {
+      "mode": "link",
+      "iteration": 1,
+      "readyMs": 11.413433999999938,
+      "spawnMs": 1.5089229999999816,
+      "requestMs": 4.741754999999898,
+      "upgradeMs": 5.208220000000097,
+      "joinAfterUpgradeMs": 0.16956899999991037,
+      "admissionMs": 1.190776000000028,
+      "outputAfterAdmissionMs": 0.10311400000000503
+    },
+    {
+      "mode": "code",
+      "iteration": 1,
+      "readyMs": 16.397721000000047,
+      "spawnMs": 1.8015950000000203,
+      "requestMs": 4.991151000000059,
+      "upgradeMs": 6.743517999999995,
+      "joinAfterUpgradeMs": 0.17535499999996773,
+      "admissionMs": 4.342439000000013,
+      "outputAfterAdmissionMs": 0.14525800000001254
+    },
+    {
+      "mode": "version",
+      "iteration": 2,
+      "readyMs": 4.196484999999939,
+      "spawnMs": 1.6064079999999876
+    },
+    {
+      "mode": "link",
+      "iteration": 2,
+      "readyMs": 12.359005999999908,
+      "spawnMs": 1.741630999999984,
+      "requestMs": 4.228015999999911,
+      "upgradeMs": 6.583107000000041,
+      "joinAfterUpgradeMs": 0.18523500000003423,
+      "admissionMs": 1.2308199999999943,
+      "outputAfterAdmissionMs": 0.13182799999992767
+    },
+    {
+      "mode": "code",
+      "iteration": 2,
+      "readyMs": 11.537703999999962,
+      "spawnMs": 1.5537440000000515,
+      "requestMs": 3.682409000000007,
+      "upgradeMs": 4.191092000000026,
+      "joinAfterUpgradeMs": 0.1755999999999176,
+      "admissionMs": 3.342604000000051,
+      "outputAfterAdmissionMs": 0.1459989999999607
+    },
+    {
+      "mode": "version",
+      "iteration": 3,
+      "readyMs": 3.4477959999999257,
+      "spawnMs": 1.681966999999986
+    },
+    {
+      "mode": "link",
+      "iteration": 3,
+      "readyMs": 9.814159000000018,
+      "spawnMs": 1.4714510000000018,
+      "requestMs": 3.7633349999999837,
+      "upgradeMs": 4.237972000000013,
+      "joinAfterUpgradeMs": 0.1939079999999649,
+      "admissionMs": 1.2090580000000273,
+      "outputAfterAdmissionMs": 0.4098860000000286
+    },
+    {
+      "mode": "code",
+      "iteration": 3,
+      "readyMs": 10.737561000000028,
+      "spawnMs": 1.5009400000000142,
+      "requestMs": 4.140886999999907,
+      "upgradeMs": 4.543458000000101,
+      "joinAfterUpgradeMs": 0.1335149999999885,
+      "admissionMs": 1.7749630000000707,
+      "outputAfterAdmissionMs": 0.14473799999996118
+    },
+    {
+      "mode": "version",
+      "iteration": 4,
+      "readyMs": 3.207932000000028,
+      "spawnMs": 1.5332820000000993
+    },
+    {
+      "mode": "link",
+      "iteration": 4,
+      "readyMs": 11.5486199999998,
+      "spawnMs": 1.2581669999999576,
+      "requestMs": 3.818618000000015,
+      "upgradeMs": 6.175532999999859,
+      "joinAfterUpgradeMs": 0.1766299999999319,
+      "admissionMs": 1.275034000000005,
+      "outputAfterAdmissionMs": 0.10280499999998938
+    },
+    {
+      "mode": "code",
+      "iteration": 4,
+      "readyMs": 11.62836100000004,
+      "spawnMs": 1.3593640000001415,
+      "requestMs": 4.168775000000096,
+      "upgradeMs": 3.7338629999999284,
+      "joinAfterUpgradeMs": 0.10900100000003476,
+      "admissionMs": 3.48494299999993,
+      "outputAfterAdmissionMs": 0.13177900000005138
+    },
+    {
+      "mode": "version",
+      "iteration": 5,
+      "readyMs": 3.6274060000000645,
+      "spawnMs": 1.5607030000001032
+    },
+    {
+      "mode": "link",
+      "iteration": 5,
+      "readyMs": 19.80198100000007,
+      "spawnMs": 1.582585999999992,
+      "requestMs": 4.072638000000097,
+      "upgradeMs": 14.235181000000011,
+      "joinAfterUpgradeMs": 0.19451299999991534,
+      "admissionMs": 1.1780499999999847,
+      "outputAfterAdmissionMs": 0.12159900000006019
+    },
+    {
+      "mode": "code",
+      "iteration": 5,
+      "readyMs": 11.011189999999942,
+      "spawnMs": 1.8449259999999867,
+      "requestMs": 3.9081300000000283,
+      "upgradeMs": 4.566868000000113,
+      "joinAfterUpgradeMs": 0.19843799999989642,
+      "admissionMs": 2.222964999999931,
+      "outputAfterAdmissionMs": 0.11478899999997338
+    },
+    {
+      "mode": "version",
+      "iteration": 6,
+      "readyMs": 3.3898300000000745,
+      "spawnMs": 1.5383750000000873
+    },
+    {
+      "mode": "link",
+      "iteration": 6,
+      "readyMs": 10.758474999999862,
+      "spawnMs": 1.636878999999908,
+      "requestMs": 4.660948999999846,
+      "upgradeMs": 4.42239399999994,
+      "joinAfterUpgradeMs": 0.2165610000001834,
+      "admissionMs": 1.3240959999998267,
+      "outputAfterAdmissionMs": 0.13447500000006585
+    },
+    {
+      "mode": "code",
+      "iteration": 6,
+      "readyMs": 10.810391999999865,
+      "spawnMs": 1.801193000000012,
+      "requestMs": 3.881151999999929,
+      "upgradeMs": 3.6125030000000606,
+      "joinAfterUpgradeMs": 0.13373200000000907,
+      "admissionMs": 2.585270000000037,
+      "outputAfterAdmissionMs": 0.5977349999998296
+    },
+    {
+      "mode": "version",
+      "iteration": 7,
+      "readyMs": 4.615779999999859,
+      "spawnMs": 2.0915319999999156
+    },
+    {
+      "mode": "link",
+      "iteration": 7,
+      "readyMs": 10.207550000000083,
+      "spawnMs": 1.5141439999999875,
+      "requestMs": 4.627533000000085,
+      "upgradeMs": 4.2135269999998854,
+      "joinAfterUpgradeMs": 0.1561260000000857,
+      "admissionMs": 1.0746679999999742,
+      "outputAfterAdmissionMs": 0.13569600000005266
+    },
+    {
+      "mode": "code",
+      "iteration": 7,
+      "readyMs": 16.138742999999977,
+      "spawnMs": 1.7763690000001588,
+      "requestMs": 4.119462999999996,
+      "upgradeMs": 7.745432000000164,
+      "joinAfterUpgradeMs": 0.17134499999997388,
+      "admissionMs": 3.955152999999882,
+      "outputAfterAdmissionMs": 0.14734999999996035
+    },
+    {
+      "mode": "version",
+      "iteration": 8,
+      "readyMs": 3.702681999999868,
+      "spawnMs": 1.6279609999999138
+    },
+    {
+      "mode": "link",
+      "iteration": 8,
+      "readyMs": 9.021607000000131,
+      "spawnMs": 1.6207090000000335,
+      "requestMs": 3.9517000000000735,
+      "upgradeMs": 3.8197029999998904,
+      "joinAfterUpgradeMs": 0.1495980000001964,
+      "admissionMs": 0.9876449999999295,
+      "outputAfterAdmissionMs": 0.11296100000004117
+    },
+    {
+      "mode": "code",
+      "iteration": 8,
+      "readyMs": 16.55302000000006,
+      "spawnMs": 1.8734580000000278,
+      "requestMs": 5.294581999999991,
+      "upgradeMs": 5.992034999999987,
+      "joinAfterUpgradeMs": 0.16233600000009574,
+      "admissionMs": 4.887042999999949,
+      "outputAfterAdmissionMs": 0.21702400000003763
+    },
+    {
+      "mode": "version",
+      "iteration": 9,
+      "readyMs": 4.6181360000000495,
+      "spawnMs": 1.8723519999998643
+    },
+    {
+      "mode": "link",
+      "iteration": 9,
+      "readyMs": 14.701441000000159,
+      "spawnMs": 2.149910000000091,
+      "requestMs": 6.7135880000000725,
+      "upgradeMs": 6.854604999999992,
+      "joinAfterUpgradeMs": 0.15469499999994696,
+      "admissionMs": 0.8597360000001117,
+      "outputAfterAdmissionMs": 0.11881700000003548
+    },
+    {
+      "mode": "code",
+      "iteration": 9,
+      "readyMs": 11.058892000000014,
+      "spawnMs": 1.5861110000000735,
+      "requestMs": 4.322372000000087,
+      "upgradeMs": 4.823822999999948,
+      "joinAfterUpgradeMs": 0.13208099999997103,
+      "admissionMs": 1.6698320000000422,
+      "outputAfterAdmissionMs": 0.11078399999996691
+    },
+    {
+      "mode": "version",
+      "iteration": 10,
+      "readyMs": 4.269212000000152,
+      "spawnMs": 1.6107480000000578
+    },
+    {
+      "mode": "link",
+      "iteration": 10,
+      "readyMs": 11.702262999999903,
+      "spawnMs": 1.8235819999999876,
+      "requestMs": 5.171323000000029,
+      "upgradeMs": 5.170084999999972,
+      "joinAfterUpgradeMs": 0.204921000000013,
+      "admissionMs": 1.0320750000000771,
+      "outputAfterAdmissionMs": 0.1238589999998112
+    },
+    {
+      "mode": "code",
+      "iteration": 10,
+      "readyMs": 12.103204000000005,
+      "spawnMs": 1.6908460000001924,
+      "requestMs": 4.063409000000092,
+      "upgradeMs": 5.275331000000051,
+      "joinAfterUpgradeMs": 0.11923299999989467,
+      "admissionMs": 2.5098199999999906,
+      "outputAfterAdmissionMs": 0.1354109999999764
+    },
+    {
+      "mode": "version",
+      "iteration": 11,
+      "readyMs": 4.19701699999996,
+      "spawnMs": 2.152321999999913
+    },
+    {
+      "mode": "link",
+      "iteration": 11,
+      "readyMs": 11.53294700000015,
+      "spawnMs": 1.7816530000000057,
+      "requestMs": 4.099754000000075,
+      "upgradeMs": 5.883739999999989,
+      "joinAfterUpgradeMs": 0.17186500000002525,
+      "admissionMs": 1.249426000000085,
+      "outputAfterAdmissionMs": 0.1281619999999748
+    },
+    {
+      "mode": "code",
+      "iteration": 11,
+      "readyMs": 12.349847999999838,
+      "spawnMs": 2.1052099999999427,
+      "requestMs": 4.525846000000001,
+      "upgradeMs": 4.813576999999896,
+      "joinAfterUpgradeMs": 0.19929900000011003,
+      "admissionMs": 2.6659239999999045,
+      "outputAfterAdmissionMs": 0.14520199999992656
+    }
+  ]
+}

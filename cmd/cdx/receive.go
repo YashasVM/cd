@@ -195,6 +195,8 @@ func resolveReceiveDest(offerName, out string, force bool) (final, staging strin
 // receiveFile joins the relay as the receiver, accepts one file offer, and
 // writes it to disk. onOffer observes the validated offer before acceptance.
 func receiveFile(ctx context.Context, code, out string, force bool, onReceived func(receiveResult) error) error {
+	timing := newTransferTiming("receiver")
+	timing.mark("start")
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -216,11 +218,12 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err != nil {
 		return fmt.Errorf("prepare transfer secret: %w", err)
 	}
-	connection, err := dialRelay(ctx, relayBase+"/"+invitation.encodedID())
+	connection, err := dialRelay(ctx, relayTransferEndpoint(relayBase, invitation.encodedID()))
 	if err != nil {
 		return err
 	}
 	defer connection.Close()
+	timing.mark("relay-connected")
 	stopOnCancel := context.AfterFunc(ctx, func() { _ = connection.Close() })
 	defer stopOnCancel()
 	connection.SetReadLimit(maxRecordBytes)
@@ -251,6 +254,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
 		return err
 	}
+	timing.mark("relay-admitted")
 	transferInfo("connected — waiting for sender's file offer")
 	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "sender disconnected (they closed the tab or lost network)", retryNewTransfer))
 	defer link.close()
@@ -265,10 +269,12 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if kind != kindOffer {
 		return NewFailure(failureProtocol, "the sender sent a message out of order", retryNever)
 	}
+	timing.mark("offer-received")
 	offer, size, err := parseReceivedOffer(payload)
 	if err != nil {
 		return err
 	}
+	timing.mark("offer-parsed")
 	var final, staging, bundleDir string
 	if offer.Bundle {
 		// Several files: stage the zip next to where they unpack.
@@ -311,6 +317,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 	if err := link.send(kindAccept, acceptance); err != nil {
 		return friendlyRelayError(fmt.Errorf("accept file offer: %w", err))
 	}
+	timing.mark("accept-sent")
 	// Data starts on the relay right away; answer a direct-path offer in the
 	// background and the sender moves over when the data channel opens.
 	if reverse != nil {
@@ -347,11 +354,17 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				bar.finish()
 				return err
 			}
+			if received == 0 {
+				timing.mark("first-chunk")
+			}
 			if _, err := stagingFile.Write(payload); err != nil {
 				bar.finish()
 				return failuref(failureLocal, retryNever, "write file while receiving: %s", underlyingReason(err))
 			}
 			received += uint64(len(payload))
+			if received == size {
+				timing.mark("last-chunk-written")
+			}
 			chunks++
 			reportProgress(received)
 			if received-acknowledged >= ackIntervalBytes || received == size {
@@ -362,14 +375,17 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 				acknowledged = received
 			}
 		case kindEnd:
+			timing.mark("end-received")
 			bar.finish()
 			endChunks, endBytes, err := decodeCounts(payload)
 			if err != nil || endBytes != size || endBytes != received || endChunks != chunks {
 				return NewFailure(failureProtocol, "the transfer ended before the complete file arrived", retryNever)
 			}
+			timing.mark("fsync-start")
 			if err := stagingFile.Sync(); err != nil {
 				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
+			timing.mark("fsync-done")
 			if err := stagingFile.Close(); err != nil {
 				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
@@ -390,7 +406,10 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {
 				return friendlyRelayError(fmt.Errorf("verify transfer: %w", err))
 			}
+			timing.mark("complete-sent")
+			timing.mark("finish-start")
 			link.finish(true)
+			timing.mark("finish-done")
 			abs, _ := filepath.Abs(final)
 			if abs == "" {
 				abs = final

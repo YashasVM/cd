@@ -1,0 +1,15 @@
+{
+  "error": "AssertionError [ERR_ASSERTION]: {\"transport\":\"relay\",\"relayBytes\":88,\"directBytes\":0}\ncdx: sender disconnected (they closed the tab or lost network)\n\n\nnull !== 0\n\n    at file:///home/yvm/code/cd/scripts/profile-cd-transfer.mjs:30:9\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+  "sender": {
+    "stdout": "91967\n",
+    "stderr": "",
+    "exitCode": null,
+    "signal": "SIGKILL"
+  },
+  "receiver": {
+    "stdout": "--- FAIL: TestProfileCLI (0.02s)\n    profile_goal_test.go:23: CLI exited 1\nFAIL\n",
+    "stderr": "{\"transport\":\"relay\",\"relayBytes\":88,\"directBytes\":0}\ncdx: sender disconnected (they closed the tab or lost network)\n",
+    "exitCode": null,
+    "signal": "SIGKILL"
+  }
+}
