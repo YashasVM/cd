@@ -1,4 +1,0 @@
-{"mib":64,"mode":"compatibility","direction":"old-new","seconds":1.184738825,"mibPerSecond":54.020344948178774,"direct":true}
-{"mib":64,"mode":"compatibility","direction":"new-old","seconds":0.40604239499999994,"mibPerSecond":157.61900921700556,"direct":true}
-{"mib":256,"mode":"compatibility","direction":"old-new","seconds":2.7130130229999994,"mibPerSecond":94.36003359722909,"direct":true}
-{"mib":256,"mode":"compatibility","direction":"new-old","seconds":1.2394095299999999,"mibPerSecond":206.5499690001577,"direct":true}

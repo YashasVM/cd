@@ -7,8 +7,9 @@ export const KIND_END = 3;
 export const KIND_ACCEPT = 4;
 export const KIND_ACK = 5;
 export const KIND_COMPLETE = 6;
-// Receiver→sender WebRTC answer for the direct path; sent only when the
-// sender's offer included SDP.
+// WebRTC answer and candidates for the direct path: receivers send them
+// only when the sender's offer included SDP, senders send candidates only
+// to receivers whose answer advertised trickle (see direct-link.js).
 export const KIND_SIGNAL = 9;
 // Tunnel records carry the browser P2P messages over a relay room when the
 // data channel cannot connect. Both directions use both kinds; a tunnel
@@ -73,7 +74,7 @@ async function recordKey(invitation, direction) {
 function isValidKind(direction, kind, tunnel) {
   if (tunnel) return kind === KIND_TUNNEL_JSON || kind === KIND_TUNNEL_BYTES;
   return direction === SENDER_DIRECTION
-    ? kind >= KIND_OFFER && kind <= KIND_END
+    ? (kind >= KIND_OFFER && kind <= KIND_END) || kind === KIND_SIGNAL
     : (kind >= KIND_ACCEPT && kind <= KIND_COMPLETE) || kind === KIND_SIGNAL;
 }
 

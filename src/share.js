@@ -17,7 +17,7 @@ import {
 } from './agent-protocol.js';
 import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
 import { downloadNames, readBundle } from './zip-unbundle.js';
-import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
+import { answerDirect, createRecordMerger, directTrickle, parseDirectOffer } from './direct-link.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
@@ -65,7 +65,7 @@ function parseOffer(plaintext) {
   // A bundle is several files sent as one zip; it is unpacked on arrival.
   const bundle = value.bundle === true;
   const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
-  return { name, mediaType, size: byteSize, bundle, files, directSdp: parseDirectOffer(value) };
+  return { name, mediaType, size: byteSize, bundle, files, directSdp: parseDirectOffer(value), directTrickle: directTrickle(value.direct) };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -297,6 +297,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     // Records from the relay and the direct path, in sequence order.
     const merger = createRecordMerger();
     let direct = null;
+    let directReady = null;
     let directUsed = false;
     // Records sent on the relay while the direct path may still open; they
     // go out again on it when it does (the sender drops second copies).
@@ -312,9 +313,9 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
           directUsed = true;
           if (!switched) {
             switched = true;
-            for (const earlier of retained.splice(0)) direct.send(earlier);
+            for (const earlier of retained.splice(0)) await direct.send(earlier);
           }
-          direct.send(record);
+          await direct.send(record);
           return;
         }
         if (direct && !switched) retained.push(record);
@@ -348,9 +349,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
 
     // startDirect answers the sender's direct-path offer in the background;
     // the transfer starts on the relay and moves over when the channel opens.
-    function startDirect(offerSdp) {
-      answerDirect({
+    function startDirect(offerSdp, trickle) {
+      directReady = answerDirect({
         offerSdp,
+        trickle,
         onSignal: (signal) => { void send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))).catch(() => {}); },
         onRecord: (record) => {
           directUsed = true;
@@ -363,7 +365,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       }).then((path) => {
         direct = path;
         closeDirect = () => path.close();
-      }).catch(() => { /* The transfer stays on the relay. */ });
+        return path;
+      }).catch(() => null /* The transfer stays on the relay. */);
     }
 
     async function processMessage(data) {
@@ -381,7 +384,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       if (state === 'connecting' && kind === KIND_OFFER) {
         offer = parseOffer(plaintext);
         state = 'offered';
-        if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp);
+        if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp, offer.directTrickle);
         sink = await waitForAcceptance(offer);
         if (failureShown) {
           await sink.abort();
@@ -404,6 +407,15 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
           await send(KIND_ACK, encodeCounts(chunks, received));
           acknowledged = received;
         }
+        return;
+      }
+      if (state === 'receiving' && kind === KIND_SIGNAL && offer.directTrickle) {
+        // A candidate the sender found after its offer; malformed or extra
+        // ones are dropped (direct-link.js bounds them).
+        if (plaintext.byteLength > 4096) return;
+        let value;
+        try { value = JSON.parse(decoder.decode(plaintext)); } catch { return; }
+        if (value?.candidate) void directReady?.then((path) => path?.addCandidate(value.candidate));
         return;
       }
       if (state === 'receiving' && kind === KIND_END) {
