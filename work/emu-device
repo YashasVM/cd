@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /home/yvm/.t3/userdata/device/bin/agent-device "$@" --platform android --serial emulator-5554 --config /home/yvm/.t3/userdata/device/hosts/25bf8e1a2393f1108d37029b.json --session t3-0d5bd05f4ddb58c8f6211a43

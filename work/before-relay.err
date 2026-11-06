@@ -1,0 +1,16 @@
+Waiting for recv-phone. Keep Receive from trusted devices enabled in CD.
+{"progress":{"phase":"sending","done":0,"total":268435456,"bytesPerSecond":0}}
+{"progress":{"phase":"sending","done":17825792,"total":268435456,"bytesPerSecond":13838421,"etaSeconds":18.1}}
+{"progress":{"phase":"sending","done":39845888,"total":268435456,"bytesPerSecond":17566449,"etaSeconds":13}}
+{"progress":{"phase":"sending","done":56623104,"total":268435456,"bytesPerSecond":16728152,"etaSeconds":12.6}}
+{"progress":{"phase":"sending","done":78643200,"total":268435456,"bytesPerSecond":19465622,"etaSeconds":9.7}}
+{"progress":{"phase":"sending","done":97517568,"total":268435456,"bytesPerSecond":18967429,"etaSeconds":9}}
+{"progress":{"phase":"sending","done":119537664,"total":268435456,"bytesPerSecond":19179256,"etaSeconds":7.7}}
+{"progress":{"phase":"sending","done":141557760,"total":268435456,"bytesPerSecond":19271622,"etaSeconds":6.5}}
+{"progress":{"phase":"sending","done":160432128,"total":268435456,"bytesPerSecond":18361081,"etaSeconds":5.8}}
+{"progress":{"phase":"sending","done":179306496,"total":268435456,"bytesPerSecond":18226259,"etaSeconds":4.8}}
+{"progress":{"phase":"sending","done":199229440,"total":268435456,"bytesPerSecond":18017447,"etaSeconds":3.8}}
+{"progress":{"phase":"sending","done":219152384,"total":268435456,"bytesPerSecond":18307859,"etaSeconds":2.6}}
+{"progress":{"phase":"sending","done":240123904,"total":268435456,"bytesPerSecond":19447475,"etaSeconds":1.4}}
+{"progress":{"phase":"sending","done":263192576,"total":268435456,"bytesPerSecond":19847061,"etaSeconds":0.2}}
+{"progress":{"phase":"sending","done":268435456,"total":268435456,"bytesPerSecond":19847061}}
