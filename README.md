@@ -1,123 +1,58 @@
-# cd
+# CD for Android
 
-Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
+Native Kotlin and Jetpack Compose receiver for trusted CLI transfers. Requires Android 10 or newer. The first physical-device target is the Samsung S24 Ultra.
 
-- **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
-  types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files arrive as one .zip.
+## Build and install
 
-CD never stores files. Transfers are live and end-to-end encrypted.
+Install JDK 17 and Android SDK platform 35. Set `ANDROID_HOME` to your SDK location, or put `sdk.dir=/path/to/Android/Sdk` in `local.properties`.
 
-## Install `cdx`
-
-| Platform | Command |
-| --- | --- |
-| Linux / macOS | `curl -fsSL https://cd.yash0.in/install.sh \| sh` |
-| Windows (PowerShell) | `irm https://cd.yash0.in/install.ps1 \| iex` |
-| Go 1.26+ | `go install github.com/YashasVM/cd/cmd/cdx@latest` |
-
-The shell installers check release checksums. The CLI is named `cdx` because `cd` is a shell builtin.
-
-## Use
-
-```bash
-cdx send ./report.pdf          # prints a code, e.g. 48291
-cdx send ./shots ./notes.md    # several paths arrive as one .zip
-cdx send --link ./secret.zip   # private end-to-end encrypted link instead of a code
-cdx receive 48291              # save to the current directory
-cdx receive 48291 --out ~/Downloads
+```sh
+cd android
+./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n in.yash0.cd/.MainActivity
 ```
 
-Without the CLI, type the code into the **Receive** box on [cd.yash0.in](https://cd.yash0.in).
-To send from a browser to a terminal, use [cd.yash0.in/send](https://cd.yash0.in/send).
+For a smaller S24 Ultra APK, first preserve the verified universal APK, then build only arm64:
 
-| Command | What it does |
-| --- | --- |
-| `cdx status [code]` | List background sends |
-| `cdx wait <code>` | Exit 0 once the receiver has verified every byte, or 1 if the transfer failed |
-| `cdx wait --timeout 5m <code>` | Same, but exit 3 if the receiver hasn't finished by then (the send keeps going) |
-| `cdx update` | Update cdx to the latest release (checksum-verified) |
-| `--json` | Machine-readable output, including `{"error":{"kind","message"}}` on failure and JSON progress lines on stderr |
-| `--wait` / `--detach` | Force foreground or background sending |
-
-**Behavior:** stdout holds only the code, and progress goes to stderr. In a terminal, `send` waits until the
-receiver verifies the file. When stdout isn't a terminal (agents, scripts, pipes), it detaches as soon as
-the code is live. Codes expire after 15 minutes and admit one receiver.
-Files of 1 MiB or more switch to a direct WebRTC path mid-transfer when the network allows it.
-
-**Security:** a 5-digit code lets the relay hold the transfer key so the code is easy to type, so anyone who
-guesses a live code can receive the file. For sensitive files, use `--link`: the key stays in the URL fragment,
-which never reaches the server. Details are in [SECURITY.md](SECURITY.md) and the [protocol spec](docs/agent-transfer-v1.md).
-
-Agents should follow [AGENTS.md](AGENTS.md) and the [file-sharing skill](skills/cd-file-sharing/SKILL.md).
-
-To teach the AI coding agents on your machine to share files with cdx, run `cdx agent setup` (the
-installer offers it too). It asks per agent: Claude Code and `~/.agents/skills` get the skill; Codex,
-Gemini CLI and opencode get a short note in their global instructions file. `cdx agent remove` undoes it.
-Or install just the skill with `npx skills add YashasVM/cd`.
-
-## Architecture
-
-```text
-Browser / cdx ── encrypted WebSocket ── CD relay (Durable Object) ── Browser / cdx
-                └─ direct WebRTC upgrade for large files from cdx ─┘
+```sh
+cp app/build/outputs/apk/debug/app-debug.apk /tmp/cd-universal.apk
+./gradlew :app:assembleDebug -PcdAbi=arm64-v8a
+mkdir -p ../bin
+cp app/build/outputs/apk/debug/app-debug.apk ../bin/cd-android-preview-arm64.apk
+adb install -r ../bin/cd-android-preview-arm64.apk
 ```
 
-One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code directory (`/api/codes`).
-Each transfer gets its own Durable Object room. Rooms hold one sender and one receiver, limit memory use,
-expire on their own, and keep no file data.
+Omitting `cdAbi` builds a universal APK for emulator development. Accepted values are `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`; other values fail configuration.
 
-## Develop
+The S24 artifact is `bin/cd-android-preview-arm64.apk` from the repository root. The default build output changes with the ABI property, so keep the universal copy for emulator use.
 
-Requires Node.js 24+, npm, and Go 1.26.8+.
+The checked-in Gradle wrapper downloads Gradle 8.13. Dependencies resolve from Google Maven and Maven Central. Debug APKs use the local Android debug signing key. A signed release and store distribution need a separately managed release key.
 
-```bash
-npm ci
-npm run dev        # web UI
-make cdx           # builds ./bin/cdx
-```
+## Pair and receive
 
-Point a local CLI at a local Worker:
+Run `cdx pair` on your computer, scan its QR code with CD, and tap **Trust device**. You can also paste its `cdpair://v1#...` pairing link. Pairing links expire after five minutes. They contain a secret, so keep them private.
 
-```bash
-npx wrangler dev
-CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 CD_PUBLIC_URL=http://127.0.0.1:8787 ./bin/cdx send ./README.md
-```
+Enable receiving and allow notifications. CD keeps a visible **Ready to receive** notification, discovers trusted computers over `_cdx._tcp`, and reconnects to their paired control channels. Trusted offers automatically enter the receive queue. LAN control sockets answer a fresh, directional HMAC challenge and never send relay bearer tokens. Relay sockets use their separate admission token. Admitted control sockets send a small JSON heartbeat every 20 seconds; idle receiving holds no CPU wake lock, so Doze may defer it until the phone wakes. Public connections require TLS; local connections accept only numeric private, link-local, or loopback addresses and still authenticate and encrypt every record.
 
-### Checks
+The receiver tries the authenticated offer's local WebSocket endpoint first and then its v2 relay endpoint. Each retry authenticates fresh session nonces and resumes only from a durable checkpoint. Retries revisit the local route and use bounded admission waits. Each failed attempt yields to other queued roots; per-root retry timing and route attempt numbers persist in the active service, and authenticated re-offers wake only their own retry. Bounded receive-attempt diagnostics are available with `adb logcat -s CD`; they contain root IDs, route classes, stages, and safe error categories, with no invitation URLs, filenames, or secrets. The Android client binds sockets to an unmetered Wi-Fi or Ethernet network by default. Enable mobile or metered data explicitly to use it. This also permits local Wi-Fi when Android's default internet route is cellular.
 
-| Command | Covers |
-| --- | --- |
-| `npm test` | Browser unit tests |
-| `npm run test:cli` | Go CLI tests |
-| `npm run typecheck` | TypeScript |
-| `npm run verify:agent` | CLI → Worker → browser, end to end in Chromium |
-| `npm run verify:browser` | Browser send → browser (typed code and scanned QR) and → `cdx receive` |
-| `npm run verify:terminal` | CLI ↔ CLI and browser → CLI |
-| `npm run bench` | Throughput benchmarks |
-| `npm run deploy:dry` | Worker bundle |
+Files stage in app-private storage. CD verifies the retained prefix before resuming, synchronizes file data and its authenticated checkpoint, including its directory rename, before acknowledging it, and verifies the final byte count and SHA-256 before publishing to `Downloads/CD` through MediaStore. Existing files receive MediaStore's collision-safe names. Completed transfer IDs and accepted control-message IDs persist across process restarts. New senders advertising a receive window of at least 1 MiB get cumulative durable acknowledgments every 1 MiB; older senders keep per-chunk acknowledgments. The final partial batch always commits. Storage checks account for both the unfinished staging file and its Downloads copy. Insufficient storage pauses the transfer with an actionable message, and a small metadata reserve lets the app persist that pause even when another app fills the disk.
 
-Set `CD_VERIFY_URL=https://cd.yash0.in` to run the `verify:*` scripts against production, and
-`CHROMIUM_PATH` if Chromium isn't installed in a standard location.
+**Stop** in the notification pauses all active and queued transfers, sends authenticated pause receipts, and turns off receiving after a bounded control-frame drain. Per-transfer Pause keeps trusted control sockets open. Saved progress remains. Enable receiving and tap **Resume** on the transfer to continue. A lost network remains retryable, while an expired transfer or an exhausted reconnect budget pauses with instructions to start a new transfer. Both keep their retained checkpoint. A paused transfer also has **Cancel and discard**, which removes retained data and preserves the receiving switch. **Revoke** removes a device credential and pauses that device's pending transfers.
 
-## Deploy and release
+For an ordinary CLI resumable transfer, paste its full private `https://.../s/...#v2...` link and tap **Receive file**. Numeric codes and v1 links do not support this receiver's resume protocol.
 
-```bash
-npm run build && npx wrangler deploy           # production: cd.yash0.in
-npx wrangler deploy --env test                 # staging: cd-test.yash0.in
-git tag v1.2.3 && git push --tags              # builds cdx for all platforms and publishes a release
-```
+## Background behavior and current limits
 
-If something breaks in production, see [docs/production-recovery.md](docs/production-recovery.md).
+Receiving uses an Android `connectedDevice` foreground service. Active transfers hold a timed partial wake lock, renewed only while the transfer is running. Idle receiving does not hold a wake lock. The notification must remain enabled. Android Doze can delay idle network traffic until the phone wakes. Active transfers consume battery. Samsung's battery management can still stop it, so physical S24 Ultra screen-off and battery tests are required before describing background delivery as reliable.
 
-## Layout
+Firebase wake-up is optional and off by default. The default build and preview APK omit Firebase; configure your own project and build with `-PcdFcm=true` to expose the separate Trusted wake-up notifications switch. See [docs/push.md](docs/push.md) for setup, build checks without credentials, delivery policy and current limits. No project is configured by this checkout. After a force-stop, open CD to restore receiving; Android does not deliver FCM to a force-stopped app. Receiving that was explicitly stopped stays off until enabled again. Android may also delay process recreation after memory pressure. CD does not silently restart receiving after a reboot. Credentials remain in Android Keystore-encrypted app-private storage; Android backup is disabled.
 
-```text
-cmd/cdx/   Go CLI
-src/       browser UI and transfer protocols
-worker/    Cloudflare Worker + Durable Object relay
-scripts/   build, verify, and bench scripts
-skills/    instructions for AI agents
-docs/      protocol spec, recovery runbook, audit notes
-```
+The remote v2 transfer starts on the encrypted WebSocket relay and can switch file chunks to native WebRTC after negotiation. Failed negotiation leaves relay transfer working. Android-to-CLI sending, directory bundles, and a release signing/distribution pipeline are not implemented in this receiver. Optional FCM wake-up is implemented but needs your Firebase and Worker configuration before real delivery can be verified. Native dependency provenance and network filtering are documented in [docs/webrtc.md](docs/webrtc.md). No account or username/password is needed for pairing.
 
-MIT licensed. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
+## Protocol checks
+
+Unit tests consume the repository's `fixtures/resume-v2.json` and `fixtures/device-v1.json`, rather than copied Android fixtures. They compare admission derivation, nonce proofs, both AES-GCM frame directions, and checkpoint MACs with Go's literal fixture. They also compare all paired channel keys and decrypt Go's literal offer frame, reject replayed records, changed nonces, modified ciphertext, expired pairing links, public cleartext endpoints, and control messages in the wrong direction. Upper expiry validation permits 30 seconds of clock skew. Push policy tests cover opt-in, receiving and notification gates, actual delivered priority, trusted-pair checks, freshness, replay/coalescing and target request credentials from the shared fixture. Scheduler tests prove that an unreachable transfer yields to newer queued roots. Native transport tests cover fragmented and concatenated CHUNK reassembly, record bounds, concurrent SIGNAL/ACK sequencing, terminal signal freeze, and mobile opt-out network policy. Separate pressure tests prove that the bounded eight-record inbox waits for the disk writer without dropping chunks and that closing it releases both blocked producers and consumers.
+
+For emulator integration, forward the CLI/Worker port with `adb reverse` and use loopback/private numeric URLs in the test invitation. Pairing still requires a manual Trust action in the app; no test-only trust bypass is included.

@@ -1,19 +1,11 @@
-node_modules/
-dist/
-.vite/
-.wrangler/
-bin/
-npm-debug.log*
-.agents/
-skills-lock.json
-
-# Generated from scripts/install.* at build time (see scripts/sync-install.mjs)
-public/install.sh
-public/install.ps1
-
+.gradle/
+.kotlin/
+local.properties
+**/build/
 *.iml
-.idea/
+build-log.txt
+lint-log.txt
+arm64-build-log.txt
 
-# Stray `go build` outputs at the repository root
-/cd
-/cdx
+app/google-services.json
+push-build-log.txt
