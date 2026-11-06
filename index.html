@@ -123,11 +123,7 @@
             <div class="progress-bar" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
             </div>
-            <div class="progress-stats">
-              <span><b>speed</b><em class="progress-speed">–</em></span>
-              <span><b>moved</b><em class="progress-transferred">–</em></span>
-              <span><b>left</b><em class="progress-eta">–</em></span>
-            </div>
+            <div class="speed-gauge" data-label="Upload speed"></div>
           </div>
 
           <div id="sender-error" class="result-section error hidden" role="alert">
@@ -146,6 +142,7 @@
             <div class="result-copy">
               <p id="sender-complete-message" class="result-title">Sent</p>
               <p id="sender-complete-detail" class="result-detail"></p>
+              <p id="sender-complete-speed" class="result-detail result-speed"></p>
               <div class="result-actions">
                 <button id="send-another-btn" class="primary-btn" type="button">Send more files</button>
               </div>
@@ -216,11 +213,7 @@
             <div class="progress-bar" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="progress-fill"></div>
             </div>
-            <div class="progress-stats">
-              <span><b>speed</b><em class="progress-speed">–</em></span>
-              <span><b>moved</b><em class="progress-transferred">–</em></span>
-              <span><b>left</b><em class="progress-eta">–</em></span>
-            </div>
+            <div class="speed-gauge" data-label="Download speed"></div>
           </div>
 
           <div id="receiver-complete" class="result-section complete-section hidden">
@@ -228,6 +221,7 @@
             <div class="result-copy">
               <p id="receiver-complete-message" class="result-title">Saved</p>
               <p id="receiver-complete-detail" class="result-detail"></p>
+              <p id="receiver-complete-speed" class="result-detail result-speed"></p>
               <div class="result-actions">
                 <button id="receive-another-btn" class="primary-btn" type="button">Receive another</button>
               </div>

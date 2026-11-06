@@ -1,6 +1,7 @@
 import { cleanCode, codeFromUrl, generateEphemeralId, isValidCode, peerIdFor } from './p2p-code.js';
 import { codeLookupPath, isShortCode, shortCodeFromInput, parseCapability, shareUrlFromCapability } from './agent-code.js';
 import { startRelaySend } from './relay-sender.js';
+import { mountSpeedGauge } from './speed-gauge.js';
 import { createZipBundle, fileSource } from './zip-bundle.js';
 import { startQrScanner } from './qr-scanner.js';
 import { parseManifest } from './p2p-manifest.js';
@@ -157,6 +158,7 @@ const els = {
   senderComplete: document.getElementById('sender-complete'),
   senderCompleteMessage: document.getElementById('sender-complete-message'),
   senderCompleteDetail: document.getElementById('sender-complete-detail'),
+  senderCompleteSpeed: document.getElementById('sender-complete-speed'),
   sendAnotherBtn: document.getElementById('send-another-btn'),
   receiverInputSection: document.getElementById('receiver-input-section'),
   codeInput: document.getElementById('code-input'),
@@ -175,6 +177,7 @@ const els = {
   receiverComplete: document.getElementById('receiver-complete'),
   receiverCompleteMessage: document.getElementById('receiver-complete-message'),
   receiverCompleteDetail: document.getElementById('receiver-complete-detail'),
+  receiverCompleteSpeed: document.getElementById('receiver-complete-speed'),
   receiverError: document.getElementById('receiver-error'),
   retryBtn: document.getElementById('retry-btn'),
   receiveAnotherBtn: document.getElementById('receive-another-btn'),
@@ -248,68 +251,51 @@ const progressRefs = new WeakMap();
 function refsForProgress(container) {
   let refs = progressRefs.get(container);
   if (!refs) {
+    const gaugeHost = container.querySelector('.speed-gauge');
     refs = {
       fill: container.querySelector('.progress-fill'),
       bar: container.querySelector('.progress-bar'),
       percent: container.querySelector('.progress-percent'),
-      speed: container.querySelector('.progress-speed'),
-      transferred: container.querySelector('.progress-transferred'),
-      eta: container.querySelector('.progress-eta'),
-      emaSpeed: 0
+      gauge: mountSpeedGauge(gaugeHost, { label: gaugeHost.dataset.label })
     };
     progressRefs.set(container, refs);
   }
   return refs;
 }
 
-function formatEta(seconds) {
-  if (!Number.isFinite(seconds) || seconds < 0) return '–';
-  if (seconds < 1) return '<1s';
-  if (seconds < 60) return `${Math.ceil(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`;
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
 function resetProgress(container) {
   const refs = refsForProgress(container);
-  refs.emaSpeed = 0;
   refs.fill.style.transform = 'scaleX(0)';
   refs.bar.setAttribute('aria-valuenow', '0');
   refs.percent.textContent = '0%';
-  refs.speed.textContent = '–';
-  refs.transferred.textContent = '–';
-  if (refs.eta) refs.eta.textContent = '–';
+  refs.gauge.reset();
+}
+
+// speedSummary is the finish line for a transfer's progress view, e.g.
+// "1.20 GB in 41 s · avg 29.8 MB/s".
+function speedSummary(container) {
+  return refsForProgress(container).gauge.summary();
 }
 
 function updateProgress(container, bytes, total, startedAt, force, lastUpdateRef) {
   if (!startedAt) return lastUpdateRef.value;
 
+  const refs = refsForProgress(container);
+  // The speed gauge takes every report (it only records a sample) and
+  // paints itself on its own cadence, so its reading ignores this throttle.
+  refs.gauge.update(bytes, total);
   const now = performance.now();
   if (!force && now - lastUpdateRef.value < PROGRESS_UPDATE_INTERVAL) {
     return lastUpdateRef.value;
   }
 
-  const refs = refsForProgress(container);
   const percent = total === 0 ? 100 : Math.min((bytes / total) * 100, 100);
-  const elapsed = Math.max((Date.now() - startedAt) / 1000, 0.001);
-  const instantSpeed = bytes / elapsed;
-  // Exponential moving average: per-chunk timing is noisy, and a flickering
-  // speed readout makes the transfer feel slower than it is.
-  refs.emaSpeed = refs.emaSpeed === 0 ? instantSpeed : refs.emaSpeed * 0.7 + instantSpeed * 0.3;
-
   // transform (not width) keeps the bar animation on the compositor thread.
   refs.fill.style.transform = `scaleX(${percent / 100})`;
   refs.bar.style.setProperty('--progress', `${percent}%`);
   refs.bar.setAttribute('aria-valuenow', percent.toFixed(1));
   refs.percent.textContent = `${percent.toFixed(1)}%`;
   document.title = `${Math.floor(percent)}% · ${BASE_TITLE}`;
-  // No speed until bytes move: "0 B/s" while connecting reads as a stall.
-  refs.speed.textContent = bytes > 0 ? `${formatSize(refs.emaSpeed)}/s` : '–';
-  refs.transferred.textContent = `${formatSize(bytes)} / ${formatSize(total)}`;
-  if (refs.eta) {
-    refs.eta.textContent = bytes >= total || refs.emaSpeed <= 0 ? '–' : formatEta((total - bytes) / refs.emaSpeed);
-  }
 
   return now;
 }
@@ -409,6 +395,7 @@ const Sender = (() => {
     els.senderCompleteDetail.textContent = files.length === 1
       ? `${shortenMiddle(files[0].name, 48)} · ${formatSize(totalSize)}`
       : formatSize(totalSize);
+    els.senderCompleteSpeed.textContent = speedSummary(els.senderProgress);
     setState('complete');
   }
 
@@ -1044,6 +1031,7 @@ const Receiver = (() => {
     els.receiverCompleteDetail.textContent = manifest.totalFiles > 1
       ? `${formatSize(manifest.totalSize)} · check your downloads folder`
       : `${shortenMiddle(manifest.files[0].name, 48)} · ${formatSize(manifest.totalSize)}`;
+    els.receiverCompleteSpeed.textContent = speedSummary(els.receiverProgress);
     setState('complete');
   }
 

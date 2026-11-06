@@ -43,6 +43,7 @@ document.body.innerHTML = `
             <div class="progress-fill"></div>
           </div>
           <span id="progress-copy">0%</span>
+          <div id="send-speed"></div>
         </div>
         <p id="status" class="status" role="status"></p>
         <div class="result-actions">
@@ -69,6 +70,7 @@ const elements = {
   progressBar: document.querySelector('#send-progress .progress-bar'),
   progressFill: document.querySelector('#send-progress .progress-fill'),
   progressCopy: document.getElementById('progress-copy'),
+  speed: document.getElementById('send-speed'),
   status: document.getElementById('status'),
   cancelBtn: document.getElementById('cancel-btn'),
   againBtn: document.getElementById('again-btn')

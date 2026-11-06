@@ -14,6 +14,7 @@ import {
 } from './agent-protocol.js';
 import { isShortCode } from './agent-code.js';
 import { fileSource, rechunk } from './zip-bundle.js';
+import { mountSpeedGauge } from './speed-gauge.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -304,18 +305,22 @@ export function startRelaySend(source, hooks = {}) {
 // mountRelaySender wires startRelaySend to the standalone `/send` page.
 // `els` provides: fileInput, pickBtn, fileLine, shareBox, shareCode,
 // shareLink, receiveCommand, copyCodeBtn, copyLinkBtn, copyCmdBtn, progress,
-// progressBar, progressFill, progressCopy, status, cancelBtn, againBtn.
+// progressBar, progressFill, progressCopy, speed, status, cancelBtn, againBtn.
 export function mountRelaySender(els) {
   let active = null;
   let shareUrl = '';
   let shareCode = '';
+  const speed = mountSpeedGauge(els.speed, { label: 'Upload speed' });
 
-  function paintProgress(sent, total) {
+  // `route` ("direct" / "relay") labels the path under the gauge.
+  function paintProgress(sent, total, route) {
     const percent = total === 0 ? 100 : Math.min((sent / total) * 100, 100);
+    speed.update(sent, total, { route });
     els.progress.hidden = false;
     els.progressFill.style.transform = `scaleX(${percent / 100})`;
     els.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
-    els.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(sent)} / ${formatSize(total)}`;
+    // The gauge lists bytes moved; at the end this is the finish line.
+    els.progressCopy.textContent = sent >= total && total > 0 ? speed.summary() : `${percent.toFixed(1)}%`;
   }
 
   function sendFile(file) {

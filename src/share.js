@@ -18,6 +18,7 @@ import {
 import { createSink as createDownloadSink, createStageSink, downloadUrlFor } from './sink.js';
 import { downloadNames, readBundle } from './zip-unbundle.js';
 import { answerDirect, createRecordMerger, parseDirectOffer } from './direct-link.js';
+import { mountSpeedGauge } from './speed-gauge.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
@@ -38,6 +39,7 @@ const PANEL_HTML = `
       <div class="progress-fill"></div>
     </div>
     <span data-relay="progress-copy">0%</span>
+    <div data-relay="speed"></div>
   </div>
   <a class="primary-btn share-download" data-relay="download" hidden>Download file</a>
   <ul class="bundle-files" data-relay="files" hidden></ul>`;
@@ -99,6 +101,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     progressBar: pick('progress').querySelector('.progress-bar'),
     progressFill: pick('progress').querySelector('.progress-fill'),
     progressCopy: pick('progress-copy'),
+    speed: mountSpeedGauge(pick('speed'), { label: 'Download speed' }),
     download: pick('download'),
     files: pick('files')
   };
@@ -221,10 +224,17 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
     elements.progress.hidden = false;
     elements.progressFill.style.transform = `scaleX(${percent / 100})`;
     elements.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
-    elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}`;
+    // The gauge lists bytes moved; once every byte is here this line
+    // becomes the finish line ("84.2 MB in 3.1 s · avg 27.2 MB/s").
+    elements.progressCopy.textContent = received === total && total > 0n
+      ? elements.speed.summary()
+      : `${percent.toFixed(1)}%`;
   }
 
-  function renderProgress(received, total, force = false) {
+  // `route` ("direct" / "relay") labels the path under the gauge.
+  function renderProgress(received, total, force = false, route) {
+    // The gauge records every report and paints itself a few times a second.
+    elements.speed.update(received, total, { route });
     const now = performance.now();
     if (!force && now - lastProgressPaint < PROGRESS_RENDER_MS) {
       pendingProgress = { received, total };

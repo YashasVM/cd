@@ -584,10 +584,89 @@ html.scanning, html.scanning body { overflow: hidden; }
   content: "";
 }
 @keyframes progress-glint { to { transform: translateX(100%); } }
-.progress-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.progress-stats span { display: grid; min-width: 0; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
-.progress-stats b { color: var(--faint); font: 10px var(--mono); text-transform: uppercase; }
-.progress-stats em { min-width: 0; font-variant-numeric: tabular-nums; overflow: hidden; color: var(--text); font: 12px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.speed-gauge {
+  display: grid;
+  grid-template-columns: minmax(128px, 172px) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 12px 16px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+}
+/* Live speed dial: lit ticks up to the reading, a needle that glides
+   between paints, and the number in the middle. The box keeps its shape
+   from the first frame, so readings never shift the layout. Geometry
+   mirrors speed-gauge.js: 160x124 face, center at (80, 74). */
+.gauge-dial { position: relative; container-type: inline-size; aspect-ratio: 160 / 124; }
+.gauge-face { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gauge-track { fill: none; stroke: rgba(228, 212, 182, .07); stroke-width: 1; }
+.gauge-tick { stroke-width: 2; stroke-linecap: round; }
+.gauge-tick.major { stroke-width: 2.6; }
+.gauge-tick:not(.on) { stroke: rgba(228, 212, 182, .13); }
+.gauge-tick.major:not(.on) { stroke: rgba(228, 212, 182, .26); }
+.gauge-needle, .gauge-peak {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-120deg);
+  transform-origin: 50% 59.677%;
+  pointer-events: none;
+}
+.gauge-needle { transition: transform .32s cubic-bezier(.25, .8, .35, 1); will-change: transform; }
+.gauge-needle::before {
+  position: absolute;
+  top: 3.226%;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 24.2%;
+  border-radius: 2px;
+  background: linear-gradient(#ffe4bf, rgba(228, 212, 182, .35));
+  box-shadow: 0 0 10px rgba(229, 138, 87, .55);
+  content: "";
+}
+.gauge-peak { transition: transform .32s ease-out; }
+.gauge-peak::before {
+  position: absolute;
+  top: .8%;
+  left: 50%;
+  border: 3.5px solid transparent;
+  border-top: 6px solid var(--accent);
+  border-bottom: 0;
+  transform: translateX(-50%);
+  content: "";
+}
+.gauge-readout {
+  position: absolute;
+  inset: 34% 20% 19%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  text-align: center;
+}
+.gauge-kicker, .gauge-unit, .gauge-min, .gauge-max { color: var(--faint); font: 9px/1 var(--mono); letter-spacing: .06em; }
+.gauge-kicker { font-size: clamp(8px, 5.6cqi, 10px); text-transform: uppercase; }
+.gauge-value {
+  color: var(--text);
+  font: 600 24px/1.05 var(--mono);
+  font-size: clamp(20px, 17cqi, 30px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+}
+.gauge-unit { color: var(--muted); font-size: clamp(9px, 6.4cqi, 11px); }
+.gauge-min, .gauge-max { position: absolute; bottom: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gauge-min { left: 12%; }
+.gauge-max { right: 2%; }
+.gauge-side { display: grid; align-content: center; gap: 6px; min-width: 0; }
+.gauge-stats { display: grid; margin: 0; }
+.gauge-stats div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.gauge-stats div:last-child { border-bottom: 0; }
+.gauge-stats dt { flex: none; color: var(--faint); font: 10px/1.3 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.gauge-stats dd { min-width: 0; margin: 0; overflow: hidden; color: var(--text); font: 12px/1.3 var(--mono); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+/* One reserved line for the path ("via relay") and the stall note. */
+.gauge-note { display: flex; flex-wrap: wrap; gap: 4px 10px; min-height: 15px; margin: 0; color: var(--faint); font: 11px/1.35 var(--mono); }
+.gauge-route { color: var(--muted); }
 .result-mark { display: inline-grid; place-items: center; width: 52px; height: 52px; border: 1px solid rgba(229, 138, 87, .4); border-radius: 6px; color: var(--accent); }
 .result-section, .connecting-section {
   display: grid;
@@ -618,6 +697,8 @@ html.scanning, html.scanning body { overflow: hidden; }
 .result-section.error .result-mark { border-color: rgba(255, 93, 42, .5); background: rgba(90, 22, 11, .6); color: #ff8a62; }
 .result-detail { margin: 4px 0 0; color: var(--muted); font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
 .complete-section .result-mark { color: #7fd18b; border-color: rgba(127, 209, 139, .4); }
+.result-speed { color: var(--text); font-variant-numeric: tabular-nums; }
+.result-speed:empty { display: none; }
 .redownload-list .secondary-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result-section .error-message { color: #ffb08f; font: 14px/1.5 Inter, system-ui, sans-serif; }
 .redownload-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
@@ -657,6 +738,7 @@ html.scanning, html.scanning body { overflow: hidden; }
 .agent-progress { margin-top: 18px; }
 .agent-progress .progress-bar { margin: 10px 0; }
 .agent-progress > span { color: var(--muted); font: 12px var(--mono); }
+.agent-progress .speed-gauge { margin-top: 12px; }
 /* Browser terminal-send: one stacked panel with a big typable code. */
 .terminal-share { display: grid; gap: 10px; margin-top: 16px; padding: 16px 0 0; border-top: 1px solid var(--line); }
 .terminal-share #share-code { font-size: clamp(38px, 5vw, 52px); font-weight: 700; letter-spacing: .12em; line-height: 1; }
@@ -722,8 +804,9 @@ html.scanning, html.scanning body { overflow: hidden; }
 
   .progress-mode { font-size: 15px; }
   .cancel-btn { min-height: 48px; }
-  .progress-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .progress-stats span:last-child { grid-column: 1 / -1; }
+  .speed-gauge { grid-template-columns: minmax(118px, 42%) minmax(0, 1fr); gap: 12px; padding: 10px 12px 8px 8px; }
+  .gauge-stats div { padding: 5px 0; }
+  .gauge-stats dd { font-size: 11.5px; }
   .agent-offer { grid-template-columns: 1fr; }
   .agent-offer span, .agent-offer button { grid-column: 1; grid-row: auto; }
   .agent-offer button { width: 100%; margin-top: 8px; }
