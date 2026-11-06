@@ -1,8 +1,11 @@
+import { startAmbientDots } from './ambient-dots.js';
+
 const agentShare = /^\/s\/[A-Za-z0-9_-]{22}\/?$/.test(window.location.pathname);
 
 const app = agentShare ? import('./share.js') : import('./main.js');
 
 app.then(() => {
+  startAmbientDots();
   const workbench = document.querySelector('.workbench');
   workbench?.removeAttribute('inert');
   workbench?.removeAttribute('aria-busy');
