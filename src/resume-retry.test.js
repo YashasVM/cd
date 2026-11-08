@@ -13,3 +13,9 @@ test('every application rejection is permanent, including authentication and pol
   assert.equal(isRetryableResumeError(new Error('The transfer timed out waiting for the other device.')), true);
   assert.equal(isRetryableResumeError(new Error('The other device disconnected. Your saved progress can be resumed from the same private link.')), true);
 });
+
+test('explicit relay recovery states retry without retrying authentication or nonce replay', async () => {
+  const { resumeCloseError } = await import('./resume-browser.js');
+  for (const [code, reason] of [[4404, 'session interrupted'], [4404, 'sender unavailable'], [4404, 'peer unavailable'], [4409, 'sender must resume first'], [4409, 'session interrupted']]) assert.equal(isRetryableResumeError(resumeCloseError(code, reason)), true);
+  for (const [code, reason] of [[4401, 'sender unauthorized'], [4409, 'session nonce replay'], [4409, 'receiver nonce replay'], [4409, 'transfer is terminal'], [4409, 'stale session'], [4408, 'transfer expired'], [4406, 'invalid sender credentials']]) assert.equal(isRetryableResumeError(resumeCloseError(code, reason)), false);
+});

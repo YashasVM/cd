@@ -17,8 +17,8 @@ export function startBrowserSend(source, hooks = {}, { sharing = 'private', resu
           link, checkpoints: createResumeKV(db, 'checkpoints'), secrets: createResumeKV(db, 'secrets'),
           hooks: {
             ...hooks, onError() {},
-            onShare(value) { link = value.url; hooks.onShare?.(value); hooks.onState?.('waiting'); },
-            onProgress(done, total, ...args) { hooks.onState?.(done >= total ? 'verifying' : 'transferring'); hooks.onProgress?.(done, total, ...args); },
+            onShare(value) { link = value.url; hooks.onShare?.(value); hooks.onState?.('waiting'); hooks.onStatus?.('Waiting for the receiver. Keep this tab open; saved progress lasts up to 24 hours.'); },
+            onProgress(done, total, ...args) { hooks.onState?.(done >= total ? 'verifying' : 'transferring'); hooks.onStatus?.(done >= total ? 'Verifying receipt on the other device…' : 'Sending with saved progress…'); hooks.onProgress?.(done, total, ...args); },
             onComplete() { hooks.onState?.('complete'); hooks.onComplete?.(); }
           }
         });

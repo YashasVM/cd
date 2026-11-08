@@ -766,3 +766,15 @@ html.scanning, html.scanning body { overflow: hidden; }
   .selection-panel { padding: 16px 0; }
   .brand-intro { margin-top: 14px; font-size: 23px; }
 }
+.selection-panel { margin-top: 0; padding-top: 0; border-top: 0; }
+.selection-panel > details > summary { color: var(--text); font-size: 18px; font-weight: 550; overflow-wrap: anywhere; }
+.selection-panel > #start-send-btn { width: 100%; margin-top: 8px; }
+.selection-panel p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.selection-panel > details { margin: 0 0 20px; }
+.selection-panel label[hidden] { display: none; }
+.device-picker [data-device-status]:empty, #sender-status:empty { display: none; }
+.install-dot { animation: none; box-shadow: none; }
+.workbench, .primary-btn, .mode-btn.active { box-shadow: none; }
+.recovery-transfer { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+.recovery-transfer input { width: 100%; font-size: 14px; }
+.recovery-transfer button { min-height: 44px; padding: 8px 12px; margin: 8px 8px 0 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); cursor: pointer; }
