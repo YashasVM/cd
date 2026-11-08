@@ -12,7 +12,7 @@ document.body.innerHTML = `
       <p class="share-description">Check the file details, then receive. Keep this tab open until verification finishes.</p>
     </header>
     <section class="workbench">
-      <div id="relay-receiver"></div><p class="share-description"><a href="/">Send or receive another file</a></p>
+      <div id="relay-receiver"></div><p class="result-actions"><a href="/">Send or receive another file</a></p>
     </section>
     <p class="watermark">encrypted in your browser · <a href="/">cd.yash0.in</a></p>
   </main>`;
