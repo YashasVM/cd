@@ -83,6 +83,8 @@ try {
   const senderPage = await browser.newPage();
   await senderPage.goto(base);
   await senderPage.setInputFiles('#file-input', Object.keys(files).map((name) => join(source, name)));
+  await senderPage.getByLabel('Sharing method').selectOption('code');
+  await senderPage.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
   const shareCode = senderPage.locator('#share-code');
   await shareCode.filter({ hasText: /^\d{4,5}$/ }).waitFor({ timeout: 20_000 });
   const browserCode = (await shareCode.textContent()).trim();

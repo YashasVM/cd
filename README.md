@@ -5,7 +5,13 @@ Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 - **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
   types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files share one code and arrive as separate files.
 
-CD never stores files. Transfers are live and end-to-end encrypted.
+In the browser, choose files, review **Selected files**, remove unwanted files, then click **Send**. The default **Private link** keeps the decryption key in the URL fragment; share the entire link or QR. Choose **Short code** under **Sharing method** when you need a numeric code. `/send` uses the same interface.
+
+Enable **Keep progress if interrupted** for one original file to use resumable relay transfer. Keep the original file available when retrying. Browser device pairing uses QR approval on the phone; approve the browser and enable receiving in CD. If a picker is unavailable or dismissed, choose files again using the file button.
+
+Private links are end-to-end encrypted. Short codes let the relay resolve the transfer key while the code is active. Resumable transfers retain encrypted progress temporarily.
+
+Run `npm run build && node scripts/verify-product-ux.mjs` for the headless product UX check.
 
 ## Install `cdx`
 

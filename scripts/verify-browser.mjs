@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -56,6 +56,8 @@ try {
     await page.goto(publicBase);
     await page.locator('.workbench:not([inert])').waitFor();
     await page.locator('#file-input').setInputFiles(paths);
+    await page.getByLabel('Sharing method').selectOption('code');
+    await page.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
     await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/, `send code ${code} is not numeric`);
@@ -111,14 +113,13 @@ try {
     const stdout = collect(receiver.stdout);
     const stderr = collect(receiver.stderr);
     assert.equal(await withTimeout(childExit(receiver), 60_000, 'cdx receive did not finish'), 0, await stderr);
-    const { path } = JSON.parse(await stdout);
-    assert.match(path, /cd-\d{8}-\d{6}\.zip$/);
-    execFileSync('unzip', ['-q', path, '-d', join(outDir, 'unzipped')]);
+    const result = JSON.parse(await stdout);
+    assert.equal(result.files.length, batch.length);
     for (const [name, bytes] of batch) {
-      assert.equal(sha(await readFile(join(outDir, 'unzipped', name))), sha(bytes), `${name} differs`);
+      assert.equal(sha(await readFile(join(outDir, name))), sha(bytes), `${name} differs`);
     }
     await page.locator('#sender-complete:not(.hidden)').waitFor();
-    console.log('verified browser->terminal: three files arrive as one exact zip');
+    console.log('verified browser->terminal: three files arrive with exact bytes');
     await context.close();
   }
 
@@ -134,6 +135,7 @@ try {
       return { data: Array.from(data), width, height };
     });
     const decoded = jsQR(Uint8ClampedArray.from(qr.data), qr.width, qr.height);
+    assert.ok(decoded?.data.startsWith(`${publicBase}/s/`), 'QR must contain the full receive URL');
     assert.match(decoded?.data ?? '', /\/s\/[A-Za-z0-9_-]{22}#v1\./, 'the on-screen QR does not hold the share link');
 
     const videoPath = join(work, 'qr.y4m');

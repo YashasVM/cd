@@ -5,7 +5,7 @@ import { startRelaySend } from './relay-sender.js';
 import { createZipBundle } from './zip-bundle.js';
 import { createOpener, createSealer, decodeBase64Url, KIND_ACCEPT, KIND_ACK, KIND_COMPLETE, KIND_OFFER, KIND_CHUNK, KIND_END, SENDER_DIRECTION, RECEIVER_DIRECTION } from './agent-protocol.js';
 
-function setup(t, payload, { largeChunks = false } = {}) {
+function setup(t, payload, { largeChunks = false, privateMode = false } = {}) {
   let instance;
   const installed = ['window', 'WebSocket', 'RTCPeerConnection'].map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
   const events = new EventTarget();
@@ -23,6 +23,11 @@ function setup(t, payload, { largeChunks = false } = {}) {
       this.chain = this.chain.then(async () => {
         if (typeof data === 'string') {
           const join = JSON.parse(data);
+          if (privateMode) {
+            assert.equal(Object.hasOwn(join, 'shareKey'), false);
+            this.message(JSON.stringify({ protocol: 'cd-transfer-v1', type: 'accepted' }));
+            return;
+          }
           const invitation = { id: decodeBase64Url(this.id), key: decodeBase64Url(join.shareKey) };
           this.opener = await createOpener(invitation, SENDER_DIRECTION);
           this.sealer = await createSealer(invitation, RECEIVER_DIRECTION);
@@ -158,4 +163,18 @@ test('short source fails instead of leaving the ACK reader waiting', async (t) =
   const input = source(payload);
   input.size += 1;
   await assert.rejects(startRelaySend(input).done, /file changed/);
+});
+
+test('private sharing omits the relay key and code registration', async (t) => {
+  setup(t, new Uint8Array(), { privateMode: true });
+  const prior = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('Private mode must not register a code'); };
+  t.after(() => { globalThis.fetch = prior; });
+  let transfer;
+  transfer = startRelaySend(source(new Uint8Array()), { onShare(value) {
+    assert.equal(value.code, '');
+    assert.match(value.url, /#v1\.[A-Za-z0-9_-]+$/);
+    transfer.cancel();
+  } }, { sharing: 'private' });
+  await assert.rejects(transfer.done, /cancel/i);
 });

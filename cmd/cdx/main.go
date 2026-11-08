@@ -76,17 +76,9 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 }
 
 func usage(output io.Writer) {
-	fmt.Fprintln(output, "usage: cdx <command> [options] [file]")
-	fmt.Fprintln(output, "   or: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
-	fmt.Fprintln(output, "   or: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
-	fmt.Fprintln(output, "   or: cdx [--json] [--] <file>  (shorthand for send)")
-	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Send files through CD at https://cd.yash0.in, or receive them.")
-	fmt.Fprintln(output, "Send prints a share code and QR in a terminal, then waits")
-	fmt.Fprintln(output, "until the receiver verifies the file; otherwise (agents, scripts, pipes)")
-	fmt.Fprintln(output, "it hands the transfer to a background sender and exits 0 right away.")
-	fmt.Fprintln(output, "The code works in any browser Receive box and in `cdx receive`. Receive")
-	fmt.Fprintln(output, "saves the offered file and prints the saved path to stdout.")
+	fmt.Fprintln(output, "Send to your phone: cdx send --to phone ./photo.jpg")
+	fmt.Fprintln(output, "Share a private link: cdx send --link ./photo.jpg")
+	fmt.Fprintln(output, "Receive into a folder: cdx receive 48291 --out ./downloads/")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
 	fmt.Fprintln(output, "  send <path>...     send one or more files and folders with one code")
@@ -106,6 +98,11 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  update             update cdx to the latest release")
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "Run cdx help send or cdx help receive for full options and contracts.")
+
+}
+
+func transferUsage(output io.Writer) {
 	fmt.Fprintln(output, "resumable transfers (foreground, private links):")
 	fmt.Fprintln(output, "  send --resumable <paths> | send --resume <transferID> <paths>")
 	fmt.Fprintln(output, "  receive --resume <private #v2 link> --out <path>")
@@ -121,7 +118,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  -h, --help     show help for receive")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "options for send:")
-	fmt.Fprintln(output, "  --to <name>    send automatically to a paired Android device (resumable)")
+	fmt.Fprintln(output, "  --to <name>    send to a paired Android device; --to picker selects in a terminal")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
@@ -158,10 +155,11 @@ func usage(output io.Writer) {
 }
 
 func sendUsage(output io.Writer) {
+	defer transferUsage(output)
 	fmt.Fprintln(output, "usage: cdx send [--link] [--json] [--progress] [--qr <png>] [--detach|--wait] [--] <file|folder>...")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <path>...      a file, or several files and folders (they arrive as separate files)")
-	fmt.Fprintln(output, "  --to <name>    send automatically to a paired Android device (resumable)")
+	fmt.Fprintln(output, "  --to <name>    send to a paired Android device; --to picker selects in a terminal")
 	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
 	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
@@ -180,6 +178,7 @@ func sendUsage(output io.Writer) {
 }
 
 func receiveUsage(output io.Writer) {
+	defer transferUsage(output)
 	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
