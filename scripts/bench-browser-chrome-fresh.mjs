@@ -61,7 +61,8 @@ try {
   await context.addInitScript(probe, { relayOnly: false });
   page = await context.newPage(); page.setDefaultTimeout(30000);
   await page.goto(worker.publicBase); await page.locator('.workbench:not([inert])').waitFor();
-  await page.locator('#file-input').setInputFiles(source); await page.locator('#sender-code-section:not(.hidden)').waitFor();
+
+  await page.locator('#file-input').setInputFiles(source); await page.getByLabel('Sharing method').selectOption('code'); await page.locator('#start-send-btn').click(); await page.locator('#sender-code-section:not(.hidden)').waitFor();
   const code = (await page.locator('#share-code').textContent()).trim(); assert.match(code, /^\d{4,5}$/);
   const invitation = `${worker.publicBase}/#${code}`;
   assert.ok(process.env.CD_ANDROID_AGENT_DEVICE, 'use the bound command returned by device_open');

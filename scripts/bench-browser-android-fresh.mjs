@@ -82,7 +82,8 @@ try {
   });
   const page = await context.newPage(); page.setDefaultTimeout(30000);
   await page.goto(worker.publicBase); await page.locator('.workbench:not([inert])').waitFor();
-  await page.locator('#file-input').setInputFiles(source); await page.locator('#sender-code-section:not(.hidden)').waitFor();
+
+  await page.locator('#file-input').setInputFiles(source); await page.getByLabel('Sharing method').selectOption('code'); await page.locator('#start-send-btn').click(); await page.locator('#sender-code-section:not(.hidden)').waitFor();
   const code = (await page.locator('#share-code').textContent()).trim(); assert.match(code, /^\d{4,5}$/);
   const offerFile = join(work, 'offer.json');
   await writeFile(offerFile, JSON.stringify({ input: `${worker.publicBase}/#${code}` }), { mode: 0o600 });

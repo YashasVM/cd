@@ -73,7 +73,7 @@ func TestHelpKeepsDetailedOptions(t *testing.T) {
 	for _, help := range []func(io.Writer){sendUsage, receiveUsage} {
 		var out bytes.Buffer
 		help(&out)
-		for _, option := range []string{"--detach", "--resume", "CD_PUBLIC_URL", "Exit status"} {
+		for _, option := range []string{"--resume", "CD_PUBLIC_URL", "Exit status"} {
 			if !strings.Contains(out.String(), option) {
 				t.Fatalf("help lost %s", option)
 			}

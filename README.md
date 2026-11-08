@@ -5,13 +5,13 @@ Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 - **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
   types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files share one code and arrive as separate files.
 
-In the browser, choose files, review **Selected files**, remove unwanted files, then click **Send**. The default **Private link** keeps the decryption key in the URL fragment; share the entire link or QR. Choose **Short code** under **Sharing method** when you need a numeric code. `/send` uses the same interface.
+In the browser, choose files, review the selection, remove unwanted files, then click **Send**. The default **Private link** keeps the decryption key in the URL fragment; share the entire link or QR. Choose **Short code** under **Sharing method** when you need a numeric code. `/send` uses the same interface.
 
-Enable **Keep progress if interrupted** for one original file to use resumable relay transfer. Keep the original file available when retrying. Browser device pairing uses QR approval on the phone; approve the browser and enable receiving in CD. If a picker is unavailable or dismissed, choose files again using the file button.
+Enable **Keep progress if interrupted** for one original file to use resumable relay transfer. Keep the original file available when retrying. Browser device pairing uses QR approval on the phone; approve the browser and enable receiving in CD. These pairings stay in this browser on this CD site; terminal pairings are separate. Saved devices are checked when connecting.
 
-Private links are end-to-end encrypted. Short codes let the relay resolve the transfer key while the code is active. Resumable transfers retain encrypted progress temporarily.
+Private links are end-to-end encrypted. Short codes let the relay resolve the transfer key while the code is active. Transfers are live. Resumable transfers keep verified progress on the receiving device.
 
-Run `npm run build && node scripts/verify-product-ux.mjs` for the headless product UX check.
+Run `npm run verify:product-ux` for headless sharing, browser pairing, delivery receipt, and interrupted recovery checks.
 
 ## Install `cdx`
 
@@ -86,6 +86,8 @@ To teach the AI coding agents on your machine to share files with cdx, run `cdx 
 installer offers it too). It asks per agent: Claude Code and `~/.agents/skills` get the skill; Codex,
 Gemini CLI and opencode get a short note in their global instructions file. `cdx agent remove` undoes it.
 Or install just the skill with `npx skills add YashasVM/cd`.
+
+In an interactive terminal, `cdx send --to picker ./report.pdf` lists saved destinations. Scripts should use an exact alias with `--to <name>`. Unknown names fail before a background process starts; pair explicitly with `cdx pair`.
 
 ## Architecture
 

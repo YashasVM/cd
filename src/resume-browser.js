@@ -626,7 +626,9 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       if (endHash.digestHex() !== offer.wholeSha256) throw new Error('The received file failed its whole-file digest check.');
       if (download) {
         const finishedStage = stage;
-        publishedDownload = downloadUrlFor(stagedFile, offer.name, () => finishedStage.cancel());
+        const downloadKey = `download:${parsed.rootId}`;
+        await checkpoints.put(downloadKey, { stagingId: finishedStage.stagingId, expiresAt: finishedStage.expiresAt });
+        publishedDownload = downloadUrlFor(stagedFile, offer.name, async () => { await finishedStage.cancel(); await checkpoints.delete(downloadKey); });
         const anchor = document.createElement('a');
         anchor.className = 'primary-btn share-download';
         anchor.href = publishedDownload.url;
@@ -642,6 +644,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       await waitForRelayEvent(inbox, ['completed'], 15000);
       // OPFS-backed download URLs read lazily; revoke owns their staging cleanup.
       if (!publishedDownload) await stage.cancel();
+      else await checkpoints.delete(`receiver:${parsed.rootId}`);
       await secrets.delete(`receiver:${parsed.rootId}`);
       cancel.hidden = true;
       status.textContent = download ? 'File verified. Download started; check your downloads.' : 'File received and verified.';

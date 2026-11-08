@@ -44,7 +44,8 @@ try{
    if(direction.startsWith('browser'))senderPage=await page();
    if(direction.endsWith('browser')){receiverPage=await page();await receiverPage.locator('#receive-mode-btn').click();}
    const start=performance.now();let code;
-   if(senderPage){await senderPage.locator('#file-input').setInputFiles(input);await senderPage.locator('#sender-code-section:not(.hidden)').waitFor();code=(await senderPage.locator('#share-code').textContent()).trim();}
+   if(senderPage){await senderPage.locator('.workbench:not([inert])').waitFor();
+  await senderPage.locator('#file-input').setInputFiles(input); await senderPage.getByLabel('Sharing method').selectOption('code'); await senderPage.locator('#start-send-btn').click();await senderPage.locator('#sender-code-section:not(.hidden)').waitFor();code=(await senderPage.locator('#share-code').textContent()).trim();}
    else{sender=launch(['send','--wait',input]);code=await firstLine(sender.child.stdout,30000);}
    const receiveStart=performance.now();row.readyMs=receiveStart-start;
    row.receiveStartedAt=performance.timeOrigin+receiveStart;

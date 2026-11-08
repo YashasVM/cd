@@ -99,7 +99,8 @@ try {
       for (const page of [sender, receiver]) { page.setDefaultTimeout(timeout); await page.goto(worker.publicBase); await page.locator('.workbench:not([inert])').waitFor(); }
       await receiver.locator('#receive-mode-btn').click();
       const ready = performance.now();
-      await sender.locator('#file-input').setInputFiles(input);
+      await sender.locator('.workbench:not([inert])').waitFor();
+  await sender.locator('#file-input').setInputFiles(input); await sender.getByLabel('Sharing method').selectOption('code'); await sender.locator('#start-send-btn').click();
       await sender.locator('#sender-code-section:not(.hidden)').waitFor();
       const code = (await sender.locator('#share-code').textContent()).trim(); assert.match(code, /^\d{4,5}$/);
       row.readyMs = performance.now() - ready;

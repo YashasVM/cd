@@ -55,9 +55,10 @@ try {
     page.setDefaultTimeout(30_000);
     await page.goto(publicBase);
     await page.locator('.workbench:not([inert])').waitFor();
+
     await page.locator('#file-input').setInputFiles(paths);
     await page.getByLabel('Sharing method').selectOption('code');
-    await page.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
+    await page.locator('#start-send-btn').click();
     await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/, `send code ${code} is not numeric`);

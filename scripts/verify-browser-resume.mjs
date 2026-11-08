@@ -61,10 +61,14 @@ try {
     return result;
   };
   const send = async (sender, link = '') => {
-    await sender.goto(worker.publicBase);
-    await sender.locator('#resumable-check').check();
-    if (link) await sender.locator('#resume-link-input').fill(link);
-    await sender.locator('#file-input').setInputFiles(source);
+    if (link) await sender.locator('#sender-retry-btn').click();
+    else {
+      await sender.goto(worker.publicBase);
+      await sender.locator('.workbench:not([inert])').waitFor();
+      await sender.locator('#file-input').setInputFiles(source);
+      await sender.getByLabel('Keep progress if interrupted').check();
+      await sender.locator('#start-send-btn').click();
+    }
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
     const invitation = await sender.locator('#share-private-link').getAttribute('href');
     assert.match(invitation, /#v2\./);
