@@ -1,4 +1,6 @@
-import { openResumeDatabase, createResumeKV, parseResumeLink, isOpaqueStagingId } from './resume-browser.js';
+import { openResumeDatabase, createResumeKV, parseResumeLink, isOpaqueStagingId, decodeBase64Url, cleanExpiredResumeRecords } from './resume-browser.js';
+
+import { verifyResumeCheckpoint } from './resume-protocol.js';
 
 export function mountBrowserRecovery(container, { onResumeSend, onResumeReceive } = {}) {
   let stopped = false;
@@ -7,16 +9,19 @@ export function mountBrowserRecovery(container, { onResumeSend, onResumeReceive 
     try {
       const checkpoints = createResumeKV(db, 'checkpoints');
       const secrets = createResumeKV(db, 'secrets');
-      for (const key of await checkpoints.keys()) {
+      await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
+      for (const key of (await checkpoints.keys()).slice(0, 128)) {
         const record = await checkpoints.get(key);
         const secret = await secrets.get(key);
         if (stopped || !record || record.expiresAt <= Date.now() || !secret?.link) continue;
         let parsed;
         try { parsed = parseResumeLink(secret.link); } catch { continue; }
-        if (parsed.rootId !== record.rootId || parsed.url.origin !== location.origin) continue;
+        if (!['sender', 'receiver'].includes(record.role) || key !== `${record.role}:${record.rootId}` || parsed.rootId !== record.rootId || parsed.url.origin !== location.origin) continue;
+        try { if (!(await verifyResumeCheckpoint(record, record.role === 'sender' ? decodeBase64Url(secret.senderToken) : parsed.key))) continue; } catch { continue; }
         const row = document.createElement('div');
         const label = document.createElement('p');
-        label.textContent = `${record.filename} · ${record.role === 'sender' ? 'Send' : 'Receive'} saved progress`;
+        label.textContent = `${record.filename} · ${record.role === 'sender' ? 'Send' : 'Receive'} · ${record.size > 0 ? Math.floor(record.offset * 100 / record.size) : 100}% retained`;
+        row.className = 'recovery-transfer';
         row.append(label);
         const resume = document.createElement(record.role === 'sender' ? 'input' : 'button');
         if (record.role === 'sender') {

@@ -245,7 +245,7 @@ export function startDeviceSend(device, source, hooks = {}) {
             hooks.onStatus?.(`Waiting for ${device.name}. Keep CD receiving enabled.`);
           })().catch(receiptReject);
         },
-        onProgress(done, total, metrics) { hooks.onState?.(done >= total ? 'verifying' : 'transferring'); hooks.onProgress?.(done, total, metrics); }
+        onProgress(done, total, metrics) { hooks.onState?.(done >= total ? 'verifying' : 'transferring'); hooks.onStatus?.(done >= total ? `Verifying receipt on ${device.name}…` : `Sending to ${device.name}…`); hooks.onProgress?.(done, total, metrics); }
       } });
       await Promise.race([active.done, receipt.then(() => new Promise(() => {}))]);
       hooks.onState?.('verifying');

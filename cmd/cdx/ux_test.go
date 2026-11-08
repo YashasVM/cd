@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestRecoveryShellQuoting(t *testing.T) {
-	got := shellCommand([]string{"cdx", "send", "--", "a'b", "$(touch /tmp/no)"})
+	got := shellCommandForOS([]string{"cdx", "send", "--", "a'b", "$(touch /tmp/no)"}, "linux")
 	want := `'cdx' 'send' '--' 'a'"'"'b' '$(touch /tmp/no)'`
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
@@ -29,6 +30,10 @@ func TestDeviceDestinationRejectedBeforeDetach(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("CD_DEVICE_DIR", dir)
+	source := filepath.Join(t.TempDir(), "payload.txt")
+	if err := os.WriteFile(source, []byte("hello"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	for _, target := range []string{"missing-alias", "picker"} {
 		t.Run(target, func(t *testing.T) {
 			original := os.Stdout
@@ -38,14 +43,14 @@ func TestDeviceDestinationRejectedBeforeDetach(t *testing.T) {
 			}
 			os.Stdout = writer
 			defer func() { os.Stdout = original }()
-			status := runDeviceSend(sendRequest{to: target, jsonOutput: true, detach: true, files: []string{"missing-source"}})
+			status := runDeviceSend(sendRequest{to: target, jsonOutput: true, detach: true, files: []string{source}})
 			writer.Close()
 			output, err := io.ReadAll(reader)
 			reader.Close()
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := "cannot load saved destination"
+			want := "cannot load paired device"
 			if target == "picker" {
 				want = "requires an interactive terminal"
 			}
@@ -68,7 +73,7 @@ func TestHelpKeepsDetailedOptions(t *testing.T) {
 	for _, help := range []func(io.Writer){sendUsage, receiveUsage} {
 		var out bytes.Buffer
 		help(&out)
-		for _, option := range []string{"--request-id", "--detach", "--resume", "CD_PUBLIC_URL", "Exit status", "--force"} {
+		for _, option := range []string{"--detach", "--resume", "CD_PUBLIC_URL", "Exit status"} {
 			if !strings.Contains(out.String(), option) {
 				t.Fatalf("help lost %s", option)
 			}

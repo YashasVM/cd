@@ -76,6 +76,8 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 }
 
 func usage(output io.Writer) {
+	fmt.Fprintln(output, "usage: cdx <command> [options]")
+	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Send to your phone: cdx send --to phone ./photo.jpg")
 	fmt.Fprintln(output, "Share a private link: cdx send --link ./photo.jpg")
 	fmt.Fprintln(output, "Receive into a folder: cdx receive 48291 --out ./downloads/")
@@ -95,7 +97,6 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  version            show version")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "Run cdx help send or cdx help receive for full options and contracts.")
-
 }
 
 func transferUsage(output io.Writer) {
@@ -103,33 +104,6 @@ func transferUsage(output io.Writer) {
 	fmt.Fprintln(output, "  send --resumable <paths> | send --resume <transferID> <paths>")
 	fmt.Fprintln(output, "  receive --resume <private #v2 link> --out <path>")
 	fmt.Fprintln(output, "  v2 uses durable checkpoints; status/wait apply to v1 background sends.")
-	fmt.Fprintln(output, "options for receive:")
-	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
-	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
-	fmt.Fprintln(output, "  --force        overwrite an existing file")
-	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
-	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
-	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
-	fmt.Fprintln(output, "  -h, --help     show help for receive")
-	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "options for send:")
-	fmt.Fprintln(output, "  --to <name>    send to a paired Android device; --to picker selects in a terminal")
-	fmt.Fprintln(output, "  --link         print a private end-to-end encrypted link instead of a share code")
-	fmt.Fprintln(output, "  --json         print transfer JSON (includes qrPath when --qr is used)")
-	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
-	fmt.Fprintln(output, "  --qr <path>    save a QR PNG for the receive link (path must not exist)")
-	fmt.Fprintln(output, "  --request-id <id>  safely repeat a background send with the same inputs")
-	fmt.Fprintln(output, "  --detach       send in the background even from a terminal")
-	fmt.Fprintln(output, "  --wait         stay in the foreground until the receiver verifies the file")
-	fmt.Fprintln(output, "  --             treat the next argument as the file even if it starts with -")
-	fmt.Fprintln(output, "  -h, --help     show help for send")
-	fmt.Fprintln(output, "  -v, --version  show version")
-	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "examples:")
-	fmt.Fprintln(output, "  cdx send ./app.apk")
-	fmt.Fprintln(output, "  cdx receive 48291 --out ./downloads/")
-	fmt.Fprintln(output, "  cdx \"./my photo.zip\" --json")
-	fmt.Fprintln(output, "  cdx send -- -weird-name.bin")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "environment:")
 	fmt.Fprintln(output, "  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)")

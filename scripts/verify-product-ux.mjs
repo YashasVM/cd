@@ -95,20 +95,29 @@ try {
   await page.locator('#sender-complete:not(.hidden)').waitFor();
   const retryPage = await context.newPage();
   retryPage.setDefaultTimeout(30_000);
+  await retryPage.addInitScript(() => {
+    const NativeWebSocket = window.WebSocket;
+    window.__uxFailureTriggered = false;
+    window.WebSocket = class extends NativeWebSocket {
+      constructor(url, protocols) {
+        super(url, protocols);
+        if (!String(url).includes('/ws/v1/')) return;
+        this.addEventListener('message', event => {
+          if (!window.__uxFailureTriggered && typeof event.data === 'string' && JSON.parse(event.data).type === 'accepted') {
+            window.__uxFailureTriggered = true;
+            queueMicrotask(() => this.close(4000, 'induced failure'));
+          }
+        });
+      }
+    };
+  });
   await retryPage.goto(publicBase);
   await retryPage.locator('.workbench:not([inert])').waitFor();
   await retryPage.locator('#file-input').setInputFiles(singlePath);
   await retryPage.getByLabel('Sharing method').selectOption('code');
-  let failConnection = true;
-  await retryPage.routeWebSocket('**/ws/v1/**', socket => {
-    const server = socket.connectToServer();
-    server.onMessage(data => {
-      if (failConnection && typeof data === 'string' && JSON.parse(data).type === 'accepted') { failConnection = false; socket.close({ code: 1011, reason: 'induced failure' }); }
-      else socket.send(data);
-    });
-  });
   await retryPage.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
-  await retryPage.locator('#sender-retry-btn').waitFor({ state: 'visible' });
+  try { await retryPage.locator('#sender-retry-btn').waitFor({ state: 'visible' }); }
+  catch (error) { throw new Error(`Retry did not appear. Fail triggered=${await retryPage.evaluate(() => window.__uxFailureTriggered)}; state=${await retryPage.locator('#app-state').textContent()}; error=${await retryPage.locator('#sender-error').textContent()}; status=${await retryPage.locator('#sender-status').textContent()}`, { cause: error }); }
   await retryPage.locator('#sender-retry-btn').click();
   await retryPage.locator('#sender-code-section:not(.hidden)').waitFor();
   assert.match(await retryPage.locator('body').textContent(), /holiday video/);

@@ -333,13 +333,18 @@ let destination = null;
 const selection = document.createElement('div');
 selection.hidden = true;
 selection.className = 'selection-panel';
-selection.innerHTML = `<fieldset><legend>Share using</legend><select aria-label="Sharing method"><option value="private">Private link</option><option value="code">Short code</option></select><p>Private links keep the decryption key in the link, away from the server. Short codes are easy to type; the server holds their key, and anyone who guesses a live code can receive.</p></fieldset><label><input type="checkbox"> Keep progress if interrupted</label><p>Available for one original file. Uses the slower resumable relay transport.</p><details><summary>Selected files</summary><ul></ul></details><div class="destination-area"></div><button id="start-send-btn" type="button" class="primary-btn">Send</button>`;
+selection.innerHTML = `<fieldset><legend>Share using</legend><select aria-label="Sharing method"><option value="private">Private link</option><option value="code">Short code</option></select><p>Only people with the full link can receive. The key stays in the link, away from the server.</p></fieldset><label><input type="checkbox"> Keep progress if interrupted</label><p>For one file. Saves progress in this browser and uses the resumable relay instead of a direct connection.</p><details><summary>Selected files</summary><ul></ul></details><div class="destination-area"></div><button id="start-send-btn" type="button" class="primary-btn">Send</button>`;
 els.dropZone.after(selection);
 const sharing = selection.querySelector('select');
+const sharingHint = sharing.nextElementSibling;
+sharing.addEventListener('change', () => { sharingHint.textContent = sharing.value === 'private' ? 'Only people with the full link can receive. The key stays in the link, away from the server.' : 'Easy to type. The server holds the key; anyone who guesses the live code can receive.'; });
 const keepProgress = selection.querySelector('input');
 keepProgress.addEventListener('change', () => { sharing.disabled = keepProgress.checked; if (keepProgress.checked) sharing.value = 'private'; });
+selection.prepend(selection.querySelector('details'));
+selection.querySelector('details').after(selection.querySelector('.destination-area'));
 selection.querySelector('#start-send-btn').addEventListener('click', () => Sender.launch());
-mountBrowserDevices(selection.querySelector('.destination-area'), { onSelect(device) { destination = device; keepProgress.disabled = Boolean(device); if (device) keepProgress.checked = false; } });
+const stopDevices = mountBrowserDevices(selection.querySelector('.destination-area'), { onSelect(device) { destination = device; keepProgress.disabled = Boolean(device); if (device) keepProgress.checked = false; sharing.closest('fieldset').hidden = Boolean(device); keepProgress.parentElement.hidden = Boolean(device); keepProgress.parentElement.nextElementSibling.hidden = Boolean(device); } });
+window.addEventListener('pagehide', stopDevices, { once: true });
 const recovery = document.createElement('div');
 els.senderView.parentElement.append(recovery);
 const recoveryPanel = mountBrowserRecovery(recovery, { onResumeSend(file, link) { if (BUSY_STATES.has(els.appState.dataset.state)) return; switchToSendMode(); Sender.init([file]); Sender.launch(link); }, onResumeReceive(link) { if (BUSY_STATES.has(els.appState.dataset.state)) return; switchToReceiveMode(); Receiver.openRelay(link); } });
@@ -432,6 +437,8 @@ const Sender = (() => {
 
   function renderSelection() {
     selection.hidden = files.length === 0;
+    els.dropZone.classList.toggle('hidden', files.length > 0);
+    selection.querySelector('summary').textContent = files.length === 1 ? files[0].name + ' · ' + formatSize(totalSize) : `${files.length} selected files · ${formatSize(totalSize)}`;
     keepProgress.disabled = files.length !== 1 || Boolean(destination);
     if (keepProgress.disabled) keepProgress.checked = false;
     const list = selection.querySelector('ul');
@@ -1408,6 +1415,7 @@ els.sendAnotherBtn.addEventListener('click', () => {
 });
 els.senderCancelBtn.addEventListener('click', () => Sender.cancel());
 els.senderRetryBtn.addEventListener('click', () => { setState('idle'); Sender.launch(); });
+document.getElementById('choose-different-btn').addEventListener('click', () => { Sender.reset(); els.fileInput.value = ''; setState('idle'); els.fileInput.click(); });
 els.copyCmdBtn.addEventListener('click', () => void Sender.copyCommand());
 
 let autoConnectTimer = null;
@@ -1541,5 +1549,3 @@ if (isShortCode(initialShortCode)) {
 } else {
   setState('idle');
 }
-
-document.getElementById('choose-different-btn').addEventListener('click', () => Sender.cancel());

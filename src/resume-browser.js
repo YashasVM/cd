@@ -265,7 +265,7 @@ function createSocketInbox(socket) {
     }
   });
   socket.addEventListener('close', (event) => {
-    failure = resumeCloseError(event.code);
+    failure = resumeCloseError(event.code, event.reason);
     while (waiters.length) waiters.shift().reject(failure);
   });
   socket.addEventListener('error', () => {
@@ -278,7 +278,6 @@ function createSocketInbox(socket) {
       queuedBytes -= item.size;
       return Promise.resolve(item.event);
     }
-    if (failure) return Promise.reject(failure);
     return new Promise((resolve, reject) => {
       const waiter = { resolve: (event) => { clearTimeout(timer); resolve(event); }, reject: (error) => { clearTimeout(timer); reject(error); } };
       const timer = setTimeout(() => {
@@ -537,6 +536,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
   let stopped = false;
   let discard = false;
   let replacement;
+  let publishedDownload;
   let socket;
   container.classList.add('share-panel');
   container.innerHTML = '<span class="panel-kicker">resumable transfer</span><p role="status" data-resume-status>Connecting securely…</p><strong data-resume-name></strong><div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill"></div></div><span data-resume-progress></span><button type="button" class="secondary-btn" data-resume-cancel>Cancel saved progress</button>';
@@ -570,7 +570,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
     const invitation = { id: parsed.id, key: parsed.key };
     const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; if (stopped) { try { value.close(1000, 'receiver left'); } catch { /* Best effort. */ } } } });
     socket = activeSocket;
-    const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox);
+    const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox, () => { status.textContent = 'Waiting for the sender. Reopen the original file on the sending device to resume.'; hooks.onState?.('waiting'); });
     if (stopped) return;
     const [opener, sealer] = await Promise.all([
       createResumeOpener(invitation, SENDER_DIRECTION, sessionParams(session)),
@@ -624,14 +624,17 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       const endHash = await hashFile(stagedFile);
       if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
       if (endHash.digestHex() !== offer.wholeSha256) throw new Error('The received file failed its whole-file digest check.');
-      let publishedDownload;
       if (download) {
-        publishedDownload = downloadUrlFor(stagedFile, offer.name, () => stage.cancel());
+        const finishedStage = stage;
+        publishedDownload = downloadUrlFor(stagedFile, offer.name, () => finishedStage.cancel());
         const anchor = document.createElement('a');
+        anchor.className = 'primary-btn share-download';
         anchor.href = publishedDownload.url;
         anchor.download = publishedDownload.name;
+        anchor.textContent = 'Download file';
+        container.append(anchor);
         anchor.click();
-        setTimeout(publishedDownload.revoke, 60_000);
+        setTimeout(() => { publishedDownload.revoke(); anchor.remove(); }, 60_000);
         globalThis.addEventListener?.('pagehide', publishedDownload.revoke, { once: true });
       }
       sendRecord(socket, await sealer.seal(KIND_COMPLETE, encodeResumeCounts(chunks, stage.currentOffset, offer.wholeSha256)));
@@ -640,6 +643,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       // OPFS-backed download URLs read lazily; revoke owns their staging cleanup.
       if (!publishedDownload) await stage.cancel();
       await secrets.delete(`receiver:${parsed.rootId}`);
+      cancel.hidden = true;
       status.textContent = download ? 'File verified. Download started; check your downloads.' : 'File received and verified.';
       hooks.onComplete?.();
       return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: publishedDownload ? stage.currentOffset : 0, maxWorkingBytes };
@@ -678,7 +682,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       status.textContent = 'Saved progress removed.';
     }
   });
-  return { done, stop() { stopped = true; replacement?.stop(); void stage?.release().catch(() => {}); clearRetry(); try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
+  return { done, stop() { stopped = true; replacement?.stop(); publishedDownload?.revoke(); void stage?.release().catch(() => {}); clearRetry(); try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
 }
 
 function waitSocketOpen(socket, timeout = 15000) {
@@ -741,14 +745,16 @@ export function resumeSafeFilename(value) {
 
 export { KIND_ACCEPT, KIND_ACK, KIND_CHUNK, KIND_COMPLETE, KIND_END, KIND_OFFER, RECEIVER_DIRECTION, SENDER_DIRECTION, createResumeOpener, createResumeSealer, textEncoder, textDecoder };
 
-export function resumeCloseError(code) {
-  const permanent = code >= 4400 && code <= 4499;
+export function resumeCloseError(code, reason = '') {
+  const reconnect = code === 4404 && ['session interrupted', 'sender unavailable', 'peer unavailable'].includes(reason) || code === 4409 && ['sender must resume first', 'session interrupted'].includes(reason);
+  const permanent = code >= 4400 && code <= 4499 && !reconnect;
   const error = new Error(code === 4408 ? 'This resumable CD transfer has expired.' : permanent ? 'CD rejected this transfer. Check the link or ask the sender for a new transfer.' : 'The transfer connection was interrupted. Your saved progress can be resumed from the same private link.');
   error.closeCode = code;
+  error.reconnect = reconnect;
   return error;
 }
 
 export function isRetryableResumeError(error) {
-  if (error?.closeCode >= 4400 && error.closeCode <= 4499) return false;
+  if (error?.closeCode >= 4400 && error.closeCode <= 4499) return error.reconnect === true;
   return /^(The transfer connection was interrupted\.|The transfer connection failed\.|The transfer timed out|The other device disconnected\.|Could not reach CD\.|Timed out waiting)/.test(error?.message || '');
 }

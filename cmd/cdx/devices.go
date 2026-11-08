@@ -352,6 +352,10 @@ func runDeviceSend(request sendRequest) int {
 	if request.requestID != "" {
 		return deviceFailure(errors.New("targeted sends do not support --request-id"), request.jsonOutput)
 	}
+	if err := validateSourcePaths(request.files); err != nil {
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
+		return 1
+	}
 	store, err := deviceStore()
 	if err != nil {
 		return deviceFailure(err, request.jsonOutput)
@@ -391,12 +395,9 @@ func runDeviceSend(request sendRequest) int {
 		for i, device := range list {
 			names[i] = device.Name
 		}
-		return deviceFailure(fmt.Errorf("cannot load saved destination %q: %w; saved names: %s. Pair explicitly with cdx pair", request.to, err, strings.Join(names, ", ")), request.jsonOutput)
+		return deviceFailure(fmt.Errorf("cannot load paired device %q: %w; saved names: %s. Pair explicitly with cdx pair", request.to, err, strings.Join(names, ", ")), request.jsonOutput)
 	}
 	if shouldDetach(request, isTerminal(os.Stdout)) {
-		if err := validateSourcePaths(request.files); err != nil {
-			return deviceFailure(err, request.jsonOutput)
-		}
 		args := []string{"send", "--to", request.to, "--wait", "--json"}
 		if request.resumeID != "" {
 			args = append(args, "--resume", request.resumeID)
@@ -404,10 +405,6 @@ func runDeviceSend(request sendRequest) int {
 		args = append(args, "--")
 		args = append(args, request.files...)
 		return runBackgroundTransfer(args, request.jsonOutput, "device-send")
-	}
-	if err = validateSourcePaths(request.files); err != nil {
-		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
-		return 1
 	}
 	pendingPath, err := devicePendingPath(pair.PairID, request.files)
 	if err != nil {
