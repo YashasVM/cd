@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -550,6 +551,9 @@ func sendResumable(ctx context.Context, request sendRequest) error {
 	}
 	if err = session.send(kindEnd, resumeEnd(sent, digest)); err != nil {
 		return err
+	}
+	if request.to != "" && !request.jsonOutput {
+		fmt.Fprintf(os.Stderr, "Verifying %s (%d bytes) on %s; waiting for receiver confirmation.\n", source.name, source.size, request.to)
 	}
 	kind, data, err = nextResumeControl(session, direct)
 	if err != nil {
