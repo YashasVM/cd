@@ -56,6 +56,8 @@ try {
     await page.goto(publicBase);
     await page.locator('.workbench:not([inert])').waitFor();
     await page.locator('#file-input').setInputFiles(paths);
+    await page.getByLabel('Sharing method').selectOption('code');
+    await page.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
     await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/, `send code ${code} is not numeric`);
@@ -155,7 +157,8 @@ try {
       return { data: Array.from(data), width, height };
     });
     const decoded = jsQR(Uint8ClampedArray.from(qr.data), qr.width, qr.height);
-    assert.equal(decoded?.data, code, 'the on-screen QR does not hold the numeric code');
+    assert.ok(decoded?.data.startsWith(`${publicBase}/s/`), 'QR must contain the full receive URL');
+    assert.match(decoded?.data ?? '', /\/s\/[A-Za-z0-9_-]{22}#v1\./, 'the on-screen QR does not hold the share link');
 
     const videoPath = join(work, 'qr.y4m');
     await writeFile(videoPath, qrVideo(decoded.data));
