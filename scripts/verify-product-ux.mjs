@@ -121,6 +121,24 @@ try {
   await retryPage.locator('#sender-retry-btn').click();
   await retryPage.locator('#sender-code-section:not(.hidden)').waitFor();
   assert.match(await retryPage.locator('body').textContent(), /holiday video/);
+  const cancelPage = await context.newPage();
+  await cancelPage.goto(publicBase);
+  await cancelPage.locator('.workbench:not([inert])').waitFor();
+  await cancelPage.locator('#file-input').setInputFiles(singlePath);
+  await cancelPage.getByLabel('Keep progress if interrupted').check();
+  await cancelPage.locator('#start-send-btn').click();
+  await cancelPage.locator('#receive-command').filter({ hasText: '#v2.' }).waitFor();
+  await cancelPage.locator('#sender-cancel-btn').click();
+  await cancelPage.waitForFunction(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('cd-resume-v2');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const keys = db.transaction('secrets').objectStore('secrets').getAllKeys();
+      keys.onsuccess = () => { db.close(); resolve(!keys.result.some(key => String(key).startsWith('sender:'))); };
+    };
+  }));
+  assert.equal(await cancelPage.locator('#app-state').textContent(), 'ready');
   await context.close();
   console.log('verified private /send selection, QR, privacy, mobile layout and exact CLI bytes');
 } finally {

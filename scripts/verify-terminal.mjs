@@ -118,9 +118,10 @@ try {
     page.setDefaultTimeout(30_000);
     await page.goto(`${publicBase}/send`);
     await page.locator('.workbench:not([inert])').waitFor();
+
     await page.locator('#file-input').setInputFiles(sourcePath);
     await page.getByLabel('Sharing method').selectOption('code');
-    await page.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
+    await page.locator('#start-send-btn').click();
     await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/);

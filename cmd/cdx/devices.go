@@ -352,8 +352,8 @@ func runDeviceSend(request sendRequest) int {
 	if request.requestID != "" {
 		return deviceFailure(errors.New("targeted sends do not support --request-id"), request.jsonOutput)
 	}
-	if err := validateSourcePaths(request.files); err != nil {
-		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
+	if len(request.files) == 0 {
+		reportFailure(os.Stdout, os.Stderr, NewFailure(failureLocal, "missing file to send", retryNever), request.jsonOutput)
 		return 1
 	}
 	store, err := deviceStore()
@@ -396,6 +396,10 @@ func runDeviceSend(request sendRequest) int {
 			names[i] = device.Name
 		}
 		return deviceFailure(fmt.Errorf("cannot load paired device %q: %w; saved names: %s. Pair explicitly with cdx pair", request.to, err, strings.Join(names, ", ")), request.jsonOutput)
+	}
+	if err = validateSourcePaths(request.files); err != nil {
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
+		return 1
 	}
 	if shouldDetach(request, isTerminal(os.Stdout)) {
 		args := []string{"send", "--to", request.to, "--wait", "--json"}

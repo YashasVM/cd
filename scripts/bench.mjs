@@ -170,7 +170,8 @@ async function browserTransfer(browser, baseUrl, payloadPath, payload, mode) {
     await sender.goto(baseUrl);
     await sender.locator('.workbench:not([inert])').waitFor();
     const readyStarted = performance.now();
-    await sender.locator('#file-input').setInputFiles(payloadPath);
+
+    await sender.locator('#file-input').setInputFiles(payloadPath); await sender.getByLabel('Sharing method').selectOption('code'); await sender.locator('#start-send-btn').click();
     try { await sender.locator('#sender-code-section:not(.hidden)').waitFor(); }
     catch (error) {
       const status = await sender.locator('#sender-status').textContent().catch(() => 'page unavailable');
