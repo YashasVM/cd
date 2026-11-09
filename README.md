@@ -7,6 +7,12 @@ Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 
 CD never stores files. Transfers are live and end-to-end encrypted.
 
+## Embed transfers in your app
+
+Android and web SDK previews let hosts own consent, storage and lifecycle. See
+the [integration guide](docs/third-party-integration.md) for local artifacts,
+examples, same-origin web hosting and verified-transfer tests.
+
 ## Install `cdx`
 
 | Platform | Command |

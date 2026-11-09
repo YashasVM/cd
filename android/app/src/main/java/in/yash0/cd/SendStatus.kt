@@ -23,6 +23,7 @@ enum class SendFailureKind(val terminal: Boolean, val message: String) {
     TIMEOUT(false, "The connection timed out. Check your connection, then tap Resume."),
     TLS(false, "Couldn't open a secure connection to the CD server. This network may be blocking it. Try another network, then tap Resume."),
     UNSUPPORTED(false, "This CD server doesn't support private resumable transfers yet. Try again after the server is updated."),
+    RECEIVER_REJECTED(true, "The receiver declined this file. Start a new send."),
     REJECTED(true, "The CD server rejected this transfer. Start a new send."),
     SENDER_BUSY(false, "The CD server still has an earlier connection from this phone. Wait a few seconds, then tap Resume."),
     EXPIRED(true, "This link expired. Start a new send."),
@@ -61,6 +62,8 @@ object SendFailures {
 
     private fun direct(e: Throwable): SendFailureKind? = when (e) {
         is SendProblem -> e.kind
+        is SourceChangedException -> SendFailureKind.SOURCE_CHANGED
+        is ReceiverRejectedException -> SendFailureKind.RECEIVER_REJECTED
         is ExpiredTransferException -> SendFailureKind.EXPIRED
         is ExhaustedTransferException -> SendFailureKind.EXHAUSTED
         is WireTimeout -> SendFailureKind.RECEIVER_TIMEOUT

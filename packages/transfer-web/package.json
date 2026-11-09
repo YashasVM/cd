@@ -1,0 +1,13 @@
+{
+  "name": "@yash0/cd-transfer",
+  "version": "0.1.0-preview.1",
+  "description": "Live encrypted transfers with host-owned consent and storage",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/YashasVM/cd.git", "directory": "packages/transfer-web" },
+  "exports": { ".": { "types": "./src/index.d.ts", "import": "./src/index.js" } },
+  "types": "./src/index.d.ts",
+  "files": ["src", "README.md", "LICENSE"],
+  "scripts": { "test": "node --test test/*.test.mjs", "typecheck": "tsc -p tsconfig.json", "prepack": "npm run typecheck" },
+  "engines": { "node": ">=22" }
+}

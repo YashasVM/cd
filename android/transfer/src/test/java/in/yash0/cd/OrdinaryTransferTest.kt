@@ -44,4 +44,14 @@ class OrdinaryTransferTest {
         assertThrows(IllegalArgumentException::class.java) { offer.checkChunk(0, 0) }
         assertThrows(IllegalArgumentException::class.java) { offer.checkChunk(0, 262145) }
     }
+    @Test fun senderFilenameFitsUtf8LimitWithoutSplittingCodePoints() {
+        assertEquals("é".repeat(127), OrdinaryOffer.filename("é".repeat(200)))
+        assertEquals("😀".repeat(63), OrdinaryOffer.filename("😀".repeat(200)))
+        assertEquals("a".repeat(253), OrdinaryOffer.filename("a".repeat(253) + "😀"))
+        assertEquals("a_b_c_", OrdinaryOffer.filename("a/b\\c\n"))
+        assertEquals("file", OrdinaryOffer.filename(".."))
+        val name = OrdinaryOffer.filename("😀".repeat(200))
+        assertEquals(name, OrdinaryOffer.parse(JSONObject().put("name", name).put("size", "0").put("chunkSize", 262144)).name)
+    }
+
 }

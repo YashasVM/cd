@@ -6,7 +6,11 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 /** Sender records share the receiver's key schedule, with reusable cipher/header storage. */
-internal class SendRecords(invitation: Invitation, sender: ByteArray, receiver: ByteArray) {
+class SendRecords(invitation: Invitation, sender: ByteArray, receiver: ByteArray) {
+    init {
+        require(invitation.version == 2) { "Sender records require a v2 invitation" }
+        require(sender.size == 32 && receiver.size == 32) { "Session nonces must be 32 bytes" }
+    }
     private var sequence = 0L
     private val cipher = Cipher.getInstance("AES/GCM/NoPadding")
     private val key = SecretKeySpec(Crypto.derive(invitation.key, invitation.rawId + sender + receiver, "cd-transfer-v2 sender frames"), "AES")
@@ -27,7 +31,7 @@ internal class SendRecords(invitation: Invitation, sender: ByteArray, receiver: 
     }
 }
 
-internal object SendProtocol {
+object SendProtocol {
     const val CHUNK = 262144
     const val WINDOW = 4L * 1024 * 1024
     fun offset(raw: String, size: Long): Long {

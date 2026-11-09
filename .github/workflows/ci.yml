@@ -42,11 +42,37 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: Run Android unit tests
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Test, lint and build Android hosts and SDK publication
         # shortcut: HTTP timeout properties are internal; recheck when upgrading Gradle.
         run: >-
           ./gradlew
           -Dorg.gradle.internal.http.connectionTimeout=60000
           -Dorg.gradle.internal.http.socketTimeout=120000
-          :app:testDebugUnitTest
+          :app:testDebugUnitTest :transfer:testDebugUnitTest
+          :app:lintDebug :sample:lintDebug :transfer:lintDebug
+          :app:assembleDebug :sample:assembleDebug :transfer:assembleRelease
+          :transfer:publishReleasePublicationToPreviewRepository
         working-directory: android
+      - run: npm run typecheck:sdk
+      - run: npm run verify:sdk:web
+      - run: npm run verify:sdk:android
+      - run: npm run verify:sdk:browser
+      - name: Package web preview
+        run: |
+          mkdir -p build/sdk-artifacts
+          npm pack ./packages/transfer-web --pack-destination build/sdk-artifacts
+          npx vite build examples/transfer-web --outDir ../../build/transfer-web-example
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: transfer-sdk-0.1.0-preview.1
+          path: |
+            android/transfer/build/repository/
+            android/sample/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/debug/*.apk
+            build/sdk-artifacts/*.tgz
+            build/transfer-web-example/
