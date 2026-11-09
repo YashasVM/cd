@@ -41,4 +41,9 @@ class SendProtocolTest {
         assertEquals(0L, SendProtocol.offset("0", 0))
         assertEquals(100L, SendProtocol.offset("100", 100))
     }
+    @Test fun senderRejectsLegacyInvitationBeforeProducingRecords() {
+        val invitation = Invitation(Crypto.encode(ByteArray(16)), ByteArray(32), "wss://example.com", version = 1)
+        assertThrows(IllegalArgumentException::class.java) { SendRecords(invitation, ByteArray(32), ByteArray(32)) }
+    }
+
 }

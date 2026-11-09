@@ -16,3 +16,14 @@ test('cancel before run never connects or reports success', async () => {
   op.cancel();
   await assert.rejects(op.run(() => assert.fail('Must not advertise a cancelled invitation')), error => error instanceof TransferError && error.state === 'cancelled');
 });
+
+
+test('cancel from the connecting callback starts no hashing, connection or invitation', async () => {
+  let reads = 0;
+  const source = { name: 'file', size: 1, slice() { reads++; throw new Error('Must not hash'); } };
+  const op = new CdTransferClient({ appId: 'host' }).outgoing(source, {
+    onUpdate: update => { if (update.state === 'connecting') op.cancel(); },
+  });
+  await assert.rejects(op.run(() => assert.fail('Must not advertise')), error => error.state === 'cancelled');
+  assert.equal(reads, 0);
+});

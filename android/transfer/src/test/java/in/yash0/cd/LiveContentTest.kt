@@ -68,4 +68,26 @@ class LiveContentTest {
         assertFalse(published)
     }
 
+    @Test fun publishedTaskCompletesEvenThoughItsActivityGateNowRejectsWork() {
+        val emptyDigest = Crypto.hex(Crypto.sha(byteArrayOf()))
+        var taskState = "verifying"
+        var completed = false
+        LiveContent.receive(0, emptyDigest, 0, MessageDigest.getInstance("SHA-256"),
+            next = { 3 to SendProtocol.end(0, emptyDigest) }, write = {}, commit = {}, shouldCommit = { _, _ -> true },
+            send = { kind, bytes -> assertEquals(6, kind); assertArrayEquals(SendProtocol.end(0, emptyDigest), bytes); completed = true },
+            active = { ReceiveGate.check(true, taskState, true) }, progress = {}, verifying = {},
+            publish = { taskState = "complete" })
+        assertEquals("complete", taskState)
+        assertTrue(completed)
+    }
+    @Test fun notificationFailureCannotUndoPublishedContent() {
+        val emptyDigest = Crypto.hex(Crypto.sha(byteArrayOf()))
+        var published = false
+        LiveContent.receive(0, emptyDigest, 0, MessageDigest.getInstance("SHA-256"),
+            next = { 3 to SendProtocol.end(0, emptyDigest) }, write = {}, commit = {}, shouldCommit = { _, _ -> true },
+            send = { _, _ -> throw java.io.IOException("Socket closed after publication") }, active = {}, progress = {}, verifying = {},
+            publish = { published = true })
+        assertTrue(published)
+    }
+
 }

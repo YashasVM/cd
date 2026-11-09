@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { CdTransferClient } from '../packages/transfer-web/src/index.js';
 const [mode, origin, invitationPath, resultPath] = process.argv.slice(2);
@@ -10,7 +10,7 @@ try {
   let result;
   if (mode === 'send') {
     operation = client.outgoing(new File([bytes], 'interop.bin'));
-    result = await operation.run(async link => { await writeFile(invitationPath, link, { mode: 0o600 }); });
+    result = await operation.run(async link => { await writeFile(`${invitationPath}.tmp`, link, { mode: 0o600 }); await rename(`${invitationPath}.tmp`, invitationPath); });
   } else {
     operation = client.incoming(await readFile(invitationPath, 'utf8'));
     const hash = createHash('sha256'); let size = 0;

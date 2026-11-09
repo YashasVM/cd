@@ -14,9 +14,12 @@ try {
   await build({ entryPoints: ['worker/index.ts'], bundle: true, format: 'esm', platform: 'neutral',
     external: ['cloudflare:workers'], outfile: scriptPath });
   const { workerOptions } = unstable_getMiniflareWorkerOptions('wrangler.jsonc');
+  const ratelimits = structuredClone(workerOptions.ratelimits);
+  // These behavior tests share one IP; production rate limits are covered by the security suite.
+  ratelimits.CONNECTION_RATE_LIMITER.simple.limit = 1000;
   relay = new Miniflare(convertV4MiniflareOptions({
     compatibilityDate: workerOptions.compatibilityDate, compatibilityFlags: workerOptions.compatibilityFlags,
-    durableObjects: workerOptions.durableObjects, ratelimits: workerOptions.ratelimits,
+    durableObjects: workerOptions.durableObjects, ratelimits,
     name: 'cd-android-sdk', rootPath: work, modulesRoot: work, modules: true, scriptPath,
     host: '127.0.0.1', port: 0, inspectorPort: 0, durableObjectsPersist: join(work, 'state'),
     log: new Log(LogLevel.WARN), outboundService: () => { throw new Error('Unexpected internet egress'); },
@@ -26,7 +29,7 @@ try {
     const { verifyWebExample } = await import('./verify-sdk-browser.mjs');
     await verifyWebExample(url.origin);
   } else if (process.env.CD_SDK_SUITE === 'web') {
-    const child = spawn(process.execPath, ['--test', 'packages/transfer-web/test/api.test.mjs', 'packages/transfer-web/test/live-relay.test.mjs'], { stdio: 'inherit', env: { ...process.env, CD_SDK_RELAY: url.origin } });
+    const child = spawn(process.execPath, ['--test', 'packages/transfer-web/test/api.test.mjs', 'packages/transfer-web/test/live-relay.test.mjs', 'examples/transfer-web/main.test.mjs'], { stdio: 'inherit', env: { ...process.env, CD_SDK_RELAY: url.origin } });
     const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
     if (code !== 0) throw new Error(`Web SDK tests exited ${code}`);
   } else {

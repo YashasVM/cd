@@ -117,8 +117,10 @@ class ResumeReceiver(private val context: Context, private val store: Store, pri
                     },
                     currentDigest = ::prefix,
                 )
-                wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
-                runCatching { while (wire.json().getString("type") != "completed") { } }
+                runCatching {
+                    wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
+                    while (wire.json().getString("type") != "completed") { }
+                }
                 cpFile.delete(); stage.delete()
                 return
             }

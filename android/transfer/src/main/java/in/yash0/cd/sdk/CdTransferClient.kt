@@ -71,6 +71,7 @@ abstract class TransferOperation internal constructor(
     private var wire: Wire? = null
     private var stream: Closeable? = null
     private var finished = false
+    @Volatile private var published: VerifiedFile? = null
     private var timer: Timer? = null
     @Volatile var state = TransferState.CONNECTING
         private set
@@ -87,6 +88,7 @@ abstract class TransferOperation internal constructor(
         wire?.close()
         runCatching { stream?.close() }
     }
+    @Synchronized internal fun markPublished(result: VerifiedFile) { published = result; finished = true }
     override fun close() = stop(TransferState.CANCELLED)
     internal fun expire(at: Long) {
         require(at > System.currentTimeMillis() && at <= System.currentTimeMillis() + 86430000L) { "Invalid expiry" }
@@ -97,15 +99,19 @@ abstract class TransferOperation internal constructor(
     internal fun execute(join: JSONObject, body: (Wire) -> VerifiedFile): VerifiedFile {
         synchronized(this) { check(!started) { "Transfer already run" }; started = true }
         try {
-            active(); update(TransferState.CONNECTING)
+            active(); update(TransferState.CONNECTING); active()
             Wire(http, invitation.relay) { it.send(join.toString()) }.use { socket ->
                 synchronized(this) { wire = socket; active() }
                 val result = body(socket)
-                synchronized(this) { active(); finished = true }
+                synchronized(this) { if (published == null) active(); finished = true }
                 update(TransferState.COMPLETE, result.size, result.size)
                 return result
             }
         } catch (error: Exception) {
+            published?.let { result ->
+                update(TransferState.COMPLETE, result.size, result.size)
+                return result
+            }
             val failure = stopped ?: when (error) {
                 is TransferException -> error.state
                 is ReceiverRejectedException -> TransferState.REJECTED
@@ -192,6 +198,7 @@ class IncomingTransfer internal constructor(invitation: Invitation, http: OkHttp
             .put("receiverNonce", Crypto.encode(nonce)).put("receiverToken", Crypto.encode(invitation.token())).put("nonceProof", Crypto.encode(invitation.proof("receiver", nonce)))
         var sink: TransferSink? = null
         var committed = false
+        var failure: Throwable? = null
         try {
             return execute(join) { wire ->
                 var paired = wire.json(20)
@@ -231,13 +238,22 @@ class IncomingTransfer internal constructor(invitation: Invitation, http: OkHttp
                         { kind, bytes -> wire.send(sealer.seal(kind, bytes)) }, ::active,
                         { update(TransferState.TRANSFERRING, it, offer.size) },
                         { update(TransferState.VERIFYING, offer.size, offer.size) },
-                        { output.close(); attach(null); active(); destination.commit(result); committed = true })
+                        { output.close(); attach(null); active(); destination.commit(result); committed = true; markPublished(result) })
                 }
-                wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
                 // Content is already verified and committed. Losing the final relay ACK cannot undo that.
-                runCatching { while (wire.json(10).getString("type") != "completed") { active() } }
+                runCatching {
+                    wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
+                    while (wire.json(10).getString("type") != "completed") { active() }
+                }
                 result
             }
-        } finally { if (!committed) sink?.abort() }
+        } catch (error: Throwable) {
+            failure = error
+            throw error
+        } finally {
+            if (!committed) try { sink?.abort() } catch (cleanup: Throwable) {
+                if (failure == null) throw cleanup else failure.addSuppressed(cleanup)
+            }
+        }
     }
 }

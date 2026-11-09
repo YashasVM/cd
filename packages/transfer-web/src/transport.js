@@ -111,7 +111,19 @@ function createSocketInbox(socket) {
   const waiters = [];
   let failure = null;
   let queuedBytes = 0;
+  let disconnected;
+  const listeners = new Set();
+  const disconnect = error => {
+    disconnected ||= error;
+    for (const listener of listeners) listener(disconnected);
+  };
   socket.addEventListener('message', (event) => {
+    if (typeof event.data === 'string') {
+      try {
+        const value = JSON.parse(event.data);
+        if (value.protocol === 'cd-transfer-v2' && value.type === 'peer-left') disconnect(new ConnectionFailure('The other device disconnected.', 4404));
+      } catch { /* Record consumers validate malformed relay events. */ }
+    }
     const waiter = waiters.shift();
     if (waiter) waiter.resolve(event);
     else {
@@ -129,12 +141,19 @@ function createSocketInbox(socket) {
   });
   socket.addEventListener('close', (event) => {
     failure = new ConnectionFailure(event.code === 4408 ? 'This resumable CD transfer has expired.' : 'The transfer connection was interrupted. Your saved progress can be resumed from the same private link.', event.code);
+    disconnect(failure);
     while (waiters.length) waiters.shift().reject(failure);
   });
   socket.addEventListener('error', () => {
     failure ||= new ConnectionFailure('The transfer connection failed. Your saved progress can be resumed from the same private link.', 0);
+    disconnect(failure);
+    while (waiters.length) waiters.shift().reject(failure);
   });
-  return { next(timeout = 90_000) {
+  return { onDisconnect(listener) {
+    listeners.add(listener);
+    if (disconnected) listener(disconnected);
+    return () => listeners.delete(listener);
+  }, next(timeout = 90_000) {
     if (pending.length) {
       const item = pending.shift();
       queuedBytes -= item.size;
@@ -215,7 +234,7 @@ function hashBytes(value) {
   return Uint8Array.from(value.match(/../g), (pair) => Number.parseInt(pair, 16));
 }
 
-export function startResumableSend(file, { link = '', secrets, checkpoints, hooks = {}, origin = globalThis.location?.origin, lifetimeMs = RESUME_LIMIT_MS, appId, WebSocketCtor = globalThis.WebSocket } = {}) {
+export function startResumableSend(file, { link = '', secrets, checkpoints, hooks = {}, origin = globalThis.location?.origin, lifetimeMs, appId, WebSocketCtor = globalThis.WebSocket } = {}) {
   let socket;
   let cancelled = false;
   let privateRootId = '';
@@ -254,7 +273,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     const connection = await createV2Socket(invitation, 'sender', senderToken, {
       senderTokenHash: encodeBase64Url(new Uint8Array(tokenHashBytes)),
       receiverTokenHash: encodeBase64Url(receiverTokenHash), sessionNonce,
-      onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: new URL(origin), WebSocketCtor, expiresAt, appId
+      onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: new URL(origin), WebSocketCtor, expiresAt: lifetimeMs === undefined ? undefined : expiresAt, appId
     });
     socket = connection.socket;
     let sharePublished = false;
@@ -301,6 +320,9 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     let acceptance;
     try { acceptance = JSON.parse(textDecoder.decode(acceptanceBytes)); } catch { throw new Error('The receiver sent invalid saved progress.'); }
     if (acceptance.rejected === true) throw new TransferRejectedError();
+    const ackEveryBytes = acceptance.ackEveryBytes ?? RESUME_CHUNK_SIZE;
+    if (!Number.isSafeInteger(ackEveryBytes) || ackEveryBytes < RESUME_CHUNK_SIZE || ackEveryBytes > 4 * 1024 * 1024 || ackEveryBytes % RESUME_CHUNK_SIZE !== 0) throw new Error('Invalid acknowledgement interval.');
+    const windowChunks = Math.max(4, ackEveryBytes / RESUME_CHUNK_SIZE);
     const offset = Number(acceptance.offset);
     if (String(offset) !== acceptance.offset) throw new Error('Invalid offset.');
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > file.size || (offset % RESUME_CHUNK_SIZE !== 0 && offset !== file.size)) throw new Error('The receiver sent an invalid resume offset.');
@@ -324,8 +346,8 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     let position = offset;
     while (position < file.size || outstanding.length) {
       if (cancelled) throw new Error('Transfer canceled.');
-      // Four records fit the receiver's bounded inbox while durable ACKs are in flight.
-      if (position < file.size && outstanding.length < 4) {
+      // Keep the window bounded, but large enough to reach the negotiated cumulative ACK.
+      if (position < file.size && outstanding.length < windowChunks) {
         const block = new Uint8Array(await file.slice(position, Math.min(file.size, position + RESUME_CHUNK_SIZE)).arrayBuffer());
         if (cancelled) throw new Error('Transfer canceled.');
         if (block.byteLength !== Math.min(RESUME_CHUNK_SIZE, file.size - position)) throw new Error('The selected file changed while sending.');
@@ -342,8 +364,10 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
         continue;
       }
       const ack = decodeResumeAck(await nextRecord(connection.inbox, opener, KIND_ACK));
-      const expected = outstanding.shift();
-      if (ack.bytes !== BigInt(expected.bytes) || ack.chunks !== expected.chunks) throw new Error('The receiver acknowledged invalid saved progress.');
+      const index = outstanding.findIndex(item => ack.bytes === BigInt(item.bytes) && ack.chunks === item.chunks);
+      if (index < 0) throw new Error('The receiver acknowledged invalid saved progress.');
+      const expected = outstanding[index];
+      outstanding.splice(0, index + 1);
       ackedBytes = expected.bytes;
       const savedCheckpoint = await signResumeCheckpoint({
         version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,

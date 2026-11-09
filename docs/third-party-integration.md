@@ -161,8 +161,9 @@ sending. Receivers do not allocate a whole-file buffer. Supply a sink with
 chunk before write resolves. Commit only exposes verified content. Abort must
 remove staging and wait for any pending writes before deleting it. Honor the
 signal in host IO and consent code. Cancellation cannot undo a host publication
-that has already succeeded. If the final relay acknowledgement is lost, the
-receiver can have verified content while the sender reports failure; never
+that has already succeeded. Once host commit returns, the receiver reports success even if cancellation,
+expiry or final notification fails afterward. If the final acknowledgement is lost,
+the receiver can have verified content while the sender reports failure; never
 promise atomic success across two devices.
 
 Call `operation.cancel()` on explicit Cancel and from your lifecycle handler.
@@ -217,7 +218,8 @@ Go/browser v2 record fixture is tested in both implementations.
 - Filename: 1–255 UTF-8 bytes, no path separators, control characters, `.` or
   `..`. The web client additionally requires NFC filenames.
 - Plaintext chunks: 256 KiB. Android send window: 4 MiB. Web sender: four
-  chunks, 1 MiB. Web pending inbox: at most 32 records and roughly 4 MiB plus
+  chunks by default, increasing to at most 16 chunks, 4 MiB, for a negotiated
+  cumulative ACK interval. Web pending inbox: at most 32 records and roughly 4 MiB plus
   record overhead. Android inbox: eight frames, at most 1 MiB each.
 - Admission/connection waits are bounded. Inactivity is 90 seconds after
   acceptance. Android permits up to 10 minutes for receiver consent; web's

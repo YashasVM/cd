@@ -29,8 +29,8 @@ const failure = (promise, state) => assert.rejects(promise, error => error insta
 
 test('explicit host consent precedes all chunks; exact bytes/hash cross several windows', options, async () => {
   const bytes = payload();
-  const states = [];
-  const sending = start(bytes, { onUpdate: value => states.push(value.state) });
+  const states = [], updates = [];
+  const sending = start(bytes, { onUpdate: value => { states.push(value.state); updates.push(value); } });
   const receiving = client().incoming(await sending.link);
   const offered = deferred(), consent = deferred();
   const destination = sink();
@@ -46,6 +46,7 @@ test('explicit host consent precedes all chunks; exact bytes/hash cross several 
   assert.deepEqual(destination.bytes(), Buffer.from(bytes));
   assert.equal(receiving.state, 'complete');
   assert.ok(states.includes('verifying'));
+  assert.deepEqual(updates.find(value => value.state === 'verifying'), { state: 'verifying', bytes: bytes.length, total: bytes.length });
   await assert.rejects(sending.op.run(() => {}), /already run/);
 });
 
@@ -119,4 +120,34 @@ test('modified source fails authenticated whole-file verification', options, asy
   const destination = sink();
   await Promise.all([failure(client().incoming(await ready.promise).run(() => destination)), failure(sent)]);
   assert.equal(destination.committed, false); assert.equal(destination.aborted, true);
+});
+
+
+test('host can transfer each chunk buffer to a worker without breaking verification', options, async () => {
+  const bytes = payload(), sending = start(bytes), destination = sink();
+  destination.write = async bytes => { destination.chunks.push(structuredClone(bytes, { transfer: [bytes.buffer] })); };
+  const result = await client().incoming(await sending.link).run(() => destination);
+  assert.deepEqual(result, { size: bytes.length, sha256: hash(bytes) });
+  assert.deepEqual(destination.bytes(), Buffer.from(bytes)); await sending.done;
+});
+
+test('peer departure interrupts pending consent and aborts the late sink', options, async () => {
+  const sending = start(payload()), offered = deferred(), consent = deferred(), destination = sink();
+  const receiving = client().incoming(await sending.link);
+  const result = receiving.run(() => { offered.resolve(); return consent.promise; });
+  result.catch(() => {});
+  await offered.promise; sending.op.cancel();
+  await Promise.all([failure(result, 'recoverable-failure'), failure(sending.done, 'cancelled')]);
+  assert.equal(receiving.signal.aborted, true);
+  consent.resolve(destination); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(destination.aborted, true); assert.equal(destination.committed, false);
+});
+
+test('verified publication stays successful if the host cancels as commit returns', options, async () => {
+  const sending = start(new Uint8Array([1, 2, 3])), destination = sink();
+  const receiving = client().incoming(await sending.link);
+  destination.commit = async result => { destination.committed = true; receiving.cancel(); };
+  const result = await receiving.run(() => destination);
+  assert.equal(result.size, 3); assert.equal(receiving.state, 'complete');
+  assert.equal(destination.aborted, false); await failure(sending.done);
 });

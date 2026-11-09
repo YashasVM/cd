@@ -103,8 +103,9 @@ object LiveContent {
                 val expected = SendProtocol.end(size, digest)
                 require(kind == 3 && written == size && currentDigest() == digest && MessageDigest.isEqual(data, expected)) { "Final digest or size failed verification" }
                 if (committed != written) commit(written)
-                active(); publish(); active()
-                send(6, expected)
+                active(); publish()
+                // Publication is irreversible; a lost completion notification cannot undo it.
+                runCatching { send(6, expected) }
                 return
             }
         }

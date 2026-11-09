@@ -26,3 +26,6 @@ The sample cancels on page exit and does not retain checkpoints across reloads.
 
 Requires Web Crypto, WebSocket, File/Blob, AbortController and OPFS. The SDK
 itself does not require OPFS. A host can supply another bounded streaming sink.
+
+Run the sample's storage and cancellation regression tests with
+`node --test examples/transfer-web/main.test.mjs`.

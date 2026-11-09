@@ -30,13 +30,17 @@ element('receive').onclick = () => run(client => {
     const directory = await navigator.storage.getDirectory();
     const name = `host-${crypto.randomUUID()}.part`;
     const handle = await directory.getFileHandle(name, { create: true });
-    const writable = await handle.createWritable();
+    const writable = await handle.createWritable().catch(async error => {
+      await directory.removeEntry(name).catch(() => {});
+      throw error;
+    });
     let closed = false;
     return {
       async write(bytes, signal) { signal.throwIfAborted(); await writable.write(bytes); },
       async commit(file, signal) {
         signal.throwIfAborted(); await writable.close(); closed = true; signal.throwIfAborted();
         const verified = await handle.getFile();
+        signal.throwIfAborted();
         revoke?.();
         const url = URL.createObjectURL(verified);
         const anchor = element('download');

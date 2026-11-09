@@ -193,4 +193,42 @@ class LiveRelayTest {
         assertEquals(1L, first.second.get(10, TimeUnit.SECONDS).size)
         assertEquals(1L, sending.result.get(10, TimeUnit.SECONDS).size)
     }
+    @Test fun cancellationAfterCommitReturnsStillReportsPublishedSuccess() {
+        val bytes = byteArrayOf(1, 2, 3)
+        val sending = send(source(bytes))
+        lateinit var op: IncomingTransfer
+        val sink = Sink(root)
+        op = client().incoming(sending.link.get(10, TimeUnit.SECONDS)).also { operations.add(it) }
+        val received = op.run { object : TransferSink {
+            override fun open() = sink.open()
+            override fun commit(file: VerifiedFile) { sink.commit(file); op.close() }
+            override fun abort() = sink.abort()
+        } }
+        assertEquals(VerifiedFile(3, hash(bytes)), received)
+        assertEquals(TransferState.COMPLETE, op.state)
+        assertArrayEquals(bytes, sink.target.readBytes())
+        assertFalse(sink.aborted)
+    }
+    @Test fun abortFailureIsSuppressedOnTheOriginalTransferFailure() {
+        val sending = send(source(byteArrayOf(1)))
+        val receiving = receive(sending.link.get(10, TimeUnit.SECONDS), { object : TransferSink {
+            override fun open(): OutputStream = throw IOException("Storage unavailable")
+            override fun commit(file: VerifiedFile) { fail("No commit expected") }
+            override fun abort() { throw IOException("Cleanup unavailable") }
+        } })
+        val failure = failure(receiving.second)
+        assertEquals(TransferState.RECOVERABLE_FAILURE, failure.state)
+        assertEquals("Storage unavailable", failure.cause?.message)
+        assertEquals(listOf("Cleanup unavailable"), failure.suppressed.map { it.message })
+    }
+
+    @Test fun connectingCallbackCancellationNeverStartsAdmission() {
+        lateinit var op: OutgoingTransfer
+        op = client().outgoing(source(byteArrayOf(1)), onUpdate = { if (it.state == TransferState.CONNECTING) op.close() })
+        operations.add(op)
+        val failure = assertThrows(TransferException::class.java) { op.run { fail("Cancelled sender must not advertise an invitation") } }
+        assertEquals(TransferState.CANCELLED, failure.state)
+        assertEquals(TransferState.CANCELLED, op.state)
+    }
+
 }

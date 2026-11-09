@@ -52,7 +52,9 @@ class SampleActivity : Activity() {
                 install(incoming)
                 incoming.run { offer ->
                     val decision = CompletableFuture<TransferSink?>()
-                    synchronized(this) { consent = decision }
+                    synchronized(this) {
+                        if (destroyed || cancelled) decision.complete(null) else consent = decision
+                    }
                     runOnUiThread {
                         if (destroyed || decision.isDone) return@runOnUiThread
                         dialog = AlertDialog.Builder(this).setTitle("Accept file?")

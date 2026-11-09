@@ -19,11 +19,11 @@ function kv() {
 }
 
 // Only the network is substituted. Both peers use the actual authenticated v2 records.
-async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, resumed = 0, failRead = false } = {}) {
+async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, resumed = 0, failRead = false, ackEveryChunks = 1, serverExpiry } = {}) {
   const bytes = Uint8Array.from({ length: chunks * RESUME_CHUNK_SIZE + tail }, (_, i) => i % 251);
   const file = new File([bytes], 'pipeline.bin');
   const secrets = kv(), checkpoints = kv();
-  let wire, operation, rootId, invitation, opener, sealer, wholeSha256;
+  let wire, operation, rootId, invitation, opener, sealer, wholeSha256, advertisedExpiry;
   let received = resumed, count = Math.ceil(resumed / RESUME_CHUNK_SIZE), flight = 0, maxFlight = 0;
   let delivery = Promise.resolve(), ackDelivery = Promise.resolve(), peerError;
   const held = [], output = [];
@@ -36,7 +36,8 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
     send(data) {
       if (typeof data === 'string') {
         this.join = JSON.parse(data);
-        this.emit(JSON.stringify({ type: 'accepted', protocol: 'cd-transfer-v2' }));
+        if (serverExpiry && this.join.expiresAt > serverExpiry) { this.close(4406); return; }
+        this.emit(JSON.stringify({ type: 'accepted', protocol: 'cd-transfer-v2', expiresAt: serverExpiry }));
       } else {
         if (data[3] === KIND_CHUNK) { flight++; maxFlight = Math.max(maxFlight, flight); }
         delivery = delivery.then(async () => {
@@ -45,12 +46,13 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
             const offer = JSON.parse(new TextDecoder().decode(record.plaintext));
             wholeSha256 = offer.wholeSha256;
             assert.equal(wholeSha256, sha(bytes));
-            this.emit(await sealer.seal(KIND_ACCEPT, encoder.encode(JSON.stringify({ offset: String(resumed), prefixSha256: sha(bytes.subarray(0, resumed)) }))));
+            this.emit(await sealer.seal(KIND_ACCEPT, encoder.encode(JSON.stringify({ offset: String(resumed), prefixSha256: sha(bytes.subarray(0, resumed)), ackEveryBytes: ackEveryChunks * RESUME_CHUNK_SIZE }))));
           } else if (record.kind === KIND_CHUNK) {
             output.push(record.plaintext);
             received += record.plaintext.length; count++;
+            if ((count - Math.ceil(resumed / RESUME_CHUNK_SIZE)) % ackEveryChunks !== 0 && received !== bytes.length) return;
             const ack = await sealer.seal(KIND_ACK, encodeResumeAck(count, invalidAck ? received + 1 : received));
-            const deliver = () => { flight--; this.emit(ack); };
+            const deliver = () => { flight -= Math.min(ackEveryChunks, flight); this.emit(ack); };
             if (hold) held.push(deliver);
             else {
               // Latency starts at receipt, allowing ACKs for multiple records to travel together.
@@ -73,20 +75,20 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
   const started = performance.now();
   let reads = 0;
   const source = failRead ? { size: file.size, name: file.name, slice(...args) { if (++reads > chunks + 1 + 2) throw new Error('source unavailable'); return file.slice(...args); } } : file;
-  operation = startResumableSend(source, { secrets, checkpoints, hooks: { onShare({ url, rootId: id }) {
-    rootId = id;
+  operation = startResumableSend(source, { secrets, checkpoints, hooks: { onShare({ url, rootId: id, expiresAt }) {
+    advertisedExpiry = expiresAt; rootId = id;
     const parsed = parseResumeLink(url); invitation = { id: parsed.id, key: parsed.key };
     const sessionNonce = decodeBase64Url(wire.join.sessionNonce), receiverNonce = new Uint8Array(32).fill(37);
     const session = { sessionNonce, receiverNonce };
     void Promise.all([createResumeOpener(invitation, SENDER_DIRECTION, session), createResumeSealer(invitation, RECEIVER_DIRECTION, session), resumeNonceProof(invitation, 'receiver', receiverNonce)]).then(([o, s, proof]) => {
       opener = o; sealer = s;
-      wire.emit(JSON.stringify({ type: 'peer-joined', protocol: 'cd-transfer-v2', sessionNonce: wire.join.sessionNonce, receiverNonce: encodeBase64Url(receiverNonce), receiverNonceProof: encodeBase64Url(proof) }));
+      wire.emit(JSON.stringify({ type: 'peer-joined', protocol: 'cd-transfer-v2', expiresAt: serverExpiry, sessionNonce: wire.join.sessionNonce, receiverNonce: encodeBase64Url(receiverNonce), receiverNonceProof: encodeBase64Url(proof) }));
     }).catch(error => { peerError = error; wire.close(1011); });
   } } });
   operation.done.catch(() => {});
   return {
     operation, checkpoints, secrets, bytes,
-    get held() { return held; }, get flight() { return flight; }, get maxFlight() { return maxFlight; }, get rootId() { return rootId; },
+    get advertisedExpiry() { return advertisedExpiry; }, get held() { return held; }, get flight() { return flight; }, get maxFlight() { return maxFlight; }, get rootId() { return rootId; },
     async waitFor(predicate) { const deadline = Date.now() + 3000; while (!predicate()) { if (peerError) throw peerError; assert.ok(Date.now() < deadline, 'sender did not make expected progress'); await delay(2); } },
     close() { wire.close(1006); },
     async finish() { try { const result = await operation.done; if (peerError) throw peerError; return { ...result, elapsedMs: performance.now() - started }; } finally { globalThis.WebSocket = originalSocket; globalThis.location = originalLocation; } },
@@ -180,3 +182,31 @@ if (process.env.CD_RESUME_BENCH === '1') {
     console.log(JSON.stringify({ benchmark: '8MiB encrypted v2, 30ms ACK latency', rows }));
   });
 }
+
+it('accepts cumulative ACKs and reaches intervals larger than the default four-chunk window', async () => {
+  for (const ackEveryChunks of [2, 8, 16]) {
+    const t = await transfer({ chunks: 20, ackEveryChunks });
+    try { const result = await t.finish(); assert.equal(result.bytesSent, t.bytes.length); assert.ok(t.maxFlight <= Math.max(4, ackEveryChunks)); }
+    finally { t.restore(); }
+  }
+});
+
+it('default sends use relay-assigned expiry when the browser clock is five minutes ahead', async () => {
+  const now = Date.now;
+  const serverExpiry = now() + 24 * 60 * 60 * 1000;
+  Date.now = () => now() + 5 * 60 * 1000;
+  let t;
+  try {
+    t = await transfer({ chunks: 0, tail: 7, serverExpiry });
+    await t.finish();
+    assert.equal(t.advertisedExpiry, serverExpiry);
+  } finally { t?.restore(); Date.now = now; }
+});
+
+it('rejects unaligned or excessive cumulative ACK intervals before sending chunks', async () => {
+  for (const ackEveryChunks of [0, 1.5, 17]) {
+    const t = await transfer({ ackEveryChunks });
+    try { await assert.rejects(t.finish(), /Invalid acknowledgement interval/); assert.equal(t.maxFlight, 0); }
+    finally { t.restore(); }
+  }
+});

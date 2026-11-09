@@ -157,7 +157,7 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
         runCatching { context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) value = cursor.getString(0)
         } }
-        return (value ?: uri.lastPathSegment ?: "file").replace(Regex("[/\\\\\\p{Cntrl}]"), "_").take(200).takeUnless { it in listOf("", ".", "..") } ?: "file"
+        return OrdinaryOffer.filename(value ?: uri.lastPathSegment ?: "file")
     }
     private fun size(uri: Uri): Long = runCatching {
         context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->

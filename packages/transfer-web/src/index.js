@@ -44,7 +44,7 @@ export class CdTransferClient {
         origin: this.origin, appId: this.appId, lifetimeMs, secrets: memoryStore(), checkpoints: memoryStore(),
         hooks: {
           onShare: ({ url, expiresAt }) => { operation.expire(expiresAt); operation.update('waiting'); onReady(url); },
-          onPhase: (state) => operation.update(state),
+          onPhase: (state) => operation.update(state, state === 'verifying' ? file.size : 0, file.size),
           onProgress: (bytes, total) => { if (operation.state !== 'verifying') operation.update('transferring', bytes, total); },
         },
       });
@@ -79,10 +79,14 @@ export class CdTransferClient {
         const json = JSON.parse(textDecoder.decode(raw));
         const offer = validateOffer(json, session.expiresAt);
         operation.update('awaiting-consent', 0, offer.size);
-        sink = await operation.wait(Promise.resolve(onOffer(offer, operation.signal)).then(async (value) => {
-          if (operation.stopped) { await value?.abort(); operation.check(); }
-          return value;
-        }));
+        const unsubscribe = connection.inbox.onDisconnect(error => operation.interrupt(failureState(error)));
+        try {
+          operation.check();
+          sink = await operation.wait(Promise.resolve(onOffer(offer, operation.signal)).then(async (value) => {
+            if (operation.stopped) { await value?.abort(); operation.check(); }
+            return value;
+          }));
+        } finally { unsubscribe(); }
         operation.check();
         if (sink === null) {
           sendRecord(socket, await sealer.seal(4, textEncoder.encode('{"rejected":true}')));
@@ -99,11 +103,13 @@ export class CdTransferClient {
           acknowledge: async (chunks, bytes) => sendRecord(socket, await sealer.seal(5, encodeResumeAck(chunks, bytes))),
           check: () => operation.check(), progress: (bytes) => operation.update('transferring', bytes, offer.size),
           verifying: () => operation.update('verifying', offer.size, offer.size),
-          publish: async () => { await sink.commit({ size: offer.size, sha256: offer.sha256 }, operation.signal); committed = true; },
+          publish: async () => { await sink.commit({ size: offer.size, sha256: offer.sha256 }, operation.signal); committed = true; operation.published = true; },
         });
-        sendRecord(socket, await sealer.seal(6, encodeResumeCounts(Math.ceil(offer.size / RESUME_CHUNK_SIZE), offer.size, offer.sha256)));
-        socket.send(JSON.stringify({ type: 'complete', protocol: 'cd-transfer-v2', sessionNonce: session.sessionNonceText, receiverNonce: session.receiverNonceText }));
-        await waitForRelayEvent(connection.inbox, ['completed'], 10_000).catch(() => {});
+        try {
+          sendRecord(socket, await sealer.seal(6, encodeResumeCounts(Math.ceil(offer.size / RESUME_CHUNK_SIZE), offer.size, offer.sha256)));
+          socket.send(JSON.stringify({ type: 'complete', protocol: 'cd-transfer-v2', sessionNonce: session.sessionNonceText, receiverNonce: session.receiverNonceText }));
+          await waitForRelayEvent(connection.inbox, ['completed'], 10_000);
+        } catch { /* Verified publication already succeeded. */ }
         return result;
       } finally {
         socket?.close(1000, 'transfer stopped');
@@ -127,12 +133,13 @@ async function nextOpened(inbox, opener) {
 class TransferOperation {
   constructor(onUpdate) { this.onUpdate = onUpdate; this.state = 'connecting'; this.started = false; this.controller = new AbortController(); this.signal = this.controller.signal; }
   update(state, bytes = 0, total = 0) { this.state = state; this.onUpdate({ state, bytes, total }); }
-  check() { if (this.stopped) throw new TransferError(this.stopped); }
-  cancel() { if (!this.finished && !this.stopped) { this.stopped = 'cancelled'; this.controller.abort(); this.stop?.(); } }
+  check() { if (this.stopped && !this.published) throw new TransferError(this.stopped); }
+  interrupt(state) { if (!this.finished && !this.published && !this.stopped) { this.stopped = state; this.controller.abort(); this.stop?.(); } }
+  cancel() { this.interrupt('cancelled'); }
   expire(at) {
     if (!Number.isSafeInteger(at) || at <= Date.now() || at > Date.now() + 86_430_000) throw new TransferError('expired');
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => { if (!this.finished) { this.stopped = 'expired'; this.controller.abort(); this.stop?.(); } }, at - Date.now());
+    this.timer = setTimeout(() => this.interrupt('expired'), at - Date.now());
   }
   async wait(promise) {
     this.check();
@@ -143,7 +150,7 @@ class TransferOperation {
   async execute(body) {
     if (this.started) throw new Error('Transfer already run.');
     this.started = true;
-    try { this.check(); this.update('connecting'); const result = await body(); this.check(); this.finished = true; this.update('complete', result.size, result.size); return result; }
+    try { this.check(); this.update('connecting'); this.check(); const result = await body(); this.check(); this.finished = true; this.update('complete', result.size, result.size); return result; }
     catch (cause) {
       const state = this.stopped || failureState(cause);
       this.finished = true; this.update(state); throw new TransferError(state, cause);
