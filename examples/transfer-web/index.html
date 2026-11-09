@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Host-owned CD transfer example</title>
+<style>body{font:18px system-ui;max-width:50rem;margin:3rem auto;padding:1rem}label{display:block;margin:1rem 0}input{font:inherit;max-width:100%;width:100%}button{font:inherit;margin:.4rem;padding:.5rem}output{display:block;white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<h1>Live file transfer example</h1>
+<p>Keep both senders and receivers online. One receiver per link. The host owns consent and private OPFS storage. Closing this page cancels the operation.</p>
+<label>Relay origin <input id="origin" value="https://cd.yash0.in"></label>
+<label>One file <input id="file" type="file"></label>
+<button id="send">Send</button>
+<label>Secret invitation <input id="link" autocomplete="off" spellcheck="false"></label>
+<button id="receive">Receive</button><button id="cancel">Cancel</button>
+<output id="status" role="status">Ready</output>
+<a id="download" hidden>Download verified file</a>
+<script type="module" src="./main.js"></script>
+</html>

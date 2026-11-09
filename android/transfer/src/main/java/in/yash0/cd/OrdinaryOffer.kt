@@ -2,7 +2,7 @@ package `in`.yash0.cd
 
 import org.json.JSONObject
 
-internal data class OrdinaryOffer(val name: String, val size: Long, val chunkSize: Int) {
+data class OrdinaryOffer(val name: String, val size: Long, val chunkSize: Int) {
     fun checkChunk(written: Long, length: Int) {
         require(length in 1..chunkSize && written + length <= size && (length == chunkSize || written + length == size)) { "Invalid chunk bounds" }
     }

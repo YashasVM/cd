@@ -318,64 +318,30 @@ class SendEngineImpl(private val context: Context, private val publicBase: Strin
                 val accepted = next()
                 require(accepted.first == 4) { "Invalid receiver acceptance" }
                 val accept = JSONObject(String(accepted.second))
+                if (accept.optBoolean("rejected")) throw ReceiverRejectedException()
                 val offset = SendProtocol.offset(accept.getString("offset"), size)
-                val ackEvery = accept.optLong("ackEveryBytes", SendProtocol.CHUNK.toLong())
-                require(ackEvery in SendProtocol.CHUNK.toLong()..SendProtocol.WINDOW && ackEvery % SendProtocol.CHUNK == 0L) { "Invalid ACK interval" }
                 store.source(id).inputStream().buffered(1024 * 1024).use { source ->
-                    val whole = MessageDigest.getInstance("SHA-256")
-                    val buffer = ByteArray(SendProtocol.CHUNK)
-                    var prefix = offset
-                    while (prefix > 0) {
-                        run.active()
-                        val n = source.read(buffer, 0, minOf(buffer.size.toLong(), prefix).toInt())
-                        if (n <= 0) throw SendProblem(SendFailureKind.SOURCE_CHANGED)
-                        whole.update(buffer, 0, n); prefix -= n
-                    }
-                    require(Crypto.hex((whole.clone() as MessageDigest).digest()) == accept.getString("prefixSha256")) { "Receiver checkpoint does not match this source" }
-                    var sent = offset
-                    var ack = offset
-                    var usingDirect = false
-                    var draining = false
                     val started = System.nanoTime()
                     var lastPublish = 0L
-                    state.put("done", offset)
-                    publish(run, state, TransferPhase.TRANSFERRING, route = Route.RELAY, message = if (offset > 0) "Resumed at $offset bytes" else null)
-                    android.util.Log.i("CD-Send", "start id=$id offset=$offset size=$size")
-                    while (ack < size) {
-                        run.active()
-                        if (!usingDirect) {
-                            if (direct?.ready() != true) draining = false
-                            else if ((sent - offset) % ackEvery == 0L || sent == size) draining = true
-                            if (draining && sent == ack) { direct!!.markUsed(); usingDirect = true; draining = false }
-                        }
-                        while (sent < size && sent - ack < SendProtocol.WINDOW && !draining) {
-                            run.active()
-                            val n = minOf(buffer.size.toLong(), size - sent).toInt()
-                            var filled = 0
-                            while (filled < n) { val read = source.read(buffer, filled, n - filled); if (read <= 0) throw SendProblem(SendFailureKind.SOURCE_CHANGED); filled += read }
-                            whole.update(buffer, 0, n)
-                            val record = sealer.seal(2, buffer, n)
-                            if (usingDirect) direct!!.send(record) { run.active() } else relay(record)
-                            sent += n
-                            if (!usingDirect && direct?.ready() == true && ((sent - offset) % ackEvery == 0L || sent == size)) draining = true
-                        }
-                        val record = next()
-                        require(record.first == 5) { "Expected cumulative acknowledgement" }
-                        ack = SendProtocol.ack(record.second, ack, sent, size)
-                        state.put("done", ack)
-                        val now = System.nanoTime()
-                        if (now - lastPublish > 150000000L || ack == size) {
-                            val rate = ((ack - offset) * 1e9 / (now - started).coerceAtLeast(1)).toLong()
-                            publish(run, state, TransferPhase.TRANSFERRING, rate, if (usingDirect) Route.DIRECT else Route.RELAY)
-                            lastPublish = now
-                        }
-                    }
-                    if (source.read() != -1 || Crypto.hex(whole.digest()) != digest) throw SendProblem(SendFailureKind.SOURCE_CHANGED)
-                    publish(run, state, TransferPhase.VERIFYING, route = if (usingDirect) Route.DIRECT else Route.RELAY)
-                    val end = SendProtocol.end(size, digest)
-                    relay(sealer.seal(3, end))
-                    val complete = next()
-                    require(complete.first == 6 && complete.second.contentEquals(end)) { "Receiver did not verify complete file" }
+                    var usingDirect = false
+                    LiveContent.send(source, size, digest, accept, sealer::seal, ::relay, ::next, run::active,
+                        progress = { ack, directRoute ->
+                            usingDirect = directRoute
+                            state.put("done", ack)
+                            val now = System.nanoTime()
+                            if (now - lastPublish > 150000000L || ack == size) {
+                                val rate = ((ack - offset) * 1e9 / (now - started).coerceAtLeast(1)).toLong()
+                                publish(run, state, TransferPhase.TRANSFERRING, rate, if (directRoute) Route.DIRECT else Route.RELAY)
+                                lastPublish = now
+                            }
+                        },
+                        verifying = { publish(run, state, TransferPhase.VERIFYING, route = if (usingDirect) Route.DIRECT else Route.RELAY) },
+                        direct = direct?.let { path -> object : LiveContent.Direct {
+                            override fun ready() = path.ready()
+                            override fun markUsed() = path.markUsed()
+                            override fun send(record: ByteArray) = path.send(record) { run.active() }
+                        } },
+                    )
                     while (true) {
                         val event = wire.json(10)
                         if (event.getString("type") == "completed") break
