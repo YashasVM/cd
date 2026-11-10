@@ -375,8 +375,8 @@ export function startRelaySend(source, hooks = {}) {
     let sent = 0n;
     let acknowledged = 0n;
     let chunks = 0;
-    // Two negotiated chunks must fit before the receiver's 1 MiB ACK.
-    windowController = createSendWindow({ minBytes: Math.max(1024 * 1024, 2 * chunkSize) });
+    // Leave room to cross the receiver's 1 MiB ACK threshold with a whole chunk.
+    windowController = createSendWindow({ minBytes: 1024 * 1024 + chunkSize });
     onProgress(0, source.size);
     const awaitAck = async () => {
       const { plaintext } = await waitForRecord(opener, [KIND_ACK], TRANSFER_IDLE_MS, 'The transfer stalled: no progress for 90 seconds.');

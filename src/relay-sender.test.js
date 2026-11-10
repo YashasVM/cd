@@ -5,7 +5,7 @@ import { startRelaySend } from './relay-sender.js';
 import { createZipBundle } from './zip-bundle.js';
 import { createOpener, createSealer, decodeBase64Url, KIND_ACCEPT, KIND_ACK, KIND_COMPLETE, KIND_OFFER, KIND_CHUNK, KIND_END, SENDER_DIRECTION, RECEIVER_DIRECTION } from './agent-protocol.js';
 
-function setup(t, payload, { largeChunks = false } = {}) {
+function setup(t, payload, { largeChunks = false, ackDelay = 0 } = {}) {
   let instance;
   const installed = ['window', 'WebSocket', 'RTCPeerConnection'].map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
   const events = new EventTarget();
@@ -42,6 +42,8 @@ function setup(t, payload, { largeChunks = false } = {}) {
           const size = this.received.reduce((sum, chunk) => sum + chunk.byteLength, 0);
           if (size - this.acknowledged >= 1024 * 1024 || size === payload.length) {
             this.acknowledged = size;
+            // A fast first ACK followed by slower delivery shrinks the window.
+            if (ackDelay && this.received.length > 5) await delay(ackDelay);
             const counts = new Uint8Array(12); const view = new DataView(counts.buffer);
             view.setUint32(0, this.received.length); view.setBigUint64(4, BigInt(size));
             this.message(await this.sealer.seal(KIND_ACK, counts));
@@ -158,4 +160,16 @@ test('short source fails instead of leaving the ACK reader waiting', async (t) =
   const input = source(payload);
   input.size += 1;
   await assert.rejects(startRelaySend(input).done, /file changed/);
+});
+
+test('fragmented source keeps sending after the adaptive window shrinks', async (t) => {
+  const payload = new Uint8Array(8 * 1024 * 1024).fill(73);
+  const socket = setup(t, payload, { ackDelay: 110 });
+  const input = { ...source(payload), async *stream() {
+    for (let offset = 0; offset < payload.length; offset += 250000) yield payload.subarray(offset, offset + 250000);
+  } };
+  const transfer = startRelaySend(input);
+  const deadline = setTimeout(() => transfer.cancel(), 3000);
+  try { await transfer.done; } finally { clearTimeout(deadline); }
+  assert.deepEqual(Buffer.concat(socket().received.map(chunk => Buffer.from(chunk))), Buffer.from(payload));
 });
