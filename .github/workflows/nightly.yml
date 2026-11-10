@@ -1,0 +1,59 @@
+name: Release cdx nightly
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cdx-nightly-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.8'
+          cache: true
+      - run: go test ./...
+      - name: Build all platforms
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          version="nightly-$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)"
+          echo "NIGHTLY_VERSION=$version" >> "$GITHUB_ENV"
+          mkdir assets
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            export GOOS="${target%/*}" GOARCH="${target#*/}"
+            suffix=''
+            if [ "$GOOS" = windows ]; then suffix='.exe'; fi
+            go build -buildvcs=false -trimpath \
+              -ldflags="-s -w -buildid= -X main.version=$version -X main.updateChannel=nightly" \
+              -o "assets/cdx-nightly-${GOOS}-${GOARCH}${suffix}" ./cmd/cdx
+          done
+          cd assets
+          sha256sum cdx-nightly-* > checksums.txt
+      - name: Publish rolling nightly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag --force nightly
+          git push --force origin refs/tags/nightly
+          printf 'Nightly CLI build from %s.\n\nInstall alongside stable with CD_CHANNEL=nightly.\n' "$(git rev-parse HEAD)" > notes.txt
+          if gh release view nightly --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload nightly assets/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit nightly --prerelease --title "cdx $NIGHTLY_VERSION" --notes-file notes.txt --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create nightly assets/* --verify-tag --prerelease --title "cdx $NIGHTLY_VERSION" --notes-file notes.txt --repo "$GITHUB_REPOSITORY"
+          fi

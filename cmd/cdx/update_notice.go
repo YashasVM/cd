@@ -18,7 +18,7 @@ type updateCheck struct {
 }
 
 func notifyUpdate(args []string, output io.Writer) {
-	if os.Getenv("CD_NO_UPDATE_CHECK") != "" {
+	if updateChannel == "nightly" || os.Getenv("CD_NO_UPDATE_CHECK") != "" {
 		return
 	}
 	if len(args) > 0 {

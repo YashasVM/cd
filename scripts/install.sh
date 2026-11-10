@@ -3,12 +3,20 @@ set -eu
 umask 077
 
 repository="YashasVM/cd"
-version="${CD_VERSION:-${CDX_VERSION:-latest}}"
+channel="${CD_CHANNEL:-stable}"
+case "$channel" in
+  stable) command_name="cdx"; default_version="latest" ;;
+  nightly) command_name="cdx-nightly"; default_version="nightly" ;;
+  *) echo "cdx: CD_CHANNEL must be stable or nightly (got '$channel')" >&2; exit 1 ;;
+esac
+version="${CD_VERSION:-${CDX_VERSION:-$default_version}}"
+[ "$channel" != nightly ] || [ "$version" != latest ] || version="nightly"
 install_dir="${CD_INSTALL_DIR:-${CDX_INSTALL_DIR:-${HOME}/.local/bin}}"
 
 case "$version" in
   latest|v*) ;;
-  *) echo "cdx: CD_VERSION must be 'latest' or a tag like v1.0.0 (got '$version')" >&2; exit 1 ;;
+  nightly) [ "$channel" = nightly ] || { echo "cdx: use CD_CHANNEL=nightly for nightly builds" >&2; exit 1; } ;;
+  *) echo "cdx: CD_VERSION must be 'latest', 'nightly' or a tag like v1.0.0 (got '$version')" >&2; exit 1 ;;
 esac
 
 case "$(uname -s)" in
@@ -26,7 +34,7 @@ esac
 
 suffix=""
 [ "$operating_system" = "windows" ] && suffix=".exe"
-asset="cdx-${operating_system}-${architecture}${suffix}"
+asset="${command_name}-${operating_system}-${architecture}${suffix}"
 if [ "$version" = "latest" ]; then
   base_url="https://github.com/${repository}/releases/latest/download"
 else
@@ -58,7 +66,7 @@ fi
 [ "$actual" = "$expected" ] || { echo "cdx: checksum verification failed" >&2; exit 1; }
 
 mkdir -p "$install_dir"
-install_target="${install_dir}/cdx${suffix}"
+install_target="${install_dir}/${command_name}${suffix}"
 install_temporary="${install_target}.tmp.$$"
 trap 'rm -rf "$temporary_dir"; rm -f "$install_temporary"' EXIT INT TERM
 cp "${temporary_dir}/${asset}" "$install_temporary"
@@ -67,15 +75,15 @@ mv -f "$install_temporary" "$install_target"
 # Earlier releases installed the CLI as `cd`, which the shell builtin
 # shadows. Remove that copy, but only if it really is a CD binary.
 old_binary="${install_dir}/cd${suffix}"
-if [ -f "$old_binary" ] && grep -q "cd-transfer-v1" "$old_binary" 2>/dev/null; then
+if [ "$channel" = stable ] && [ -f "$old_binary" ] && grep -q "cd-transfer-v1" "$old_binary" 2>/dev/null; then
   rm -f "$old_binary"
   echo "removed the old ${old_binary} (the CLI is now called cdx)" >&2
 fi
-echo "installed cdx to ${install_target}"
+echo "installed ${command_name} to ${install_target}"
 case ":${PATH}:" in
   *":${install_dir}:"*) ;;
   *)
-    echo "add ${install_dir} to PATH, then run: cdx send <file>" >&2
+    echo "add ${install_dir} to PATH, then run: ${command_name} send <file>" >&2
     ;;
 esac
 

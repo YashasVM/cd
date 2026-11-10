@@ -9,6 +9,7 @@
 # <install-dir>\cdx.exe (default: $HOME\.local\bin\cdx.exe).
 #
 # Environment overrides (same names as install.sh):
+#   $env:CD_CHANNEL     'stable' (default) or 'nightly'
 #   $env:CD_VERSION     'latest' (default) or a tag like 'v1.0.0'
 #   $env:CD_INSTALL_DIR custom install directory
 
@@ -16,9 +17,17 @@ $ErrorActionPreference = 'Stop'
 
 $Repository = 'YashasVM/cd'
 
-$Version = if ($env:CD_VERSION) { $env:CD_VERSION } elseif ($env:CDX_VERSION) { $env:CDX_VERSION } else { 'latest' }
-if ($Version -ne 'latest' -and -not $Version.StartsWith('v')) {
-  Write-Error "cdx: CD_VERSION must be 'latest' or a tag like v1.0.0 (got '$Version')"
+$Channel = if ($env:CD_CHANNEL) { $env:CD_CHANNEL } else { 'stable' }
+switch -CaseSensitive ($Channel) {
+  'stable' { $CommandName = 'cdx'; $DefaultVersion = 'latest' }
+  'nightly' { $CommandName = 'cdx-nightly'; $DefaultVersion = 'nightly' }
+  default { throw "cdx: CD_CHANNEL must be stable or nightly (got '$Channel')" }
+}
+
+$Version = if ($env:CD_VERSION) { $env:CD_VERSION } elseif ($env:CDX_VERSION) { $env:CDX_VERSION } else { $DefaultVersion }
+if ($Channel -eq 'nightly' -and $Version -eq 'latest') { $Version = 'nightly' }
+if ($Version -ne 'latest' -and -not ($Channel -eq 'nightly' -and $Version -eq 'nightly') -and -not $Version.StartsWith('v')) {
+  Write-Error "cdx: CD_VERSION must be 'latest', 'nightly' or a tag like v1.0.0 (got '$Version')"
 }
 
 $InstallDir = if ($env:CD_INSTALL_DIR) { $env:CD_INSTALL_DIR } elseif ($env:CDX_INSTALL_DIR) { $env:CDX_INSTALL_DIR } else { Join-Path $HOME '.local\bin' }
@@ -41,7 +50,7 @@ switch ($osArch) {
   }
 }
 
-$Asset = "cdx-windows-$Architecture.exe"
+$Asset = "$CommandName-windows-$Architecture.exe"
 if ($Version -eq 'latest') {
   $BaseUrl = "https://github.com/$Repository/releases/latest/download"
 } else {
@@ -67,16 +76,16 @@ try {
   if ($Actual -ne $Expected.ToLowerInvariant()) { Write-Error 'cdx: checksum verification failed' }
 
   New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-  $Target = Join-Path $InstallDir 'cdx.exe'
+  $Target = Join-Path $InstallDir "$CommandName.exe"
   Copy-Item -Path (Join-Path $TempDir $Asset) -Destination $Target -Force
   # Earlier releases installed the CLI as cd.exe. Remove that copy, but only
   # if it really is a CD binary.
   $OldBinary = Join-Path $InstallDir 'cd.exe'
-  if ((Test-Path $OldBinary) -and (Select-String -Path $OldBinary -Pattern 'cd-transfer-v1' -SimpleMatch -Quiet)) {
+  if ($Channel -eq 'stable' -and (Test-Path $OldBinary) -and (Select-String -Path $OldBinary -Pattern 'cd-transfer-v1' -SimpleMatch -Quiet)) {
     Remove-Item -Path $OldBinary -Force -ErrorAction SilentlyContinue
     Write-Output "removed the old $OldBinary (the CLI is now called cdx)"
   }
-  Write-Output "installed cdx to $Target"
+  Write-Output "installed $CommandName to $Target"
 
   $inPath = ($env:Path -split ';') -contains $InstallDir
   if (-not $inPath) {
@@ -90,7 +99,7 @@ try {
       Write-Warning "cdx: could not persist PATH update: $($_.Exception.Message)"
     }
     $env:Path += ';' + $InstallDir
-    Write-Warning "added $InstallDir to PATH (restart your terminal if 'cdx' is not found), then run: cdx send <file>"
+    Write-Warning "added $InstallDir to PATH (restart your terminal if '$CommandName' is not found), then run: $CommandName send <file>"
   }
 } finally {
   Remove-Item -Recurse -Force $TempDir -ErrorAction SilentlyContinue

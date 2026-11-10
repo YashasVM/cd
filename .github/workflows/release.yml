@@ -1,4 +1,4 @@
-name: Release cdx
+name: Release cdx stable
 
 on:
   push:
@@ -60,7 +60,7 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: '0'
-        run: go build -buildvcs=false -trimpath -ldflags="-s -w -buildid= -X main.version=${GITHUB_REF_NAME}" -o "cdx-${GOOS}-${GOARCH}${{ matrix.suffix }}" ./cmd/cdx
+        run: go build -buildvcs=false -trimpath -ldflags="-s -w -buildid= -X main.version=${GITHUB_REF_NAME} -X main.updateChannel=stable" -o "cdx-${GOOS}-${GOARCH}${{ matrix.suffix }}" ./cmd/cdx
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cdx-${{ matrix.os }}-${{ matrix.arch }}
@@ -80,4 +80,7 @@ jobs:
       - run: sha256sum cdx-* > checksums.txt
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes
+        run: |
+          flags=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes "${flags[@]}"

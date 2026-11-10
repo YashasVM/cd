@@ -21,6 +21,8 @@ import (
 
 // releaseBase is where `cdx update` finds releases; a variable so tests can
 // point it at a local server. It mirrors scripts/install.sh and install.ps1.
+var updateChannel = "stable"
+
 var releaseBase = "https://github.com/YashasVM/cd/releases"
 
 // maxBinaryBytes bounds a downloaded release asset.
@@ -29,7 +31,11 @@ const maxBinaryBytes = 128 << 20
 var updateClient = &http.Client{Timeout: 2 * time.Minute}
 
 func updateAsset() string {
-	name := "cdx-" + runtime.GOOS + "-" + runtime.GOARCH
+	prefix := "cdx-"
+	if updateChannel == "nightly" {
+		prefix = "cdx-nightly-"
+	}
+	name := prefix + runtime.GOOS + "-" + runtime.GOARCH
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
@@ -42,6 +48,9 @@ func latestTag() (string, error) {
 }
 
 func latestTagContext(ctx context.Context) (string, error) {
+	if updateChannel == "nightly" {
+		return "nightly", nil
+	}
 	endpoint := strings.Replace(releaseBase, "https://github.com/", "https://api.github.com/repos/", 1)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"?per_page=100", nil)
 	if err != nil {
@@ -57,9 +66,10 @@ func latestTagContext(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("check for updates: %s", response.Status)
 	}
 	var releases []struct {
-		Tag       string    `json:"tag_name"`
-		Draft     bool      `json:"draft"`
-		Published time.Time `json:"published_at"`
+		Tag        string    `json:"tag_name"`
+		Draft      bool      `json:"draft"`
+		Prerelease bool      `json:"prerelease"`
+		Published  time.Time `json:"published_at"`
 	}
 	if err := json.NewDecoder(io.LimitReader(response.Body, 4<<20)).Decode(&releases); err != nil {
 		return "", fmt.Errorf("check for updates: %w", err)
@@ -67,7 +77,7 @@ func latestTagContext(ctx context.Context) (string, error) {
 	var tag string
 	var published time.Time
 	for _, release := range releases {
-		if release.Draft {
+		if release.Draft || release.Prerelease {
 			continue
 		}
 		if _, valid := versionNumbers(release.Tag); !valid || !strings.HasPrefix(release.Tag, "v") || url.PathEscape(release.Tag) != release.Tag {
