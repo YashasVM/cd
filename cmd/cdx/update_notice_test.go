@@ -59,7 +59,7 @@ func noticeEnvironment(t *testing.T, handler http.HandlerFunc) string {
 
 func TestUpdateNoticeChecksCachesAndStopsAfterUpdating(t *testing.T) {
 	path := noticeEnvironment(t, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/tag/v0.3.4", http.StatusFound)
+		json.NewEncoder(w).Encode([]map[string]string{{"tag_name": "v0.3.4"}})
 	})
 	var output bytes.Buffer
 	notifyUpdate([]string{"send", "photo.jpg"}, &output)
@@ -92,7 +92,7 @@ func TestUpdateNoticeChecksCachesAndStopsAfterUpdating(t *testing.T) {
 
 func TestUpdateNoticeRefreshesStaleCacheAndKeepsNoticeOffline(t *testing.T) {
 	path := noticeEnvironment(t, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/tag/v0.3.5", http.StatusFound)
+		json.NewEncoder(w).Encode([]map[string]string{{"tag_name": "v0.3.5"}})
 	})
 	saveUpdateCheck(path, updateCheck{CheckedAt: time.Now().Add(-2 * time.Hour), Latest: "v0.3.4"})
 	var output bytes.Buffer
@@ -140,7 +140,7 @@ func TestUpdateNoticeTimeoutIsSilentAndCached(t *testing.T) {
 
 func TestUpdateNoticeSkipsExplicitUpdateInternalAndDevelopmentCommands(t *testing.T) {
 	noticeEnvironment(t, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/tag/v0.3.4", http.StatusFound)
+		json.NewEncoder(w).Encode([]map[string]string{{"tag_name": "v0.3.4"}})
 	})
 	for _, command := range []string{"update", "--update", "upgrade", holderCommand} {
 		var output bytes.Buffer

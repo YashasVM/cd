@@ -6,10 +6,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,25 +36,48 @@ func updateAsset() string {
 	return name
 }
 
-// latestTag reads the tag GitHub's /releases/latest redirect points at.
+// latestTag includes published prereleases, which /releases/latest excludes.
 func latestTag() (string, error) {
 	return latestTagContext(context.Background())
 }
 
 func latestTagContext(ctx context.Context) (string, error) {
-	client := *updateClient
-	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, releaseBase+"/latest", nil)
+	endpoint := strings.Replace(releaseBase, "https://github.com/", "https://api.github.com/repos/", 1)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+"?per_page=100", nil)
 	if err != nil {
 		return "", err
 	}
-	response, err := client.Do(request)
+	request.Header.Set("Accept", "application/vnd.github+json")
+	response, err := updateClient.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("check for updates: %w", err)
 	}
-	response.Body.Close()
-	tag := filepath.Base(response.Header.Get("Location"))
-	if !strings.HasPrefix(tag, "v") {
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("check for updates: %s", response.Status)
+	}
+	var releases []struct {
+		Tag       string    `json:"tag_name"`
+		Draft     bool      `json:"draft"`
+		Published time.Time `json:"published_at"`
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, 4<<20)).Decode(&releases); err != nil {
+		return "", fmt.Errorf("check for updates: %w", err)
+	}
+	var tag string
+	var published time.Time
+	for _, release := range releases {
+		if release.Draft {
+			continue
+		}
+		if _, valid := versionNumbers(release.Tag); !valid || !strings.HasPrefix(release.Tag, "v") || url.PathEscape(release.Tag) != release.Tag {
+			continue
+		}
+		if tag == "" || release.Published.After(published) {
+			tag, published = release.Tag, release.Published
+		}
+	}
+	if tag == "" {
 		return "", errors.New("check for updates: could not find the latest release")
 	}
 	return tag, nil

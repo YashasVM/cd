@@ -25,11 +25,11 @@ func TestUpdateDownloadsVerifiesAndReplaces(t *testing.T) {
 	sum := sha256.Sum256(binary)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/latest":
-			http.Redirect(w, r, "/tag/v9.9.9", http.StatusFound)
-		case "/download/v9.9.9/checksums.txt":
+		case "/":
+			w.Write([]byte(`[{"tag_name":"v9.9.9-beta.2","prerelease":true}]`))
+		case "/download/v9.9.9-beta.2/checksums.txt":
 			w.Write([]byte(hex.EncodeToString(sum[:]) + "  " + updateAsset() + "\n"))
-		case "/download/v9.9.9/" + updateAsset():
+		case "/download/v9.9.9-beta.2/" + updateAsset():
 			w.Write(binary)
 		default:
 			http.NotFound(w, r)
@@ -41,10 +41,10 @@ func TestUpdateDownloadsVerifiesAndReplaces(t *testing.T) {
 	defer func() { releaseBase = previous }()
 
 	tag, err := latestTag()
-	if err != nil || tag != "v9.9.9" {
+	if err != nil || tag != "v9.9.9-beta.2" {
 		t.Fatalf("latestTag = %q, %v", tag, err)
 	}
-	checksums, err := download(server.URL+"/download/v9.9.9/checksums.txt", 1<<20)
+	checksums, err := download(server.URL+"/download/v9.9.9-beta.2/checksums.txt", 1<<20)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,5 +61,36 @@ func TestUpdateDownloadsVerifiesAndReplaces(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(target); string(got) != "new cdx" {
 		t.Fatalf("target = %q", got)
+	}
+}
+
+func TestLatestTagIncludesNewestPublishedBeta(t *testing.T) {
+	previous := releaseBase
+	t.Cleanup(func() { releaseBase = previous })
+	for _, test := range []struct {
+		name, body, want string
+		status           int
+	}{
+		{"beta", `[{"tag_name":"v1.0.0","published_at":"2026-01-01T00:00:00Z"},{"tag_name":"v1.1.0-beta.2","prerelease":true,"published_at":"2026-02-01T00:00:00Z"},{"tag_name":"v2.0.0","draft":true,"published_at":"2026-03-01T00:00:00Z"}]`, "v1.1.0-beta.2", 200},
+		{"empty", `[]`, "", 200},
+		{"malformed", `{`, "", 200},
+		{"http failure", `[]`, "", 429},
+		{"unsafe tag", `[{"tag_name":"v1.0.0-beta/other"}]`, "", 200},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("per_page") != "100" {
+					t.Error("missing release list page size")
+				}
+				w.WriteHeader(test.status)
+				w.Write([]byte(test.body))
+			}))
+			defer server.Close()
+			releaseBase = server.URL
+			got, err := latestTag()
+			if got != test.want || (err != nil) != (test.want == "") {
+				t.Fatalf("latestTag = %q, %v; want %q", got, err, test.want)
+			}
+		})
 	}
 }
