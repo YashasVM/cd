@@ -22,6 +22,19 @@ test('readBundle returns every file from a browser bundle', async () => {
   assert.deepEqual(new Uint8Array(await read[1].blob.arrayBuffer()), big);
 });
 
+test('bundle duplicate names skip names already generated for earlier files', async () => {
+  const files = [
+    new File([], 'same.bin'),
+    new File([], 'same.bin'),
+    new File([], 'same.bin'),
+    new File([], 'same (2).bin')
+  ];
+  const read = await readBundle(await collect(createZipBundle(files).stream()));
+  assert.deepEqual(read.map((file) => file.path), [
+    'same.bin', 'same (2).bin', 'same (3).bin', 'same (2) (2).bin'
+  ]);
+});
+
 test('readBundle reads folders from a Go-built bundle', async (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'cd-unbundle-'));
   mkdirSync(join(dir, 'docs', 'deep'), { recursive: true });

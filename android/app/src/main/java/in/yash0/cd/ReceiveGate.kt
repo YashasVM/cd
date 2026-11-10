@@ -5,6 +5,9 @@ import org.json.JSONObject
 
 class UserPausedException: IOException("Receiving was paused")
 class TransientNetworkException: IOException("Waiting for an allowed network")
+internal inline fun tolerateTransientNetwork(action: () -> Unit) {
+    try { action() } catch (_: TransientNetworkException) { }
+}
 class ExhaustedTransferException: IOException("Transfer reached its reconnect limit. Start a new transfer from the sender.")
 class ExpiredTransferException: IOException("This transfer expired or is no longer available. Start a new transfer on your computer.")
 
