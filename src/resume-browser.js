@@ -265,19 +265,20 @@ function createSocketInbox(socket) {
     }
   });
   socket.addEventListener('close', (event) => {
-    failure = resumeCloseError(event.code, event.reason);
+    if (!failure || isRetryableResumeError(failure)) failure = resumeCloseError(event.code, event.reason);
     while (waiters.length) waiters.shift().reject(failure);
   });
   socket.addEventListener('error', () => {
     failure ||= new Error('The transfer connection failed. Your saved progress can be resumed from the same private link.');
   });
   return { next(timeout = 90_000) {
-    if (failure) return Promise.reject(failure);
+    if (failure && !isRetryableResumeError(failure)) return Promise.reject(failure);
     if (pending.length) {
       const item = pending.shift();
       queuedBytes -= item.size;
       return Promise.resolve(item.event);
     }
+    if (failure) return Promise.reject(failure);
     return new Promise((resolve, reject) => {
       const waiter = { resolve: (event) => { clearTimeout(timer); resolve(event); }, reject: (error) => { clearTimeout(timer); reject(error); } };
       const timer = setTimeout(() => {
@@ -507,14 +508,21 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     }
   });
   settled.catch(error => { if (!cancelled) hooks.onError?.(error); });
+  let cleanupPromise;
   return { done: settled, pause() {
     paused = true;
     try { socket?.close(1000, 'sender paused'); } catch { /* Best effort. */ }
   }, cancel() {
     cancelled = true;
     try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
-    // Cleanup waits until active hashing and checkpoint writes have settled.
-    // A socket loss or page close never calls this method.
+    cleanupPromise ||= settled.catch(() => {}).then(async () => {
+      if (privateRootId) {
+        await checkpoints.delete(`sender:${privateRootId}`);
+        await secrets.delete(`sender:${privateRootId}`);
+      }
+    });
+    cleanupPromise.catch(() => {});
+    return cleanupPromise;
   } };
 }
 

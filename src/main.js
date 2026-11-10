@@ -330,6 +330,7 @@ function receiveCommand(value) { return `cdx receive ${value.code || `'${value.u
 els.senderProgress.after(els.senderStatus, els.senderCancelBtn);
 els.senderCancelBtn.hidden = true;
 let destination = null;
+let singleFileSelected = false;
 const selection = document.createElement('div');
 selection.hidden = true;
 selection.className = 'selection-panel';
@@ -339,11 +340,20 @@ const sharing = selection.querySelector('select');
 const sharingHint = sharing.nextElementSibling;
 sharing.addEventListener('change', () => { sharingHint.textContent = sharing.value === 'private' ? 'Only people with the full link can receive. The key stays in the link, away from the server.' : 'Easy to type. The server holds the key; anyone who guesses the live code can receive.'; });
 const keepProgress = selection.querySelector('input');
-keepProgress.addEventListener('change', () => { sharing.disabled = keepProgress.checked; if (keepProgress.checked) sharing.value = 'private'; });
+function syncKeepProgress() {
+  keepProgress.disabled = !singleFileSelected || Boolean(destination);
+  if (keepProgress.disabled) keepProgress.checked = false;
+  sharing.disabled = keepProgress.checked;
+  if (keepProgress.checked) {
+    sharing.value = 'private';
+    sharingHint.textContent = 'Only people with the full link can receive. The key stays in the link, away from the server.';
+  }
+}
+keepProgress.addEventListener('change', syncKeepProgress);
 selection.prepend(selection.querySelector('details'));
 selection.querySelector('details').after(selection.querySelector('.destination-area'));
 selection.querySelector('#start-send-btn').addEventListener('click', () => Sender.launch());
-const stopDevices = mountBrowserDevices(selection.querySelector('.destination-area'), { onSelect(device) { destination = device; keepProgress.disabled = Boolean(device); if (device) keepProgress.checked = false; sharing.closest('fieldset').hidden = Boolean(device); keepProgress.parentElement.hidden = Boolean(device); keepProgress.parentElement.nextElementSibling.hidden = Boolean(device); } });
+const stopDevices = mountBrowserDevices(selection.querySelector('.destination-area'), { onSelect(device) { destination = device; syncKeepProgress(); sharing.closest('fieldset').hidden = Boolean(device); keepProgress.parentElement.hidden = Boolean(device); keepProgress.parentElement.nextElementSibling.hidden = Boolean(device); } });
 window.addEventListener('pagehide', stopDevices, { once: true });
 const recovery = document.createElement('div');
 els.senderView.parentElement.append(recovery);
@@ -375,6 +385,12 @@ const Sender = (() => {
 
   function launch(resumeLink = lastResumeLink) {
     if (!files.length || BUSY_STATES.has(els.appState.dataset.state)) return;
+    if ((keepProgress.checked || resumeLink) && files.length !== 1) {
+      keepProgress.checked = false;
+      syncKeepProgress();
+      failSend('Keep progress works with one file. Remove the extra files and try again.');
+      return;
+    }
     els.senderError.classList.add('hidden');
     selection.hidden = true;
     let source;
@@ -437,10 +453,10 @@ const Sender = (() => {
 
   function renderSelection() {
     selection.hidden = files.length === 0;
+    singleFileSelected = files.length === 1;
     els.dropZone.classList.toggle('hidden', files.length > 0);
     selection.querySelector('summary').textContent = files.length === 1 ? files[0].name + ' · ' + formatSize(totalSize) : `${files.length} selected files · ${formatSize(totalSize)}`;
-    keepProgress.disabled = files.length !== 1 || Boolean(destination);
-    if (keepProgress.disabled) keepProgress.checked = false;
+    syncKeepProgress();
     const list = selection.querySelector('ul');
     list.replaceChildren();
     files.forEach((file, index) => {
@@ -508,6 +524,7 @@ const Sender = (() => {
     active?.cancel();
     active = null;
     files = [];
+    els.fileInput.value = '';
     selection.hidden = true;
     share = null;
     lastResumeLink = '';

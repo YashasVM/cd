@@ -139,8 +139,38 @@ try {
     };
   }));
   assert.equal(await cancelPage.locator('#app-state').textContent(), 'ready');
+  const destinationPage = await context.newPage();
+  destinationPage.setDefaultTimeout(30_000);
+  await destinationPage.addInitScript(() => {
+    const request = indexedDB.open('cd-browser-devices', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('devices');
+    request.onsuccess = () => {
+      const db = request.result;
+      const pairId = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+      const secret = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+      const transaction = db.transaction('devices', 'readwrite');
+      transaction.objectStore('devices').put({ pairId, name: 'Saved phone', pair: { version: 1, pairId, secret, name: 'Saved phone', localUrls: [], expiresAt: Date.now() + 300000, relayUrl: `${location.origin.replace(/^http/, 'ws')}/ws/devices/v1/${pairId}` } }, `device:${pairId}`);
+      transaction.oncomplete = () => db.close();
+    };
+  });
+  await destinationPage.goto(publicBase);
+  await destinationPage.locator('.workbench:not([inert])').waitFor();
+  await destinationPage.locator('#file-input').setInputFiles([singlePath, batchPaths[0]]);
+  const keepProgressChoice = destinationPage.getByLabel('Keep progress if interrupted');
+  assert.equal(await keepProgressChoice.isDisabled(), true);
+  await destinationPage.getByText('Saved phone · saved in this browser', { exact: true }).waitFor();
+  await destinationPage.getByText('Saved phone · saved in this browser', { exact: true }).locator('..').locator('input').check();
+  await destinationPage.getByLabel('Share a link or code', { exact: false }).check();
+  assert.equal(await keepProgressChoice.isDisabled(), true);
+  assert.equal(await keepProgressChoice.isChecked(), false);
+  assert.equal(await destinationPage.getByLabel('Sharing method').isDisabled(), false);
+  await destinationPage.evaluate(() => { document.querySelector('.selection-panel input[type="checkbox"]').checked = true; });
+  await destinationPage.locator('#start-send-btn').click();
+  await destinationPage.locator('#sender-error:not(.hidden)').waitFor();
+  assert.match(await destinationPage.locator('#sender-error').textContent(), /works with one file/);
+  assert.equal(await destinationPage.locator('#app-state').textContent(), 'failed', 'stale keep-progress state must fail before starting a one-file transfer');
   await context.close();
-  console.log('verified private /send selection, QR, privacy, mobile layout and exact CLI bytes');
+  console.log('verified private /send selection, QR, privacy, mobile layout, exact CLI bytes, and saved-phone destination switching');
 } finally {
   for (const browser of browsers) await browser.close().catch(() => {});
   await stopChild(worker);

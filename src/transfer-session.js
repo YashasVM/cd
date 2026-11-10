@@ -5,7 +5,7 @@ export function startBrowserSend(source, hooks = {}, { sharing = 'private', resu
   if (!['private', 'code'].includes(sharing)) throw new Error('Choose private link or short code sharing.');
   if (!resumable) return startRelaySend(source, hooks, { sharing: sharing === 'code' ? 'numeric' : 'private' });
   if (!(source instanceof File)) throw new Error('Choose the original file to send with resume enabled.');
-  let active, timer, wakeRetry, cancelled = false;
+  let active, timer, wakeRetry, cancelled = false, finished = false;
   let link = resumeLink;
   const done = (async () => {
     const db = await openResumeDatabase();
@@ -29,7 +29,19 @@ export function startBrowserSend(source, hooks = {}, { sharing = 'private', resu
           await new Promise(resolve => { wakeRetry = resolve; timer = setTimeout(resolve, 1000 * 2 ** retries); });
         }
       }
-    } finally { clearTimeout(timer); db.close(); }
+    } finally {
+      clearTimeout(timer);
+      try { if (cancelled) await active?.cancel(); }
+      finally { finished = true; db.close(); }
+    }
   })();
-  return { done, cancel() { cancelled = true; clearTimeout(timer); wakeRetry?.(); active?.cancel(); } };
+  let cancelPromise;
+  return { done, cancel() {
+    cancelled = true;
+    clearTimeout(timer);
+    if (!finished) active?.cancel().catch(() => {});
+    wakeRetry?.();
+    cancelPromise ||= done.catch(() => {});
+    return cancelPromise;
+  } };
 }

@@ -44,15 +44,32 @@ try {
     decipher.setAuthTag(frame.subarray(-16));
     return JSON.parse(Buffer.concat([decipher.update(frame.subarray(12, -16)), decipher.final()]));
   };
-  let receivedOffer;
-  const offer = new Promise(resolve => { receivedOffer = resolve; });
+  const offers = [], waitingOffers = [], seenOffers = new Set();
+  const nextOffer = () => offers.length ? Promise.resolve(offers.shift()) : new Promise(resolve => waitingOffers.push(resolve));
+  const receiveOffer = offer => {
+    if (seenOffers.has(offer.transferId)) return;
+    seenOffers.add(offer.transferId);
+    const waiter = waitingOffers.shift();
+    if (waiter) waiter(offer); else offers.push(offer);
+  };
+  const waitForCanceledRecords = async () => {
+    await page.waitForFunction(pairId => new Promise((resolve, reject) => {
+      const open = indexedDB.open('cd-browser-devices');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const pending = db.transaction('devices').objectStore('devices').get(`pending:${pairId}`);
+        pending.onsuccess = () => { db.close(); resolve(pending.result === undefined); };
+      };
+    }), pair.pairId);
+  };
   const connect = async () => {
     socket = new WebSocket(pair.relayUrl); socket.binaryType = 'arraybuffer';
     socket.addEventListener('message', event => {
       if (typeof event.data === 'string') {
         const value = JSON.parse(event.data);
         if (['accepted', 'peer-joined'].includes(value.type)) socket.send(seal({ type: 'paired', name: 'Test Pixel' }));
-      } else receivedOffer(open(event.data));
+      } else receiveOffer(open(event.data));
     });
     await new Promise((resolve, reject) => { socket.addEventListener('open', resolve, { once: true }); socket.addEventListener('error', reject, { once: true }); });
     socket.send(JSON.stringify({ type: 'join', protocol: 'cd-device-v1', role: 'receiver', token: derive('receiver join').toString('base64url') }));
@@ -61,7 +78,13 @@ try {
   heartbeat = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping', protocol: 'cd-device-v1' })); }, 20_000);
   await page.getByText('Test Pixel · saved in this browser', { exact: true }).waitFor();
   await page.locator('#start-send-btn').click();
-  const offered = await withTimeout(offer, 30_000, 'Browser did not offer to the trusted phone');
+  const canceledOffer = await withTimeout(nextOffer(), 30_000, 'Browser did not offer to the trusted phone');
+  await page.locator('#sender-cancel-btn').click();
+  await waitForCanceledRecords();
+  await page.locator('#file-input').setInputFiles(source);
+  await page.locator('#start-send-btn').click();
+  const offered = await withTimeout(nextOffer(), 30_000, 'Canceled phone send did not restart');
+  assert.notEqual(offered.transferId, canceledOffer.transferId, 'a canceled capability must not be reused');
   assert.equal(offered.type, 'offer');
   assert.equal(offered.filename, 'phone photo.bin');
   assert.equal(offered.wholeSha256, createHash('sha256').update(bytes).digest('hex'));
@@ -78,8 +101,25 @@ try {
   await page.locator('.workbench:not([inert])').waitFor();
   await page.locator('#file-input').setInputFiles(source);
   await page.getByText('Test Pixel · saved in this browser', { exact: true }).waitFor();
+  await page.evaluate(({ pairId, link, size }) => new Promise((resolve, reject) => {
+    const open = indexedDB.open('cd-browser-devices');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const transaction = db.transaction('devices', 'readwrite');
+      transaction.objectStore('devices').put({ pending: true, pairId, name: 'phone photo.bin', size, link }, `pending:${pairId}`);
+      transaction.oncomplete = () => { db.close(); resolve(); };
+      transaction.onabort = () => reject(transaction.error);
+    };
+  }), { pairId: pair.pairId, link: canceledOffer.url, size: bytes.length });
+  await page.getByLabel('Test Pixel · saved in this browser').check();
+  await page.locator('#start-send-btn').click();
+  const recoveredOffer = await withTimeout(nextOffer(), 30_000, 'Orphaned pending link prevented a fresh phone send');
+  assert.notEqual(recoveredOffer.transferId, canceledOffer.transferId);
+  await page.locator('#sender-cancel-btn').click();
+  await waitForCanceledRecords();
   assert.deepEqual(errors, []);
-  console.log('Verified browser QR pairing approval, authenticated phone offer, resumable browser-to-CLI bytes, confirmed delivery, and saved device after reload.');
+  console.log('Verified browser QR pairing approval, authenticated phone offer, resumable browser-to-CLI bytes, confirmed delivery, saved device after reload, cancel-and-resend, and orphaned pending-link recovery.');
 } finally {
   clearInterval(heartbeat);
   socket?.close();

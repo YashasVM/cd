@@ -1,11 +1,17 @@
 import { decodeBase64Url, encodeBase64Url } from './agent-protocol.js';
 import { createStageSink } from './sink.js';
+import { parseResumeLink } from './resume-browser.js';
+import { verifyResumeCheckpoint } from './resume-protocol.js';
 
 const protocol = 'cd-device-v1';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const keyPrefix = 'device:';
 const lifetime = 5 * 60_000;
+const pendingWrites = new Map();
+function ownsPending(record, owner) {
+  return typeof owner === 'string' ? record?.pendingId === owner : record?.link === owner.link && record?.pairId === owner.pairId;
+}
 
 function random(bytes) { return encodeBase64Url(crypto.getRandomValues(new Uint8Array(bytes))); }
 function exactBytes(value, size) {
@@ -82,13 +88,41 @@ async function stored(method, key, value) {
   try {
     return await new Promise((resolve, reject) => {
       const transaction = db.transaction('devices', method === 'getAll' ? 'readonly' : 'readwrite');
-      const request = method === 'put' ? transaction.objectStore('devices').put(value, key) : method === 'getAll' ? transaction.objectStore('devices').getAll() : transaction.objectStore('devices').delete(key);
+      const store = transaction.objectStore('devices');
+      const request = method === 'put' ? store.put(value, key) : method === 'getAll' ? store.getAll() : method === 'deleteIf' ? store.get(key) : store.delete(key);
       let result;
-      request.onsuccess = () => { result = request.result; };
+      request.onsuccess = () => {
+        result = request.result;
+        if (method === 'deleteIf' && ownsPending(result, value)) store.delete(key);
+      };
       transaction.oncomplete = () => resolve(result);
       transaction.onabort = () => reject(transaction.error || new Error('Could not save browser device.'));
     });
   } finally { db.close(); }
+}
+
+export async function validatePendingResume(link, file, secrets, checkpoints, origin = globalThis.location.origin) {
+  const parsed = parseResumeLink(link, `${origin}/`);
+  if (parsed.url.origin !== new URL(origin).origin) throw new Error('Saved transfer belongs to a different CD site.');
+  const [secret, checkpoint] = await Promise.all([secrets.get(`sender:${parsed.rootId}`), checkpoints.get(`sender:${parsed.rootId}`)]);
+  if (!secret || !checkpoint) return false;
+  const token = decodeBase64Url(secret.senderToken);
+  if (!Number.isSafeInteger(secret.expiresAt) || !Number.isSafeInteger(checkpoint.expiresAt) || secret.expiresAt !== checkpoint.expiresAt || !(await verifyResumeCheckpoint(checkpoint, token, checkpoint.expiresAt - 1)) || checkpoint.rootId !== parsed.rootId || checkpoint.role !== 'sender') {
+    throw new Error('Saved sender resume credentials failed their integrity check.');
+  }
+  if (secret.expiresAt <= Date.now() || checkpoint.expiresAt <= Date.now()) return false;
+  if (checkpoint.filename !== file.name || checkpoint.size !== file.size) throw new Error('The selected file does not match the saved source. Choose the original file and try again.');
+  return true;
+}
+
+export { ownsPending as ownsPendingRecord };
+
+function queuePending(pairId, action) {
+  const previous = pendingWrites.get(pairId) || Promise.resolve();
+  const next = previous.catch(() => {}).then(action);
+  pendingWrites.set(pairId, next);
+  void next.finally(() => { if (pendingWrites.get(pairId) === next) pendingWrites.delete(pairId); }).catch(() => {});
+  return next;
 }
 
 function connect(pair, { onMessage, onStatus = () => {}, onError = () => {} }) {
@@ -191,7 +225,7 @@ export function mountBrowserDevices(container, { onSelect, onChange = () => {} }
 }
 
 export function startDeviceSend(device, source, hooks = {}) {
-  let active, control, cancelled = false, cleanup = async () => {}, rootId = '', receiptResolve, receiptReject;
+  let active, control, cancelled = false, cleanup = async () => {}, rootId = '', receiptResolve, receiptReject, pendingWrite = Promise.resolve(), cancelPromise, pendingId = '';
   const receipt = new Promise((resolve, reject) => { receiptResolve = resolve; receiptReject = reject; });
   receipt.catch(() => {});
   const done = (async () => {
@@ -231,19 +265,26 @@ export function startDeviceSend(device, source, hooks = {}) {
       if (cancelled) { control.close(); throw new Error('Transfer canceled.'); }
       readyControl = await control.ready;
       if (cancelled) throw new Error('Transfer canceled.');
-      const prior = (await stored('getAll')).find(d => d.pending && d.pairId === device.pairId && d.name === file.name && d.size === file.size);
+      const prior = (await stored('getAll')).find(d => d.pending && d.pairId === device.pairId);
       if (cancelled) throw new Error('Transfer canceled.');
-      active = startResumableSend(file, { secrets, checkpoints, link: prior?.link || '', hooks: {
+      let priorLink = '';
+      if (prior?.link) {
+        if (await validatePendingResume(prior.link, file, secrets, checkpoints)) priorLink = prior.link;
+        else await queuePending(device.pairId, () => stored('deleteIf', `pending:${device.pairId}`, { link: prior.link, pairId: prior.pairId }));
+      }
+      if (cancelled) throw new Error('Transfer canceled.');
+      pendingId = random(16);
+      active = startResumableSend(file, { secrets, checkpoints, link: priorLink, hooks: {
         ...hooks,
         onShare(value) {
           rootId = value.rootId;
           pendingOffer = { type: 'offer', transferId: rootId, url: value.url, filename: file.name, size: String(file.size), wholeSha256: value.wholeSha256 };
-          void (async () => {
-            await stored('put', `pending:${device.pairId}`, { pending: true, pairId: device.pairId, name: file.name, size: file.size, link: value.url });
+          pendingWrite = queuePending(device.pairId, async () => {
+            await stored('put', `pending:${device.pairId}`, { pending: true, pendingId, pairId: device.pairId, name: file.name, size: file.size, link: value.url });
             await sendOffer();
             hooks.onState?.('waiting');
             hooks.onStatus?.(`Waiting for ${device.name}. Keep CD receiving enabled.`);
-          })().catch(receiptReject);
+          }).catch(receiptReject);
         },
         onProgress(done, total, metrics) { hooks.onState?.(done >= total ? 'verifying' : 'transferring'); hooks.onStatus?.(done >= total ? `Verifying receipt on ${device.name}…` : `Sending to ${device.name}…`); hooks.onProgress?.(done, total, metrics); }
       } });
@@ -253,14 +294,25 @@ export function startDeviceSend(device, source, hooks = {}) {
       let timeout;
       try { await Promise.race([receipt, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('The phone has not confirmed saving the file. Check CD on the phone before retrying.')), 30_000); })]); }
       finally { clearTimeout(timeout); }
-      await stored('delete', `pending:${device.pairId}`);
+      await queuePending(device.pairId, () => stored('deleteIf', `pending:${device.pairId}`, pendingId));
       hooks.onState?.('complete');
       hooks.onStatus?.(`Delivered to ${device.name} and verified.`);
     } finally {
       active?.pause?.();
       await active?.done.catch(() => {});
+      if (cancelled) await active?.cancel?.();
       db.close();
     }
   })().finally(async () => { control?.close(); await cleanup(); });
-  return { done, cancel() { cancelled = true; control?.close(); active?.cancel(); receiptReject(new Error('Transfer canceled.')); } };
+  return { done, cancel() {
+    cancelled = true; control?.close(); receiptReject(new Error('Transfer canceled.'));
+    cancelPromise ||= (async () => {
+      await active?.cancel?.();
+      await pendingWrite.catch(() => {});
+      await done.catch(() => {});
+      if (pendingId) await queuePending(device.pairId, () => stored('deleteIf', `pending:${device.pairId}`, pendingId));
+    })();
+    cancelPromise.catch(() => {});
+    return cancelPromise;
+  } };
 }

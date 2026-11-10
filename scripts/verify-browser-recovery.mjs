@@ -80,7 +80,43 @@ try {
   await receiver.locator('.workbench:not([inert])').waitFor();
   await receiver.waitForFunction(() => new Promise(resolve => { const open = indexedDB.open('cd-resume-v2'); open.onsuccess = () => { const db = open.result; const request = db.transaction('checkpoints').objectStore('checkpoints').getAll(); request.onsuccess = () => { db.close(); resolve(request.result.filter(record => record.version === 2).length === 0); }; }; }));
   assert.equal((await records(receiver)).length, 0);
-  console.log('PASS: ACK interruption, retained checkpoints, original-file recovery UI, resumed bytes, exact download and completion cleanup');
+  await sender.locator('#send-another-btn').click();
+  await sender.locator('#file-input').setInputFiles(source);
+  await sender.getByLabel('Keep progress if interrupted').check();
+  await sender.locator('#start-send-btn').click();
+  await sender.locator('#receive-command').filter({ hasText: '#v2.' }).waitFor();
+  await sender.evaluate(() => {
+    window.cancelledDuringBackoff = false;
+    const status = document.getElementById('sender-status');
+    const observer = new MutationObserver(() => {
+      if (!status.textContent.includes('Reconnecting with saved progress')) return;
+      observer.disconnect();
+      window.cancelledDuringBackoff = true;
+      document.getElementById('sender-cancel-btn').click();
+    });
+    observer.observe(status, { childList: true, subtree: true });
+    window.transferSocket.close(1000, 'verify cancellation during retry backoff');
+  });
+  await sender.waitForFunction(() => window.cancelledDuringBackoff === true);
+  await sender.waitForFunction(() => new Promise((resolve, reject) => {
+    const open = indexedDB.open('cd-resume-v2');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const transaction = db.transaction(['checkpoints', 'secrets']);
+      let remaining = 0;
+      for (const store of ['checkpoints', 'secrets']) {
+        const keys = transaction.objectStore(store).getAllKeys();
+        keys.onsuccess = () => { remaining += keys.result.filter(key => String(key).startsWith('sender:')).length; };
+      }
+      transaction.oncomplete = () => { db.close(); resolve(remaining === 0); };
+      transaction.onabort = () => reject(transaction.error);
+    };
+  }));
+  await sender.reload();
+  await sender.locator('.workbench:not([inert])').waitFor();
+  assert.equal(await sender.getByLabel('Choose original file for recovery.bin').count(), 0, 'canceled backoff must not return in recovery');
+  console.log('PASS: interrupted recovery resumes exact bytes; cancellation during retry backoff removes checkpoints and capabilities before reload');
 } finally {
   await browser?.close();
   await worker?.stop();
