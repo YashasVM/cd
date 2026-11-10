@@ -7,7 +7,21 @@ curl -fsSL https://cd.yash0.in/install.sh | sh
 curl -fsSL https://cd.yash0.in/install.sh | CD_CHANNEL=nightly sh
 ```
 
-On Windows, set `$env:CD_CHANNEL = 'nightly'` before running the PowerShell installer. Remove that variable or set it to `stable` for the stable CLI.
+In Windows PowerShell:
+
+```powershell
+$env:CD_CHANNEL = 'stable'; irm https://cd.yash0.in/install.ps1 | iex
+$env:CD_CHANNEL = 'nightly'; irm https://cd.yash0.in/install.ps1 | iex
+```
+
+In Windows Command Prompt, run the installer through PowerShell:
+
+```bat
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:CD_CHANNEL='stable'; irm https://cd.yash0.in/install.ps1 | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:CD_CHANNEL='nightly'; irm https://cd.yash0.in/install.ps1 | iex"
+```
+
+Open a new terminal after installing if the command is not found. Each installer prints its executable path. If both are installed, `cdx version` and `cdx-nightly version` identify them separately.
 
 `cdx update` selects the newest published stable release and excludes prereleases. `cdx-nightly update` reinstalls the current rolling nightly build. It never replaces `cdx`. Nightly does not show automatic update notices; run its update command explicitly.
 

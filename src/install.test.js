@@ -42,6 +42,13 @@ esac
     const invalid = spawnSync('sh', ['scripts/install.sh'], { env: { ...env, CD_CHANNEL: 'wrong' }, encoding: 'utf8' });
     assert.equal(invalid.status, 1);
     assert.match(invalid.stderr, /CD_CHANNEL must be stable or nightly/);
+    const corrupt = join(work, 'corrupt');
+    writeFileSync(corrupt, 'corrupt download');
+    const rejected = spawnSync('sh', ['scripts/install.sh'], { env: { ...env, CD_CHANNEL: 'nightly', INSTALL_ASSET: 'cdx-nightly-linux-amd64', INSTALL_FIXTURE: corrupt }, encoding: 'utf8' });
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /checksum verification failed/);
+    assert.equal(readFileSync(join(installDir, 'cdx'), 'utf8'), payload);
+    assert.equal(readFileSync(join(installDir, 'cdx-nightly'), 'utf8'), payload);
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

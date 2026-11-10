@@ -167,3 +167,27 @@ func TestUpdateNoticeSkipsExplicitUpdateInternalAndDevelopmentCommands(t *testin
 		t.Fatalf("release build showed %q", output.String())
 	}
 }
+
+func TestNightlyDoesNotUseStableUpdateNoticeCache(t *testing.T) {
+	path := noticeEnvironment(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("nightly requested the stable release list")
+		http.Error(w, "unexpected request", http.StatusInternalServerError)
+	})
+	previous := updateChannel
+	updateChannel = "nightly"
+	t.Cleanup(func() { updateChannel = previous })
+	saveUpdateCheck(path, updateCheck{CheckedAt: time.Now(), Latest: "v99.0.0"})
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	notifyUpdate([]string{"help"}, &output)
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output.Len() != 0 || !bytes.Equal(before, after) {
+		t.Fatalf("nightly changed stable notices: output=%q cache=%s", output.String(), after)
+	}
+}

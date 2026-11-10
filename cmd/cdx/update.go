@@ -172,7 +172,7 @@ func runUpdate(args []string) int {
 		return err
 	})
 	if err != nil {
-		return fail(errors.New("could not reach GitHub; check your connection and try again"))
+		return fail(err)
 	}
 	updateStep(true, "Checked "+strings.TrimPrefix(releaseBase, "https://")+dim("  latest is "+tag))
 	if version == tag {

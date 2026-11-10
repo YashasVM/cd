@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -106,5 +107,28 @@ func TestNightlyUpdateChannel(t *testing.T) {
 	}
 	if !strings.HasPrefix(updateAsset(), "cdx-nightly-") {
 		t.Fatal(updateAsset())
+	}
+}
+
+func TestUpdateReportsReleaseAPIFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusTooManyRequests) }))
+	defer server.Close()
+	previousBase, previousChannel, previousStderr := releaseBase, updateChannel, os.Stderr
+	releaseBase, updateChannel = server.URL, "stable"
+	t.Cleanup(func() { releaseBase, updateChannel, os.Stderr = previousBase, previousChannel, previousStderr })
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	os.Stderr = writer
+	status := runUpdate(nil)
+	writer.Close()
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != 1 || !strings.Contains(string(output), "429 Too Many Requests") {
+		t.Fatalf("status=%d output=%q", status, output)
 	}
 }
