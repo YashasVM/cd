@@ -25,6 +25,8 @@ export function browserTransportProbe(options = {}) {
   };
   stats.engineMaxima = {};
   const channels = [];
+  let markDirectOpen;
+  const directOpen = new Promise((resolve) => { markDirectOpen = resolve; });
   let lastWindowSample = -Infinity;
   if (options.profile) stats.windowSamples = [];
   const captureRoute = peer => {
@@ -126,6 +128,7 @@ export function browserTransportProbe(options = {}) {
       peer.addEventListener('connectionstatechange', update);
       peer.addEventListener('iceconnectionstatechange', update);
       channel.addEventListener('open', update);
+      if (channel.label === 'cd-direct') channel.addEventListener('open', markDirectOpen, { once: true });
       channel.addEventListener('close', update);
       if (channel.label === 'cd-direct') channel.addEventListener('message', (event) => {
         sampleHeap();
@@ -162,10 +165,22 @@ export function browserTransportProbe(options = {}) {
       return nativeAnswer.apply(this, args);
     };
   }
-  if (options.decryptDelayMs) {
+  if (options.decryptDelayMs || options.waitForDirectPayload) {
     const nativeDecrypt = SubtleCrypto.prototype.decrypt;
+    let gatedPayload = false;
     SubtleCrypto.prototype.decrypt = async function(...args) {
-      await new Promise((resolve) => setTimeout(resolve, options.decryptDelayMs));
+      const header = args[0].additionalData;
+      // Keep fast relays from finishing direct-path tests before ICE connects.
+      if (options.waitForDirectPayload && !gatedPayload && header?.[0] === 0x43 && header[1] === 0x44 && header[3] === 2) {
+        gatedPayload = true;
+        let timer;
+        try {
+          await Promise.race([directOpen, new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Direct channel did not open before payload verification')), 15_000);
+          })]);
+        } finally { clearTimeout(timer); }
+      }
+      if (options.decryptDelayMs) await new Promise((resolve) => setTimeout(resolve, options.decryptDelayMs));
       return nativeDecrypt.apply(this, args);
     };
   }

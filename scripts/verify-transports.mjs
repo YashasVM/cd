@@ -60,6 +60,7 @@ try {
         contexts.push(context);
         await context.addInitScript(browserTransportProbe, {
           blockDirect: Boolean(testCase.blocked), directDelayMs: receiver ? testCase.directDelayMs : 0,
+          waitForDirectPayload: receiver && !testCase.blocked && !testCase.directDelayMs,
           decryptDelayMs: receiver ? testCase.decryptDelayMs : 0
         });
         const page = await context.newPage();
