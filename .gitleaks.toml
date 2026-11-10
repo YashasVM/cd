@@ -10,3 +10,43 @@ targetRules = ["generic-api-key"]
 regexTarget = "match"
 regexes = ['''invalid-secret-[0-9]+''']
 paths = ['''^cdx/src/transfer/transfer_test\.go$''']
+
+[[allowlists]]
+description = "Historical benchmark source checksum"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:a63672d9fa7ad85731dd34e326ffe4ecedd2a271e460b8e94f3efdae894cb269)$''']
+paths = ['''^docs/measurements/transfer\-speed\-2026\-10\-18/provenance\.json$''']
+
+[[allowlists]]
+description = "Fixed protocol test vectors"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:Cq_WkLMJiMzwiP7y2quBMwkwIdrFPbWkaCAD12ocfww|EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8|FklKdu4EnsXK_DL4nLqIKh45Yma4ccp9fWl8hTjWM9U|qiNfJi885JN4vso6KYKgCXW1Y6xBgYeF1piR3uRmXds|tjhg3WkW7JjG8_9fYH_eqYPRdZGSK2ZxufuIGEkWU2I)$''']
+paths = ['''^fixtures/device\-v1\.json$''']
+
+[[allowlists]]
+description = "Fixed protocol test vectors"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:EBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8|iLGO6mZeaJglq0Dtlt7gVbXAxzfaRuuTB2EKU9pUzhI|tv3A13vt67jg7N3OmSO\-390R19s9pecIXKUhZ0p9IAg)$''']
+paths = ['''^fixtures/resume\-v2\.json$''']
+
+[[allowlists]]
+description = "Fixed protocol test vectors"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:AgMgWYyVOVPhMzLd4NwL8Mcl9GbvPg5SiBuEZF82VoE|ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8)$''']
+paths = ['''^fixtures/transfer\-v1\.json$''']
+
+[[allowlists]]
+description = "Fixed synthetic diagnostics test secret"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^(?:abc_DEF\-0123456789)$''']
+paths = ['''^scripts/v2\-browser\-diagnostics\.test\.mjs$''']
