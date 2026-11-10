@@ -146,18 +146,22 @@ async function verifyFolderBundle(context) {
   const page = await context.newPage();
   await page.goto(publicBase);
   await page.locator('#receive-mode-btn').click();
-  const downloadEvent = page.waitForEvent('download');
+  const downloadsReady = Promise.all(['a.bin', 'extra.txt'].map((name) => page.waitForEvent('download', {
+    predicate: (download) => download.suggestedFilename() === name
+  })));
   await page.locator('#code-input').fill(bundleLink);
-  const download = await downloadEvent;
-  assert.equal(download.suggestedFilename(), 'bundle folder-and-1-more.zip');
-  const bundlePath = join(work, 'received-bundle.zip');
-  await download.saveAs(bundlePath);
-  const bundle = await readFile(bundlePath);
-  assert.deepEqual([...bundle.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04], 'bundle is not a zip');
-  assert.ok(bundle.includes(Buffer.from('bundle folder/nested/a.bin')), 'bundle is missing the nested file');
+  const downloads = await downloadsReady;
+  await page.locator('[data-relay="status"]').filter({ hasText: '2 files verified. Downloads started' }).waitFor();
+  assert.deepEqual(await page.locator('[data-relay="files"] a').allTextContents(), ['bundle folder/nested/a.bin', 'extra.txt']);
+  assert.deepEqual(downloads.map((download) => download.suggestedFilename()).sort(), ['a.bin', 'extra.txt']);
+  for (const download of downloads) {
+    const receivedPath = join(work, `received-${download.suggestedFilename()}`);
+    await download.saveAs(receivedPath);
+    assert.deepEqual(await readFile(receivedPath), download.suggestedFilename() === 'a.bin' ? Buffer.from(source) : Buffer.from('extra'));
+  }
   assert.equal(new URL(page.url()).pathname, '/', 'receiving left the home page');
   await page.close();
-  console.log(`verified a ${bundle.byteLength}-byte folder bundle into the browser`);
+  console.log('verified exact folder bundle files and nested paths in the browser');
 }
 
 async function assertVisibleBrand(page) {

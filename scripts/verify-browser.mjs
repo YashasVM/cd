@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -102,7 +102,7 @@ try {
     await context.close();
   }
 
-  // 2. Browser -> cdx receive, several files as one zip.
+  // 2. Browser -> cdx receive, several files unpacked into the destination.
   {
     const { context, page, code } = await startSend(batchPaths);
     const outDir = join(work, 'zip');
@@ -111,20 +111,23 @@ try {
     const stdout = collect(receiver.stdout);
     const stderr = collect(receiver.stderr);
     assert.equal(await withTimeout(childExit(receiver), 60_000, 'cdx receive did not finish'), 0, await stderr);
-    const { path } = JSON.parse(await stdout);
-    assert.match(path, /cd-\d{8}-\d{6}\.zip$/);
-    execFileSync('unzip', ['-q', path, '-d', join(outDir, 'unzipped')]);
+    const { path, files } = JSON.parse(await stdout);
+    assert.equal(path, outDir);
+    assert.deepEqual(files.map((file) => file.filename).sort(), batch.map(([name]) => name).sort());
     for (const [name, bytes] of batch) {
-      assert.equal(sha(await readFile(join(outDir, 'unzipped', name))), sha(bytes), `${name} differs`);
+      const file = files.find((file) => file.filename === name);
+      assert.equal(file.path, join(outDir, name));
+      assert.equal(file.size, bytes.length);
+      assert.equal(sha(await readFile(file.path)), sha(bytes), `${name} differs`);
     }
     await page.locator('#sender-complete:not(.hidden)').waitFor();
-    console.log('verified browser->terminal: three files arrive as one exact zip');
+    console.log('verified browser->terminal: three exact files arrive unpacked');
     await context.close();
   }
 
   // 3. Browser -> browser by scanning the QR code with a (fake) camera.
   {
-    const { context, page } = await startSend([singlePath]);
+    const { context, page, code } = await startSend([singlePath]);
     await page.waitForFunction(() => {
       const canvas = document.getElementById('share-qr');
       return canvas.getContext('2d').getImageData(0, 0, 1, 1).data[3] > 0;
@@ -134,7 +137,7 @@ try {
       return { data: Array.from(data), width, height };
     });
     const decoded = jsQR(Uint8ClampedArray.from(qr.data), qr.width, qr.height);
-    assert.match(decoded?.data ?? '', /\/s\/[A-Za-z0-9_-]{22}#v1\./, 'the on-screen QR does not hold the share link');
+    assert.equal(decoded?.data, code, 'the on-screen QR does not hold the share code');
 
     const videoPath = join(work, 'qr.y4m');
     await writeFile(videoPath, qrVideo(decoded.data));
