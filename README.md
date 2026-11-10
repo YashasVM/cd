@@ -109,7 +109,7 @@ See [the pairing decision](docs/adr/0002-paired-android-receiving.md) for protoc
 
 ## Develop
 
-Requires Node.js 24+, npm, and Go 1.26.8+.
+Requires Node.js 24+, npm, and Go 1.26.10+.
 
 ```bash
 npm ci
