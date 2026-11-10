@@ -89,3 +89,37 @@ func TestQuietMachineProgressMeasurement(t *testing.T) {
 	}
 	t.Logf("captured JSON progress fixture before: %d bytes/%d lines; after: %d bytes/%d lines", before.Len(), strings.Count(before.String(), "\n"), after.Len(), strings.Count(after.String(), "\n"))
 }
+
+func TestProgressLineFitsTerminalWithoutWrapping(t *testing.T) {
+	line := "\x1b[31msending\x1b[0m [████████████████████████] 100%  100.0 GiB / 100.0 GiB  200.0 MiB/s  in 1:00"
+	for _, width := range []int{1, 20, 40, 80} {
+		fitted := fitProgressLine(line, width-1)
+		// The fixture's colors are the same SGR sequences used by the bar.
+		visible := strings.NewReplacer("\x1b[31m", "", "\x1b[0m", "").Replace(fitted)
+		if got := len([]rune(visible)); got >= width {
+			t.Fatalf("width %d: %d columns would wrap: %q", width, got, fitted)
+		}
+		if !strings.HasSuffix(fitted, "\x1b[0m") {
+			t.Fatal("truncated line leaves terminal color enabled")
+		}
+	}
+	var out bytes.Buffer
+	bar := newProgressBar(&out, "receiving", 100)
+	bar.updateAt(10, bar.started)
+	if !strings.HasPrefix(out.String(), "\r\x1b[2K") {
+		t.Fatalf("redraw did not clear previous row: %q", out.String())
+	}
+}
+
+func TestPlainProgressIsLimitedToOneLinePerSecond(t *testing.T) {
+	var out bytes.Buffer
+	bar := newProgressBar(&out, "receiving", 100)
+	bar.plainLines = true
+	for done := uint64(1); done < 100; done++ {
+		bar.updateAt(done, bar.started.Add(time.Duration(done)*10*time.Millisecond))
+	}
+	bar.updateAt(100, bar.started.Add(time.Second))
+	if got := strings.Count(out.String(), "\n"); got != 2 {
+		t.Fatalf("printed %d lines in one second, want first and final", got)
+	}
+}

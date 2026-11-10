@@ -78,7 +78,7 @@ func (p *progressBar) updateAt(done uint64, now time.Time) {
 		p.sampledAt, p.sampled = now, done
 	}
 	interval := progressInterval
-	if p.jsonLines {
+	if p.jsonLines || p.plainLines {
 		interval = jsonProgressInterval
 	}
 	if p.drawn && done < p.total && now.Sub(p.drawnAt) < interval {
@@ -99,7 +99,11 @@ func (p *progressBar) updateAt(done uint64, now time.Time) {
 	if p.plainLines {
 		fmt.Fprintln(p.out, p.line(done, now))
 	} else {
-		fmt.Fprintf(p.out, "\r%s\x1b[K", p.line(done, now))
+		width := 80
+		if file, ok := p.out.(*os.File); ok {
+			width = progressTerminalWidth(file)
+		}
+		fmt.Fprintf(p.out, "\r\x1b[2K%s", fitProgressLine(p.line(done, now), width-1))
 	}
 }
 
@@ -165,4 +169,26 @@ func transferInfo(format string, args ...any) {
 		format += "\n"
 	}
 	fmt.Fprintf(os.Stderr, format, args...)
+}
+
+// Reserve the last column so terminal autowrap never leaves an old progress row.
+func fitProgressLine(line string, columns int) string {
+	var out strings.Builder
+	escape := false
+	for _, character := range line {
+		if character == '\x1b' {
+			escape = true
+		}
+		if !escape {
+			if columns <= 0 {
+				break
+			}
+			columns--
+		}
+		out.WriteRune(character)
+		if escape && character == 'm' {
+			escape = false
+		}
+	}
+	return out.String() + "\x1b[0m"
 }

@@ -431,6 +431,7 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 	if err := connection.SetReadDeadline(time.Now().Add(timeout)); err != nil {
 		return relayEvent{}, err
 	}
+	defer connection.SetReadDeadline(time.Time{})
 	messageType, data, err := connection.ReadMessage()
 	if err != nil {
 		if ctx.Err() != nil {
