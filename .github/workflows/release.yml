@@ -81,6 +81,10 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          flags=()
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
-          gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes "${flags[@]}"
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" cdx-* checksums.txt --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            flags=()
+            if [[ "$GITHUB_REF_NAME" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$GITHUB_REF_NAME" cdx-* checksums.txt --repo "$GITHUB_REPOSITORY" --generate-notes "${flags[@]}"
+          fi
