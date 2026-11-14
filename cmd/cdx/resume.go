@@ -615,6 +615,13 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	if err != nil || offer.SizeValue < 0 || offer.SizeValue > 1<<53-1 || offer.ChunkSize != chunkSize || len(offer.WholeSHA256) != 64 || offer.ExpiresAt <= time.Now().UnixMilli() || offer.ExpiresAt > time.Now().Add(24*time.Hour).UnixMilli() {
 		return resumeFailure("invalid resumable source identity or expiry")
 	}
+	ackEvery := int64(chunkSize)
+	if offer.WindowBytes < 0 || (offer.WindowBytes != 0 && offer.WindowBytes < chunkSize) {
+		return resumeFailure("invalid resumable send window")
+	}
+	if offer.WindowBytes > 0 {
+		ackEvery = min(offer.WindowBytes, 4*1024*1024) / chunkSize * chunkSize
+	}
 	if offer.ExpiresAt != session.expiresAt {
 		return resumeFailure("offered expiry does not match the fixed relay root expiry")
 	}
@@ -691,7 +698,8 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 	if err = persist(); err != nil {
 		return err
 	}
-	accept, _ := json.Marshal(map[string]string{"offset": strconv.FormatInt(checkpoint.Offset, 10), "prefixSha256": checkpoint.PrefixSHA256})
+	acknowledged := checkpoint.Offset
+	accept, _ := json.Marshal(map[string]any{"offset": strconv.FormatInt(checkpoint.Offset, 10), "prefixSha256": checkpoint.PrefixSHA256, "ackEveryBytes": ackEvery})
 	if err = session.send(kindAccept, accept); err != nil {
 		return err
 	}
@@ -709,11 +717,14 @@ func receiveResumable(ctx context.Context, request receiveRequest) (resultErr er
 			}
 			whole.Write(data)
 			checkpoint.Offset += int64(len(data))
-			if err = persist(); err != nil {
-				return err
-			}
-			if err = session.send(kindAck, encodeCounts(resumeCounts(uint64(checkpoint.Offset)), uint64(checkpoint.Offset))); err != nil {
-				return err
+			if checkpoint.Offset-acknowledged >= ackEvery || checkpoint.Offset == checkpoint.Size {
+				if err = persist(); err != nil {
+					return err
+				}
+				if err = session.send(kindAck, encodeCounts(resumeCounts(uint64(checkpoint.Offset)), uint64(checkpoint.Offset))); err != nil {
+					return err
+				}
+				acknowledged = checkpoint.Offset
 			}
 			report(uint64(checkpoint.Offset))
 			continue
