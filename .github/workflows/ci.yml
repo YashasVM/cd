@@ -30,6 +30,7 @@ jobs:
       - run: npm run verify:v2
       - run: npm run verify:agent
       - run: npm run verify:browser
+      - run: npm run verify:product-ux
       - run: npm run verify:performance
       - name: Upload fresh transfer measurements
         if: always()

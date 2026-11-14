@@ -203,6 +203,7 @@ export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 10
 // Read in bounded blocks; the transfer engine separately sets wire record sizes.
 export function fileSource(file, { chunkBytes = 4 * 1024 * 1024 } = {}) {
   return {
+    file,
     name: file.name,
     type: file.type || 'application/octet-stream',
     size: file.size,

@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="Send files directly between browsers with a numeric code or QR code. No upload queue, no cloud detour."
+      content="Send files between browsers, terminals, and your phone. Share a private link, short code, or QR."
     />
     <meta name="theme-color" content="#0d0503" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="cd" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta property="og:title" content="cd | direct browser transfer" />
+    <meta property="og:title" content="cd | private file handoffs" />
     <meta
       property="og:description"
       content="Send files directly between browsers with a numeric code or QR code."
@@ -21,7 +21,7 @@
     <meta property="og:url" content="https://cd.yash0.in/" />
     <link rel="canonical" href="https://cd.yash0.in/" />
     <link rel="stylesheet" href="/src/style.css" />
-    <title>cd | direct browser transfer</title>
+    <title>cd | private file handoffs</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -36,7 +36,7 @@
             <p class="tagline">/di·rect/</p>
           </div>
           <p class="brand-intro">
-            Direct <span class="route"><span class="swap">browser</span>-to-<span class="swap">browser</span></span><br />file transfer.
+            Private files.<br />Direct handoffs.
           </p>
           <div class="install">
             <button id="install-toggle" class="install-toggle" type="button" aria-expanded="false" aria-controls="install-panel">
@@ -101,12 +101,14 @@
               </div>
               <div class="qr-block">
                 <span class="panel-kicker">or scan it</span>
-                <canvas id="share-qr" width="220" height="220" aria-label="QR code containing this transfer’s numeric code"></canvas>
+                <canvas id="share-qr" width="220" height="220" aria-label="QR code opening this transfer’s receive link"></canvas>
               </div>
             </div>
 
             <div class="share-actions">
-              <button id="copy-code-btn" class="secondary-btn" type="button">Copy code</button>
+              <button id="copy-code-btn" class="secondary-btn" type="button">Share link</button>
+              <button id="copy-link-btn" class="secondary-btn" type="button">Copy link</button>
+              <button id="copy-short-code-btn" class="secondary-btn" type="button" hidden>Copy code</button>
               <button id="copy-cmd-btn" class="secondary-btn" type="button">Copy command</button>
             </div>
 
@@ -135,7 +137,7 @@
               <p class="result-title">That didn’t work</p>
               <p class="error-message result-detail"></p>
               <div class="result-actions">
-                <button id="sender-retry-btn" class="primary-btn" type="button">Try again</button>
+                <button id="choose-different-btn" class="secondary-btn" type="button">Choose different files</button><button id="sender-retry-btn" class="primary-btn" type="button">Try again</button>
               </div>
             </div>
           </div>

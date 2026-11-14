@@ -219,7 +219,7 @@ export async function createPrivateSenderCapability({ origin = globalThis.locati
   const invitation = { id, key };
   const receiver = await resumeReceiverAdmission(invitation);
   const expiresAt = Date.now() + RESUME_LIMIT_MS;
-  await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt });
+  await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt, link: `${origin}/s/${rootId}#v2.${encodeBase64Url(key)}` });
   return { invitation, rootId, senderToken, receiverToken: receiver.token, receiverTokenHash: receiver.digest, expiresAt, url: `${origin}/s/${rootId}#v2.${encodeBase64Url(key)}` };
 }
 
@@ -265,13 +265,14 @@ function createSocketInbox(socket) {
     }
   });
   socket.addEventListener('close', (event) => {
-    failure = new Error(event.code === 4408 ? 'This resumable CD transfer has expired.' : 'The transfer connection was interrupted. Your saved progress can be resumed from the same private link.');
+    if (!failure || isRetryableResumeError(failure)) failure = resumeCloseError(event.code, event.reason);
     while (waiters.length) waiters.shift().reject(failure);
   });
   socket.addEventListener('error', () => {
     failure ||= new Error('The transfer connection failed. Your saved progress can be resumed from the same private link.');
   });
   return { next(timeout = 90_000) {
+    if (failure && !isRetryableResumeError(failure)) return Promise.reject(failure);
     if (pending.length) {
       const item = pending.shift();
       queuedBytes -= item.size;
@@ -355,6 +356,7 @@ function hashBytes(value) {
 export function startResumableSend(file, { link = '', secrets, checkpoints, hooks = {}, origin = globalThis.location?.origin } = {}) {
   let socket;
   let cancelled = false;
+  let paused = false;
   let privateRootId = '';
   const done = (async () => {
     if (!file || typeof file.slice !== 'function' || !Number.isSafeInteger(file.size)) throw new Error('Choose one file to send with resume enabled.');
@@ -371,7 +373,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     hooks.onStatus?.('Checking the file before sharing…');
     const fullHash = await hashFile(file);
     const wholeSha256 = fullHash.digestHex();
-    if (cancelled) throw new Error('Transfer canceled.');
+    if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
     if (reconnect) assertResumeSourceIdentity(saved, file, wholeSha256);
     const chunkCount = Math.ceil(file.size / RESUME_CHUNK_SIZE);
     let sourceBytesRead = file.size;
@@ -385,18 +387,18 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
         expiresAt, priorSessionNonce: encodeBase64Url(sessionNonce)
       }, senderToken));
     }
-    if (cancelled) throw new Error('Transfer canceled.');
+    if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
     const tokenHashBytes = await crypto.subtle.digest('SHA-256', senderToken);
-    if (cancelled) throw new Error('Transfer canceled.');
+    if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
     const connection = await createV2Socket(invitation, 'sender', senderToken, {
       senderTokenHash: encodeBase64Url(new Uint8Array(tokenHashBytes)),
       receiverTokenHash: encodeBase64Url(receiverTokenHash), sessionNonce,
-      onSocket(value) { socket = value; if (cancelled) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: globalThis.location
+      onSocket(value) { socket = value; if (cancelled || paused) { try { value.close(1000, 'sender canceled'); } catch { /* Best effort. */ } } }, location: globalThis.location
     });
     socket = connection.socket;
     let sharePublished = false;
     const publishShare = async (relayExpiry) => {
-      if (cancelled) throw new Error('Transfer canceled.');
+      if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
       const authoritativeExpiry = relayExpiry || expiresAt;
       if (!Number.isSafeInteger(authoritativeExpiry) || authoritativeExpiry <= Date.now() || authoritativeExpiry > Date.now() + RESUME_LIMIT_MS + 60_000) {
         throw new Error('The relay returned an invalid resume expiry.');
@@ -405,21 +407,21 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
         throw new Error('The relay expiry does not match this saved transfer.');
       }
       if (!reconnect && authoritativeExpiry !== expiresAt) {
-        await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: authoritativeExpiry });
+        await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: authoritativeExpiry, link: url });
         const checkpoint = await checkpoints.get(`sender:${rootId}`);
         if (checkpoint) await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({ ...checkpoint, expiresAt: authoritativeExpiry }, senderToken));
       }
-      if (cancelled) throw new Error('Transfer canceled.');
+      if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
       if (!sharePublished) {
-        hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect) });
+        hooks.onShare?.({ url, rootId, resumed: Boolean(reconnect), wholeSha256 });
         sharePublished = true;
       }
     };
     const session = await authenticateV2Peer(invitation, 'sender', sessionNonce, connection.inbox, publishShare);
-    if (cancelled) throw new Error('Transfer canceled.');
+    if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
     const activeExpiry = session.expiresAt || expiresAt;
     if (!reconnect && session.expiresAt) {
-      await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: activeExpiry });
+      await secrets.put(`sender:${rootId}`, { senderToken: encodeBase64Url(senderToken), expiresAt: activeExpiry, link: url });
       await checkpoints.put(`sender:${rootId}`, await signResumeCheckpoint({
         version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
         wholeSha256, offset: 0, prefixSha256: new IncrementalSHA256().digestHex(), stagingId: 'sender-source', destination: 'source-reselect',
@@ -457,15 +459,15 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     const outstanding = [];
     let position = offset;
     while (position < file.size || outstanding.length) {
-      if (cancelled) throw new Error('Transfer canceled.');
+      if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
       // Four records fit the receiver's bounded inbox while durable ACKs are in flight.
       if (position < file.size && outstanding.length < 4) {
         const block = new Uint8Array(await file.slice(position, Math.min(file.size, position + RESUME_CHUNK_SIZE)).arrayBuffer());
-        if (cancelled) throw new Error('Transfer canceled.');
+        if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
         if (block.byteLength !== Math.min(RESUME_CHUNK_SIZE, file.size - position)) throw new Error('The selected file changed while sending.');
         sourceBytesRead += block.byteLength;
         const sealed = await sealer.seal(KIND_CHUNK, block);
-        if (cancelled) throw new Error('Transfer canceled.');
+        if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
         maxWorkingBytes = Math.max(maxWorkingBytes, block.byteLength + sealed.byteLength + outstanding.length * (RESUME_CHUNK_SIZE + 28));
         sendRecord(socket, sealed);
         bytesSent += block.byteLength;
@@ -487,7 +489,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
       await checkpoints.put(`sender:${rootId}`, savedCheckpoint);
       reportResumeProgress(hooks, 'sender', ackedBytes, file.size, { bytesRead: sourceBytesRead, resumedBytes: offset, maxWorkingBytes });
     }
-    if (cancelled) throw new Error('Transfer canceled.');
+    if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
     sendRecord(socket, await sealer.seal(KIND_END, encodeResumeCounts(chunksSent, bytesSent, wholeSha256)));
     const result = decodeResumeCounts(await nextRecord(connection.inbox, opener, KIND_COMPLETE));
     if (result.bytes !== BigInt(file.size) || result.chunks !== chunkCount || result.wholeSha256 !== wholeSha256) throw new Error('The receiver did not verify the complete file.');
@@ -498,17 +500,29 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
     hooks.onComplete?.();
     return { rootId, url, bytesRead: sourceBytesRead, bytesSent: file.size - offset, resumedBytes: offset, retainedBytes: 0, maxWorkingBytes };
   })();
-  done.catch((error) => { if (!cancelled) hooks.onError?.(error); }).finally(() => {
+  const settled = done.finally(async () => {
+    try { socket?.close(1000, 'sender finished'); } catch { /* Best effort. */ }
     if (cancelled && privateRootId) {
-      void checkpoints.delete(`sender:${privateRootId}`).catch(() => {});
-      void secrets.delete(`sender:${privateRootId}`).catch(() => {});
+      await checkpoints.delete(`sender:${privateRootId}`);
+      await secrets.delete(`sender:${privateRootId}`);
     }
   });
-  return { done, cancel() {
+  settled.catch(error => { if (!cancelled) hooks.onError?.(error); });
+  let cleanupPromise;
+  return { done: settled, pause() {
+    paused = true;
+    try { socket?.close(1000, 'sender paused'); } catch { /* Best effort. */ }
+  }, cancel() {
     cancelled = true;
     try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
-    // Cleanup waits until active hashing and checkpoint writes have settled.
-    // A socket loss or page close never calls this method.
+    cleanupPromise ||= settled.catch(() => {}).then(async () => {
+      if (privateRootId) {
+        await checkpoints.delete(`sender:${privateRootId}`);
+        await secrets.delete(`sender:${privateRootId}`);
+      }
+    });
+    cleanupPromise.catch(() => {});
+    return cleanupPromise;
   } };
 }
 
@@ -529,6 +543,8 @@ async function loadSenderCapability(link, { secrets, checkpoints, origin }) {
 export function mountResumableReceiver(container, link, { storage = globalThis.navigator?.storage, checkpoints, secrets, download = true, hooks = {} } = {}) {
   let stopped = false;
   let discard = false;
+  let replacement;
+  let publishedDownload;
   let socket;
   container.classList.add('share-panel');
   container.innerHTML = '<span class="panel-kicker">resumable transfer</span><p role="status" data-resume-status>Connecting securely…</p><strong data-resume-name></strong><div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill"></div></div><span data-resume-progress></span><button type="button" class="secondary-btn" data-resume-cancel>Cancel saved progress</button>';
@@ -540,22 +556,29 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
   let stage;
   const cancelClick = () => {
     stopped = true;
+    clearRetry();
     discard = true;
+    replacement?.cancel();
     void stage?.cancel().catch(error => {
       status.textContent = error.message || 'Could not remove saved progress.';
       hooks.onError?.(error);
     });
     try { socket?.close(1000, 'receiver canceled'); } catch { /* Best effort. */ }
-    status.textContent = 'Saved progress removed.';
+    status.textContent = 'Removing saved progress…';
   };
   cancel.addEventListener('click', cancelClick);
-  const done = (async () => {
+  let retryTimer;
+  let releaseRetry;
+  let retries = 0;
+  const clearRetry = () => { clearTimeout(retryTimer); releaseRetry?.(); };
+  const attempt = async () => {
+    if (stopped) return;
     if (!storage?.getDirectory) throw new Error('Resume needs browser durable storage (OPFS). Open this link in a supported browser with site storage enabled.');
     const parsed = parseResumeLink(link);
     const invitation = { id: parsed.id, key: parsed.key };
-    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; } });
+    const { socket: activeSocket, nonce, inbox } = await createV2Socket(invitation, 'receiver', null, { onSocket(value) { socket = value; if (stopped) { try { value.close(1000, 'receiver left'); } catch { /* Best effort. */ } } } });
     socket = activeSocket;
-    const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox);
+    const session = await authenticateV2Peer(invitation, 'receiver', nonce, inbox, () => { status.textContent = 'Waiting for the sender. Reopen the original file on the sending device to resume.'; hooks.onState?.('waiting'); });
     if (stopped) return;
     const [opener, sealer] = await Promise.all([
       createResumeOpener(invitation, SENDER_DIRECTION, sessionParams(session)),
@@ -567,6 +590,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
     let offer;
     try { offer = JSON.parse(textDecoder.decode(rawOffer)); } catch { throw new Error('The sender offered invalid file details.'); }
     if (!resumeSafeFilename(offer.name) || !Number.isSafeInteger(offer.expiresAt) || offer.expiresAt <= Date.now() || (session.expiresAt && offer.expiresAt !== session.expiresAt)) throw new Error('The sender offered an invalid or expired file.');
+    await secrets.put(`receiver:${parsed.rootId}`, { link: parsed.url.href, expiresAt: offer.expiresAt });
     filename.textContent = offer.name;
     stage = await createReceiverStage({ invitation, rootId: parsed.rootId, offer, storage, checkpoints, secrets, now: Date.now() });
     if (stopped) {
@@ -575,6 +599,8 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       return;
     }
     await stage.bindSession(encodeBase64Url(session.sessionNonce));
+    status.textContent = 'Receiving with saved progress. Keep this tab open.';
+    hooks.onState?.('transferring');
     if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
     const resumeControl = { offset: String(stage.offset), prefixSha256: stage.prefixSha256 };
     sendRecord(socket, await sealer.seal(KIND_ACCEPT, textEncoder.encode(JSON.stringify(resumeControl))));
@@ -599,19 +625,26 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       if (opened.kind !== KIND_END) throw new Error('The sender ended the transfer out of order.');
       const end = decodeResumeCounts(opened.plaintext);
       if (end.chunks !== chunks || end.bytes !== BigInt(offer.size) || end.wholeSha256 !== offer.wholeSha256 || stage.currentOffset !== Number(offer.size)) throw new Error('The sender’s final counts did not match the staged file.');
+      status.textContent = 'Verifying file…';
+      hooks.onState?.('verifying');
       const stagedFile = await stage.finish();
       if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
       const endHash = await hashFile(stagedFile);
       if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
       if (endHash.digestHex() !== offer.wholeSha256) throw new Error('The received file failed its whole-file digest check.');
-      let publishedDownload;
       if (download) {
-        publishedDownload = downloadUrlFor(stagedFile, offer.name, () => stage.cancel());
+        const finishedStage = stage;
+        const downloadKey = `download:${parsed.rootId}`;
+        await checkpoints.put(downloadKey, { stagingId: finishedStage.stagingId, expiresAt: finishedStage.expiresAt });
+        publishedDownload = downloadUrlFor(stagedFile, offer.name, async () => { await finishedStage.cancel(); await checkpoints.delete(downloadKey); });
         const anchor = document.createElement('a');
+        anchor.className = 'primary-btn share-download';
         anchor.href = publishedDownload.url;
         anchor.download = publishedDownload.name;
+        anchor.textContent = 'Download file';
+        container.append(anchor);
         anchor.click();
-        setTimeout(publishedDownload.revoke, 60_000);
+        setTimeout(() => { publishedDownload.revoke(); anchor.remove(); }, 60_000);
         globalThis.addEventListener?.('pagehide', publishedDownload.revoke, { once: true });
       }
       sendRecord(socket, await sealer.seal(KIND_COMPLETE, encodeResumeCounts(chunks, stage.currentOffset, offer.wholeSha256)));
@@ -619,19 +652,48 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       await waitForRelayEvent(inbox, ['completed'], 15000);
       // OPFS-backed download URLs read lazily; revoke owns their staging cleanup.
       if (!publishedDownload) await stage.cancel();
-      status.textContent = 'File received and verified.';
+      else await checkpoints.delete(`receiver:${parsed.rootId}`);
+      await secrets.delete(`receiver:${parsed.rootId}`);
+      cancel.hidden = true;
+      status.textContent = download ? 'File verified. Download started; check your downloads.' : 'File received and verified.';
       hooks.onComplete?.();
       return { bytesWritten: Number(offer.size), resumedBytes: stage.offset, retainedBytes: publishedDownload ? stage.currentOffset : 0, maxWorkingBytes };
     }
-  })().catch(async (error) => {
-    await stage?.release().catch(() => {});
-    try { socket?.close(1011, 'receiver failed'); } catch { /* Best effort. */ }
+  };
+  const run = async () => {
+    while (!stopped) {
+      try { return await attempt(); } catch (error) {
+        await stage?.release().catch(() => {});
+        if (stopped) return;
+        if (!isRetryableResumeError(error) || retries >= 3) throw error;
+        try { socket?.close(1000, 'reconnecting'); } catch { /* Best effort. */ }
+        status.textContent = 'Connection interrupted. Reconnecting with saved progress…';
+        await new Promise(resolve => { releaseRetry = resolve; retryTimer = setTimeout(resolve, 1000 * 2 ** retries++); });
+      } finally {
+        try { socket?.close(1000, 'receive attempt ended'); } catch { /* Best effort. */ }
+      }
+    }
+  };
+  const done = run().catch(async (error) => {
     if (stopped) { if (discard) status.textContent = 'Saved progress removed.'; return; }
     status.textContent = error.message || 'The resumable transfer failed.';
+    if (isRetryableResumeError(error)) {
+      const retry = document.createElement('button');
+      retry.textContent = 'Retry from saved progress';
+      retry.addEventListener('click', () => { if (!stopped) { stopped = true; clearRetry(); replacement = mountResumableReceiver(container, link, { storage, checkpoints, secrets, download, hooks }); replacement.done.catch(() => {}); } }, { once: true });
+      container.append(retry);
+    }
     hooks.onError?.(error);
     throw error;
+  }).finally(async () => {
+    if (discard) {
+      await stage?.cancel();
+      const parsed = parseResumeLink(link);
+      await secrets.delete(`receiver:${parsed.rootId}`);
+      status.textContent = 'Saved progress removed.';
+    }
   });
-  return { done, stop() { stopped = true; void stage?.release().catch(() => {}); try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
+  return { done, stop() { stopped = true; replacement?.stop(); publishedDownload?.revoke(); void stage?.release().catch(() => {}); clearRetry(); try { socket?.close(1000, 'receiver left'); } catch { /* Best effort. */ } }, cancel: cancelClick };
 }
 
 function waitSocketOpen(socket, timeout = 15000) {
@@ -693,3 +755,17 @@ export function resumeSafeFilename(value) {
 }
 
 export { KIND_ACCEPT, KIND_ACK, KIND_CHUNK, KIND_COMPLETE, KIND_END, KIND_OFFER, RECEIVER_DIRECTION, SENDER_DIRECTION, createResumeOpener, createResumeSealer, textEncoder, textDecoder };
+
+export function resumeCloseError(code, reason = '') {
+  const reconnect = code === 4404 && ['session interrupted', 'sender unavailable', 'peer unavailable'].includes(reason) || code === 4409 && ['sender must resume first', 'session interrupted'].includes(reason);
+  const permanent = code >= 4400 && code <= 4499 && !reconnect;
+  const error = new Error(code === 4408 ? 'This resumable CD transfer has expired.' : permanent ? 'CD rejected this transfer. Check the link or ask the sender for a new transfer.' : 'The transfer connection was interrupted. Your saved progress can be resumed from the same private link.');
+  error.closeCode = code;
+  error.reconnect = reconnect;
+  return error;
+}
+
+export function isRetryableResumeError(error) {
+  if (error?.closeCode >= 4400 && error.closeCode <= 4499) return error.reconnect === true;
+  return /^(The transfer connection was interrupted\.|The transfer connection failed\.|The transfer timed out|The other device disconnected\.|Could not reach CD\.|Timed out waiting)/.test(error?.message || '');
+}

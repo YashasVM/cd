@@ -19,7 +19,7 @@ function kv() {
 }
 
 // Only the network is substituted. Both peers use the actual authenticated v2 records.
-async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, resumed = 0, failRead = false } = {}) {
+async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, resumed = 0, failRead = false, closeAfterComplete = false } = {}) {
   const bytes = Uint8Array.from({ length: chunks * RESUME_CHUNK_SIZE + tail }, (_, i) => i % 251);
   const file = new File([bytes], 'pipeline.bin');
   const secrets = kv(), checkpoints = kv();
@@ -62,6 +62,7 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
             assert.deepEqual(Buffer.concat(output.map(x => Buffer.from(x))), Buffer.from(bytes.subarray(resumed)));
             this.emit(await sealer.seal(KIND_COMPLETE, encodeResumeCounts(count, received, wholeSha256)));
             this.emit(JSON.stringify({ type: 'completed', protocol: 'cd-transfer-v2' }));
+            if (closeAfterComplete) this.close(1006);
           } else assert.fail('unexpected sender record');
         }).catch(error => { peerError = error; this.close(1011); });
       }
@@ -163,11 +164,31 @@ it('cancel removes sender secrets and checkpoints while ACKs are pending', async
   } finally { t.restore(); }
 });
 
+it('cancel removes retained records after a disconnected sender has settled', async () => {
+  const t = await transfer({ hold: true });
+  try {
+    await t.waitFor(() => t.held.length > 0);
+    t.close();
+    await assert.rejects(t.operation.done, /interrupted/);
+    assert.ok(t.checkpoints.values.has(`sender:${t.rootId}`));
+    assert.ok(t.secrets.values.has(`sender:${t.rootId}`));
+    await t.operation.cancel();
+    assert.equal(t.checkpoints.values.size, 0);
+    assert.equal(t.secrets.values.size, 0);
+  } finally { t.restore(); }
+});
+
 it('completes resumed, empty, and short encrypted sources', async () => {
   for (const options of [{ resumed: RESUME_CHUNK_SIZE * 2 }, { chunks: 0, tail: 0 }, { chunks: 0, tail: 7 }]) {
     const t = await transfer(options);
     try { const result = await t.finish(); assert.equal(result.bytesSent, t.bytes.length - (options.resumed || 0)); } finally { t.restore(); }
   }
+});
+
+it('drains an encrypted COMPLETE and queued completed event before a socket close', async () => {
+  const t = await transfer({ closeAfterComplete: true });
+  try { const result = await t.finish(); assert.equal(result.bytesSent, t.bytes.length); }
+  finally { t.restore(); }
 });
 
 if (process.env.CD_RESUME_BENCH === '1') {

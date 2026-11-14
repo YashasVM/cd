@@ -8,11 +8,11 @@ document.body.innerHTML = `
   <main class="shell share-transfer-page">
     <header class="brand-rail">
       <div class="brand-lockup"><h1>cd</h1><span class="tagline">/di·rect/</span></div>
-      <p class="brand-note">private CD relay</p>
-      <p class="share-description">A file is being handed to you through CD.</p>
+      <p class="brand-note">Receive files</p>
+      <p class="share-description">Check the file details, then receive. Keep this tab open until verification finishes.</p>
     </header>
     <section class="workbench">
-      <div id="relay-receiver"></div>
+      <div id="relay-receiver"></div><p class="result-actions"><a href="/">Send or receive another file</a></p>
     </section>
     <p class="watermark">encrypted in your browser · <a href="/">cd.yash0.in</a></p>
   </main>`;
@@ -25,4 +25,7 @@ try {
 
 const shareUrl = window.location.href;
 history.replaceState(null, '', window.location.pathname);
-mountRelayReceiver(document.getElementById('relay-receiver'), shareUrl);
+let receiving = true;
+window.addEventListener('beforeunload', event => { if (receiving) event.preventDefault(); });
+const stop = mountRelayReceiver(document.getElementById('relay-receiver'), shareUrl, { hooks: { onState(state) { receiving = !['complete', 'failed'].includes(state); } } });
+window.addEventListener('pagehide', stop, { once: true });
