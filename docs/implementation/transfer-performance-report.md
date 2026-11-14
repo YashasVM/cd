@@ -49,3 +49,9 @@ Run the publisher tests with:
 ```sh
 node --test .github/scripts/transfer-report.test.cjs
 ```
+
+To verify publishing end to end, open a PR after the publisher reaches the
+default branch and let its CI run finish. Confirm that the **Transfer Performance
+Report** workflow succeeds and that `github-actions[bot]` posts the marked
+transfer table on the PR. A successful publisher unit test alone does not prove
+that GitHub permissions, artifact downloads and comment posting work together.
