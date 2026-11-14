@@ -6,7 +6,7 @@ import org.json.JSONObject
 import java.io.File
 
 internal class SenderStore(context: Context) {
-    val directory = File(context.filesDir, "send-v1").apply { mkdirs() }
+    val directory = File(context.filesDir, "send-v2").apply { mkdirs() }
     fun source(id: String): File = File(directory, "$id.payload")
     private fun metadata(id: String): AtomicFile {
         require(id.matches(Regex("[A-Za-z0-9_-]{22}")))

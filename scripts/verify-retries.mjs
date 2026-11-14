@@ -89,10 +89,11 @@ async function verifyReceivedFolder(directory, fileCount, expectedContent) {
 
 async function finish(ready, source, name) {
   const output = join(work, `${name}-received.bin`);
-  const waiter = execute(['wait', '--json', '--timeout', '30s', idOf(ready)], 35_000);
+  const waiter = execute(['wait', '--json', '--timeout', '30s', '--', idOf(ready)], 35_000);
   const receiver = await execute(['receive', '--json', ready.code ?? ready.url, '--out', output], 35_000);
   assert.equal(receiver.code, 0, receiver.stderr + receiver.stdout);
-  assert.equal((await waiter).code, 0, 'sender wait did not verify');
+  const waited = await waiter;
+  assert.equal(waited.code, 0, `sender wait did not verify: ${waited.stdout}${waited.stderr}`);
   assert.equal(sha(await readFile(output)), sha(source), 'payload differs');
 }
 try {
@@ -147,7 +148,7 @@ try {
     changed[0] ^= 1;
     await writeFile(sourcePath, changed);
     const destination = join(work, 'changed-after-ready.bin');
-    const waiter = execute(['wait', '--json', '--timeout', '30s', idOf(ready)], 35_000);
+    const waiter = execute(['wait', '--json', '--timeout', '30s', '--', idOf(ready)], 35_000);
     const receiver = await execute(['receive', '--json', ready.code, '--out', destination], 35_000);
     assert.equal(receiver.code, 1, 'receiver accepted bytes that changed after request reservation');
     assert.equal((await waiter).code, 1, 'sender accepted changed request bytes');
@@ -190,7 +191,7 @@ try {
     const output = join(work, 'lost-response-received');
     const receiver = await execute(['receive', '--json', retry.ready.code, '--out', output], 35_000);
     assert.equal(receiver.code, 0, receiver.stderr + receiver.stdout);
-    assert.equal((await execute(['wait', '--json', '--timeout', '30s', state.transferId], 35_000)).code, 0);
+    assert.equal((await execute(['wait', '--json', '--timeout', '30s', '--', state.transferId], 35_000)).code, 0);
     const received = JSON.parse(receiver.stdout);
     assert.equal(received.size, state.size);
     assert.equal(received.files.length, 1000);
@@ -204,7 +205,7 @@ try {
       const state = await stateOf(ready);
       process.kill(state.pid, signal);
       await poll(async () => {
-        const result = await execute(['status', '--json', idOf(ready)]);
+        const result = await execute(['status', '--json', '--', idOf(ready)]);
         return JSON.parse(result.stdout).phase === 'failed';
       }, `${name} never became failed`);
       const failure = await expectFailure(requestId, sourcePath, kind);

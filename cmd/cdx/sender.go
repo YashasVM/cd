@@ -45,6 +45,7 @@ type fileOffer struct {
 	Size         string `json:"size"`
 	ChunkSize    int    `json:"chunkSize"`
 	MaxChunkSize int    `json:"maxChunkSize,omitempty"`
+	Compression  string `json:"compression,omitempty"`
 	// Direct, when present, offers a WebRTC path (see direct.go). Receivers
 	// that predate it ignore the field.
 	Direct     *directOffer `json:"direct,omitempty"`
@@ -338,6 +339,7 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 		return err
 	}
 	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "receiver disconnected (they closed the tab or lost network)", retryNewTransfer))
+	link.striping = stripeEnabled()
 	defer link.close()
 	// Gather direct-path candidates while waiting for the receiver.
 	var offerSDP chan string
@@ -471,11 +473,12 @@ func waitRelayEvent(ctx context.Context, connection *websocket.Conn, expected st
 func largeRecordsEnabled() bool { return os.Getenv("CD_LARGE_RECORDS") != "0" }
 
 type chunkAcceptance struct {
-	ChunkSize int       `json:"chunkSize,omitempty"`
-	LAN       *lanOffer `json:"lan,omitempty"`
+	Compression string    `json:"compression,omitempty"`
+	ChunkSize   int       `json:"chunkSize,omitempty"`
+	LAN         *lanOffer `json:"lan,omitempty"`
 }
 
-func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool) (chunkAcceptance, error) {
+func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool, offeredCompression string) (chunkAcceptance, error) {
 	accepted := chunkAcceptance{ChunkSize: chunkSize}
 	if len(payload) == 0 {
 		return accepted, nil
@@ -495,6 +498,9 @@ func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool) (chun
 	if err := decoder.Decode(new(any)); err != io.EOF {
 		return invalid()
 	}
+	if selection.Compression != "" && (selection.Compression != transferCompression || selection.Compression != offeredCompression) {
+		return invalid()
+	}
 	if selection.LAN != nil {
 		if !reverseOffered || validateLANOffer(selection.LAN) != nil {
 			return invalid()
@@ -510,7 +516,7 @@ func acceptedTransfer(payload []byte, offeredMax int, reverseOffered bool) (chun
 }
 
 func acceptedChunkSize(payload []byte, offeredMax int) (int, error) {
-	selection, err := acceptedTransfer(payload, offeredMax, false)
+	selection, err := acceptedTransfer(payload, offeredMax, false, "")
 	return selection.ChunkSize, err
 }
 
@@ -537,7 +543,18 @@ func waitReverseLAN(ctx context.Context, size uint64, done <-chan struct{}) erro
 // transfer streams one source over a paired link. offerSDP, when not nil,
 // yields the direct-path offer to embed in the file offer.
 func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	stopOnCancel := context.AfterFunc(ctx, func() {
+		_ = link.connection.Close()
+		link.close()
+	})
+	defer stopOnCancel()
 	offer := fileOffer{Name: ready.Filename, MediaType: fileMediaType(ready.Filename), Size: strconv.FormatUint(ready.Size, 10), ChunkSize: chunkSize, Bundle: ready.Files > 0, Files: ready.Files, LAN: link.lanOffer, ReverseLAN: link.reverseLAN != nil}
+	if compressionEnabled() {
+		offer.Compression = transferCompression
+	}
 	if largeRecordsEnabled() {
 		offer.MaxChunkSize = largeChunkSize
 	}
@@ -567,6 +584,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return err
 	}
 	if err := link.send(kindOffer, encoded); err != nil {
+		if cancellation := ctx.Err(); cancellation != nil {
+			return cancellation
+		}
 		return friendlyRelayError(fmt.Errorf("send file offer: %w", err))
 	}
 
@@ -602,6 +622,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	}
 
 	selectedChunkSize := chunkSize
+	selectedCompression := ""
 	transferInfo("waiting for receiver to accept (up to 10m)")
 	for {
 		kind, payload, err := link.next(ctx, consentWait)
@@ -618,11 +639,12 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		if kind != kindAccept {
 			return NewFailure(failureProtocol, "receiver sent an invalid acceptance", retryNever)
 		}
-		selection, selectionErr := acceptedTransfer(payload, offer.MaxChunkSize, offer.ReverseLAN)
+		selection, selectionErr := acceptedTransfer(payload, offer.MaxChunkSize, offer.ReverseLAN, offer.Compression)
 		if selectionErr != nil {
 			return selectionErr
 		}
 		selectedChunkSize = selection.ChunkSize
+		selectedCompression = selection.Compression
 		if selection.LAN != nil {
 			if err := waitReverseLAN(ctx, ready.Size, link.reverseLAN(selection.LAN)); err != nil {
 				return err
@@ -666,6 +688,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 		return nil
 	}
 	linkError := func(err error) error {
+		if cancellation := ctx.Err(); cancellation != nil {
+			return cancellation
+		}
 		if isTimeoutError(err) {
 			if progress.ended {
 				return NewFailure(failureStalled, "receiver did not verify within 90s: they may have disconnected", retryNewTransfer)
@@ -676,10 +701,16 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	}
 	await := func(done func() bool) error {
 		for {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			// Take everything already received before deciding to wait, so
 			// acks reach the window estimate on time. After COMPLETE the
 			// relay's peer-left follows immediately; it is not a failure.
 			for !progress.completed {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				kind, payload, ok, err := link.poll()
 				if err != nil {
 					return linkError(err)
@@ -710,16 +741,35 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	if os.Getenv("CD_REQUEST_JOURNAL") != "" {
 		payloadHash = sha256.New()
 	}
-	buffer := make([]byte, selectedChunkSize)
+	framed := make([]byte, selectedChunkSize+1)
+	buffer := framed[1:]
+	var compressor chunkCompressor
 	for {
+		if err := ctx.Err(); err != nil {
+			finishLine()
+			return err
+		}
 		count, readErr := io.ReadFull(file, buffer)
+		if err := ctx.Err(); err != nil {
+			finishLine()
+			return err
+		}
 		if count > 0 {
 			if payloadHash != nil {
 				payloadHash.Write(buffer[:count])
 			}
-			if err := link.sendReleasable(kindChunk, buffer[:count], progress.sent+uint64(count)); err != nil {
+			payload := buffer[:count]
+			if selectedCompression != "" {
+				var err error
+				payload, err = compressor.encode(framed[:count+1])
+				if err != nil {
+					finishLine()
+					return err
+				}
+			}
+			if err := link.sendReleasable(kindChunk, payload, progress.sent+uint64(count)); err != nil {
 				finishLine()
-				return friendlyRelayError(fmt.Errorf("send file data: %w", err))
+				return linkError(friendlyRelayError(fmt.Errorf("send file data: %w", err)))
 			}
 			progress.sent += uint64(count)
 			progress.chunks++
@@ -749,7 +799,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	}
 	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
-		return friendlyRelayError(fmt.Errorf("finish transfer: %w", err))
+		return linkError(friendlyRelayError(fmt.Errorf("finish transfer: %w", err)))
 	}
 	progress.ended = true
 	err = await(func() bool { return progress.completed })

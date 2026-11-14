@@ -17,7 +17,7 @@ const fixture = `
 import { DurableObject } from 'cloudflare:workers';
 import { ResumeRoomProtocol } from ${JSON.stringify(resolve('worker/resume-room.ts'))};
 export class TestResumeRoom extends DurableObject {
- constructor(ctx,env){super(ctx,env);this.protocol=new ResumeRoomProtocol(ctx,env);}
+ constructor(ctx,env){super(ctx,env);this.protocol=new ResumeRoomProtocol(ctx,env,async()=>{});}
  async fetch(request){
   const url=new URL(request.url),action=url.pathname.split('/')[3];
   if(url.pathname.startsWith('/__test/')){
@@ -25,7 +25,7 @@ export class TestResumeRoom extends DurableObject {
    if(action==='clock'){const value=await request.json();Date.now=()=>value.now;}
    if(action==='alarm')await this.protocol.alarm();
    if(action==='legacy')for(const socket of this.ctx.getWebSockets()){const a=socket.deserializeAttachment();if(a?.kind==='resume-peer'){delete a.lastActivityAt;socket.serializeAttachment(a);}}
-   if(action==='reconstruct')this.protocol=new ResumeRoomProtocol(this.ctx,this.env);
+   if(action==='reconstruct')this.protocol=new ResumeRoomProtocol(this.ctx,this.env,async()=>{});
    return Response.json({state:await this.ctx.storage.get('resume-room'),alarm:await this.ctx.storage.getAlarm(),attachments:this.ctx.getWebSockets().map(s=>({readyState:s.readyState,...s.deserializeAttachment()}))});
   }
   return this.protocol.fetch(request,url.pathname.split('/').at(-1));
@@ -197,6 +197,21 @@ try {
   await debug(legacyRoot, 'alarm');
   assert.equal((await legacy.sender.event('closed')).code, 4404);
   assert.equal((await debug(legacyRoot)).state.status, 'interrupted');
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const root = `concurrent-admission-${attempt}`, c = credentials();
+    const sender = await connect(root, senderJoin(c));
+    await sender.event('accepted');
+    const candidates = await Promise.all([connect(root, receiverJoin(c)), connect(root, receiverJoin(c))]);
+    await until(() => candidates.every(peer => peer.messages.some(m => m.type === 'accepted' || m.type === 'closed')), 'concurrent admission settles');
+    const winners = candidates.filter(peer => peer.messages.some(m => m.type === 'accepted'));
+    assert.equal(winners.length, 1, 'two receivers admitted to one resume session');
+    const snapshot = await debug(root);
+    const accepted = winners[0].messages.find(m => m.type === 'accepted');
+    assert.equal(snapshot.state.receiverNonce, accepted.receiverNonce);
+    assert.equal(snapshot.attachments.filter(a => a.kind === 'resume-peer' && a.role === 'receiver').length, 1);
+    assert.equal(sender.messages.filter(m => m.type === 'peer-joined').length, 1);
+  }
+  console.log('Verified exactly one concurrent resumable receiver and matching persisted session binding.');
   console.log('Verified real Worker 128-session cap, authenticated exhaustion, replay separation, final-session completion and retained root/history.');
   console.log('Verified 16-minute waiting lease, 15-minute paired lease, ACK-only activity, lazy alarms, stale resume and persisted legacy grace.');
 } finally {

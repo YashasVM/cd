@@ -102,10 +102,32 @@ try {
     await context.close();
   }
 
-  // 2. Browser -> cdx receive, several files unpacked into the destination.
+  // Numeric share URLs work both as paste events and as autofill/input events.
+  for (const mode of ['paste', 'autofill']) {
+    const { context, page, code } = await startSend([singlePath]);
+    const received = await receiveInBrowser(browser, async (receiver) => {
+      // Like the CLI, a numeric URL supplies a code. Lookup uses the current
+      // configured site even when the advertised URL names production.
+      const link = `https://cd.yash0.in/#${code}`;
+      if (mode === 'autofill') await receiver.locator('#code-input').fill(link);
+      else await receiver.locator('#code-input').evaluate((input, link) => {
+        const clipboard = new DataTransfer();
+        clipboard.setData('text/plain', link);
+        input.dispatchEvent(new ClipboardEvent('paste', { clipboardData: clipboard, bubbles: true, cancelable: true }));
+      }, link);
+      assert.equal(new URL(receiver.url()).origin, publicBase);
+    });
+    assert.equal(received.name, 'holiday video.mp4');
+    assert.equal(sha(received.bytes), sha(single));
+    await page.locator('#sender-complete:not(.hidden)').waitFor();
+    console.log(`verified browser->browser by numeric-link ${mode}: ${received.bytes.length} exact bytes`);
+    await context.close();
+  }
+
+  // 2. Browser -> cdx receive, several files arrive as separate files.
   {
     const { context, page, code } = await startSend(batchPaths);
-    const outDir = join(work, 'zip');
+    const outDir = join(work, 'unpacked');
     await mkdir(outDir);
     const receiver = spawn(executable, ['receive', code, '--out', outDir, '--json'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout = collect(receiver.stdout);
