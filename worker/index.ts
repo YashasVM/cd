@@ -138,6 +138,10 @@ export class TransferRoom extends DurableObject<Env> {
   private resume: ResumeRoomProtocol;
   private claiming: Promise<ClaimResult> | null = null;
   private resumeClaiming: Promise<ClaimResult> | null = null;
+  // Role assignments never change after admission. Keep the two live peers
+  // while this instance is warm; after hibernation peer() rebuilds this cache
+  // from persisted attachments. Closed sockets are never reused.
+  private peers = new Map<Role, WebSocket>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -170,7 +174,7 @@ export class TransferRoom extends DurableObject<Env> {
   async webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): Promise<void> {
     const rawAttachment = socket.deserializeAttachment() as { kind?: string } | null;
     if (rawAttachment?.kind?.startsWith('resume-')) { await this.resume.message(socket, message); return; }
-    const attachment: unknown = socket.deserializeAttachment();
+    const attachment: unknown = rawAttachment;
     if (!isSocketAttachment(attachment)) { reject(socket, 4400, 'invalid connection'); return; }
     if (this.isExpired()) {
       await this.expireRoom();
@@ -399,10 +403,15 @@ export class TransferRoom extends DurableObject<Env> {
   }
 
   private peer(role: Role): WebSocket | null {
-    return this.ctx.getWebSockets().find((socket) => {
+    const cached = this.peers.get(role);
+    if (cached?.readyState === WebSocket.OPEN) return cached;
+    this.peers.delete(role);
+    const peer = this.ctx.getWebSockets().find((socket) => {
       const attachment: unknown = socket.deserializeAttachment();
       return socket.readyState === WebSocket.OPEN && isSocketAttachment(attachment) && attachment.kind === 'peer' && attachment.role === role;
     }) ?? null;
+    if (peer) this.peers.set(role, peer);
+    return peer;
   }
 
   private isExpired(): boolean {

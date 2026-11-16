@@ -1,0 +1,89 @@
+{
+  "scope": "Node handler microbenchmark; mocked host APIs; no network throughput claim",
+  "frames": 100000,
+  "node": "v24.22.1",
+  "results": [
+    {
+      "name": "candidate",
+      "trials": [
+        {
+          "elapsedMs": 150.943431,
+          "scans": 0,
+          "reads": 100000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 168.24686799999995,
+          "scans": 0,
+          "reads": 100000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 174.0892369999999,
+          "scans": 0,
+          "reads": 100000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 428.12563100000034,
+          "scans": 0,
+          "reads": 100000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 266.17630099999997,
+          "scans": 0,
+          "reads": 100000,
+          "writes": 0,
+          "forwarded": 100000
+        }
+      ],
+      "medianMs": 174.0892369999999
+    },
+    {
+      "name": "baseline",
+      "trials": [
+        {
+          "elapsedMs": 488.401592,
+          "scans": 100000,
+          "reads": 400000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 678.1226619999999,
+          "scans": 100000,
+          "reads": 400000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 615.675309,
+          "scans": 100000,
+          "reads": 400000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 949.6579630000001,
+          "scans": 100000,
+          "reads": 400000,
+          "writes": 0,
+          "forwarded": 100000
+        },
+        {
+          "elapsedMs": 599.8537650000003,
+          "scans": 100000,
+          "reads": 400000,
+          "writes": 0,
+          "forwarded": 100000
+        }
+      ],
+      "medianMs": 615.675309
+    }
+  ]
+}

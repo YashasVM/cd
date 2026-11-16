@@ -1,11 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { median, summarize, cases } from './bench-croc-matrix.mjs';
+import { median, summarize, cases, validateTransportReports } from './bench-croc-matrix.mjs';
 function row(tool, value, extra = {}) {
-  return { tool, storage: 'tmpfs', route: 'auto', case: 'random-4k', ok: true, readyMs: value, receiverMs: value, durableMs: value, totalMs: value * 2, ...extra };
+  return { tool, storage: 'tmpfs', route: 'auto', case: 'random-4k', run: 0, ok: true, readyMs: value, receiverMs: value, durableMs: value, totalMs: value * 2, ...extra };
 }
 test('median uses middle pair and does not mutate samples', () => {
   const values = [9, 1, 7, 3]; assert.equal(median(values), 5); assert.deepEqual(values, [9, 1, 7, 3]);
+});
+test('transport evidence accepts compressed wire sizes independently of plaintext size', () => {
+  assert.doesNotThrow(() => validateTransportReports([{ relayBytes: 67116000, directBytes: 0 }, { relayBytes: 128, directBytes: 0 }], 'relay'));
+  // A verified 64 MiB compressible file may use far fewer than 64 MiB on wire.
+  assert.doesNotThrow(() => validateTransportReports([{ relayBytes: 65536, directBytes: 0 }, { relayBytes: 128, directBytes: 0 }], 'relay'));
+  assert.doesNotThrow(() => validateTransportReports([{ relayBytes: 512, directBytes: 65536 }], 'auto'));
+});
+test('transport evidence rejects absent, negative, fractional, unsafe and zero counters', () => {
+  assert.throws(() => validateTransportReports([], 'relay'), /missing CD transport telemetry/);
+  for (const value of [undefined, NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+    for (const key of ['relayBytes', 'directBytes']) assert.throws(() => validateTransportReports([{ relayBytes: 128, directBytes: 0, [key]: value }], 'auto'), /invalid CD transport counters/);
+  }
+  assert.throws(() => validateTransportReports([{ relayBytes: 0, directBytes: 0 }], 'auto'), /missing CD ciphertext/);
+  assert.throws(() => validateTransportReports([{ relayBytes: 512, directBytes: 1 }], 'relay'), /forced relay used direct bytes/);
 });
 test('gate requires every timing metric against both croc configurations', () => {
   const passing = [row('cd', 10), row('croc', 22), row('croc-no-compress', 21)];
@@ -22,11 +36,29 @@ test('matrix includes random and compressible small, medium and bulk payloads', 
   assert.deepEqual(Object.keys(cases), ['random-4k', 'random-1m', 'random-64m', 'random-256m', 'compressible-4k', 'compressible-1m', 'compressible-64m', 'compressible-256m']);
 });
 test('summary exposes spread while gating median results', () => {
-  const rows = ['cd', 'croc', 'croc-no-compress'].flatMap(tool => [row(tool, tool === 'cd' ? 2 : 8), row(tool, tool === 'cd' ? 4 : 12)]);
+  const rows = ['cd', 'croc', 'croc-no-compress'].flatMap(tool => [row(tool, tool === 'cd' ? 2 : 8), row(tool, tool === 'cd' ? 4 : 12, { run: 1 })]);
   const summary = summarize(rows, 2)[0];
   assert.equal(summary.tools.cd.durableMs, 3);
   assert.deepEqual(summary.tools.cd.spread.durableMs, { min: 2, max: 4 });
   assert.equal(summary.pass2, true);
+});
+test('duplicate, out-of-range and invalid timing samples cannot establish a speed claim', () => {
+  const good = ['cd', 'croc', 'croc-no-compress'].flatMap(tool => [row(tool, tool === 'cd' ? 2 : 8), row(tool, tool === 'cd' ? 2 : 8, { run: 1 })]);
+  for (const bad of [{ run: 0 }, { run: 2 }, { run: undefined }, { durableMs: -1 }, { durableMs: 0 }, { totalMs: Infinity }, { receiverMs: NaN }]) {
+    const rows = good.map((value, index) => index === 1 ? { ...value, ...bad } : value);
+    assert.equal(summarize(rows, 2)[0].pass1_5, false, JSON.stringify(bad));
+  }
+});
+test('seeded trial order is reproducible, a permutation and independent per block', async () => {
+  const { trialOrder } = await import('./bench-order.mjs');
+  const tools = ['cd', 'croc', 'croc-no-compress'];
+  const orders = Array.from({ length: 30 }, (_, run) => trialOrder(tools, 'recorded-seed', ['disk', 'random-4k', 'auto', run]));
+  for (const [run, order] of orders.entries()) {
+    assert.deepEqual(order, trialOrder(tools, 'recorded-seed', ['disk', 'random-4k', 'auto', run]));
+    assert.deepEqual([...order].sort(), [...tools].sort());
+  }
+  assert.equal(new Set(orders.map(order => order.join(','))).size, 6);
+  assert.deepEqual(tools, ['cd', 'croc', 'croc-no-compress']);
 });
 test('benchmark worker has isolated rate namespaces and no deployment routes', async () => {
   const { readFile } = await import('node:fs/promises');

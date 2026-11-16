@@ -21,8 +21,7 @@ const MAX_CANDIDATES = 64;
 export const DIRECT_CHANNEL_ID = 1;
 export const DIRECT_PIECE_BYTES = 64 * 1024;
 export const DIRECT_ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' }
+  { urls: 'stun:stun.cloudflare.com:3478' }
 ];
 
 // parseDirectOffer returns the sender's offer SDP, or null if it offered none.
@@ -110,15 +109,19 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
   const connection = new RTCPeerConnectionImpl({ iceServers: DIRECT_ICE_SERVERS });
   const channel = connection.createDataChannel('cd-direct', { negotiated: true, id: DIRECT_CHANNEL_ID, ordered: true });
   channel.binaryType = 'arraybuffer';
-  channel.bufferedAmountLowThreshold = DIRECT_BUFFER_BYTES / 2;
+  // Wake as soon as the largest wire piece fits again. Polling every 10 ms
+  // leaves fast paths idle after the native queue has already drained.
+  channel.bufferedAmountLowThreshold = DIRECT_BUFFER_BYTES - DIRECT_PIECE_BYTES;
   const assembler = createRecordAssembler();
   let lost = false;
   let sending = Promise.resolve();
   let queuedSendBytes = 0;
   let queuedSends = 0;
+  let rejectDrain = null;
   const lose = (error) => {
     if (lost) return;
     lost = true;
+    rejectDrain?.(error);
     onLost(error);
   };
   channel.addEventListener('open', () => onOpen());
@@ -148,7 +151,23 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
           while (channel.bufferedAmount + piece.byteLength > DIRECT_BUFFER_BYTES) {
             if (!path.open) throw new Error('The direct connection closed while sending.');
             if (performance.now() - started > 90_000) throw new Error('The direct send buffer stalled. Send again for a fresh transfer.');
-            await new Promise((resolve) => setTimeout(resolve, 10));
+            await new Promise((resolve, reject) => {
+              const finish = (error) => {
+                clearTimeout(timer);
+                channel.removeEventListener('bufferedamountlow', drained);
+                rejectDrain = null;
+                if (error) reject(error); else resolve();
+              };
+              const drained = () => {
+                if (!path.open) finish(new Error('The direct connection closed while sending.'));
+                else if (channel.bufferedAmount + piece.byteLength <= DIRECT_BUFFER_BYTES) finish();
+              };
+              const timer = setTimeout(() => finish(new Error('The direct send buffer stalled. Send again for a fresh transfer.')), Math.max(0, 90_000 - (performance.now() - started)));
+              rejectDrain = finish;
+              channel.addEventListener('bufferedamountlow', drained);
+              // Recheck after subscribing so a drain cannot be missed.
+              drained();
+            });
           }
           if (!path.open) throw new Error('The direct connection closed while sending.');
           channel.send(piece);
@@ -156,7 +175,11 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
       }).finally(() => { queuedSends -= 1; queuedSendBytes -= record.byteLength; });
       return sending;
     },
-    close() { lost = true; connection.close(); }
+    close() {
+      lost = true;
+      rejectDrain?.(new Error('The direct connection closed while sending.'));
+      connection.close();
+    }
   };
   return path;
 }

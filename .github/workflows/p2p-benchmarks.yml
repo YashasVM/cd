@@ -1,0 +1,66 @@
+name: P2P comparison benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser_comparison:
+        description: 'Also exercise the real public ToffeeShare service (synthetic 16 MiB files)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.11'
+          cache: true
+      - run: npm ci
+      - run: npm run build
+      - name: Install checksum-pinned croc 11.6.5
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/croc" "$RUNNER_TEMP/results"
+          curl -fSL --retry 3 --max-time 120 \
+            https://github.com/schollz/croc/releases/download/v11.6.5/croc_v11.6.5_Linux-64bit.tar.gz \
+            -o "$RUNNER_TEMP/croc/croc.tar.gz"
+          echo "01bbbb4eafe12c01ddb84ddebf556c35ea9989a976f4abc7e72933c2a6e5e61e  $RUNNER_TEMP/croc/croc.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/croc/croc.tar.gz" -C "$RUNNER_TEMP/croc" croc
+          "$RUNNER_TEMP/croc/croc" --version
+      - name: Compare CLI defaults and forced relay
+        run: >-
+          node scripts/bench-croc-matrix.mjs
+          --croc "$RUNNER_TEMP/croc/croc"
+          --runs 5 --storage disk
+          --disk-dir "$RUNNER_TEMP"
+          --routes auto,relay
+          --output "$RUNNER_TEMP/results/croc-matrix.json"
+      - name: Install comparison browser
+        if: ${{ !cancelled() && inputs.browser_comparison }}
+        run: npx playwright-core install --with-deps chromium
+      - name: Compare browsers with real ToffeeShare
+        if: ${{ !cancelled() && inputs.browser_comparison }}
+        shell: bash
+        run: |
+          export CHROMIUM_PATH="$(node --input-type=module -e 'import {chromium} from "playwright-core"; process.stdout.write(chromium.executablePath())')"
+          CD_P2P_MIB=16 CD_P2P_RUNS=5 CD_P2P_TIMEOUT_MS=60000 \
+            CD_P2P_OUTPUT="$RUNNER_TEMP/results/p2p-browser.json" \
+            node scripts/bench-p2p-browser.mjs
+      - name: Retain all results, including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: p2p-comparison-results
+          path: ${{ runner.temp }}/results/*.json
+          if-no-files-found: warn
+          retention-days: 30

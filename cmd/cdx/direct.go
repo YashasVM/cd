@@ -47,7 +47,7 @@ const (
 var errDirectStalled = NewFailure(failureDisconnected, "direct connection stalled", retryNewTransfer)
 
 // directICEServers is a variable so tests can run without STUN.
-var directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"}}}
+var directICEServers = []webrtc.ICEServer{{URLs: []string{"stun:stun.cloudflare.com:3478"}}}
 
 // directOffer is the optional `direct` member of the encrypted file offer.
 type directOffer struct {
@@ -376,27 +376,49 @@ type recordAssembler struct {
 }
 
 func (assembler *recordAssembler) push(piece []byte) ([][]byte, error) {
-	assembler.buffer = append(assembler.buffer, piece...)
 	var records [][]byte
-	for len(assembler.buffer) >= headerBytes {
-		header := assembler.buffer[:headerBytes]
-		if header[0] != 'C' || header[1] != 'D' || header[2] != assembler.protocol() {
-			return nil, NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever)
+	for len(piece) > 0 {
+		if len(assembler.buffer) < headerBytes {
+			header := piece
+			if len(assembler.buffer) != 0 || len(piece) < headerBytes {
+				// Split headers need only a small staging allocation. Never
+				// grow from unvalidated peer lengths or copy an entire message
+				// before checking the header's bound.
+				if assembler.buffer == nil {
+					assembler.buffer = make([]byte, 0, headerBytes)
+				}
+				n := min(headerBytes-len(assembler.buffer), len(piece))
+				assembler.buffer = append(assembler.buffer, piece[:n]...)
+				piece = piece[n:]
+				if len(assembler.buffer) < headerBytes {
+					break
+				}
+				header = assembler.buffer
+			}
+			if header[0] != 'C' || header[1] != 'D' || header[2] != assembler.protocol() {
+				return nil, NewFailure(failureProtocol, "direct connection sent an invalid record", retryNever)
+			}
+			length := uint64(headerBytes+recordTagBytes) + uint64(binary.BigEndian.Uint32(header[8:12]))
+			if length > maxRecordBytes {
+				return nil, NewFailure(failureProtocol, "direct connection sent an oversized record", retryNever)
+			}
+			// Capacity is exactly the validated wire length. All fragments
+			// copy directly to their final storage, without append growth or
+			// a second full-record copy on completion.
+			record := make([]byte, len(assembler.buffer), int(length))
+			copy(record, assembler.buffer)
+			assembler.buffer = record
 		}
-		length := headerBytes + int(binary.BigEndian.Uint32(header[8:12])) + recordTagBytes
-		if length > maxRecordBytes {
-			return nil, NewFailure(failureProtocol, "direct connection sent an oversized record", retryNever)
+		n := min(cap(assembler.buffer)-len(assembler.buffer), len(piece))
+		assembler.buffer = append(assembler.buffer, piece[:n]...)
+		piece = piece[n:]
+		if len(assembler.buffer) == cap(assembler.buffer) {
+			// The callback owns these bytes. Later pushes cannot overwrite
+			// queued records or plaintext that recordOpener.consume opens
+			// in place; no reference to WebRTC callback storage escapes.
+			records = append(records, assembler.buffer)
+			assembler.buffer = nil
 		}
-		if len(assembler.buffer) < length {
-			break
-		}
-		record := make([]byte, length)
-		copy(record, assembler.buffer[:length])
-		records = append(records, record)
-		assembler.buffer = assembler.buffer[length:]
-	}
-	if len(assembler.buffer) == 0 {
-		assembler.buffer = nil
 	}
 	return records, nil
 }
