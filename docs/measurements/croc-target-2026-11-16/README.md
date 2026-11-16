@@ -1,10 +1,17 @@
 # Croc performance target: second backend iteration
 
-The source under test is `4b881fdd989ac51417ade92bb84bcc10a1047bd1`, following
+The native source under test is `4b881fdd989ac51417ade92bb84bcc10a1047bd1`, following
 the earlier `d71a051` comparison. Five-digit sharing, private-link behavior,
 wire encryption/authentication, sequence validation, output publication and
 durability checks remain intact. There was no Cloudflare deployment or paid
 resource creation.
+
+A later browser-only fix in `abacf1248ed6a3aa1ae8455f05fcc8e48cd364b9` lets
+deferred SDP process while consent/storage selection is pending. File data
+remains rejected until ACCEPT, and canceled/failed picker completion cannot
+revive the transfer. It has separate browser/UX validation; the benchmarked
+Go, Worker and module files are byte-for-byte unchanged. No browser performance
+multiplier is inferred from the native data.
 
 ## Result: automatic mode clears 2x; the all-mode target remains unmet
 
@@ -177,12 +184,12 @@ not be presented as a green performance claim.
 
 ## Correctness and compatibility
 
-- `npm test`: 243 passing tests, zero failures/skips.
+- `npm test`: 247 passing tests, zero failures/skips.
 - Full `go test ./...`, with per-command `umask 022`: passed.
 - Focused Go race tests for deferred signaling, legacy admission, buffer
   ownership/reuse, compression and framing: passed.
 - Main and SDK type checks, web build and deployment dry-run: passed.
-- Actual Worker security, CLI/browser, terminal, v2 resume and web SDK
+- Actual Worker security, CLI/browser, terminal, v2 resume, product UX and web SDK
   integration verifiers: passed.
 - `verify-legacy-cli.mjs` tested the real prior and current CLI binaries in
   both directions, random and compressible 4 MiB files, automatic and forced

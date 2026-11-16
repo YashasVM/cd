@@ -22,17 +22,17 @@ dist/assets/resume-opfs-worker-BbGOYGsi.js    0.78 kB
 dist/index.html                              14.40 kB │ gzip:  3.14 kB
 dist/assets/index-CU_BlWTk.css               26.85 kB │ gzip:  6.49 kB
 dist/assets/rolldown-runtime-XKyaHtl9.js      0.72 kB │ gzip:  0.42 kB
-dist/assets/share-page-dxMiiguL.js            1.22 kB │ gzip:  0.69 kB
-dist/assets/index-o_BRyvNb.js                 4.45 kB │ gzip:  1.92 kB
+dist/assets/share-page-DZGi6rC-.js            1.22 kB │ gzip:  0.69 kB
+dist/assets/index-CxxwZb1w.js                 4.45 kB │ gzip:  1.92 kB
 dist/assets/sink-DqO2aTNn.js                 15.18 kB │ gzip:  5.27 kB
-dist/assets/share-DhnVPzRi.js                15.84 kB │ gzip:  6.07 kB
+dist/assets/share-DudKFDWO.js                15.97 kB │ gzip:  6.12 kB
 dist/assets/browser-DfYHeeW3.js              23.46 kB │ gzip:  8.86 kB
 dist/assets/resume-browser-Dyq8sQql.js       36.71 kB │ gzip: 12.17 kB
-dist/assets/main-DHeLat27.js                 72.49 kB │ gzip: 23.85 kB
+dist/assets/main-BkxQezpl.js                 72.49 kB │ gzip: 23.85 kB
 dist/assets/bundler-D6CBOI20.js              86.46 kB │ gzip: 23.11 kB
 dist/assets/jsQR-DMfxOdIb.js                129.98 kB │ gzip: 47.51 kB
 
-✓ built in 146ms
+✓ built in 136ms
 verified browser->browser by typed code: 3145805 exact bytes
 verified browser->browser by numeric-link paste: 3145805 exact bytes
 verified browser->browser by numeric-link autofill: 3145805 exact bytes

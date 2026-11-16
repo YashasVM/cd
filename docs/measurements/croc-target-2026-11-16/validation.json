@@ -32,7 +32,7 @@
     "completion2x": false
   },
   "validation": {
-    "javascriptPassed": 243,
+    "javascriptPassed": 247,
     "javascriptFailed": 0,
     "goFull": "passed with umask022",
     "goFocusedRace": "passed",
@@ -45,9 +45,13 @@
     "resumeIntegration": "passed",
     "webSDKIntegration": "passed",
     "build": "passed",
-    "deployDryRun": "passed"
+    "deployDryRun": "passed",
+    "productUXIntegration": "passed"
   },
   "browserP2PPerformance": "unmeasured: managed non-proxied UDP restriction retained",
   "deployment": "none; no authenticated Cloudflare account",
-  "worldwideFastestProven": false
+  "worldwideFastestProven": false,
+  "browserConsentSourceCommit": "abacf1248ed6a3aa1ae8455f05fcc8e48cd364b9",
+  "browserConsentSourceSHA256": "1bfa1365bcabc1b423fe29e06236cb4b7e54bb7b00689c5801182f56a44d064d",
+  "nativeSourcesUnchangedAfterBrowserFix": true
 }
