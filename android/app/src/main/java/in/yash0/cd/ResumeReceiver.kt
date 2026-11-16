@@ -101,34 +101,28 @@ class ResumeReceiver(private val context: Context, private val store: Store, pri
                 }
                 store.state(task.getString("id"), "receiving") ?: throw UserPausedException()
                 progress(filename, committedOffset, size)
-                while (true) {
-                    val (kind, data) = nextRecord()
-                    if (kind == 2) {
-                        require(data.isNotEmpty() && data.size <= 262144 && writtenOffset + data.size <= size && (data.size == 262144 || writtenOffset + data.size == size)) { "Invalid chunk bounds" }
-                        output.write(data); whole.update(data); writtenOffset += data.size
-                        if (ackPolicy.commit(writtenOffset, committedOffset, size)) {
-                            persist()
-                            writer.send(5, counts(committedOffset))
-                        }
-                        progress(filename, committedOffset, size)
-                    } else {
-                        store.state(task.getString("id"), "verifying") ?: throw UserPausedException()
-                        val expectedEnd = counts(size) + digest.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-                        require(kind == 3 && writtenOffset == size && prefix() == digest && MessageDigest.isEqual(data, expectedEnd)) { "Final digest or size failed verification" }
+                LiveContent.receive(size, digest, writtenOffset, whole, ::nextRecord,
+                    write = { data -> output.write(data); writtenOffset += data.size },
+                    commit = { persist() },
+                    shouldCommit = { written, committed -> ackPolicy.commit(written, committed, size) },
+                    send = writer::send, active = ::active,
+                    progress = { progress(filename, it, size) },
+                    verifying = { store.state(task.getString("id"), "verifying") ?: throw UserPausedException() },
+                    publish = {
                         writer.stopSignals()
-                        if (committedOffset != writtenOffset) persist()
                         output.fd.sync()
-                        active()
                         task.put("wholeSha256", digest)
                         publish(task, stage, filename, size)
                         diagnostic("published")
-                        writer.send(6, expectedEnd)
-                        wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
-                        runCatching { while (wire.json().getString("type") != "completed") { } }
-                        cpFile.delete(); stage.delete()
-                        return
-                    }
+                    },
+                    currentDigest = ::prefix,
+                )
+                runCatching {
+                    wire.send(JSONObject().put("type", "complete").put("protocol", "cd-transfer-v2").put("sessionNonce", paired.getString("sessionNonce")).put("receiverNonce", paired.getString("receiverNonce")))
+                    while (wire.json().getString("type") != "completed") { }
                 }
+                cpFile.delete(); stage.delete()
+                return
             }
         } } finally { direct?.close() }
     }

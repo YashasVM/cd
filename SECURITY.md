@@ -45,3 +45,10 @@ still accepted). CD's Worker coordinates signaling but does not carry
 file bytes. WebRTC may contact public STUN servers for NAT discovery; those
 servers can observe endpoint IP addresses but not transfer contents. The `cdx`
 path uses only `cd.yash0.in` and does not need STUN or PeerJS infrastructure.
+
+The Android and web transfer SDK previews use v2 fragment invitations and never
+register their keys with the numeric-code directory. Their host ownership,
+verification and preview support limits are documented in the
+[integration guide](docs/third-party-integration.md) and
+[v2 contract](docs/agent-transfer-v2.md). Report SDK vulnerabilities through the
+same private reporting channel above.

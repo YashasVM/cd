@@ -5,15 +5,17 @@ import { chromium } from 'playwright-core';
 import { findChromium } from './harness.mjs';
 
 const names = ['resume-browser', 'agent-protocol', 'resume-protocol', 'incremental-sha256', 'resume-retention', 'sink', 'resume-opfs', 'resume-opfs-worker'];
-const sources = Object.fromEntries(await Promise.all(names.map(async name => [name, await readFile(`src/${name}.js`, 'utf8')])));
+const paths = [...names.map(name => `src/${name}.js`), ...['agent-protocol', 'resume-protocol', 'incremental-sha256'].map(name => `packages/transfer-web/src/${name}.js`)];
+const sources = Object.fromEntries(await Promise.all(paths.map(async path => [`/${path}`, await readFile(path, 'utf8')])));
 const browser = await chromium.launch({ executablePath: await findChromium(), headless: true });
 try {
   const page = await browser.newPage();
   let crashWorker = true;
   await page.route('http://127.0.0.1/opfs-check', route => route.fulfill({ contentType: 'text/html', body: '' }));
   await page.route(/\/src\/[a-z0-9-]+\.js$/, route => {
-    const name = new URL(route.request().url()).pathname.split('/').at(-1).slice(0, -3);
-    let body = sources[name];
+    const path = new URL(route.request().url()).pathname;
+    const name = path.split('/').at(-1).slice(0, -3);
+    let body = sources[path];
     if (name === 'resume-opfs-worker' && crashWorker) {
       // Acquires a real lock and flushes real bytes, then crashes before replying.
       body = `self.onmessage = async ({ data }) => {

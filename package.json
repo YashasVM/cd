@@ -35,7 +35,11 @@
     "verify:zip64": "node scripts/verify-zip64-large.mjs",
     "verify:beta-send": "npm run build && node scripts/verify-beta-send-local.mjs",
     "verify:performance": "npm run build && CD_FRESH_MIB=64 CD_FRESH_RUNS=3 CD_FRESH_OUTPUT=/tmp/cd-fresh-performance.json node scripts/bench-transfer-fresh.mjs && node scripts/fresh-transfer-gates.mjs /tmp/cd-fresh-performance.json",
-    "verify:product-ux": "npm run build && node scripts/verify-product-ux.mjs && node scripts/verify-browser-devices.mjs && node scripts/verify-browser-recovery.mjs"
+    "verify:product-ux": "npm run build && node scripts/verify-product-ux.mjs && node scripts/verify-browser-devices.mjs && node scripts/verify-browser-recovery.mjs",
+    "verify:sdk:web": "CD_SDK_SUITE=web node scripts/verify-transfer-sdk.mjs",
+    "verify:sdk:android": "node scripts/verify-transfer-sdk.mjs",
+    "verify:sdk:browser": "CD_SDK_SUITE=browser node scripts/verify-transfer-sdk.mjs",
+    "typecheck:sdk": "tsc -p packages/transfer-web/tsconfig.json"
   },
   "dependencies": {
     "jsqr": "1.4.0",
@@ -47,7 +51,8 @@
     "playwright-core": "1.65.0",
     "typescript": "7.0.2",
     "vite": "8.3.8",
-    "wrangler": "4.161.0"
+    "wrangler": "4.161.0",
+    "esbuild": "0.28.2"
   },
   "overrides": {
     "undici": "7.30.1"

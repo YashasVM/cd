@@ -19,16 +19,16 @@ function kv() {
 }
 
 // Only the network is substituted. Both peers use the actual authenticated v2 records.
-async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, invalidAck = false, ackEvery = 1, resumed = 0, failRead = false, closeAfterComplete = false } = {}) {
+async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, invalidAck = false, ackEvery = 1, resumed = 0, failRead = false, closeAfterComplete = false, ackEveryChunks, serverExpiry } = {}) {
   const bytes = Uint8Array.from({ length: chunks * RESUME_CHUNK_SIZE + tail }, (_, i) => i % 251);
   const file = new File([bytes], 'pipeline.bin');
   const secrets = kv(), checkpoints = kv();
-  let wire, operation, rootId, invitation, opener, sealer, wholeSha256;
+  let wire, operation, rootId, invitation, opener, sealer, wholeSha256, advertisedExpiry;
   let received = resumed, count = Math.ceil(resumed / RESUME_CHUNK_SIZE), flight = 0, maxFlight = 0;
   let delivery = Promise.resolve(), ackDelivery = Promise.resolve(), peerError;
   const held = [], output = [];
   let pendingAckChunks = 0;
-  let ackInterval = ackEvery;
+  let ackInterval = ackEveryChunks ?? ackEvery;
   class Socket extends EventTarget {
     readyState = 0;
     bufferedAmount = 0;
@@ -38,7 +38,8 @@ async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, inv
     send(data) {
       if (typeof data === 'string') {
         this.join = JSON.parse(data);
-        this.emit(JSON.stringify({ type: 'accepted', protocol: 'cd-transfer-v2' }));
+        if (serverExpiry && this.join.expiresAt > serverExpiry) { this.close(4406); return; }
+        this.emit(JSON.stringify({ type: 'accepted', protocol: 'cd-transfer-v2', expiresAt: serverExpiry }));
       } else {
         if (data[3] === KIND_CHUNK) { flight++; maxFlight = Math.max(maxFlight, flight); }
         delivery = delivery.then(async () => {
@@ -49,7 +50,7 @@ async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, inv
             if (ackEvery > 1) assert.ok(offer.windowBytes >= ackEvery * RESUME_CHUNK_SIZE, 'sender must advertise its bounded window before receiving batched ACKs');
             wholeSha256 = offer.wholeSha256;
             assert.equal(wholeSha256, sha(bytes));
-            this.emit(await sealer.seal(KIND_ACCEPT, encoder.encode(JSON.stringify({ offset: String(resumed), prefixSha256: sha(bytes.subarray(0, resumed)) }))));
+            this.emit(await sealer.seal(KIND_ACCEPT, encoder.encode(JSON.stringify({ offset: String(resumed), prefixSha256: sha(bytes.subarray(0, resumed)), ackEveryBytes: ackInterval * RESUME_CHUNK_SIZE }))));
           } else if (record.kind === KIND_CHUNK) {
             output.push(record.plaintext);
             received += record.plaintext.length; count++;
@@ -83,7 +84,8 @@ async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, inv
   const started = performance.now();
   let reads = 0;
   const source = failRead ? { size: file.size, name: file.name, slice(...args) { if (++reads > chunks + 1 + 2) throw new Error('source unavailable'); return file.slice(...args); } } : file;
-  operation = startResumableSend(source, { secrets, checkpoints, hooks: { onShare({ url, rootId: id }) {
+  operation = startResumableSend(source, { secrets, checkpoints, hooks: { onShare({ url, rootId: id, expiresAt }) {
+    advertisedExpiry = expiresAt;
     rootId = id;
     const parsed = parseResumeLink(url); invitation = { id: parsed.id, key: parsed.key };
     const sessionNonce = decodeBase64Url(wire.join.sessionNonce), receiverNonce = new Uint8Array(32).fill(37);
@@ -96,6 +98,7 @@ async function transfer({ chunks = 17, tail = 19, latency = 0, hold = false, inv
   operation.done.catch(() => {});
   return {
     operation, checkpoints, secrets, bytes,
+    get advertisedExpiry() { return advertisedExpiry; },
     get held() { return held; }, get flight() { return flight; }, get maxFlight() { return maxFlight; }, get rootId() { return rootId; },
     async waitFor(predicate) { const deadline = Date.now() + 3000; while (!predicate()) { if (peerError) throw peerError; assert.ok(Date.now() < deadline, 'sender did not make expected progress'); await delay(2); } },
     close() { wire.close(1006); },
@@ -215,6 +218,17 @@ it('cancel removes sender secrets and checkpoints while ACKs are pending', async
   } finally { t.restore(); }
 });
 
+it('pause preserves sender secrets and the last durable checkpoint', async () => {
+  const t = await transfer({ hold: true });
+  try {
+    await t.waitFor(() => t.held.length === 16);
+    t.operation.pause();
+    await assert.rejects(t.finish(), /interrupted|disconnected/);
+    assert.equal(t.checkpoints.values.get(`sender:${t.rootId}`).offset, 0);
+    assert.equal(t.secrets.values.size, 1);
+  } finally { t.restore(); }
+});
+
 it('cancel removes retained records after a disconnected sender has settled', async () => {
   const t = await transfer({ hold: true });
   try {
@@ -251,4 +265,35 @@ if (process.env.CD_RESUME_BENCH === '1') {
     }
     console.log(JSON.stringify({ benchmark: '8MiB encrypted v2 fixture, 30ms ACK latency, receiver batches the offered window; not WAN or disk throughput', rows }));
   });
+}
+
+if (process.env.CD_RESUME_SENDER_MODULE) {
+it('accepts cumulative ACKs and reaches intervals larger than the default four-chunk window', async () => {
+  for (const ackEveryChunks of [2, 8, 16]) {
+    const t = await transfer({ chunks: 20, ackEveryChunks });
+    try { const result = await t.finish(); assert.equal(result.bytesSent, t.bytes.length); assert.ok(t.maxFlight <= 16); }
+    finally { t.restore(); }
+  }
+});
+
+it('default sends use relay-assigned expiry when the browser clock is five minutes ahead', async () => {
+  const now = Date.now;
+  const serverExpiry = now() + 24 * 60 * 60 * 1000;
+  Date.now = () => now() + 5 * 60 * 1000;
+  let t;
+  try {
+    t = await transfer({ chunks: 0, tail: 7, serverExpiry });
+    await t.finish();
+    assert.equal(t.advertisedExpiry, serverExpiry);
+  } finally { t?.restore(); Date.now = now; }
+});
+
+it('rejects unaligned or excessive cumulative ACK intervals before sending chunks', async () => {
+  for (const ackEveryChunks of [0, 1.5, 17]) {
+    const t = await transfer({ ackEveryChunks });
+    try { await assert.rejects(t.finish(), /Invalid acknowledgement interval/); assert.equal(t.maxFlight, 0); }
+    finally { t.restore(); }
+  }
+});
+
 }

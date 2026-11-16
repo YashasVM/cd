@@ -13,6 +13,12 @@ Private links are end-to-end encrypted. Short codes let the relay resolve the tr
 
 Run `npm run verify:product-ux` for headless sharing, browser pairing, delivery receipt, and interrupted recovery checks.
 
+## Embed transfers in your app
+
+Android and web SDK previews let hosts own consent, storage and lifecycle. See
+the [integration guide](docs/third-party-integration.md) for local artifacts,
+examples, same-origin web hosting and verified-transfer tests.
+
 ## Install `cdx`
 
 | Platform | Command |

@@ -50,6 +50,7 @@ android {
     sourceSets["test"].resources.srcDir("../../fixtures")
 }
 dependencies {
+    implementation(project(":transfer"))
     implementation(platform("androidx.compose:compose-bom:2025.01.01"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
