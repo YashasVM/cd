@@ -113,6 +113,31 @@ test('offer includes public candidates discovered after the gathering deadline',
   path.close();
 });
 
+test('direct records respect a smaller negotiated SCTP limit and rebuild exactly', async () => {
+  class Channel extends EventTarget {
+    readyState = 'open'; bufferedAmount = 0; pieces = [];
+    send(piece) {
+      assert.ok(piece.byteLength <= 1000, 'SCTP rejects messages above the negotiated limit');
+      this.pieces.push(piece.slice());
+    }
+  }
+  class Connection extends EventTarget {
+    iceGatheringState = 'complete'; channel = new Channel(); sctp = { maxMessageSize: 1000 };
+    createDataChannel() { return this.channel; }
+    async createOffer() { return { type: 'offer', sdp: 'v=0' }; }
+    async setLocalDescription(value) { this.localDescription = value; }
+    close() {}
+  }
+  const path = await offerDirect({ RTCPeerConnectionImpl: Connection, onRecord() {} });
+  const expected = record(0, 200_000);
+  await path.send(expected);
+  const assembler = createRecordAssembler();
+  const actual = path.connection.channel.pieces.flatMap(piece => assembler.push(piece));
+  assert.deepEqual(actual, [expected]);
+  assert.equal(path.queuedSendBytes, 0);
+  path.close();
+});
+
 test('assembly accepts fragmented headers and coalesced records without aliasing input', () => {
   const expected = [record(0, 1), record(1, 100_000), record(2, 0)];
   const wire = Buffer.concat(expected.map(value => Buffer.from(value)));

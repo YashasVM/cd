@@ -66,8 +66,8 @@ class ReceiverService: Service() {
                 if (!receiving) store.tasks().filter { it.getString("state") == "cancelled" && !it.optBoolean("discarded") }.forEach { discard(it) }
                 if (store.enabled()) {
                     store.pairs().forEach { pair ->
-                        connect(pair, pair.json.getString("relayUrl"), localTransport = false)
-                        pair.json.optJSONArray("localUrls")?.let { urls -> repeat(urls.length()) { connect(pair, urls.getString(it), localTransport = true) } }
+                        tolerateTransientNetwork { connect(pair, pair.json.getString("relayUrl"), localTransport = false) }
+                        pair.json.optJSONArray("localUrls")?.let { urls -> repeat(urls.length()) { index -> tolerateTransientNetwork { connect(pair, urls.getString(index), localTransport = true) } } }
                     }
                     heartbeat()
                     if (!receiving) {

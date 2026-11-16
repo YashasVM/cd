@@ -77,7 +77,7 @@ export class RelaySendError extends Error {}
 // through hooks: onShare({ code, url }), onState(state), onStatus(text),
 // onProgress(done, total). It resolves when the receiver verified every
 // byte and rejects with the reason otherwise. cancel() stops it.
-export function startRelaySend(source, hooks = {}) {
+export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {}) {
   const onShare = hooks.onShare || (() => {});
   const onState = hooks.onState || (() => {});
   const onStatus = hooks.onStatus || (() => {});
@@ -302,15 +302,15 @@ export function startRelaySend(source, hooks = {}) {
     // shareKey asks the relay to claim the share code during the join.
     socket.send(JSON.stringify({
       type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
-      receiverTokenHash: encodeBase64Url(digest), shareKey: encodedKey
+      receiverTokenHash: encodeBase64Url(digest), ...(sharing === 'private' ? {} : { shareKey: encodedKey })
     }));
     const accepted = await waitForText('accepted', ADMISSION_WAIT_MS, 'CD did not answer. Check your connection and try again.');
     // Relays that predate join-time codes: claim one separately.
-    const code = isShortCode(accepted.code) ? accepted.code : await claimShareCode(encodedId, encodedKey);
+    const code = sharing === 'private' ? '' : isShortCode(accepted.code) ? accepted.code : await claimShareCode(encodedId, encodedKey);
     if (cancelled) throw new RelaySendError('Transfer canceled.');
     onShare({ code, url: shareUrl });
     onState('waiting');
-    onStatus('Waiting for the receiver. The code works for 15 minutes.');
+    onStatus('Waiting for the receiver. The invitation works for 15 minutes.');
     const offerPromise = typeof RTCPeerConnection === 'function' ? offerDirect({
       onRecord: (record) => { directUsed = true; receiveRecord(record); },
       onOpen: () => {
@@ -436,6 +436,7 @@ export function startRelaySend(source, hooks = {}) {
     };
     await Promise.all([sendSource(), readAcknowledgements()]);
 
+    onState('verifying');
     await send(KIND_END, encodeCounts(chunks, sent));
     const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');
     const done = decodeCounts(plaintext);

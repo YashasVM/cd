@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "profiling": true,
+  "chromium": "155.0.8059.84",
+  "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+  "bytes": 67108941,
+  "sha256": "f1b9426ea6dfec6b3a6732ae553c6e278d4eeb1b74ea13fe1294ea68e256ac7c",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 67108941,
+      "sha256": "f1b9426ea6dfec6b3a6732ae553c6e278d4eeb1b74ea13fe1294ea68e256ac7c",
+      "preparationMs": 1852.0601979999997,
+      "transferMs": 6050.7374629999995,
+      "milliseconds": 7902.797660999999,
+      "profile": {
+        "sender": {
+          "idb:readonly:devices": {
+            "calls": 1,
+            "ms": 4.5,
+            "maxMs": 4.5
+          },
+          "idb:readonly:checkpoints": {
+            "calls": 5,
+            "ms": 6.499999970197678,
+            "maxMs": 5.299999982118607
+          },
+          "idb:readonly:secrets": {
+            "calls": 2,
+            "ms": 0.7000000178813934,
+            "maxMs": 0.4000000059604645
+          },
+          "import:HKDF": {
+            "calls": 266,
+            "ms": 5.699999988079071,
+            "maxMs": 0.20000001788139343
+          },
+          "deriveOther": {
+            "calls": 4,
+            "ms": 0.09999999403953552,
+            "maxMs": 0.09999999403953552
+          },
+          "idb:readwrite:secrets": {
+            "calls": 5,
+            "ms": 2.4000000059604645,
+            "maxMs": 0.7000000178813934
+          },
+          "blobRead": {
+            "calls": 514,
+            "ms": 503.90000063180923,
+            "maxMs": 22.19999998807907
+          },
+          "deriveCheckpoint": {
+            "calls": 262,
+            "ms": 10.300000011920929,
+            "maxMs": 0.9000000059604645
+          },
+          "import:HMAC": {
+            "calls": 264,
+            "ms": 3.7999998927116394,
+            "maxMs": 0.10000002384185791
+          },
+          "sign": {
+            "calls": 264,
+            "ms": 4.10000005364418,
+            "maxMs": 0.19999998807907104
+          },
+          "idb:readwrite:checkpoints": {
+            "calls": 263,
+            "ms": 350.2999999821186,
+            "maxMs": 15.099999994039536
+          },
+          "import:AES-GCM": {
+            "calls": 2,
+            "ms": 0,
+            "maxMs": 0
+          },
+          "encrypt": {
+            "calls": 259,
+            "ms": 87.09999984502792,
+            "maxMs": 4.5
+          },
+          "decrypt": {
+            "calls": 259,
+            "ms": 16.299999982118607,
+            "maxMs": 0.5999999940395355
+          }
+        },
+        "receiver": {
+          "idb:readonly:checkpoints": {
+            "calls": 3,
+            "ms": 0.7999999821186066,
+            "maxMs": 0.4000000059604645
+          },
+          "idb:readonly:secrets": {
+            "calls": 2,
+            "ms": 0.30000001192092896,
+            "maxMs": 0.20000001788139343
+          },
+          "import:HKDF": {
+            "calls": 261,
+            "ms": 13.799999982118607,
+            "maxMs": 0.20000001788139343
+          },
+          "deriveOther": {
+            "calls": 3,
+            "ms": 0,
+            "maxMs": 0
+          },
+          "import:HMAC": {
+            "calls": 260,
+            "ms": 5.400000065565109,
+            "maxMs": 0.30000001192092896
+          },
+          "sign": {
+            "calls": 260,
+            "ms": 3.700000077486038,
+            "maxMs": 0.10000002384185791
+          },
+          "import:AES-GCM": {
+            "calls": 2,
+            "ms": 0,
+            "maxMs": 0
+          },
+          "decrypt": {
+            "calls": 259,
+            "ms": 83.40000030398369,
+            "maxMs": 1.5
+          },
+          "idb:readwrite:secrets": {
+            "calls": 2,
+            "ms": 1.0999999940395355,
+            "maxMs": 0.699999988079071
+          },
+          "worker:open": {
+            "calls": 1,
+            "ms": 12.199999988079071,
+            "maxMs": 12.199999988079071
+          },
+          "deriveCheckpoint": {
+            "calls": 258,
+            "ms": 11.400000035762787,
+            "maxMs": 0.5
+          },
+          "idb:readwrite:checkpoints": {
+            "calls": 260,
+            "ms": 222.4999998807907,
+            "maxMs": 5.899999976158142
+          },
+          "encrypt": {
+            "calls": 259,
+            "ms": 14.79999989271164,
+            "maxMs": 0.800000011920929
+          },
+          "worker:write": {
+            "calls": 257,
+            "ms": 996.5000000596046,
+            "maxMs": 31.700000017881393
+          },
+          "worker:close": {
+            "calls": 1,
+            "ms": 0.5999999940395355,
+            "maxMs": 0.5999999940395355
+          },
+          "blobRead": {
+            "calls": 257,
+            "ms": 176.40000000596046,
+            "maxMs": 3.100000023841858
+          }
+        },
+        "cpu": {
+          "sender": [
+            {
+              "frame": "(idle) :0:0",
+              "selfMs": 5421.2080000000105
+            },
+            {
+              "frame": "(program) :0:0",
+              "selfMs": 782.3600000000001
+            },
+            {
+              "frame": "C http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:6174",
+              "selfMs": 690.8230000000002
+            },
+            {
+              "frame": "S http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:6143",
+              "selfMs": 175.52799999999993
+            },
+            {
+              "frame": "X http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:20419",
+              "selfMs": 150.11700000000002
+            },
+            {
+              "frame": "slice :0:0",
+              "selfMs": 117.19699999999999
+            },
+            {
+              "frame": "encrypt :0:0",
+              "selfMs": 77.978
+            },
+            {
+              "frame": "arrayBuffer :0:0",
+              "selfMs": 52.64400000000002
+            },
+            {
+              "frame": "prototype.<computed> :14:45",
+              "selfMs": 44.763999999999996
+            },
+            {
+              "frame": "seal http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:1276",
+              "selfMs": 44.545000000000016
+            },
+            {
+              "frame": "(garbage collector) :0:0",
+              "selfMs": 19.481
+            },
+            {
+              "frame": "J http://127.0.0.1:37069/assets/main-Dih_W8GW.js:2:43659",
+              "selfMs": 19.278000000000002
+            },
+            {
+              "frame": "Kt http://127.0.0.1:37069/assets/main-Dih_W8GW.js:2:45733",
+              "selfMs": 17.954
+            },
+            {
+              "frame": "put :0:0",
+              "selfMs": 17.170999999999996
+            },
+            {
+              "frame": "transaction :0:0",
+              "selfMs": 14.085
+            },
+            {
+              "frame": "digestHex http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:7802",
+              "selfMs": 12.857999999999999
+            },
+            {
+              "frame": "encode :0:0",
+              "selfMs": 11.84
+            },
+            {
+              "frame": "getBoundingClientRect :0:0",
+              "selfMs": 11.728
+            },
+            {
+              "frame": "record :5:22",
+              "selfMs": 10.900999999999998
+            },
+            {
+              "frame": "decrypt :0:0",
+              "selfMs": 10.726999999999999
+            }
+          ],
+          "receiver": [
+            {
+              "frame": "(idle) :0:0",
+              "selfMs": 3835.9250000000006
+            },
+            {
+              "frame": "(program) :0:0",
+              "selfMs": 769.7309999999994
+            },
+            {
+              "frame": "C http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:6174",
+              "selfMs": 673.4320000000001
+            },
+            {
+              "frame": "S http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:6143",
+              "selfMs": 157.4069999999999
+            },
+            {
+              "frame": "decrypt :0:0",
+              "selfMs": 72.26500000000001
+            },
+            {
+              "frame": "slice :0:0",
+              "selfMs": 42.266999999999996
+            },
+            {
+              "frame": "D http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:29072",
+              "selfMs": 34.622
+            },
+            {
+              "frame": "arrayBuffer :0:0",
+              "selfMs": 25.518
+            },
+            {
+              "frame": "(garbage collector) :0:0",
+              "selfMs": 21.109999999999996
+            },
+            {
+              "frame": "prototype.<computed> :14:45",
+              "selfMs": 15.865000000000002
+            },
+            {
+              "frame": "postMessage :42:20",
+              "selfMs": 14.980999999999998
+            },
+            {
+              "frame": "put :0:0",
+              "selfMs": 13.943
+            },
+            {
+              "frame": "record :5:22",
+              "selfMs": 13.036000000000001
+            },
+            {
+              "frame": "update http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:6898",
+              "selfMs": 12.719000000000001
+            },
+            {
+              "frame": "encrypt :0:0",
+              "selfMs": 11.743000000000002
+            },
+            {
+              "frame": "transaction :0:0",
+              "selfMs": 11.433
+            },
+            {
+              "frame": "postMessage :0:0",
+              "selfMs": 10.526000000000002
+            },
+            {
+              "frame": "t http://127.0.0.1:37069/assets/sink-D-AeZdDV.js:1:33",
+              "selfMs": 8.639
+            },
+            {
+              "frame": "E.n.onmessage http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:8548",
+              "selfMs": 8.545
+            },
+            {
+              "frame": "X http://127.0.0.1:37069/assets/resume-browser-BKk9RK9y.js:1:20419",
+              "selfMs": 7.485999999999999
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

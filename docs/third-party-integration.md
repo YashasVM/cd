@@ -15,9 +15,10 @@ Your app owns discovery, secret-link delivery, explicit consent, source access,
 destination storage, notifications, background execution and posthandling.
 The SDK owns admission, encryption, bounded streaming, acknowledgements and
 verification. CD's Android app uses the same library's stream engine with its
-existing durable storage and direct-path adapters. CD's web app imports the
-web package's transport and shared receive engine; its OPFS and DOM adapters
-remain in `src/resume-browser.js`.
+existing durable storage and direct-path adapters. CD's web app shares the
+package's cryptography and incremental hash. Its resumable transfer, reconnect
+and durable OPFS adapters remain in `src/resume-browser.js`; the package sender
+has separate coverage for the same bounded window and cumulative ACK contract.
 
 `appId` is public, unverified attribution. A peer can forge it. Never use it for
 authorization, identity verification, privileges or trusted consent. It goes in
@@ -270,3 +271,7 @@ commitment to an iOS SDK.
 Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/YashasVM/cd/security/advisories/new),
 not a public issue containing a live invitation. See [SECURITY.md](../SECURITY.md)
 for the repository policy and expected initial response time.
+
+## Existing Android coroutine SDK
+
+The existing `com.yashasvm.cd.sdk` coroutine API remains available in [`android/sdk`](../android/sdk/README.md), with its host sample in `android/sdk-sample`. The `in.yash0.cd.sdk` transfer preview documented above is a separate API.

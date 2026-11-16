@@ -1,0 +1,84 @@
+▶ resume browser primitives
+  ✔ parses only private v2 links and validates safe filenames (0.995949ms)
+  ✔ hashes files incrementally in bounded chunks (17.700299ms)
+  ✔ binds a resumed sender to the original name, size, and whole digest (0.337249ms)
+  ✔ writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption (21.665731ms)
+  ✖ batches only advertised windows and retains only flushed, checkpointed prefixes (2.429167ms)
+  ✖ discards a buffered receive tail on interruption and resumes from its committed prefix (24.175334ms)
+  ✖ rejects invalid advertised receive windows before allocating storage (0.721555ms)
+  ✔ round-trips v2 progress records and confirms the fallback cap (0.441657ms)
+✖ resume browser primitives (69.751128ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 5
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.07645
+
+✖ failing tests:
+
+test at src/resume-browser.test.js:133:3
+✖ batches only advertised windows and retains only flushed, checkpointed prefixes (2.429167ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 262144
+  
+      at TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.test.js:141:14)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 262144,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at src/resume-browser.test.js:158:3
+✖ discards a buffered receive tail on interruption and resumes from its committed prefix (24.175334ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 1310720
+  - 1048576
+  
+      at TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.test.js:168:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1310720,
+    expected: 1048576,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at src/resume-browser.test.js:177:3
+✖ rejects invalid advertised receive windows before allocating storage (0.721555ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /send window/. Input:
+  
+  'AssertionError [ERR_ASSERTION]: invalid window must fail before storage allocation'
+  
+      at async TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.test.js:180:7)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: AssertionError [ERR_ASSERTION]: invalid window must fail before storage allocation
+        at Object.getDirectory (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.test.js:179:49)
+        at createReceiverStage (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:110:35)
+        at TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.test.js:180:28)
+        at Test.runInAsyncScope (node:async_hooks:226:14)
+        at Test.run (node:internal/test_runner/test:1402:25)
+        at Suite.processPendingSubtests (node:internal/test_runner/test:974:18)
+        at Test.postRun (node:internal/test_runner/test:1542:19)
+        at Test.run (node:internal/test_runner/test:1467:12)
+        at async Suite.processPendingSubtests (node:internal/test_runner/test:974:7),
+    expected: /send window/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

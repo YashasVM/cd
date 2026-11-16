@@ -33,14 +33,18 @@ export function crc32(bytes, previous = 0) {
 // uniqueNames keeps every entry distinct: "a.txt", "a (2).txt", ...
 function uniqueNames(files) {
   const seen = new Set();
+  const nextCopy = new Map();
   return files.map((file) => {
     const base = String(file.name || 'file').replace(/[\\/]/g, '_') || 'file';
     let name = base;
     const dot = base.lastIndexOf('.');
     const stem = dot > 0 ? base.slice(0, dot) : base;
     const extension = dot > 0 ? base.slice(dot) : '';
-    for (let copy = 2; seen.has(name.toLowerCase()); copy += 1) name = `${stem} (${copy})${extension}`;
+    const key = base.toLowerCase();
+    let copy = nextCopy.get(key) || 2;
+    while (seen.has(name.toLowerCase())) name = `${stem} (${copy++})${extension}`;
     seen.add(name.toLowerCase());
+    if (name !== base) nextCopy.set(key, copy);
     return name;
   });
 }
@@ -203,6 +207,7 @@ export function createZipBundle(files, { now = new Date(), chunkBytes = 256 * 10
 // Read in bounded blocks; the transfer engine separately sets wire record sizes.
 export function fileSource(file, { chunkBytes = 4 * 1024 * 1024 } = {}) {
   return {
+    file,
     name: file.name,
     type: file.type || 'application/octet-stream',
     size: file.size,

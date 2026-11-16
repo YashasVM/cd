@@ -1,0 +1,48 @@
+browser-cli: verified 8388685 bytes
+browser-browser: verified 8388685 bytes
+browser-browser-fallback: verified 8388685 bytes
+{
+  "version": 1,
+  "completed": 5,
+  "measurements": [
+    {
+      "scenario": "browser-cli",
+      "route": "local-v2-relay",
+      "bytes": 8388685,
+      "sha256": "afe017c24369f75726a9b3d9f0827c69328091d1e1fdf3a96e3073639a00b21f",
+      "preparationMs": 1183.9207680000002,
+      "transferMs": 323.84242700000004,
+      "milliseconds": 1507.7631950000002
+    },
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 8388685,
+      "sha256": "afe017c24369f75726a9b3d9f0827c69328091d1e1fdf3a96e3073639a00b21f",
+      "preparationMs": 1195.9049450000002,
+      "transferMs": 791.6865849999995,
+      "milliseconds": 1987.5915299999997
+    },
+    {
+      "scenario": "browser-browser-fallback",
+      "route": "local-v2-relay",
+      "bytes": 8388685,
+      "sha256": "afe017c24369f75726a9b3d9f0827c69328091d1e1fdf3a96e3073639a00b21f",
+      "preparationMs": 1211.529458,
+      "transferMs": 1008.6436219999996,
+      "milliseconds": 2220.1730799999996
+    },
+    {
+      "scenario": "browser-cli-restart",
+      "bytes": 8388685,
+      "resumedBytes": 262144,
+      "sha256": "afe017c24369f75726a9b3d9f0827c69328091d1e1fdf3a96e3073639a00b21f"
+    },
+    {
+      "scenario": "cli-browser-same-page-restart",
+      "bytes": 8388685,
+      "resumedBytes": 524288,
+      "sha256": "afe017c24369f75726a9b3d9f0827c69328091d1e1fdf3a96e3073639a00b21f"
+    }
+  ]
+}

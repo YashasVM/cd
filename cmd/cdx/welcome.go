@@ -87,8 +87,8 @@ func runWelcome(argv []string) int {
 	}()
 
 	w.intro()
-	w.agents()
 	w.firstSend()
+	w.agents()
 
 	_ = os.MkdirAll(filepath.Dir(welcomeMarker()), 0o755)
 	_ = os.WriteFile(welcomeMarker(), []byte(cdVersion()+"\n"), 0o644)
@@ -148,7 +148,7 @@ func (w welcome) intro() {
 }
 
 func (w welcome) agents() {
-	w.heading("01", "Connect your AI agents")
+	w.heading("02", "Optional: connect your AI agents")
 	fmt.Fprintln(w.out, "    "+dim("Ask your agent to send a file. Get a download link."))
 	fmt.Fprintln(w.out)
 	fmt.Fprintln(w.out, "    "+accent("❯")+" "+bold("\"Send me the build with cdx\""))
@@ -280,7 +280,11 @@ func (w welcome) sttySet(args ...string) error {
 }
 
 func (w welcome) firstSend() {
-	w.heading("02", "Send your first file")
+	w.heading("01", "Everyday transfers")
+	fmt.Fprintln(w.out, "    Send to your phone: cdx send --to phone ./photo.jpg")
+	fmt.Fprintln(w.out, "    Private link: cdx send --link ./photo.jpg")
+	fmt.Fprintln(w.out, "    Receive: cdx receive 48291 --out ./downloads/")
+	fmt.Fprintln(w.out)
 	w.typeOut("    "+dim("$ "), "cdx send ./photo.jpg", cmdText)
 	fmt.Fprintln(w.out)
 	w.pause(200)

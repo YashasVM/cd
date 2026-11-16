@@ -1,0 +1,17 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('#sender-code-section:not(.hidden)') to be visible[22m
+
+    at send (/home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:91:63)
+    at async file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:102:24 {
+  log: [
+    "  - waiting for locator('#sender-code-section:not(.hidden)') to be visible"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v26.13.1

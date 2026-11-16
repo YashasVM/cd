@@ -5,7 +5,13 @@ Fast, private file handoffs: **[cd.yash0.in](https://cd.yash0.in)**
 - **Anyone → anyone:** pick files in the browser or run `cdx send <file>`, share the 5-digit code, and the receiver
   types it into the **Receive** box, scans the QR code, or runs `cdx receive <code>`. Several files share one code and arrive as separate files.
 
-CD never stores files. Transfers are live and end-to-end encrypted.
+In the browser, choose files, review the selection, remove unwanted files, then click **Send**. The default **Private link** keeps the decryption key in the URL fragment; share the entire link or QR. Choose **Short code** under **Sharing method** when you need a numeric code. `/send` uses the same interface.
+
+Enable **Keep progress if interrupted** for one original file to use resumable relay transfer. Keep the original file available when retrying. Browser device pairing uses QR approval on the phone; approve the browser and enable receiving in CD. These pairings stay in this browser on this CD site; terminal pairings are separate. Saved devices are checked when connecting.
+
+Private links are end-to-end encrypted. Short codes let the relay resolve the transfer key while the code is active. Transfers are live. Resumable transfers keep verified progress on the receiving device.
+
+Run `npm run verify:product-ux` for headless sharing, browser pairing, delivery receipt, and interrupted recovery checks.
 
 ## Embed transfers in your app
 
@@ -87,6 +93,8 @@ installer offers it too). It asks per agent: Claude Code and `~/.agents/skills` 
 Gemini CLI and opencode get a short note in their global instructions file. `cdx agent remove` undoes it.
 Or install just the skill with `npx skills add YashasVM/cd`.
 
+In an interactive terminal, `cdx send --to picker ./report.pdf` lists saved destinations. Scripts should use an exact alias with `--to <name>`. Unknown names fail before a background process starts; pair explicitly with `cdx pair`.
+
 ## Architecture
 
 ```text
@@ -98,7 +106,7 @@ One Cloudflare Worker serves the UI, signaling, relay (`/ws/v1`), and code direc
 Each transfer gets its own Durable Object room. Rooms hold one sender and one receiver, limit memory use,
 expire on their own, and keep no file data.
 
-Developers who want to embed CD transfers in another app can read the [third-party integration RFC](docs/third-party-integration.md).
+Developers can embed live encrypted transfers with the [Android SDK and sample](android/sdk/README.md), without requiring the CD app. See the [third-party integration RFC](docs/third-party-integration.md) for the broader platform plan.
 
 ## Paired-device development preview
 

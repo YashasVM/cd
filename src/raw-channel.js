@@ -14,7 +14,6 @@
 // signaling. PeerJS's own channel uses the low, DTLS-role-derived ids.
 const RAW_CHANNEL_ID = 1000;
 const MAX_RAW_CHUNK_BYTES = 256 * 1024;
-const MIN_RAW_CHUNK_BYTES = 16 * 1024;
 
 // openRawChannel attaches the raw channel to `owner`, a PeerJS
 // DataConnection whose peer connection it shares. Closing the owner closes
@@ -69,7 +68,7 @@ export function openRawChannel(owner) {
 
 export function rawChunkBytes(maxMessageSize) {
   if (!Number.isFinite(maxMessageSize) || maxMessageSize <= 0) return MAX_RAW_CHUNK_BYTES;
-  return Math.max(MIN_RAW_CHUNK_BYTES, Math.min(MAX_RAW_CHUNK_BYTES, Math.floor(maxMessageSize)));
+  return Math.max(1, Math.min(MAX_RAW_CHUNK_BYTES, Math.floor(maxMessageSize)));
 }
 
 // Receive windows the receiver may announce. Anything outside is ignored and

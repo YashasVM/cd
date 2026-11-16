@@ -30,6 +30,7 @@ export async function startWorker(work) {
   const publicBase = `http://127.0.0.1:${port}`;
   const wranglerCli = fileURLToPath(import.meta.resolve('wrangler'));
   const configArgs = process.env.CD_VERIFY_WRANGLER_CONFIG ? ['--config', process.env.CD_VERIFY_WRANGLER_CONFIG] : [];
+  if (process.env.CD_VERIFY_ASSET_DIR) configArgs.push('--assets', process.env.CD_VERIFY_ASSET_DIR);
   const child = spawn(process.execPath, [wranglerCli, 'dev', ...configArgs, '--port', String(port), '--ip', '127.0.0.1', '--persist-to', join(work, 'wrangler-state')], {
     stdio: ['ignore', 'pipe', 'pipe']
   });

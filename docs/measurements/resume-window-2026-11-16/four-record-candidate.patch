@@ -1,0 +1,172 @@
+diff --git c/docs/adr/0002-paired-android-receiving.md w/docs/adr/0002-paired-android-receiving.md
+index ed089eb..f56470c 100644
+--- c/docs/adr/0002-paired-android-receiving.md
++++ w/docs/adr/0002-paired-android-receiving.md
+@@ -16,7 +16,7 @@ The CLI also advertises `_cdx._tcp` locally. Discovery carries a pair ID and por
+ 
+ File data retains the authenticated `cd-transfer-v2` record protocol from ADR 0001. Local WebSockets carry these encrypted records directly over TCP. The relay remains available when the local route fails. Internet transfers start on the relay and negotiate native WebRTC through encrypted signaling. After draining durable relay acknowledgements, only subsequent chunks move to the ordered direct channel. Control and completion remain on the relay. This preserves strict record sequence validation across the transition. A used direct channel that fails triggers a new resumable attempt. Each reconnect contributes new sender and receiver nonces and derives fresh directional frame keys. A matching credential can recover orphaned waiting or paired relay state only when no sender socket is active.
+ 
+-New senders advertise a four-MiB window and accept increasing cumulative durable acknowledgements. Existing receivers continue to acknowledge each chunk. Android commits one-MiB batches only when the sender advertises a sufficient window. Older senders retain per-chunk commits to avoid a deadlock. Receiver buffering remains bounded and applies backpressure instead of discarding records when storage is slower than the network.
++Native CLI senders advertise a four-MiB window and accept increasing cumulative durable acknowledgements. The browser resumable sender advertises its existing four-record, one-MiB window and accepts an acknowledgement only when both byte and chunk counts match an outstanding record boundary. Existing receivers can continue to acknowledge each chunk. Android commits one-MiB batches only when the sender advertises a sufficient window. Older senders retain per-chunk commits to avoid a deadlock. Receiver buffering remains bounded and applies backpressure instead of discarding records when storage is slower than the network.
+ 
+ A checkpoint advances only after syncing the staging file, checkpoint file, and checkpoint directory. Restart validates the checkpoint MAC and retained prefix, truncates any uncommitted tail, and resumes from committed bytes. The receiver verifies the complete size and SHA-256 before publishing through MediaStore. CLI completion requires the authenticated completion exchange or a matching trusted publication receipt after revalidating the source and saved capability. This receipt recovers a final acknowledgement lost after publication.
+ 
+diff --git c/src/resume-browser.js w/src/resume-browser.js
+index 17afe8f..e5b49d3 100644
+--- c/src/resume-browser.js
++++ w/src/resume-browser.js
+@@ -8,6 +8,7 @@ import { downloadUrlFor } from './sink.js';
+ import { createResumeWriter } from './resume-opfs.js';
+ 
+ export const RESUME_CHUNK_SIZE = 256 * 1024;
++const RESUME_WINDOW_CHUNKS = 4;
+ export const RESUME_LIMIT_MS = 24 * 60 * 60 * 1000;
+ export const RESUME_DB_NAME = 'cd-resume-v2';
+ const textEncoder = new TextEncoder();
+@@ -432,7 +433,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+       createResumeSealer(invitation, SENDER_DIRECTION, sessionParams(session)),
+       createResumeOpener(invitation, RECEIVER_DIRECTION, sessionParams(session))
+     ]);
+-    const offer = { name: file.name, size: String(file.size), chunkSize: RESUME_CHUNK_SIZE, wholeSha256, expiresAt: activeExpiry };
++    const offer = { name: file.name, size: String(file.size), chunkSize: RESUME_CHUNK_SIZE, windowBytes: RESUME_WINDOW_CHUNKS * RESUME_CHUNK_SIZE, wholeSha256, expiresAt: activeExpiry };
+     sendRecord(socket, await sealer.seal(KIND_OFFER, textEncoder.encode(JSON.stringify(offer))));
+     const acceptanceBytes = await nextRecord(connection.inbox, opener, KIND_ACCEPT);
+     if (acceptanceBytes.byteLength > 2048) throw new Error('The receiver sent oversized saved progress.');
+@@ -461,7 +462,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+     while (position < file.size || outstanding.length) {
+       if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
+       // Four records fit the receiver's bounded inbox while durable ACKs are in flight.
+-      if (position < file.size && outstanding.length < 4) {
++      if (position < file.size && outstanding.length < RESUME_WINDOW_CHUNKS) {
+         const block = new Uint8Array(await file.slice(position, Math.min(file.size, position + RESUME_CHUNK_SIZE)).arrayBuffer());
+         if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
+         if (block.byteLength !== Math.min(RESUME_CHUNK_SIZE, file.size - position)) throw new Error('The selected file changed while sending.');
+@@ -478,8 +479,10 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+         continue;
+       }
+       const ack = decodeResumeAck(await nextRecord(connection.inbox, opener, KIND_ACK));
+-      const expected = outstanding.shift();
+-      if (ack.bytes !== BigInt(expected.bytes) || ack.chunks !== expected.chunks) throw new Error('The receiver acknowledged invalid saved progress.');
++      const acknowledgedIndex = outstanding.findIndex(expected => ack.bytes === BigInt(expected.bytes) && ack.chunks === expected.chunks);
++      if (acknowledgedIndex < 0) throw new Error('The receiver acknowledged invalid saved progress.');
++      const expected = outstanding[acknowledgedIndex];
++      outstanding.splice(0, acknowledgedIndex + 1);
+       ackedBytes = expected.bytes;
+       const savedCheckpoint = await signResumeCheckpoint({
+         version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,
+diff --git c/src/resume-sender.test.js w/src/resume-sender.test.js
+index 2da74a0..d85b63d 100644
+--- c/src/resume-sender.test.js
++++ w/src/resume-sender.test.js
+@@ -19,7 +19,7 @@ function kv() {
+ }
+ 
+ // Only the network is substituted. Both peers use the actual authenticated v2 records.
+-async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, resumed = 0, failRead = false, closeAfterComplete = false } = {}) {
++async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, invalidAck = false, ackEvery = 1, resumed = 0, failRead = false, closeAfterComplete = false } = {}) {
+   const bytes = Uint8Array.from({ length: chunks * RESUME_CHUNK_SIZE + tail }, (_, i) => i % 251);
+   const file = new File([bytes], 'pipeline.bin');
+   const secrets = kv(), checkpoints = kv();
+@@ -27,6 +27,8 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
+   let received = resumed, count = Math.ceil(resumed / RESUME_CHUNK_SIZE), flight = 0, maxFlight = 0;
+   let delivery = Promise.resolve(), ackDelivery = Promise.resolve(), peerError;
+   const held = [], output = [];
++  let pendingAckChunks = 0;
++  let ackInterval = ackEvery;
+   class Socket extends EventTarget {
+     readyState = 0;
+     bufferedAmount = 0;
+@@ -43,14 +45,21 @@ async function transfer({ chunks = 9, tail = 19, latency = 0, hold = false, inva
+           const record = await opener.open(data);
+           if (record.kind === KIND_OFFER) {
+             const offer = JSON.parse(new TextDecoder().decode(record.plaintext));
++            if (ackEvery === 'offered') ackInterval = offer.windowBytes ? offer.windowBytes / RESUME_CHUNK_SIZE : 1;
++            if (ackEvery > 1) assert.ok(offer.windowBytes >= ackEvery * RESUME_CHUNK_SIZE, 'sender must advertise its bounded window before receiving batched ACKs');
+             wholeSha256 = offer.wholeSha256;
+             assert.equal(wholeSha256, sha(bytes));
+             this.emit(await sealer.seal(KIND_ACCEPT, encoder.encode(JSON.stringify({ offset: String(resumed), prefixSha256: sha(bytes.subarray(0, resumed)) }))));
+           } else if (record.kind === KIND_CHUNK) {
+             output.push(record.plaintext);
+             received += record.plaintext.length; count++;
+-            const ack = await sealer.seal(KIND_ACK, encodeResumeAck(count, invalidAck ? received + 1 : received));
+-            const deliver = () => { flight--; this.emit(ack); };
++            pendingAckChunks++;
++            if (pendingAckChunks < ackInterval && received < bytes.length) return;
++            const acknowledgedChunks = pendingAckChunks;
++            pendingAckChunks = 0;
++            const ack = await sealer.seal(KIND_ACK, encodeResumeAck(invalidAck === 'chunks' ? count + 1 : count, invalidAck === true ? received + 1 : received));
++            const replay = invalidAck === 'replay' ? await sealer.seal(KIND_ACK, encodeResumeAck(count, received)) : null;
++            const deliver = () => { flight -= acknowledgedChunks; this.emit(ack); if (replay) this.emit(replay); };
+             if (hold) held.push(deliver);
+             else {
+               // Latency starts at receipt, allowing ACKs for multiple records to travel together.
+@@ -137,6 +146,48 @@ it('retains only acknowledged progress after interruption with chunks in flight'
+   } finally { t.restore(); }
+ });
+ 
++it('accepts cumulative durable ACKs within its bounded window', async () => {
++  const t = await transfer({ hold: true, ackEvery: 4 });
++  try {
++    await t.waitFor(() => t.held.length === 1);
++    assert.equal(t.flight, 4);
++    assert.equal(t.checkpoints.values.get(`sender:${t.rootId}`).offset, 0);
++    t.held.shift()();
++    await t.waitFor(() => t.checkpoints.values.get(`sender:${t.rootId}`).offset === 4 * RESUME_CHUNK_SIZE);
++    const checkpoint = t.checkpoints.values.get(`sender:${t.rootId}`);
++    assert.equal(checkpoint.prefixSha256, sha(t.bytes.subarray(0, 4 * RESUME_CHUNK_SIZE)));
++    assert.equal(await verifyResumeCheckpoint(checkpoint, decodeBase64Url(t.secrets.values.get(`sender:${t.rootId}`).senderToken)), true);
++    while (t.checkpoints.values.has(`sender:${t.rootId}`)) {
++      await t.waitFor(() => t.held.length > 0 || !t.checkpoints.values.has(`sender:${t.rootId}`));
++      for (const release of t.held.splice(0)) release();
++      await delay(2);
++    }
++    assert.equal((await t.finish()).bytesSent, t.bytes.length);
++    assert.equal(t.maxFlight, 4);
++    assert.deepEqual(t.checkpoints.writes.filter(value => value.offset > 0).map(value => value.offset), [4 * RESUME_CHUNK_SIZE, 8 * RESUME_CHUNK_SIZE, t.bytes.length]);
++  } finally { t.restore(); }
++});
++
++it('rejects cumulative ACKs with mismatched byte or chunk counts', async () => {
++  for (const invalidAck of [true, 'chunks']) {
++    const t = await transfer({ ackEvery: 4, invalidAck });
++    try {
++      await assert.rejects(t.finish(), /invalid saved progress/);
++      assert.equal(t.checkpoints.values.get(`sender:${t.rootId}`).offset, 0);
++    } finally { t.restore(); }
++  }
++});
++
++it('rejects a repeated cumulative ACK without advancing beyond its first durable prefix', async () => {
++  const t = await transfer({ ackEvery: 4, invalidAck: 'replay' });
++  try {
++    await assert.rejects(t.finish(), /invalid saved progress/);
++    const checkpoint = t.checkpoints.values.get(`sender:${t.rootId}`);
++    assert.equal(checkpoint.offset, 4 * RESUME_CHUNK_SIZE);
++    assert.equal(checkpoint.prefixSha256, sha(t.bytes.subarray(0, 4 * RESUME_CHUNK_SIZE)));
++  } finally { t.restore(); }
++});
++
+ it('rejects invalid durable ACKs without advancing its checkpoint', async () => {
+   const t = await transfer({ invalidAck: true });
+   try {
+@@ -179,7 +230,7 @@ it('cancel removes retained records after a disconnected sender has settled', as
+ });
+ 
+ it('completes resumed, empty, and short encrypted sources', async () => {
+-  for (const options of [{ resumed: RESUME_CHUNK_SIZE * 2 }, { chunks: 0, tail: 0 }, { chunks: 0, tail: 7 }]) {
++  for (const options of [{ resumed: RESUME_CHUNK_SIZE * 2 }, { chunks: 0, tail: 0 }, { chunks: 0, tail: 7 }, { resumed: RESUME_CHUNK_SIZE * 2, ackEvery: 4 }, { chunks: 0, tail: 7, ackEvery: 4 }]) {
+     const t = await transfer(options);
+     try { const result = await t.finish(); assert.equal(result.bytesSent, t.bytes.length - (options.resumed || 0)); } finally { t.restore(); }
+   }
+@@ -195,9 +246,9 @@ if (process.env.CD_RESUME_BENCH === '1') {
+   it('measures encrypted resumable sending with delayed durable ACKs', async () => {
+     const rows = [];
+     for (let i = 0; i < Number(process.env.CD_RESUME_BENCH_RUNS || 7); i++) {
+-      const t = await transfer({ chunks: 32, tail: 0, latency: 30 });
++      const t = await transfer({ chunks: 32, tail: 0, latency: 30, ackEvery: 'offered' });
+       try { rows.push(await t.finish()); } finally { t.restore(); }
+     }
+-    console.log(JSON.stringify({ benchmark: '8MiB encrypted v2, 30ms ACK latency', rows }));
++    console.log(JSON.stringify({ benchmark: '8MiB encrypted v2 fixture, 30ms ACK latency, receiver batches the offered window; not WAN or disk throughput', rows }));
+   });
+ }

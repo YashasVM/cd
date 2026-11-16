@@ -118,8 +118,11 @@ try {
     page.setDefaultTimeout(30_000);
     await page.goto(`${publicBase}/send`);
     await page.locator('.workbench:not([inert])').waitFor();
+
     await page.locator('#file-input').setInputFiles(sourcePath);
-    await page.locator('#share-box:not([hidden])').waitFor();
+    await page.getByLabel('Sharing method').selectOption('code');
+    await page.locator('#start-send-btn').click();
+    await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/);
     const outDir = join(work, 'b2t');
@@ -130,7 +133,8 @@ try {
     assert.equal(receiverExit, 0, await receiverStderr);
     const received = await readFile(join(outDir, 'terminal check.bin'));
     assert.equal(sha(Buffer.from(received)), sha(Buffer.from(source)));
-    await page.locator('#status').filter({ hasText: 'The receiver has every byte.' }).waitFor();
+    try { await page.locator('#sender-complete:not(.hidden)').waitFor(); }
+    catch (error) { throw new Error(`Sender completion failed: ${await page.locator('#sender-status').textContent()} / ${await page.locator('#sender-error-message, #sender-error .error-message').textContent()}`, { cause: error }); }
     console.log(`verified browser->terminal: ${received.byteLength} exact bytes`);
     await context.close();
   }

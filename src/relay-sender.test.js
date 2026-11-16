@@ -6,7 +6,7 @@ import { createZipBundle } from './zip-bundle.js';
 import { createRecordAssembler, createRecordMerger } from './direct-link.js';
 import { createOpener, createSealer, decodeBase64Url, KIND_ACCEPT, KIND_ACK, KIND_COMPLETE, KIND_OFFER, KIND_CHUNK, KIND_END, KIND_SIGNAL, SENDER_DIRECTION, RECEIVER_DIRECTION } from './agent-protocol.js';
 
-function setup(t, payload, { largeChunks = false, directCandidate = null } = {}) {
+function setup(t, payload, { largeChunks = false, directCandidate = null, privateMode = false } = {}) {
   let instance;
   const installed = ['window', 'WebSocket', 'RTCPeerConnection'].map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
   const events = new EventTarget();
@@ -26,6 +26,11 @@ function setup(t, payload, { largeChunks = false, directCandidate = null } = {})
       this.chain = this.chain.then(async () => {
         if (typeof data === 'string') {
           const join = JSON.parse(data);
+          if (privateMode) {
+            assert.equal(Object.hasOwn(join, 'shareKey'), false);
+            this.message(JSON.stringify({ protocol: 'cd-transfer-v1', type: 'accepted' }));
+            return;
+          }
           const invitation = { id: decodeBase64Url(this.id), key: decodeBase64Url(join.shareKey) };
           this.opener = await createOpener(invitation, SENDER_DIRECTION);
           this.sealer = await createSealer(invitation, RECEIVER_DIRECTION);
@@ -214,4 +219,18 @@ test('ignored control events do not strand a queued ACK', { timeout: 2000 }, asy
   } });
   t.after(() => transfer.cancel());
   await transfer.done;
+});
+
+test('private sharing omits the relay key and code registration', async (t) => {
+  setup(t, new Uint8Array(), { privateMode: true });
+  const prior = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('Private mode must not register a code'); };
+  t.after(() => { globalThis.fetch = prior; });
+  let transfer;
+  transfer = startRelaySend(source(new Uint8Array()), { onShare(value) {
+    assert.equal(value.code, '');
+    assert.match(value.url, /#v1\.[A-Za-z0-9_-]+$/);
+    transfer.cancel();
+  } }, { sharing: 'private' });
+  await assert.rejects(transfer.done, /cancel/i);
 });

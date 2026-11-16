@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "bytes": 8388685,
+  "sha256": "c0209e5f05c918776abe6fdc1dacc79af53b6ea638649f2ab4cf57b0618587cb",
+  "assets": null,
+  "measurements": [],
+  "failure": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#sender-error:not(.hidden)') to be visible\u001b[22m\n\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:140:56",
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

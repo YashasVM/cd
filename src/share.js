@@ -90,7 +90,8 @@ function decodeCounts(value) {
 // Renders the relay receiver into `container` and starts receiving the
 // `/s/<id>#v1.<key>` link. Used by the standalone share page and inline by
 // the main page's Receive tab. Returns a function that leaves the transfer.
-export function mountRelayReceiver(container, shareUrl, { autoReceive = false } = {}) {
+export function mountRelayReceiver(container, shareUrl, { autoReceive = false, hooks = {} } = {}) {
+  hooks.onState?.('connecting');
   if (/#v2\.[A-Za-z0-9_-]{43}$/.test(new URL(shareUrl, window.location.href).hash)) {
     let active = null;
     let stopped = false;
@@ -101,10 +102,11 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       const secrets = createResumeKV(db, 'secrets');
       await cleanExpiredResumeRecords({ checkpoints, secrets, storage: navigator.storage });
       if (stopped) return;
-      active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets });
+      active = mountResumableReceiver(container, shareUrl, { checkpoints, secrets, hooks: { ...hooks, onComplete() { hooks.onState?.('complete'); hooks.onComplete?.(); }, onError(error) { hooks.onState?.('failed'); hooks.onError?.(error); } } });
       active.done.catch(() => {});
     })().catch((error) => {
       container.classList.add('share-panel');
+      hooks.onState?.('failed');
       container.textContent = error.message || 'Could not open local resume storage.';
     });
     return () => {
@@ -243,12 +245,16 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
   let progressQueued = false;
   let pendingProgress = null;
 
+  let progressStarted;
   function paintProgress(received, total) {
+    progressStarted ??= performance.now();
+    const speed = Number(received) / Math.max((performance.now() - progressStarted) / 1000, 0.001);
     const percent = total === 0n ? 100 : Math.min(Number(received * 1000n / total) / 10, 100);
     elements.progress.hidden = false;
     elements.progressFill.style.transform = `scaleX(${percent / 100})`;
     elements.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
-    elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}`;
+    elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}${speed > 0 ? ` · ${formatSize(BigInt(Math.floor(speed)))}/s · ${Math.ceil(Number(total - received) / speed)}s left` : ''}`;
+    if (received === total) elements.status.textContent = 'Verifying file…';
   }
 
   function renderProgress(received, total, force = false) {
@@ -279,6 +285,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
   function fail(error, socket, sink) {
     if (failureShown) return;
     failureShown = true;
+    hooks.onState?.('failed');
     closeDirect();
     if (sink) void sink.abort().catch(() => {});
     if (socket?.readyState === WebSocket.OPEN) socket.close(4400, 'receiver failed');
@@ -426,6 +433,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
         elements.offer.hidden = true;
         elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
         state = 'receiving';
+        hooks.onState?.('transferring');
         renderProgress(0n, offer.size, true);
         await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
         return;
@@ -446,6 +454,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
       if (state === 'receiving' && kind === KIND_END) {
         const ended = decodeCounts(plaintext);
         if (ended.bytes !== offer.size || ended.bytes !== received || ended.chunks !== chunks) throw new Error('The transfer ended before the complete file arrived.');
+        hooks.onState?.('verifying');
         const result = await sink.close();
         state = 'complete';
         renderProgress(received, offer.size, true);
@@ -470,6 +479,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false } 
             elements.status.textContent = 'File verified. Download started; use the download link if your browser blocked it.';
           }
         } else elements.status.textContent = 'File verified and saved.';
+        hooks.onState?.('complete');
         socket.close(1000, 'complete');
         return;
       }

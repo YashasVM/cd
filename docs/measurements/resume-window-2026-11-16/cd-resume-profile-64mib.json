@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "profiling": true,
+  "chromium": "155.0.8059.84",
+  "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+  "bytes": 67108941,
+  "sha256": "e2fa2ae1bef2a4c7355b3843d1b56a033d8afa40be63c57aa284781a94e6bc6a",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 67108941,
+      "sha256": "e2fa2ae1bef2a4c7355b3843d1b56a033d8afa40be63c57aa284781a94e6bc6a",
+      "preparationMs": 1815.7496419999998,
+      "transferMs": 4003.5328070000005,
+      "milliseconds": 5819.282449,
+      "profile": {
+        "sender": {
+          "idb:readonly:devices": {
+            "calls": 1,
+            "ms": 0.5,
+            "maxMs": 0.5
+          },
+          "idb:readonly:checkpoints": {
+            "calls": 5,
+            "ms": 1.0999999940395355,
+            "maxMs": 0.4000000059604645
+          },
+          "idb:readonly:secrets": {
+            "calls": 2,
+            "ms": 0.09999999403953552,
+            "maxMs": 0.09999999403953552
+          },
+          "import:HKDF": {
+            "calls": 266,
+            "ms": 5.699999958276749,
+            "maxMs": 0.10000002384185791
+          },
+          "deriveOther": {
+            "calls": 4,
+            "ms": 0.4000000059604645,
+            "maxMs": 0.10000002384185791
+          },
+          "idb:readwrite:secrets": {
+            "calls": 5,
+            "ms": 2.0999999940395355,
+            "maxMs": 0.699999988079071
+          },
+          "blobRead": {
+            "calls": 514,
+            "ms": 357.60000002384186,
+            "maxMs": 11.600000023841858
+          },
+          "deriveCheckpoint": {
+            "calls": 262,
+            "ms": 6.699999988079071,
+            "maxMs": 0.20000001788139343
+          },
+          "import:HMAC": {
+            "calls": 264,
+            "ms": 1.699999988079071,
+            "maxMs": 0.10000002384185791
+          },
+          "sign": {
+            "calls": 264,
+            "ms": 2.9999999701976776,
+            "maxMs": 0.10000002384185791
+          },
+          "idb:readwrite:checkpoints": {
+            "calls": 263,
+            "ms": 244.80000013113022,
+            "maxMs": 6.5999999940395355
+          },
+          "import:AES-GCM": {
+            "calls": 2,
+            "ms": 0,
+            "maxMs": 0
+          },
+          "encrypt": {
+            "calls": 259,
+            "ms": 64.30000007152557,
+            "maxMs": 0.699999988079071
+          },
+          "decrypt": {
+            "calls": 259,
+            "ms": 15.700000137090683,
+            "maxMs": 0.20000001788139343
+          }
+        },
+        "receiver": {
+          "idb:readonly:checkpoints": {
+            "calls": 3,
+            "ms": 0.800000011920929,
+            "maxMs": 0.30000001192092896
+          },
+          "idb:readonly:secrets": {
+            "calls": 2,
+            "ms": 0.09999999403953552,
+            "maxMs": 0.09999999403953552
+          },
+          "import:HKDF": {
+            "calls": 261,
+            "ms": 10.899999737739563,
+            "maxMs": 0.20000001788139343
+          },
+          "deriveOther": {
+            "calls": 3,
+            "ms": 0.09999999403953552,
+            "maxMs": 0.09999999403953552
+          },
+          "import:HMAC": {
+            "calls": 260,
+            "ms": 3.200000047683716,
+            "maxMs": 0.19999998807907104
+          },
+          "sign": {
+            "calls": 260,
+            "ms": 2.2999999821186066,
+            "maxMs": 0.10000002384185791
+          },
+          "import:AES-GCM": {
+            "calls": 2,
+            "ms": 0,
+            "maxMs": 0
+          },
+          "decrypt": {
+            "calls": 259,
+            "ms": 66.90000015497208,
+            "maxMs": 0.5
+          },
+          "idb:readwrite:secrets": {
+            "calls": 2,
+            "ms": 0.8999999761581421,
+            "maxMs": 0.5999999940395355
+          },
+          "worker:open": {
+            "calls": 1,
+            "ms": 13,
+            "maxMs": 13
+          },
+          "deriveCheckpoint": {
+            "calls": 258,
+            "ms": 9.099999815225601,
+            "maxMs": 0.20000001788139343
+          },
+          "idb:readwrite:checkpoints": {
+            "calls": 260,
+            "ms": 177.40000012516975,
+            "maxMs": 10
+          },
+          "encrypt": {
+            "calls": 259,
+            "ms": 10.000000149011612,
+            "maxMs": 0.30000001192092896
+          },
+          "worker:write": {
+            "calls": 257,
+            "ms": 755.3999997675419,
+            "maxMs": 26.400000005960464
+          },
+          "worker:close": {
+            "calls": 1,
+            "ms": 0.4000000059604645,
+            "maxMs": 0.4000000059604645
+          },
+          "blobRead": {
+            "calls": 257,
+            "ms": 154.39999988675117,
+            "maxMs": 3.9000000059604645
+          }
+        }
+      }
+    }
+  ],
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

@@ -1,8 +1,10 @@
+import { rawChunkBytes } from './raw-channel.js';
+
 // Direct path for relay transfers, browser side (see cmd/cdx/direct.go).
 // The sender offers WebRTC SDP inside its encrypted file offer; this page
 // answers with a signal record, trickles its ICE candidates, and the two
 // exchange the same encrypted records over a pre-negotiated data channel
-// once it opens. Records are split into 64 KiB messages and rebuilt from
+// once it opens. Records are split into messages up to 64 KiB and rebuilt from
 // their plaintext header; both paths feed one merger that orders records by
 // sequence number and drops the second copy of any record.
 
@@ -29,10 +31,11 @@ export function parseDirectOffer(offer) {
   return typeof sdp === 'string' && sdp.length > 0 && sdp.length <= MAX_SDP_BYTES ? sdp : null;
 }
 
-export function splitRecord(record) {
+export function splitRecord(record, maxMessageSize = DIRECT_PIECE_BYTES) {
+  const pieceBytes = Math.min(DIRECT_PIECE_BYTES, rawChunkBytes(maxMessageSize));
   const pieces = [];
-  for (let start = 0; start < record.byteLength; start += DIRECT_PIECE_BYTES) {
-    pieces.push(record.subarray(start, Math.min(start + DIRECT_PIECE_BYTES, record.byteLength)));
+  for (let start = 0; start < record.byteLength; start += pieceBytes) {
+    pieces.push(record.subarray(start, Math.min(start + pieceBytes, record.byteLength)));
   }
   return pieces;
 }
@@ -141,7 +144,7 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
       queuedSends += 1; queuedSendBytes += record.byteLength;
       sending = sending.then(async () => {
         const started = performance.now();
-        for (const piece of splitRecord(record)) {
+        for (const piece of splitRecord(record, connection.sctp?.maxMessageSize)) {
           while (channel.bufferedAmount + piece.byteLength > DIRECT_BUFFER_BYTES) {
             if (!path.open) throw new Error('The direct connection closed while sending.');
             if (performance.now() - started > 90_000) throw new Error('The direct send buffer stalled. Send again for a fresh transfer.');

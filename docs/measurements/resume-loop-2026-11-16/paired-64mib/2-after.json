@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "bytes": 67108941,
+  "sha256": "e6d1176fdffd31f7b6bea56e156715240bea5ec09b9f8df10805f96ada95fdac",
+  "assets": "/tmp/cd-resume-paired-GvE654/after",
+  "measurements": [],
+  "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

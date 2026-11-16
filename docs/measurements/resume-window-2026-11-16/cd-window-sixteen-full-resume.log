@@ -1,0 +1,51 @@
+browser-cli: verified 8388685 bytes
+browser-browser: verified 8388685 bytes
+browser-browser-fallback: verified 8388685 bytes
+{
+  "version": 1,
+  "completed": 5,
+  "measurements": [
+    {
+      "scenario": "browser-cli",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44247",
+      "bytes": 8388685,
+      "sha256": "7cf4db3f3660a6ed2730c643c49d272915e897c303b7fc5e8f156cd0ebf0a9aa",
+      "preparationMs": 3558.2198880000005,
+      "transferMs": 1035.7938679999988,
+      "milliseconds": 4594.013755999999
+    },
+    {
+      "scenario": "browser-browser",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44247",
+      "bytes": 8388685,
+      "sha256": "7cf4db3f3660a6ed2730c643c49d272915e897c303b7fc5e8f156cd0ebf0a9aa",
+      "preparationMs": 11376.017351,
+      "transferMs": 9421.423384999998,
+      "milliseconds": 20797.440735999997
+    },
+    {
+      "scenario": "browser-browser-fallback",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44247",
+      "bytes": 8388685,
+      "sha256": "7cf4db3f3660a6ed2730c643c49d272915e897c303b7fc5e8f156cd0ebf0a9aa",
+      "preparationMs": 9297.358774000004,
+      "transferMs": 4802.4481499999965,
+      "milliseconds": 14099.806924
+    },
+    {
+      "scenario": "browser-cli-restart",
+      "bytes": 8388685,
+      "resumedBytes": 4194304,
+      "sha256": "7cf4db3f3660a6ed2730c643c49d272915e897c303b7fc5e8f156cd0ebf0a9aa"
+    },
+    {
+      "scenario": "cli-browser-same-page-restart",
+      "bytes": 8388685,
+      "resumedBytes": 262144,
+      "sha256": "7cf4db3f3660a6ed2730c643c49d272915e897c303b7fc5e8f156cd0ebf0a9aa"
+    }
+  ]
+}

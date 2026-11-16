@@ -19,17 +19,27 @@ jobs:
           cache: npm
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
       - run: npm ci
       - run: npm test
+      - run: node --test .github/scripts/transfer-report.test.cjs
       - run: npm run test:cli
       - run: npm run typecheck
       - run: npm run verify:security
       - run: npm run verify:v2
       - run: npm run verify:agent
       - run: npm run verify:browser
+      - run: npm run verify:product-ux
       - run: npm run verify:performance
+      - name: Upload fresh transfer measurements
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fresh-transfer-results
+          path: /tmp/cd-fresh-performance.json
+          if-no-files-found: warn
+          retention-days: 30
       - run: npm run deploy:dry
 
   android-unit:
@@ -37,7 +47,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: '17'
@@ -54,6 +64,7 @@ jobs:
           -Dorg.gradle.internal.http.connectionTimeout=60000
           -Dorg.gradle.internal.http.socketTimeout=120000
           :app:testDebugUnitTest :transfer:testDebugUnitTest
+          :sdk:testDebugUnitTest :sdk-sample:testDebugUnitTest :sdk-sample:assembleDebug
           :app:lintDebug :sample:lintDebug :transfer:lintDebug
           :app:assembleDebug :sample:assembleDebug :transfer:assembleRelease
           :transfer:publishReleasePublicationToPreviewRepository

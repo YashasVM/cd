@@ -1,0 +1,30 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+Error: Sender did not publish: Checking the file before sharing…; 
+            
+            
+              That didn’t work
+              Could not reach CD. Check your connection and try again.
+              
+                Choose different filesTry again
+              
+            
+          
+    at send (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:94:13)
+    at async file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:106:24 {
+  [cause]: locator.waitFor: Timeout 30000ms exceeded.
+  Call log:
+  [2m  - waiting for locator('#sender-code-section:not(.hidden)') to be visible[22m
+  
+      at send (/home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:92:69)
+      at async file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:106:24 {
+    log: [
+      "  - waiting for locator('#sender-code-section:not(.hidden)') to be visible"
+    ],
+    name: 'TimeoutError'
+  }
+}
+
+Node.js v26.13.1

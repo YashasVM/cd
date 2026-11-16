@@ -94,3 +94,18 @@ it('propagates worker crashes during writes and releases the worker', async () =
   await writer.close();
   assert.equal(instance.terminated, true);
 });
+
+it('flushes a bounded two-MiB batch and rejects oversized batches before writing', async () => {
+  let written = 0, flushed = 0;
+  const writer = await createResumeWriter({ async createSyncAccessHandle() { return {
+    write(bytes) { written += bytes.length; return bytes.length; },
+    flush() { flushed++; }, close() {}
+  }; } }, workerClass());
+  await writer.write(new Uint8Array(2 * 1024 * 1024), 0);
+  assert.equal(written, 2 * 1024 * 1024);
+  assert.equal(flushed, 1);
+  await assert.rejects(writer.write(new Uint8Array(2 * 1024 * 1024 + 1), written), /Invalid resumable storage write/);
+  assert.equal(written, 2 * 1024 * 1024);
+  assert.equal(flushed, 1);
+  await writer.close();
+});

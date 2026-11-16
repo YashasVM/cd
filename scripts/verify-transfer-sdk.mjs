@@ -29,7 +29,7 @@ try {
     const { verifyWebExample } = await import('./verify-sdk-browser.mjs');
     await verifyWebExample(url.origin);
   } else if (process.env.CD_SDK_SUITE === 'web') {
-    const child = spawn(process.execPath, ['--test', 'packages/transfer-web/test/api.test.mjs', 'packages/transfer-web/test/live-relay.test.mjs', 'examples/transfer-web/main.test.mjs'], { stdio: 'inherit', env: { ...process.env, CD_SDK_RELAY: url.origin } });
+    const child = spawn(process.execPath, ['--test', 'packages/transfer-web/test/api.test.mjs', 'packages/transfer-web/test/sender.test.mjs', 'packages/transfer-web/test/live-relay.test.mjs', 'examples/transfer-web/main.test.mjs'], { stdio: 'inherit', env: { ...process.env, CD_SDK_RELAY: url.origin } });
     const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
     if (code !== 0) throw new Error(`Web SDK tests exited ${code}`);
   } else {

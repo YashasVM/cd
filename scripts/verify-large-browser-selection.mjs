@@ -19,11 +19,14 @@ try {
   browser = await chromium.launch({ executablePath: await findChromium(), headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
   await page.goto(worker.publicBase);
+  await page.locator('.workbench:not([inert])').waitFor();
   await page.locator('#file-input').setInputFiles(files);
+  assert.equal(await page.locator('#file-input').evaluate(input => input.files.length), 3);
+  assert.equal(await page.locator('#sender-error').isVisible(), false); await page.getByLabel('Sharing method').selectOption('code'); await page.locator('#start-send-btn').click();
   await page.waitForFunction(() => /^\d{5}$/.test(document.getElementById('share-code').textContent), null, { timeout: 15_000 });
   assert.match(await page.locator('#receive-command').textContent(), /^cdx receive \d{5}$/);
   assert.equal(await page.locator('#sender-error').isVisible(), false);
-  console.log('Three 13 GiB sparse files selected in Chromium: live numeric code and receive command displayed before payload reads');
+  console.log('Three sparse files totaling 13 GiB selected in Chromium: live numeric code and receive command displayed before payload reads');
 } finally {
   await browser?.close();
   await worker?.stop();

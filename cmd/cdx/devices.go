@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -351,9 +352,34 @@ func runDeviceSend(request sendRequest) int {
 	if request.requestID != "" {
 		return deviceFailure(errors.New("targeted sends do not support --request-id"), request.jsonOutput)
 	}
+	if len(request.files) == 0 {
+		reportFailure(os.Stdout, os.Stderr, NewFailure(failureLocal, "missing file to send", retryNever), request.jsonOutput)
+		return 1
+	}
 	store, err := deviceStore()
 	if err != nil {
 		return deviceFailure(err, request.jsonOutput)
+	}
+	if request.to == "picker" {
+		if request.jsonOutput || !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
+			return deviceFailure(errors.New("--to picker requires an interactive terminal; use --to <saved-name>"), request.jsonOutput)
+		}
+		list, err := store.List()
+		if err != nil {
+			return deviceFailure(err, false)
+		}
+		if len(list) == 0 {
+			return deviceFailure(errors.New("no saved devices; run cdx pair"), false)
+		}
+		for i, device := range list {
+			fmt.Fprintf(os.Stderr, "%d. %s (saved; reachability checked when connecting)\n", i+1, device.Name)
+		}
+		fmt.Fprint(os.Stderr, "Destination number: ")
+		var choice int
+		if _, err := fmt.Fscanln(os.Stdin, &choice); err != nil || choice < 1 || choice > len(list) {
+			return deviceFailure(errors.New("invalid destination selection"), false)
+		}
+		request.to = list[choice-1].Name
 	}
 	request.to, err = resolveDeviceTarget(store, request.to)
 	if err != nil {
@@ -361,12 +387,21 @@ func runDeviceSend(request sendRequest) int {
 	}
 	pair, err := store.Load(request.to)
 	if err != nil {
-		return deviceFailure(fmt.Errorf("load paired device %q: %w", request.to, err), request.jsonOutput)
+		list, listErr := store.List()
+		if listErr != nil {
+			return deviceFailure(listErr, request.jsonOutput)
+		}
+		names := make([]string, len(list))
+		for i, device := range list {
+			names[i] = device.Name
+		}
+		return deviceFailure(fmt.Errorf("cannot load paired device %q: %w; saved names: %s. Pair explicitly with cdx pair", request.to, err, strings.Join(names, ", ")), request.jsonOutput)
+	}
+	if err = validateSourcePaths(request.files); err != nil {
+		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
+		return 1
 	}
 	if shouldDetach(request, isTerminal(os.Stdout)) {
-		if err := validateSourcePaths(request.files); err != nil {
-			return deviceFailure(err, request.jsonOutput)
-		}
 		args := []string{"send", "--to", request.to, "--wait", "--json"}
 		if request.resumeID != "" {
 			args = append(args, "--resume", request.resumeID)
@@ -374,10 +409,6 @@ func runDeviceSend(request sendRequest) int {
 		args = append(args, "--")
 		args = append(args, request.files...)
 		return runBackgroundTransfer(args, request.jsonOutput, "device-send")
-	}
-	if err = validateSourcePaths(request.files); err != nil {
-		reportFailure(os.Stdout, os.Stderr, err, request.jsonOutput)
-		return 1
 	}
 	pendingPath, err := devicePendingPath(pair.PairID, request.files)
 	if err != nil {
@@ -457,16 +488,37 @@ func runDeviceSend(request sendRequest) int {
 		current, remoteCandidate, err = awaitDevicePeer(ctx, peerInbox, remoteCandidate)
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Waiting for %s. Keep Receive from trusted devices enabled in CD.\n", request.to)
-	if err = awaitPeer(); err != nil {
+	waitCtx, stopWaiting := context.WithCancel(ctx)
+	if !request.jsonOutput {
+		fmt.Fprintf(os.Stderr, "Waiting for %s. Open CD and enable receiving; Ctrl-C to cancel.\n", request.to)
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			started := time.Now()
+			for {
+				select {
+				case <-waitCtx.Done():
+					return
+				case <-ticker.C:
+					fmt.Fprintf(os.Stderr, "Still waiting for %s (%s elapsed). Open CD, enable receiving, and check both connections; Ctrl-C to cancel.\n", request.to, time.Since(started).Round(time.Second))
+				}
+			}
+		}()
+	}
+	err = awaitPeer()
+	stopWaiting()
+	if err != nil {
 		return deviceFailure(err, request.jsonOutput)
 	}
+
 	var lastID string
+	var deliverySize uint64
 	request.deviceConnect = func(callCtx context.Context, invite invitation, senderToken []byte, expiry int64, ready readyOutput, digest string) (*resumeSession, error) {
 		wakeCtx, stopWake := context.WithCancel(callCtx)
 		defer stopWake()
 		go deviceWakeLoop(wakeCtx, pair)
 		lastID = invite.encodedID()
+		deliverySize = ready.Size
 		if err := saveDevicePending(pendingPath, lastID, expiry); err != nil {
 			return nil, err
 		}
@@ -575,6 +627,12 @@ func runDeviceSend(request sendRequest) int {
 			}
 		}
 	}
+	started := time.Now()
+	defer func() {
+		if ctx.Err() != nil && !request.jsonOutput {
+			fmt.Fprintln(os.Stderr, "Resume with: "+shellCommand(append([]string{"cdx"}, os.Args[1:]...)))
+		}
+	}()
 	for {
 		activeID.Store("")
 		var receivedID string
@@ -585,6 +643,11 @@ func runDeviceSend(request sendRequest) int {
 				return deviceFailure(receiptErr, request.jsonOutput)
 			}
 			if confirmed {
+				source, sourceErr := prepareSource(request.files)
+				if sourceErr != nil {
+					return deviceFailure(sourceErr, request.jsonOutput)
+				}
+				deliverySize = source.size
 				err = nil
 			}
 		}
@@ -592,6 +655,8 @@ func runDeviceSend(request sendRequest) int {
 			_ = os.Remove(pendingPath)
 			if request.jsonOutput {
 				json.NewEncoder(os.Stdout).Encode(map[string]any{"version": 2, "phase": "verified", "transferId": lastID, "device": request.to})
+			} else {
+				fmt.Fprintf(os.Stdout, "Verified delivery to %s: %s (%d bytes). Receiver confirmed every byte.\n", request.to, strings.Join(request.files, ", "), deliverySize)
 			}
 			return 0
 		}
@@ -610,7 +675,9 @@ func runDeviceSend(request sendRequest) int {
 			return 1
 		}
 		request.resumeID = lastID
-		fmt.Fprintf(os.Stderr, "Connection interrupted: %v. Retrying retained progress.\n", err)
+		if !request.jsonOutput {
+			fmt.Fprintf(os.Stderr, "Waiting for %s (%s elapsed): %v. Retrying retained progress; open CD and enable receiving.\n", request.to, time.Since(started).Round(time.Second), err)
+		}
 		select {
 		case <-ctx.Done():
 			return 1
@@ -708,4 +775,24 @@ func awaitDevicePeer(ctx context.Context, incoming <-chan deviceMessage, prior *
 			arm()
 		}
 	}
+}
+
+func shellCommand(args []string) string {
+	return shellCommandForOS(args, runtime.GOOS)
+}
+
+// Windows recovery commands are for PowerShell.
+func shellCommandForOS(args []string, platform string) string {
+	quoted := make([]string, len(args))
+	for i, arg := range args {
+		if platform == "windows" {
+			quoted[i] = "'" + strings.ReplaceAll(arg, "'", "''") + "'"
+			continue
+		}
+		quoted[i] = "'" + strings.ReplaceAll(arg, "'", "'\"'\"'") + "'"
+	}
+	if platform == "windows" {
+		return "& " + strings.Join(quoted, " ")
+	}
+	return strings.Join(quoted, " ")
 }

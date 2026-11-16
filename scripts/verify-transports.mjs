@@ -71,7 +71,10 @@ try {
       if (testCase.sender === 'browser') {
         senderPage = await newPage();
         await senderPage.goto(worker.publicBase);
-        await senderPage.locator('#file-input').setInputFiles(source);
+        await senderPage.locator('.workbench:not([inert])').waitFor();
+  await senderPage.locator('#file-input').setInputFiles(source);
+        await senderPage.getByLabel('Sharing method').selectOption('code');
+        await senderPage.locator('#start-send-btn').click();
         await senderPage.locator('#sender-code-section:not(.hidden)').waitFor();
         invitation = (await senderPage.locator('#share-code').textContent()).trim();
       } else {
