@@ -1,0 +1,13 @@
+browser-browser: verified 8388685 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "bytes": 8388685,
+      "sha256": "7f975363a426a40d319d6851c10ce1243c92d743d33144bb932a12bb9bd5223b",
+      "milliseconds": 3889.8081449999995
+    }
+  ]
+}

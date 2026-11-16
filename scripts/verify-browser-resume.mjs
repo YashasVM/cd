@@ -18,7 +18,8 @@ assert.ok(!only || ['browser-cli', 'browser-browser', 'browser-browser-fallback'
 let worker, browser;
 try {
   await writeFile(source, payload);
-  const executable = await buildCLI(work);
+  const browserOnly = only === 'browser-browser' || only === 'browser-browser-fallback';
+  const executable = browserOnly ? null : await buildCLI(work);
   worker = await startWorker(work);
   browser = await chromium.launch({ executablePath: await findChromium(), headless: true });
   const launch = args => {
@@ -70,7 +71,10 @@ try {
       await sender.locator('#start-send-btn').click();
     }
     await sender.locator('#sender-code-section:not(.hidden)').waitFor();
-    const invitation = await sender.locator('#share-private-link').getAttribute('href');
+    const command = await sender.locator('#receive-command').textContent();
+    const match = /^cdx receive '(https?:\/\/[^']+)'$/.exec(command.trim());
+    assert.ok(match, 'resumable sender must expose a private receive link');
+    const invitation = match[1];
     assert.match(invitation, /#v2\./);
     return invitation;
   };
@@ -87,7 +91,7 @@ try {
       const downloading = receiver.waitForEvent('download', { timeout: 60_000 });
       await receiver.goto(invitation);
       await (await downloading).saveAs(destination);
-      await receiver.locator('[data-resume-status]').filter({ hasText: 'File received and verified.' }).waitFor();
+      await receiver.locator('[data-resume-status]').filter({ hasText: 'File verified. Download started; check your downloads.' }).waitFor();
       const workerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
       if (direction === 'browser-browser-fallback') assert.equal(workerWrites, 0);
       else assert.equal(workerWrites, Math.ceil(payload.length / 262144));
@@ -164,7 +168,7 @@ try {
       throw new Error(`Same-page receive stalled: ${await receiver.locator('[data-resume-status]').textContent()}; sender: ${resumed.output.stderr}`, { cause: error });
     }
     assert.equal(await resumedExit, 0, resumed.output.stderr);
-    await receiver.locator('[data-resume-status]').filter({ hasText: 'File received and verified.' }).waitFor();
+    await receiver.locator('[data-resume-status]').filter({ hasText: 'File verified. Download started; check your downloads.' }).waitFor();
     assert.equal(sha(await readFile(destination)), sha(payload));
     const observedOffset = await receiver.evaluate(() => globalThis.__resumeProgress.filter(value => value.role === 'receiver').at(-1).resumedBytes);
     assert.equal(observedOffset, savedOffset);
