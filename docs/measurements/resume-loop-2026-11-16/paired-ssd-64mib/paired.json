@@ -1,0 +1,379 @@
+{
+  "baseline": "fb390760baaab971f9b9f92c2a5e5715adf69717",
+  "head": "ce19da21b9e7bdf5f5bc398be10973358c649064",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+  "bytes": 67108941,
+  "runs": 7,
+  "method": "Alternating hash implementations in the same current UI and local v2 relay. Fresh random input per pair, identical bytes within each pair. Fresh Chromium process and contexts per trial. Full output digest and bytes verified. OPFS Worker path; OS cache allowed. Not LAN, WAN, phone or fsync evidence.",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "expected": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+            "preparationMs": 3401.78333,
+            "transferMs": 16021.513669,
+            "milliseconds": 19423.296999
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "expected": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+            "preparationMs": 1843.983999,
+            "transferMs": 8079.876385,
+            "milliseconds": 9923.860384
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "expected": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+            "preparationMs": 1838.1380129999998,
+            "transferMs": 5196.113665000001,
+            "milliseconds": 7034.2516780000005
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "expected": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "d1e73a9f606cd794e0c8e405fc2a0d69afa69e37c4a20ce43ffe147c0a8d9569",
+            "preparationMs": 2512.90416,
+            "transferMs": 8499.515094,
+            "milliseconds": 11012.419254
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "expected": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+            "preparationMs": 3098.278311,
+            "transferMs": 6379.20609,
+            "milliseconds": 9477.484401
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "expected": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+            "preparationMs": 1869.8559380000002,
+            "transferMs": 13396.314880000002,
+            "milliseconds": 15266.170818
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "expected": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+            "preparationMs": 1825.5596389999996,
+            "transferMs": 5873.915360000001,
+            "milliseconds": 7699.474999
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "expected": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "2d75a1e47089e01077a5bc3fb0dd24f122bbe682092d2db7544d32448409e717",
+            "preparationMs": 2352.2266310000005,
+            "transferMs": 6239.715533999999,
+            "milliseconds": 8591.942165
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "expected": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+            "preparationMs": 2342.709915,
+            "transferMs": 5582.582923999999,
+            "milliseconds": 7925.292839
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "expected": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "5c85f2619703b0e73bc9d2da63ab4c881b1f733966d0fd3c336c0edb5980cf1f",
+            "preparationMs": 2228.739224,
+            "transferMs": 7873.959315000001,
+            "milliseconds": 10102.698539
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "expected": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+            "preparationMs": 1848.5763509999997,
+            "transferMs": 7124.443002,
+            "milliseconds": 8973.019353
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "expected": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "5016b7863e07cc12b5235b96ddc14890ca8897ea3418599f87eeb29faecaf56a",
+            "preparationMs": 2366.5642270000003,
+            "transferMs": 5816.731317000001,
+            "milliseconds": 8183.2955440000005
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "expected": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+            "preparationMs": 2396.6232340000006,
+            "transferMs": 7063.516588999999,
+            "milliseconds": 9460.139823
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "expected": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+        "bytes": 67108941,
+        "sha256": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+        "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 67108941,
+            "sha256": "3e5028835dabd168638acf385c98f0d4d8c7892464558c7f0ec241bbf9d75f0d",
+            "preparationMs": 1823.782308,
+            "transferMs": 4822.168782000001,
+            "milliseconds": 6645.9510900000005
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    }
+  ],
+  "hashModules": {
+    "before": "6b7f2d282be3af2039766f32e57899ac77f51d2fdd2417cbdaf4eeb3f9f6ef67",
+    "after": "edcb976176873aee71569e38186581905ccb4065c0ad8378b49778a1ac428b14"
+  }
+}

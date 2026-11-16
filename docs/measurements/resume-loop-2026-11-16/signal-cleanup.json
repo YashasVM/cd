@@ -1,0 +1,1 @@
+{"check":"SIGTERM exits and cleans captured descendants within 3 seconds of verifier exit","capturedProcesses":14,"remaining":0}

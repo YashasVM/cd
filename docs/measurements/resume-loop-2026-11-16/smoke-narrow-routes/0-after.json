@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "bytes": 1048653,
+  "sha256": "45d32ce95d965bab6ca454d9a0b159391954d937d0b97daaf1ba77826a63a66a",
+  "assets": "/tmp/cd-resume-paired-yviQp5/after",
+  "measurements": [],
+  "failure": "Error: Sender did not publish: Checking the file before sharing…; \n            \n            \n              That didn’t work\n              Could not reach CD. Check your connection and try again.\n              \n                Choose different filesTry again\n              \n            \n          \n    at send (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:94:13)\n    at async file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:106:24",
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

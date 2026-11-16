@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "bytes": 67108941,
+  "sha256": "8ad32c55aa9dba5d82fb686cc6be921474fcdd12cbc9f3ab9cad7c1aa5fbbd35",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 67108941,
+      "sha256": "8ad32c55aa9dba5d82fb686cc6be921474fcdd12cbc9f3ab9cad7c1aa5fbbd35",
+      "preparationMs": 4150.019988,
+      "transferMs": 16310.663614,
+      "milliseconds": 20460.683601999997
+    }
+  ],
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}

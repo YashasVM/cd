@@ -1,0 +1,252 @@
+{
+  "baseline": "fb390760baaab971f9b9f92c2a5e5715adf69717",
+  "head": "ce19da21b9e7bdf5f5bc398be10973358c649064",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "bytes": 67108941,
+  "runs": 7,
+  "method": "Alternating hash implementations in the same current UI and local v2 relay. Fresh random input per pair, identical bytes within each pair. Fresh Chromium process and contexts per trial. Full output digest and bytes verified. OPFS Worker path; OS cache allowed. Not LAN, WAN, phone or fsync evidence.",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "expected": "9db004501bfd1c21ce58d3bc7e1e609b9c75c0ad2f941fa226f528303bb986cf",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "9db004501bfd1c21ce58d3bc7e1e609b9c75c0ad2f941fa226f528303bb986cf",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "expected": "9db004501bfd1c21ce58d3bc7e1e609b9c75c0ad2f941fa226f528303bb986cf",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "9db004501bfd1c21ce58d3bc7e1e609b9c75c0ad2f941fa226f528303bb986cf",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "expected": "aa0187a4bf82f6789d68d470282b1c0aa099a2a9faf65b291ecaba8dfca10ffb",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "aa0187a4bf82f6789d68d470282b1c0aa099a2a9faf65b291ecaba8dfca10ffb",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "expected": "aa0187a4bf82f6789d68d470282b1c0aa099a2a9faf65b291ecaba8dfca10ffb",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "aa0187a4bf82f6789d68d470282b1c0aa099a2a9faf65b291ecaba8dfca10ffb",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "expected": "e6d1176fdffd31f7b6bea56e156715240bea5ec09b9f8df10805f96ada95fdac",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "e6d1176fdffd31f7b6bea56e156715240bea5ec09b9f8df10805f96ada95fdac",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "expected": "e6d1176fdffd31f7b6bea56e156715240bea5ec09b9f8df10805f96ada95fdac",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "e6d1176fdffd31f7b6bea56e156715240bea5ec09b9f8df10805f96ada95fdac",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "expected": "319bd7b9b461f7e81a804c97ec839153e5850f731a3ecb49f856f4861f56ee15",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "319bd7b9b461f7e81a804c97ec839153e5850f731a3ecb49f856f4861f56ee15",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "expected": "319bd7b9b461f7e81a804c97ec839153e5850f731a3ecb49f856f4861f56ee15",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "319bd7b9b461f7e81a804c97ec839153e5850f731a3ecb49f856f4861f56ee15",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "expected": "ca0d2959dd10cb36d882a9b061495bf0bc3017373a35a9183962f995879ca7b7",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "ca0d2959dd10cb36d882a9b061495bf0bc3017373a35a9183962f995879ca7b7",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "expected": "ca0d2959dd10cb36d882a9b061495bf0bc3017373a35a9183962f995879ca7b7",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "ca0d2959dd10cb36d882a9b061495bf0bc3017373a35a9183962f995879ca7b7",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "expected": "4a1d7e341e040fd9bbae0895300b06ee318d9e5bdf4666a96d73a04c1b64530c",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "4a1d7e341e040fd9bbae0895300b06ee318d9e5bdf4666a96d73a04c1b64530c",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "expected": "4a1d7e341e040fd9bbae0895300b06ee318d9e5bdf4666a96d73a04c1b64530c",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "4a1d7e341e040fd9bbae0895300b06ee318d9e5bdf4666a96d73a04c1b64530c",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "expected": "dc9fb023d15d37bc8599fe0306c831c4d4acf17de821da7c293cc3295dc8405c",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "dc9fb023d15d37bc8599fe0306c831c4d4acf17de821da7c293cc3295dc8405c",
+        "assets": "/tmp/cd-resume-paired-GvE654/before",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "expected": "dc9fb023d15d37bc8599fe0306c831c4d4acf17de821da7c293cc3295dc8405c",
+      "ok": false,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 67108941,
+        "sha256": "dc9fb023d15d37bc8599fe0306c831c4d4acf17de821da7c293cc3295dc8405c",
+        "assets": "/tmp/cd-resume-paired-GvE654/after",
+        "measurements": [],
+        "failure": "download.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33",
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      },
+      "error": "node:internal/modules/run_main:111\n    triggerUncaughtException(\n    ^\n\ndownload.saveAs: canceled\n    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {\n  log: [],\n  name: 'Error'\n}\n\nNode.js v26.13.1\n\n\n1 !== 0\n"
+    }
+  ],
+  "hashModules": {
+    "before": "6b7f2d282be3af2039766f32e57899ac77f51d2fdd2417cbdaf4eeb3f9f6ef67",
+    "after": "edcb976176873aee71569e38186581905ccb4065c0ad8378b49778a1ac428b14"
+  }
+}

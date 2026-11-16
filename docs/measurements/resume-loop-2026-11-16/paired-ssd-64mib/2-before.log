@@ -1,0 +1,16 @@
+browser-browser: verified 67108941 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 67108941,
+      "sha256": "3044cdd604a9e3d076e027031916890eeb6e801a2955091033c063b637fbb45d",
+      "preparationMs": 3098.278311,
+      "transferMs": 6379.20609,
+      "milliseconds": 9477.484401
+    }
+  ]
+}

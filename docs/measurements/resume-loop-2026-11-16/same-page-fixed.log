@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "cli-browser-same-page-restart",
+      "bytes": 8388685,
+      "resumedBytes": 524288,
+      "sha256": "a56e3f66763c2d436854163385250e89d9ffba6e2c95ef66fa7b0cecb0751069"
+    }
+  ]
+}

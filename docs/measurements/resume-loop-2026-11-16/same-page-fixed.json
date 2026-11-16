@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "bytes": 8388685,
+  "sha256": "a56e3f66763c2d436854163385250e89d9ffba6e2c95ef66fa7b0cecb0751069",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "cli-browser-same-page-restart",
+      "bytes": 8388685,
+      "resumedBytes": 524288,
+      "sha256": "a56e3f66763c2d436854163385250e89d9ffba6e2c95ef66fa7b0cecb0751069"
+    }
+  ],
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}
