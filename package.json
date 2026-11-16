@@ -46,7 +46,7 @@
     "miniflare": "5.20261104.0-beta",
     "playwright-core": "1.65.0",
     "typescript": "7.0.2",
-    "vite": "8.3.6",
+    "vite": "8.3.8",
     "wrangler": "4.161.0"
   },
   "overrides": {
