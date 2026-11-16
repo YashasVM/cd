@@ -54,11 +54,13 @@ type directOffer struct {
 	SDP string `json:"sdp"`
 }
 
-// directSignal is the payload of a receiver's signal record: its answer,
-// then (trickle ICE) one record per local candidate as it is discovered.
+// directSignal carries receiver answers and trickled candidates. Modern
+// receivers can first advertise deferred-offer support with an empty candidate;
+// only an authenticated opt-in permits a later sender signal containing SDP.
 type directSignal struct {
-	SDP       string                   `json:"sdp,omitempty"`
-	Candidate *webrtc.ICECandidateInit `json:"candidate,omitempty"`
+	SDP           string                   `json:"sdp,omitempty"`
+	Candidate     *webrtc.ICECandidateInit `json:"candidate,omitempty"`
+	DeferredOffer bool                     `json:"deferredOffer,omitempty"`
 }
 
 // maxRemoteCandidates bounds trickled candidates taken from the peer.
@@ -212,9 +214,13 @@ func (path *directPath) localDescription() string {
 	select {
 	case <-webrtc.GatheringCompletePromise(path.connection):
 	case <-path.publicCandidate:
+	case <-path.lost:
 	case <-time.After(directGatherWait):
 	}
-	return path.connection.LocalDescription().SDP
+	if description := path.connection.LocalDescription(); description != nil {
+		return description.SDP
+	}
+	return ""
 }
 
 func (path *directPath) createOffer() (string, error) {

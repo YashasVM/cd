@@ -46,6 +46,7 @@ jobs:
           --routes auto,relay
           --output "$RUNNER_TEMP/results/croc-matrix.json"
       - name: Install comparison browser
+        # A measured speed failure must not hide the retained transfer evidence.
         if: ${{ !cancelled() && inputs.browser_comparison }}
         run: npx playwright-core install --with-deps chromium
       - name: Compare browsers with real ToffeeShare
@@ -56,6 +57,9 @@ jobs:
           CD_P2P_MIB=16 CD_P2P_RUNS=5 CD_P2P_TIMEOUT_MS=60000 \
             CD_P2P_OUTPUT="$RUNNER_TEMP/results/p2p-browser.json" \
             node scripts/bench-p2p-browser.mjs
+      - name: Check 1.5x verified-completion target
+        if: ${{ !cancelled() }}
+        run: node scripts/verify-croc-completion.mjs "$RUNNER_TEMP/results/croc-matrix.json" 1.5
       - name: Retain all results, including failures
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -36,6 +36,12 @@ type recordLink struct {
 	pendingBytes int
 	pending      map[uint32][]byte
 	expected     uint32
+	// Optional ordinary-receiver pool. A returned plaintext remains owned by
+	// its caller until releaseInbound is explicitly called. Other users keep
+	// the existing unlimited payload lifetime and never recycle buffers.
+	receivePool    chan []byte
+	consumedRecord []byte
+	reusable       map[uint32]bool
 
 	direct   atomic.Pointer[directPath]
 	lanOffer *lanOffer
@@ -74,6 +80,7 @@ type linkItem struct {
 	err    error
 	direct bool
 	path   *directPath
+	reuse  bool
 }
 
 // errLinkTimeout reports a read deadline in the net.Error shape callers
@@ -88,6 +95,10 @@ func (linkTimeout) Temporary() bool { return true }
 const maxPendingRecords = 256
 const maxPendingBytes = 32 * 1024 * 1024
 
+// At most eight <=1 MiB records are retained, separately from the unchanged
+// bounded reorder/channel queues. Pools are never shared across transfers.
+const maxRecycledRecords = 8
+
 // closeWait bounds how long a finished transfer waits for the peer and the
 // relay to acknowledge the close.
 const closeWait = 3 * time.Second
@@ -100,6 +111,42 @@ func newRecordLink(connection *websocket.Conn, sealer *recordSealer, opener *rec
 	return &recordLink{
 		connection: connection, sealer: sealer, opener: opener, peerLeft: peerLeft,
 		items: make(chan linkItem, 64), stop: make(chan struct{}), readerDone: make(chan struct{}), pending: map[uint32][]byte{},
+	}
+}
+
+// enableReceiveReuse must run before start, and requires a single consumer
+// that explicitly releases each payload after parsing/writing it. In
+// particular, resumable sessions and SDK callers do not opt into this API.
+func (link *recordLink) enableReceiveReuse() {
+	link.receivePool = make(chan []byte, maxRecycledRecords)
+	link.reusable = make(map[uint32]bool)
+}
+
+func (link *recordLink) acquireInbound(length int) []byte {
+	if link.receivePool != nil {
+		select {
+		case buffer := <-link.receivePool:
+			if cap(buffer) >= length {
+				return buffer[:length]
+			}
+		default:
+		}
+	}
+	return make([]byte, length)
+}
+
+// releaseInbound invalidates the most recently returned plaintext. Only
+// completed, authenticated records enter the pool; queued/reordered records
+// retain exclusive storage. Forgetting a release merely forgoes reuse.
+func (link *recordLink) releaseInbound() {
+	buffer := link.consumedRecord
+	link.consumedRecord = nil
+	if link.receivePool == nil || buffer == nil || cap(buffer) > maxRecordBytes {
+		return
+	}
+	select {
+	case link.receivePool <- buffer[:0]:
+	default:
 	}
 }
 
@@ -166,7 +213,7 @@ func (link *recordLink) readRelay() {
 			link.deliver(linkItem{err: NewFailure(failureProtocol, "record length is invalid", retryNever)})
 			return
 		}
-		record := make([]byte, int(length))
+		record := link.acquireInbound(int(length))
 		copy(record, header[:])
 		if _, err := io.ReadFull(reader, record[headerBytes:]); err != nil {
 			link.deliver(linkItem{err: failuref(failureProtocol, retryNever, "receive record body: %w", err)})
@@ -177,7 +224,7 @@ func (link *recordLink) readRelay() {
 			link.deliver(linkItem{err: NewFailure(failureProtocol, "record length is invalid", retryNever)})
 			return
 		}
-		link.deliver(linkItem{record: record})
+		link.deliver(linkItem{record: record, reuse: link.receivePool != nil})
 	}
 }
 
@@ -408,12 +455,19 @@ func (link *recordLink) ready() (messageKind, []byte, bool, error) {
 		return 0, nil, false, nil
 	}
 	delete(link.pending, link.expected)
+	canReuse := link.reusable[link.expected]
+	delete(link.reusable, link.expected)
 	link.pendingBytes -= len(record)
 	kind, plaintext, err := link.opener.consume(record)
 	if err != nil {
 		return 0, nil, false, err
 	}
 	link.expected++
+	if canReuse {
+		link.consumedRecord = record
+	} else {
+		link.consumedRecord = nil
+	}
 	return kind, plaintext, true, nil
 }
 
@@ -451,6 +505,9 @@ func (link *recordLink) accept(item linkItem) error {
 		return NewFailure(failureProtocol, "the peer sent too many records out of order", retryNever)
 	}
 	link.pending[sequence] = item.record
+	if link.reusable != nil && item.reuse {
+		link.reusable[sequence] = true
+	}
 	link.pendingBytes += len(item.record)
 	return nil
 }

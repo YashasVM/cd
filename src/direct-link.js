@@ -184,8 +184,10 @@ function directPath({ onRecord, onOpen = () => {}, onLost = () => {}, RTCPeerCon
   return path;
 }
 
-// Offers include bounded host-candidate gathering because sender frame kinds
-// cannot carry trickled signaling. Creation starts while waiting for a receiver.
+// Legacy peers need candidates in their initial offer. Negotiated deferred
+// peers can receive one complete SDP later, after the same bounded gathering;
+// this does not introduce sender-side candidate trickling. Creation starts
+// while waiting for a receiver.
 export async function offerDirect(options) {
   const path = directPath(options);
   try {

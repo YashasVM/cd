@@ -4,7 +4,7 @@ export { DeviceRoom } from './device-room';
 import { clientPrefix, sameOrigin } from './code-security';
 
 type Role = 'sender' | 'receiver';
-type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string; prefix?: string; appId?: string } | { kind: 'peer'; role: Role; appId?: string };
+type SocketAttachment = { kind: 'pending'; expiresAt: number; transferId?: string; prefix?: string; appId?: string } | { kind: 'peer'; role: Role; appId?: string; directOfferMode?: 'deferred-v1' };
 // `code` is the room's short share code while the directory still holds it.
 type CodeHolder = { prefix: string; leaseId: string };
 type ShareCode = { code: string; transferId: string; expiresAt?: number; holder?: CodeHolder };
@@ -17,7 +17,7 @@ type RoomState =
   | { kind: 'terminal'; expiresAt: number };
 // A sender that includes `shareKey` gets its short share code in the
 // `accepted` event: one round trip from connect to code.
-type SenderJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'sender'; receiverTokenHash: string; shareKey?: string };
+type SenderJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'sender'; receiverTokenHash: string; shareKey?: string; directOfferMode?: 'deferred-v1' };
 type ReceiverJoin = { type: 'join'; protocol: 'cd-transfer-v1'; role: 'receiver'; receiverToken: string };
 type Join = SenderJoin | ReceiverJoin;
 type PeerAttachment = { id: string; peers: string[]; messages: number };
@@ -62,7 +62,8 @@ function isSocketAttachment(value: unknown): value is SocketAttachment {
       && (!('appId' in value) || isPublicAppId(value.appId));
   }
   return value.kind === 'peer' && 'role' in value && (value.role === 'sender' || value.role === 'receiver')
-    && (!('appId' in value) || isPublicAppId(value.appId));
+    && (!('appId' in value) || isPublicAppId(value.appId))
+    && (!('directOfferMode' in value) || (value.role === 'sender' && value.directOfferMode === 'deferred-v1'));
 }
 
 function parseJoin(message: string): Join | null {
@@ -78,6 +79,9 @@ function parseJoin(message: string): Join | null {
       if (!isBase64Url32(value.shareKey)) return null;
       join.shareKey = value.shareKey;
     }
+    // Exact, opt-in capability only. Unknown versions keep the legacy offer
+    // path; a receiver must not send new control records to an old sender.
+    if ('directOfferMode' in value && value.directOfferMode === 'deferred-v1') join.directOfferMode = 'deferred-v1';
     return join;
   }
   if (value.role === 'receiver' && 'receiverToken' in value && isBase64Url32(value.receiverToken) && !('receiverTokenHash' in value)) {
@@ -259,7 +263,7 @@ export class TransferRoom extends DurableObject<Env> {
       if (this.room.kind !== 'empty') { reject(socket, 4409, 'sender unavailable'); return; }
       const expiresAt = Date.now() + ROOM_LIFETIME_MS;
       const nextRoom: RoomState = { kind: 'waiting', receiverTokenHash: join.receiverTokenHash, expiresAt, prefix };
-      socket.serializeAttachment({ kind: 'peer', role: 'sender', ...(appId ? { appId } : {}) } satisfies SocketAttachment);
+      socket.serializeAttachment({ kind: 'peer', role: 'sender', ...(appId ? { appId } : {}), ...(join.directOfferMode ? { directOfferMode: join.directOfferMode } : {}) } satisfies SocketAttachment);
       await this.ctx.storage.put('room', nextRoom);
       this.room = nextRoom;
       await this.scheduleAlarm();
@@ -300,8 +304,13 @@ export class TransferRoom extends DurableObject<Env> {
     this.room = nextRoom;
     logEvent('room_paired', appId ? { appId } : {});
     await this.scheduleAlarm();
+    // Persist the capability on the sender socket, so it survives hibernation.
+    // It is a compatibility hint, never a substitute for encrypted peer consent.
+    const senderAttachment: unknown = sender.deserializeAttachment();
+    const directOfferMode = isSocketAttachment(senderAttachment) && senderAttachment.kind === 'peer' && senderAttachment.role === 'sender'
+      ? senderAttachment.directOfferMode : undefined;
     try {
-      socket.send(relayEvent('accepted'));
+      socket.send(relayEvent('accepted', directOfferMode ? { directOfferMode } : {}));
       socket.send(relayEvent('peer-joined'));
       sender.send(relayEvent('peer-joined'));
     } catch {

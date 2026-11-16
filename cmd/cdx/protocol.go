@@ -46,9 +46,10 @@ const (
 	kindAccept
 	kindAck
 	kindComplete
-	// kindSignal (receiver→sender) carries the receiver's WebRTC answer for
-	// the direct path. Receivers send it only when the offer included SDP,
-	// so senders that predate it never see it.
+	// kindSignal carries receiver WebRTC answers/candidates. A relay-advertised
+	// deferred-offer capability also permits one pre-offer receiver hello and,
+	// after authenticated opt-in, a sender SDP on scoped codecs only. Legacy
+	// peers never receive unsolicited new signaling.
 	kindSignal messageKind = 9
 )
 
@@ -98,6 +99,8 @@ type recordSealer struct {
 	id        [16]byte
 	direction direction
 	sequence  uint64
+	// Sender signaling is allowed only after authenticated deferred-offer negotiation.
+	allowDirectSignal bool
 }
 
 type recordOpener struct {
@@ -105,6 +108,8 @@ type recordOpener struct {
 	id        [16]byte
 	direction direction
 	sequence  uint64
+	// Sender signaling is allowed only after authenticated deferred-offer negotiation.
+	allowDirectSignal bool
 }
 
 func newRecordAEAD(value invitation, valueDirection direction) (cipher.AEAD, error) {
@@ -157,7 +162,7 @@ func recordAAD(header []byte, id [16]byte) []byte {
 }
 
 func (value *recordSealer) sealInto(buffer []byte, kind messageKind, plaintext []byte) ([]byte, error) {
-	if !validKind(value.direction, kind) {
+	if !validKind(value.direction, kind) && !(value.direction == senderDirection && kind == kindSignal && value.allowDirectSignal) {
 		return nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
 	if value.sequence > uint64(^uint32(0)) {
@@ -198,7 +203,7 @@ func (value *recordOpener) openRecord(record []byte, consume bool) (messageKind,
 		return 0, nil, NewFailure(failureProtocol, "record protocol is invalid", retryNever)
 	}
 	kind := messageKind(header[3])
-	if !validKind(value.direction, kind) {
+	if !validKind(value.direction, kind) && !(value.direction == senderDirection && kind == kindSignal && value.allowDirectSignal) {
 		return 0, nil, NewFailure(failureProtocol, "message kind is invalid for direction", retryNever)
 	}
 	sequence := binary.BigEndian.Uint32(header[4:8])

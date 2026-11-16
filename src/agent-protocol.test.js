@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   KIND_CHUNK,
+  KIND_SIGNAL,
   SENDER_DIRECTION,
   createOpener,
   createSealer,
@@ -18,6 +19,22 @@ test('browser record codec preserves authenticated bytes', async () => {
   const opened = await opener.open(record);
   assert.equal(opened.kind, KIND_CHUNK);
   assert.equal(new TextDecoder().decode(opened.plaintext), 'exact bytes');
+});
+
+test('sender signaling requires explicit codec opt-in and remains authenticated and sequence checked', async () => {
+  const sealer = await createSealer({ id, key }, SENDER_DIRECTION);
+  const opener = await createOpener({ id, key }, SENDER_DIRECTION);
+  const payload = new TextEncoder().encode('{"sdp":"offer"}');
+  await assert.rejects(sealer.seal(KIND_SIGNAL, payload), /kind.*direction/i);
+  sealer.enableDirectSignal();
+  const record = await sealer.seal(KIND_SIGNAL, payload);
+  await assert.rejects(opener.open(record), /kind.*direction/i);
+  opener.enableDirectSignal();
+  assert.deepEqual((await opener.open(record)).plaintext, payload);
+  await assert.rejects(opener.open(record), /sequence/);
+  const tunnel = await createSealer({ id, key }, SENDER_DIRECTION, { tunnel: true });
+  tunnel.enableDirectSignal();
+  await assert.rejects(tunnel.seal(KIND_SIGNAL, payload), /kind.*direction/i);
 });
 
 test('browser record codec rejects a sequence gap without advancing', async () => {

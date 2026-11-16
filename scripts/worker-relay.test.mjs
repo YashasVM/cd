@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { loadTransferRoom, relayFixture } from './worker-relay-harness.mjs';
 
 const TransferRoom = await loadTransferRoom();
@@ -68,5 +69,35 @@ test('malformed attachments and oversized records cannot use the cache', async (
     await room.webSocketMessage(sender, new ArrayBuffer(malformed ? 16 : 1024 * 1024 + 1));
     assert.equal(receiver.sent.length, 1);
     assert.equal(sender.closed.at(-1).code, malformed ? 4400 : 4403);
+  }
+});
+
+test('deferred offer hint requires exact sender opt-in and survives hibernation', async (t) => {
+  // Cloudflare exposes this native method; Node's WebCrypto does not.
+  const previous = Object.getOwnPropertyDescriptor(crypto.subtle, 'timingSafeEqual');
+  Object.defineProperty(crypto.subtle, 'timingSafeEqual', { configurable: true, value: timingSafeEqual });
+  t.after(() => { if (previous) Object.defineProperty(crypto.subtle, 'timingSafeEqual', previous); else delete crypto.subtle.timingSafeEqual; });
+  const token = Buffer.alloc(32, 41);
+  for (const mode of [undefined, 'deferred-v1', 'future-v2', true]) {
+    for (const hibernate of [false, true]) {
+      const fixture = await relayFixture(TransferRoom);
+      let room = fixture.room;
+      room.room = { kind: 'empty' };
+      for (const socket of [fixture.sender, fixture.receiver]) socket.attachment = { kind: 'pending', expiresAt: Date.now() + 10000 };
+      await room.webSocketMessage(fixture.sender, JSON.stringify({
+        type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
+        receiverTokenHash: createHash('sha256').update(token).digest('base64url'),
+        ...(mode === undefined ? {} : { directOfferMode: mode })
+      }));
+      if (hibernate) room = await fixture.reconstruct();
+      await room.webSocketMessage(fixture.receiver, JSON.stringify({
+        type: 'join', protocol: 'cd-transfer-v1', role: 'receiver', receiverToken: token.toString('base64url')
+      }));
+      assert.equal(fixture.receiver.closed.length, 0);
+      const accepted = fixture.receiver.sent.map(value => JSON.parse(value)).find(value => value.type === 'accepted');
+      assert.ok(accepted);
+      assert.equal(accepted.directOfferMode, mode === 'deferred-v1' ? 'deferred-v1' : undefined);
+      assert.equal(fixture.sender.attachment.directOfferMode, mode === 'deferred-v1' ? 'deferred-v1' : undefined);
+    }
   }
 });

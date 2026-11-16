@@ -1,11 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { median, summarize, cases, validateTransportReports } from './bench-croc-matrix.mjs';
+import { median, summarize, cases, validateTransportReports, completionGates, workerRuntimeSelection } from './bench-croc-matrix.mjs';
 function row(tool, value, extra = {}) {
   return { tool, storage: 'tmpfs', route: 'auto', case: 'random-4k', run: 0, ok: true, readyMs: value, receiverMs: value, durableMs: value, totalMs: value * 2, ...extra };
 }
 test('median uses middle pair and does not mutate samples', () => {
   const values = [9, 1, 7, 3]; assert.equal(median(values), 5); assert.deepEqual(values, [9, 1, 7, 3]);
+});
+test('effective runtime metadata follows direct-bundle, hosted and Wrangler precedence', () => {
+  const config = '/test/wrangler.jsonc';
+  const direct = workerRuntimeSelection({ CD_BENCH_RUNTIME_BUNDLE: '/test/worker.mjs', CD_VERIFY_URL: 'https://unused.example', CD_BENCH_NO_COMPRESSION: '1' }, config);
+  assert.equal(direct.runtime, 'direct workerd (Miniflare)');
+  assert.equal(direct.hosted, false);
+  assert.equal(direct.config, null);
+  assert.equal(direct.bundlePath, '/test/worker.mjs');
+  assert.equal(direct.runtimeControl, true);
+  assert.deepEqual(direct.selectedCompatibilityFlags, ['no_web_socket_compression']);
+  assert.match(direct.note, /Do not pool/);
+  assert.deepEqual(workerRuntimeSelection({ CD_BENCH_RUNTIME_BUNDLE: '/test/worker.mjs' }, config).selectedCompatibilityFlags, []);
+  const hosted = workerRuntimeSelection({ CD_VERIFY_URL: 'https://service.example', CD_BENCH_NO_COMPRESSION: '1' }, config);
+  assert.equal(hosted.runtime, 'hosted');
+  assert.equal(hosted.hosted, true);
+  assert.equal(hosted.config, null);
+  assert.equal(hosted.selectedCompatibilityFlags, null, 'direct-runtime compression flag must not be presented as effective on a hosted service');
+  const local = workerRuntimeSelection({}, config);
+  assert.equal(local.runtime, 'Wrangler development proxy');
+  assert.equal(local.config, config);
+  assert.equal(local.bundlePath, null);
+  assert.equal(local.runtimeControl, false);
+  assert.equal(local.requestedOverrides.CD_VERIFY_WRANGLER_CONFIG, null);
 });
 test('transport evidence accepts compressed wire sizes independently of plaintext size', () => {
   assert.doesNotThrow(() => validateTransportReports([{ relayBytes: 67116000, directBytes: 0 }, { relayBytes: 128, directBytes: 0 }], 'relay'));
@@ -25,6 +48,62 @@ test('gate requires every timing metric against both croc configurations', () =>
   const passing = [row('cd', 10), row('croc', 22), row('croc-no-compress', 21)];
   assert.equal(summarize(passing, 1)[0].pass2, true);
   assert.equal(summarize([...passing.slice(0, 2), row('croc-no-compress', 21, { readyMs: 14 })], 1)[0].pass1_5, false);
+});
+
+function completionFixture(runs = 5, ratio = 2) {
+  return {
+    finishedAt: '2026-11-16T00:00:00.000Z',
+    options: { runs, storage: ['tmpfs'], routes: ['auto'], cases: ['random-4k'] },
+    rows: ['cd', 'croc', 'croc-no-compress'].flatMap(tool => Array.from({ length: runs }, (_, run) => row(tool, tool === 'cd' ? 10 : 10 * ratio, {
+      run, readyMs: tool === 'cd' ? 20 : 5, totalMs: tool === 'cd' ? 30 : 30 * ratio
+    })))
+  };
+}
+test('completion gates are separate from unchanged invitation-readiness gates', () => {
+  const report = completionFixture(), summary = summarize(report.rows, 5)[0];
+  assert.equal(summary.pass1_5, false);
+  assert.equal(summary.pass2, false);
+  assert.equal(summary.speedup.croc.readyMs, 0.25);
+  assert.equal(summary.completionPass1_5, true);
+  assert.equal(summary.completionPass2, true);
+  assert.deepEqual(completionGates(report), { completionPass1_5: true, completionPass2: true });
+  assert.deepEqual(completionGates(completionFixture(5, 1.5)), { completionPass1_5: true, completionPass2: false });
+});
+test('overall completion acceptance requires five repetitions and every configured group', () => {
+  for (const runs of [1, 2, 3, 4]) assert.deepEqual(completionGates(completionFixture(runs)), { completionPass1_5: false, completionPass2: false });
+  const missing = completionFixture(); missing.options.cases.push('compressible-4k');
+  assert.equal(completionGates(missing).completionPass1_5, false);
+  const extra = completionFixture(); extra.rows[0].case = 'unrequested-payload';
+  assert.equal(completionGates(extra).completionPass1_5, false);
+  const unknownTool = completionFixture(); unknownTool.rows[0].tool = 'unrequested-tool';
+  assert.equal(completionGates(unknownTool).completionPass1_5, false);
+});
+test('failed, missing, duplicate, invalid or interrupted completion samples fail closed', () => {
+  for (const change of [
+    report => { report.rows[0].ok = false; },
+    report => { report.rows[0] = null; },
+    report => report.rows.pop(),
+    report => { report.rows[1].run = 0; },
+    report => { report.rows[1].run = 5; },
+    report => { report.rows[1].receiverMs = NaN; },
+    report => { report.rows[1].durableMs = 0; },
+    report => { report.rows[1].totalMs = Infinity; },
+    report => { report.rows[1].readyMs = -1; },
+    report => { report.error = 'setup failed'; },
+    report => { report.interrupted = 'SIGINT'; },
+    report => { delete report.finishedAt; }
+  ]) {
+    const report = completionFixture(); change(report);
+    report.summary = [{ completionPass1_5: true, completionPass2: true }];
+    assert.deepEqual(completionGates(report), { completionPass1_5: false, completionPass2: false });
+  }
+});
+test('completion acceptance must beat both croc modes in all three completion metrics', () => {
+  for (const tool of ['croc', 'croc-no-compress']) for (const metric of ['receiverMs', 'durableMs', 'totalMs']) {
+    const report = completionFixture();
+    for (const value of report.rows) if (value.tool === tool) value[metric] = 1;
+    assert.deepEqual(completionGates(report), { completionPass1_5: false, completionPass2: false });
+  }
 });
 test('failed, missing or incomplete repetitions never pass', () => {
   const rows = [row('cd', 1), row('croc', 9), row('croc-no-compress', 9)];

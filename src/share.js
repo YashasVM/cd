@@ -19,6 +19,7 @@ import { createSink as createDownloadSink, createStageSink, downloadUrlFor } fro
 import { downloadNames, readBundle } from './zip-unbundle.js';
 import { answerDirect, createRecordMerger, parseDirectOffer, DIRECT_BUFFER_BYTES } from './direct-link.js';
 import { selectReceiveChunkSize } from './transfer-limits.js';
+import { DEFERRED_DIRECT_MODE, deferredDirectHello, deferredDirectSDP, directPending as parseDirectPending } from './deferred-direct.js';
 
 const ACK_INTERVAL = 1024n * 1024n;
 // Match the relay's 32 MiB peer buffer: queue more undecrypted/unwritten
@@ -70,7 +71,8 @@ function parseOffer(plaintext) {
   // A bundle is several files sent as one zip; it is unpacked on arrival.
   const bundle = value.bundle === true;
   const files = bundle && Number.isSafeInteger(value.files) && value.files > 0 ? value.files : 0;
-  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value) };
+  if (value.directPending === true && value.direct !== undefined) throw new Error('The sender offered invalid direct signaling.');
+  return { name, mediaType, size: byteSize, chunkSize: selectedChunkSize, baseChunkSize: chunkSize, bundle, files, directSdp: parseDirectOffer(value), directPending: value.directPending };
 }
 
 function encodeCounts(chunks, bytes) {
@@ -334,6 +336,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     const merger = createRecordMerger();
     let direct = null;
     let directUsed = false;
+    let deferredHelloSent = false;
+    let pendingDirect = false;
     // Records sent on the relay while the direct path may still open; they
     // go out again on it when it does (the sender drops second copies).
     let retained = [];
@@ -393,7 +397,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     function startDirect(offerSdp) {
       answerDirect({
         offerSdp,
-        onSignal: (signal) => send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal))),
+        onSignal: (signal) => {
+          if (stopped || failureShown || state === 'complete') return;
+          return send(KIND_SIGNAL, new TextEncoder().encode(JSON.stringify(signal)));
+        },
         onRecord: (record) => {
           directUsed = true;
           enqueueRecords(record);
@@ -403,7 +410,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
           if (directUsed && state !== 'complete') fail(error, socket, sink);
         }
       }).then((path) => {
-        if (stopped || failureShown) { path.close(); return; }
+        if (stopped || failureShown || state === 'complete') { path.close(); return; }
         direct = path;
         closeDirect = () => path.close();
       }).catch(() => { /* The transfer stays on the relay. */ });
@@ -417,12 +424,20 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
         if (value.protocol !== 'cd-transfer-v1') throw new Error('The sender uses an incompatible CD version.');
         // Once the direct path carries the transfer, the relay is optional.
         if (value.type === 'peer-left' && !directUsed) throw new Error('The sender is no longer available.');
-        if (value.type === 'accepted') elements.status.textContent = 'Connected. Waiting for file details...';
+        if (value.type === 'accepted') {
+          elements.status.textContent = 'Connected. Waiting for file details...';
+          if (state === 'connecting' && !deferredHelloSent && value.directOfferMode === DEFERRED_DIRECT_MODE) {
+            deferredHelloSent = true;
+            await send(KIND_SIGNAL, deferredDirectHello());
+          }
+        }
         return;
       }
       const { kind, plaintext } = await opener.open(data);
       if (state === 'connecting' && kind === KIND_OFFER) {
         offer = parseOffer(plaintext);
+        pendingDirect = parseDirectPending(offer.directPending, deferredHelloSent, offer.directSdp);
+        if (pendingDirect) opener.enableDirectSignal();
         state = 'offered';
         if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp);
         sink = await waitForAcceptance(offer);
@@ -436,6 +451,13 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
         hooks.onState?.('transferring');
         renderProgress(0n, offer.size, true);
         await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
+        return;
+      }
+      if (state === 'receiving' && kind === KIND_SIGNAL) {
+        if (!pendingDirect) throw new Error('The sender sent unnegotiated direct signaling.');
+        const sdp = deferredDirectSDP(plaintext);
+        pendingDirect = false; // Only one deferred offer can change this path.
+        if (typeof RTCPeerConnection === 'function') startDirect(sdp);
         return;
       }
       if (state === 'receiving' && kind === KIND_CHUNK) {

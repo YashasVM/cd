@@ -29,12 +29,15 @@ export async function relayFixture(TransferRoom) {
   const sender = socket('sender'), receiver = socket('receiver');
   const sockets = [sender, receiver];
   const paired = { kind: 'paired', receiverTokenHash: 'a'.repeat(43), expiresAt: Date.now() + 60_000 };
+  const stored = new Map([['room', paired]]);
   let startup;
   const ctx = {
     getWebSockets() { counts.scans++; return sockets.filter(s => s.readyState === WebSocket.OPEN); },
     blockConcurrencyWhile(fn) { startup = fn(); return startup; },
     storage: {
-      async get() { return structuredClone(paired); }, async put() {}, async getAlarm() { return null; }, async setAlarm() {},
+      async get(key) { return structuredClone(stored.get(key)); },
+      async put(key, value) { stored.set(key, structuredClone(value)); },
+      async getAlarm() { return null; }, async setAlarm() {},
     },
   };
   const reconstruct = async () => {

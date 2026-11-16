@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+
+	fastflate "github.com/klauspost/compress/flate"
 )
 
 const transferCompression = "deflate-v1"
@@ -14,13 +16,23 @@ func compressionEnabled() bool { return os.Getenv("CD_COMPRESSION") != "0" }
 
 type chunkCompressor struct {
 	output bytes.Buffer
-	writer *flate.Writer
+	writer chunkDeflater
+}
+
+// Both implementations emit the same RFC 1951 format. Keeping the decoder
+// in the standard library independently validates the faster encoder.
+type chunkDeflater interface {
+	io.WriteCloser
+	Reset(io.Writer)
 }
 
 // The caller reserves buffer[0], so incompressible data needs no extra copy.
 func (c *chunkCompressor) encode(buffer []byte) ([]byte, error) {
 	buffer[0] = 0
 	raw := buffer[1:]
+	if len(raw) < 1024 {
+		return buffer, nil
+	}
 	// Sampling avoids spending compression CPU on photos, videos and archives.
 	var seen [256]bool
 	distinct := 0
@@ -28,16 +40,16 @@ func (c *chunkCompressor) encode(buffer []byte) ([]byte, error) {
 		if !seen[b] {
 			seen[b] = true
 			distinct++
+			if distinct > 224 {
+				return buffer, nil
+			}
 		}
-	}
-	if len(raw) < 1024 || distinct > 224 {
-		return buffer, nil
 	}
 	c.output.Reset()
 	c.output.Write([]byte{1, 0, 0, 0, 0})
 	binary.BigEndian.PutUint32(c.output.Bytes()[1:5], uint32(len(raw)))
 	if c.writer == nil {
-		c.writer, _ = flate.NewWriter(&c.output, flate.BestSpeed)
+		c.writer, _ = fastflate.NewWriter(&c.output, fastflate.BestSpeed)
 	} else {
 		c.writer.Reset(&c.output)
 	}
