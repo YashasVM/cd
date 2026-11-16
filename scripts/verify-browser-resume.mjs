@@ -10,18 +10,27 @@ import { buildCLI, captureOutput, childExit, cliEnv, findChromium, firstLine, st
 // Exercises the built UI, native browser storage, and the actual v2 Worker.
 const work = await mkdtemp(join(tmpdir(), 'cd-browser-resume-'));
 const children = [], contexts = [], measurements = [];
-const payload = randomBytes(8 * 1024 * 1024 + 77);
+const payloadSize = Number(process.env.CD_BROWSER_RESUME_BYTES ?? 8 * 1024 * 1024 + 77);
+assert.ok(Number.isSafeInteger(payloadSize) && payloadSize > 0);
+const payload = process.env.CD_BROWSER_RESUME_INPUT ? await readFile(process.env.CD_BROWSER_RESUME_INPUT) : randomBytes(payloadSize);
+assert.equal(payload.length, payloadSize);
 const source = join(work, 'payload.bin');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const only = process.env.CD_BROWSER_RESUME_ONLY;
 assert.ok(!only || ['browser-cli', 'browser-browser', 'browser-browser-fallback', 'browser-cli-restart', 'cli-browser-same-page-restart'].includes(only));
 let worker, browser;
+let failure;
+let interrupted = false;
+const interrupt = () => { interrupted = true; void browser?.close().catch(() => {}); };
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, interrupt);
 try {
   await writeFile(source, payload);
   const browserOnly = only === 'browser-browser' || only === 'browser-browser-fallback';
   const executable = browserOnly ? null : await buildCLI(work);
   worker = await startWorker(work);
+  assert.ok(!interrupted, 'verification interrupted');
   browser = await chromium.launch({ executablePath: await findChromium(), headless: true });
+  assert.ok(!interrupted, 'verification interrupted');
   const launch = args => {
     const child = spawn(executable, args, { env: cliEnv(worker, { CD_STATE_DIR: join(work, 'state') }), stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(child);
@@ -70,7 +79,10 @@ try {
       await sender.getByLabel('Keep progress if interrupted').check();
       await sender.locator('#start-send-btn').click();
     }
-    await sender.locator('#sender-code-section:not(.hidden)').waitFor();
+    try { await sender.locator('#sender-code-section:not(.hidden)').waitFor(); }
+    catch (error) {
+      throw new Error(`Sender did not publish: ${await sender.locator('#sender-status').textContent()}; ${await sender.locator('#sender-error').textContent()}`, { cause: error });
+    }
     const command = await sender.locator('#receive-command').textContent();
     const match = /^cdx receive '(https?:\/\/[^']+)'$/.exec(command.trim());
     assert.ok(match, 'resumable sender must expose a private receive link');
@@ -82,6 +94,7 @@ try {
   for (const direction of ['browser-cli', 'browser-browser', 'browser-browser-fallback'].filter(value => !only || value === only)) {
     const sender = await page(), started = performance.now();
     const invitation = await send(sender);
+    const ready = performance.now();
     const destination = join(work, `${direction}.bin`);
     if (direction === 'browser-cli') {
       const receiver = launch(['receive', '--json', invitation, '--out', destination]);
@@ -90,15 +103,22 @@ try {
       const receiver = await page(false, direction === 'browser-browser-fallback');
       const downloading = receiver.waitForEvent('download', { timeout: 60_000 });
       await receiver.goto(invitation);
-      await (await downloading).saveAs(destination);
+      const download = await downloading;
+      try { await download.saveAs(destination); }
+      catch (error) {
+        throw new Error(`Download failed: ${await download.failure()}; receiver: ${await receiver.locator('[data-resume-status]').textContent()}`, { cause: error });
+      }
       await receiver.locator('[data-resume-status]').filter({ hasText: 'File verified. Download started; check your downloads.' }).waitFor();
       const workerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
       if (direction === 'browser-browser-fallback') assert.equal(workerWrites, 0);
       else assert.equal(workerWrites, Math.ceil(payload.length / 262144));
     }
     await complete(sender);
-    assert.equal(sha(await readFile(destination)), sha(payload));
-    measurements.push({ scenario: direction, bytes: payload.length, sha256: sha(payload), milliseconds: performance.now() - started });
+    const completed = performance.now();
+    const received = await readFile(destination);
+    assert.equal(received.length, payload.length);
+    assert.equal(sha(received), sha(payload));
+    measurements.push({ scenario: direction, route: 'local-v2-relay', bytes: payload.length, sha256: sha(payload), preparationMs: ready - started, transferMs: completed - ready, milliseconds: completed - started });
     console.error(`${direction}: verified ${payload.length} bytes`);
   }
   // A killed receiver retains its durable prefix. The same browser must resume
@@ -122,8 +142,10 @@ try {
     await exit;
     checkpoint = JSON.parse(await readFile(checkpointPath, 'utf8'));
     assert.equal(checkpoint.prefixSha256, sha(payload.subarray(0, checkpoint.offset)));
-    await sender.locator('#sender-error:not(.hidden)').waitFor();
-    assert.equal(await send(sender, invitation), invitation);
+    await sender.locator('#sender-status').filter({ hasText: 'Connection interrupted. Reconnecting with saved progress' }).waitFor();
+    await sender.locator('#sender-status').filter({ hasText: 'Waiting for the receiver.' }).waitFor();
+    const command = await sender.locator('#receive-command').textContent();
+    assert.equal(command.trim(), `cdx receive '${invitation}'`);
     const resumed = launch(['receive', '--resume', '--json', invitation, '--out', destination]);
     assert.equal(await childExit(resumed.child), 0, resumed.output.stderr);
     await resumed.output.finished;
@@ -155,11 +177,11 @@ try {
     }), root);
     assert.ok(savedOffset > 0 && savedOffset < payload.length);
     const priorWorkerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
+    await receiver.locator('#relay-done-btn').click();
     const resumed = launch(['send', '--resume', root, '--json', source]);
     const resumedExit = childExit(resumed.child);
     const nextReady = JSON.parse(await firstLine(resumed.child.stdout));
     assert.equal(nextReady.url, ready.url);
-    await receiver.locator('#relay-done-btn').click();
     const downloading = receiver.waitForEvent('download', { timeout: 60_000 });
     await receiver.locator('#code-input').fill(ready.url);
     const destination = join(work, 'browser-same-page-restart.bin');
@@ -177,10 +199,22 @@ try {
     measurements.push({ scenario: 'cli-browser-same-page-restart', bytes: payload.length, resumedBytes: savedOffset, sha256: sha(payload) });
   }
   console.log(JSON.stringify({ version: 1, completed: measurements.length, measurements }, null, 2));
+} catch (error) {
+  failure = error.stack;
+  throw error;
 } finally {
-  for (const child of children) await stopChild(child);
-  for (const context of contexts) await context.close();
-  await browser?.close();
-  await worker?.stop();
-  await rm(work, { recursive: true, force: true });
+  try {
+    if (process.env.CD_BROWSER_RESUME_REPORT) await writeFile(process.env.CD_BROWSER_RESUME_REPORT, JSON.stringify({
+      version: 1, chromium: browser?.version(), temporaryStorage: tmpdir(), bytes: payload.length, sha256: sha(payload),
+      assets: process.env.CD_VERIFY_ASSET_DIR ?? null, measurements, failure,
+      method: 'One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim.'
+    }, null, 2) + '\n');
+  } finally {
+    for (const child of children) await stopChild(child);
+    for (const context of contexts) await context.close();
+    await browser?.close();
+    await worker?.stop();
+    await rm(work, { recursive: true, force: true });
+    for (const signal of ['SIGINT', 'SIGTERM']) process.removeListener(signal, interrupt);
+  }
 }

@@ -1,0 +1,64 @@
+{
+  "baseline": "fb390760baaab971f9b9f92c2a5e5715adf69717",
+  "head": "ce19da21b9e7bdf5f5bc398be10973358c649064",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+  "bytes": 1048653,
+  "runs": 1,
+  "method": "Alternating hash implementations in the same current UI and local v2 relay. Fresh random input per pair, identical bytes within each pair. Fresh Chromium process and contexts per trial. Full output digest and bytes verified. OPFS Worker path; OS cache allowed. Not LAN, WAN, phone or fsync evidence.",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "expected": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 1048653,
+        "sha256": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+        "assets": "/tmp/cd-resume-paired-h4xIlX/before",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 1048653,
+            "sha256": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+            "preparationMs": 1126.498201,
+            "transferMs": 491.6579139999999,
+            "milliseconds": 1618.156115
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "expected": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+      "ok": true,
+      "result": {
+        "version": 1,
+        "chromium": "155.0.8059.84",
+        "bytes": 1048653,
+        "sha256": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+        "assets": "/tmp/cd-resume-paired-h4xIlX/after",
+        "measurements": [
+          {
+            "scenario": "browser-browser",
+            "route": "local-v2-relay",
+            "bytes": 1048653,
+            "sha256": "14a40106f9be74cf489f3ce408efe33d3b08bcbec77234f02a7dc7601994f7e0",
+            "preparationMs": 1096.7530669999999,
+            "transferMs": 374.6978270000004,
+            "milliseconds": 1471.4508940000003
+          }
+        ],
+        "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+      }
+    }
+  ],
+  "hashModules": {
+    "before": "6b7f2d282be3af2039766f32e57899ac77f51d2fdd2417cbdaf4eeb3f9f6ef67",
+    "after": "edcb976176873aee71569e38186581905ccb4065c0ad8378b49778a1ac428b14"
+  }
+}

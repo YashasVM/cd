@@ -1,0 +1,11 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+download.saveAs: canceled
+    at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:107:33 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v26.13.1

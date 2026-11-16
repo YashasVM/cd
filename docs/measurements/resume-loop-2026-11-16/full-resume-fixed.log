@@ -1,0 +1,21 @@
+browser-cli: verified 8388685 bytes
+browser-browser: verified 8388685 bytes
+browser-browser-fallback: verified 8388685 bytes
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+Error: Same-page receive stalled: The transfer connection was interrupted. Your saved progress can be resumed from the same private link.; sender: cdx: peer interrupted; reconnect both clients with the same private link
+
+    at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:185:13 {
+  [cause]: page.waitForEvent: Timeout 60000ms exceeded while waiting for event "download"
+  =========================== logs ===========================
+  waiting for event "download"
+  ============================================================
+      at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:180:34 {
+    log: [],
+    name: 'TimeoutError'
+  }
+}
+
+Node.js v26.13.1

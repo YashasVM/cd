@@ -1,0 +1,14 @@
+node:internal/modules/run_main:111
+    triggerUncaughtException(
+    ^
+
+Error: Download failed: canceled; receiver: File verified. Download started; check your downloads.
+    at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:110:15 {
+  [cause]: download.saveAs: canceled
+      at /home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:108:28 {
+    log: [],
+    name: 'Error'
+  }
+}
+
+Node.js v26.13.1

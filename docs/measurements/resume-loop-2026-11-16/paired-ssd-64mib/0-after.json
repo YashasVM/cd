@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "chromium": "155.0.8059.84",
+  "temporaryStorage": "/home/yvm/.cache/cd-loop-tmp",
+  "bytes": 67108941,
+  "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+  "assets": "/home/yvm/.cache/cd-loop-tmp/cd-resume-paired-2Mn6RA/after",
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "local-v2-relay",
+      "bytes": 67108941,
+      "sha256": "a319571733b8feed46d5d720e3da4ff8282e567a66025342dbdfa8547f1e81d6",
+      "preparationMs": 1843.983999,
+      "transferMs": 8079.876385,
+      "milliseconds": 9923.860384
+    }
+  ],
+  "method": "One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim."
+}
