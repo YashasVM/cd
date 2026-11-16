@@ -1,0 +1,25 @@
+disk/auto/random-4k croc #1: 578.66 ms durable
+disk/auto/random-4k croc-no-compress #1: 556.56 ms durable
+disk/auto/random-4k cd #1: 45.04 ms durable
+disk/relay/random-4k cd #1: 40.57 ms durable
+disk/relay/random-4k croc #1: 115.75 ms durable
+disk/relay/random-4k croc-no-compress #1: 115.23 ms durable
+disk/auto/random-1m croc #1: 550.99 ms durable
+disk/auto/random-1m cd #1: 40.71 ms durable
+disk/auto/random-1m croc-no-compress #1: 552.27 ms durable
+disk/relay/random-1m croc-no-compress #1: 104.95 ms durable
+disk/relay/random-1m cd #1: 45.60 ms durable
+disk/relay/random-1m croc #1: 106.23 ms durable
+disk/auto/random-64m cd #1: 115.22 ms durable
+disk/auto/random-64m croc-no-compress #1: 631.20 ms durable
+disk/auto/random-64m croc #1: 640.46 ms durable
+disk/relay/random-64m croc-no-compress #1: 195.64 ms durable
+disk/relay/random-64m cd #1: 301.08 ms durable
+disk/relay/random-64m croc #1: 198.98 ms durable
+disk/auto/compressible-64m croc-no-compress #1: 654.21 ms durable
+disk/auto/compressible-64m croc #1: 841.04 ms durable
+disk/auto/compressible-64m cd #1: 168.28 ms durable
+disk/relay/compressible-64m cd #1: 153.22 ms durable
+disk/relay/compressible-64m croc #1: 377.32 ms durable
+disk/relay/compressible-64m croc-no-compress #1: 211.80 ms durable
+{"output":"/workspace/work/croc-v2-smoke.json","pass1_5":false,"pass2":false}

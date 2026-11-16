@@ -1,0 +1,17 @@
+disk/relay/random-64m croc-no-compress #1: 363.47 ms durable
+disk/relay/random-64m croc #1: 204.98 ms durable
+{"event":"sender_admitted"}
+{"event":"code_claimed","code":"00394"}
+{"event":"code_resolved","code":"00394"}
+{"event":"room_paired"}
+{"event":"room_terminal"}
+disk/relay/random-64m cd #1: 377.07 ms durable
+disk/relay/compressible-64m croc #1: 419.81 ms durable
+{"event":"sender_admitted"}
+{"event":"code_claimed","code":"80420"}
+{"event":"code_resolved","code":"80420"}
+{"event":"room_paired"}
+{"event":"room_terminal"}
+disk/relay/compressible-64m cd #1: 213.24 ms durable
+disk/relay/compressible-64m croc-no-compress #1: 194.15 ms durable
+{"output":"/workspace/work/croc-v2-runtime-control.json","pass1_5":false,"pass2":false,"completionPass1_5":false,"completionPass2":false}

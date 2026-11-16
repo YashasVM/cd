@@ -1,0 +1,77 @@
+{
+  "method": "Loopback-only unencrypted native HTTP POST body → native IdentityTransformStream in SQLite Durable Object → separate authenticated GET, optionally paired against hibernatable DO WebSocket forwarding. Same random preloaded buffer and768KiB producer chunks each trial, with Node socket backpressure; contexts reset per row. Client receive buffers are retained in RAM; timer includes native HTTP or WebSocket upload/download and Node client bookkeeping, excludes SHA and source generation. No CD file protocol, encryption, ACKs, disk saving, croc comparison or production speed claim. HTTP server has no JavaScript per-chunk loop or payload storage. Setup admission excluded from transfer timer.",
+  "mib": 64,
+  "runs": 3,
+  "transports": [
+    "http",
+    "websocket"
+  ],
+  "inputSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+  "workerSHA256": "95ccf5af768b218b02db18d35e528ff0380df1bf4fd090a193deb93de847dbf0",
+  "runnerSHA256": "c672ccceee0325198a8df6c8ea0b58726179b9f0017475e1b5a9d6917a34fd85",
+  "node": "v24.22.1",
+  "startedAt": "2026-11-16T15:20:06.999Z",
+  "rows": [
+    {
+      "run": 0,
+      "transport": "http",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 341.3916590000001,
+      "firstByteMs": 14.40164300000015,
+      "mibPerSecond": 187.4679662281965
+    },
+    {
+      "run": 0,
+      "transport": "websocket",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 413.5464649999999,
+      "firstByteMs": 224.59664299999986,
+      "mibPerSecond": 154.75890961853588
+    },
+    {
+      "run": 1,
+      "transport": "websocket",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 207.3450740000003,
+      "firstByteMs": 159.01925500000016,
+      "mibPerSecond": 308.6641932954718
+    },
+    {
+      "run": 1,
+      "transport": "http",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 89.3800510000001,
+      "firstByteMs": 2.829400000000078,
+      "mibPerSecond": 716.043449113717
+    },
+    {
+      "run": 2,
+      "transport": "http",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 70.2426019999998,
+      "firstByteMs": 1.8702650000000176,
+      "mibPerSecond": 911.1279790005526
+    },
+    {
+      "run": 2,
+      "transport": "websocket",
+      "ok": true,
+      "bytes": 67108864,
+      "receivedSHA256": "7e2dc4c65b4bf770e4ce1689a886bf0d4028847f594bd71ff550218418b50b35",
+      "elapsedMs": 164.83543099999997,
+      "firstByteMs": 124.80397800000037,
+      "mibPerSecond": 388.26603972055017
+    }
+  ],
+  "finishedAt": "2026-11-16T15:20:09.496Z"
+}

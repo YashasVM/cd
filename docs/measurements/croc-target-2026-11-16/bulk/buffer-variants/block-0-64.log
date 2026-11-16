@@ -1,0 +1,10 @@
+disk/relay/input cd #1: 468.51 ms durable
+disk/relay/input croc #1: 224.53 ms durable
+disk/relay/input croc-no-compress #1: 207.96 ms durable
+disk/relay/input cd #2: 335.21 ms durable
+disk/relay/input croc-no-compress #2: 203.92 ms durable
+disk/relay/input croc #2: 195.09 ms durable
+disk/relay/input cd #3: 253.96 ms durable
+disk/relay/input croc #3: 209.52 ms durable
+disk/relay/input croc-no-compress #3: 201.15 ms durable
+{"output":"/workspace/work/buffer-variants/block-0-64.json","pass1_5":false,"pass2":false,"completionPass1_5":false,"completionPass2":false}

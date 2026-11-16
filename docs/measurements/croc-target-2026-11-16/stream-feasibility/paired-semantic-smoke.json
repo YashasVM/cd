@@ -1,0 +1,37 @@
+{
+  "method": "Loopback-only unencrypted native HTTP POST body → native IdentityTransformStream in SQLite Durable Object → separate authenticated GET, optionally paired against hibernatable DO WebSocket forwarding. Same random preloaded buffer and768KiB producer chunks each trial, with Node socket backpressure; contexts reset per row. Client receive buffers are retained in RAM; timer includes native HTTP or WebSocket upload/download and Node client bookkeeping, excludes SHA and source generation. No CD file protocol, encryption, ACKs, disk saving, croc comparison or production speed claim. HTTP server has no JavaScript per-chunk loop or payload storage. Setup admission excluded from transfer timer.",
+  "mib": 1,
+  "runs": 1,
+  "transports": [
+    "http",
+    "websocket"
+  ],
+  "inputSHA256": "710688849ae68aa49dc46e82810d8eaa35dca96628429bf26c33bfac72ebcad6",
+  "workerSHA256": "95ccf5af768b218b02db18d35e528ff0380df1bf4fd090a193deb93de847dbf0",
+  "runnerSHA256": "c672ccceee0325198a8df6c8ea0b58726179b9f0017475e1b5a9d6917a34fd85",
+  "node": "v24.22.1",
+  "startedAt": "2026-11-16T15:19:05.060Z",
+  "rows": [
+    {
+      "run": 0,
+      "transport": "http",
+      "ok": true,
+      "bytes": 1048576,
+      "receivedSHA256": "710688849ae68aa49dc46e82810d8eaa35dca96628429bf26c33bfac72ebcad6",
+      "elapsedMs": 6.437400999999909,
+      "firstByteMs": 2.9929779999999937,
+      "mibPerSecond": 155.34219477705585
+    },
+    {
+      "run": 0,
+      "transport": "websocket",
+      "ok": true,
+      "bytes": 1048576,
+      "receivedSHA256": "710688849ae68aa49dc46e82810d8eaa35dca96628429bf26c33bfac72ebcad6",
+      "elapsedMs": 10.188897999999995,
+      "firstByteMs": 9.491217000000006,
+      "mibPerSecond": 98.14604091629934
+    }
+  ],
+  "finishedAt": "2026-11-16T15:19:05.357Z"
+}

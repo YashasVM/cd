@@ -1,0 +1,40 @@
+
+> cd@1.0.0 verify:terminal
+> npm run build && node scripts/verify-terminal.mjs
+
+
+> cd@1.0.0 build
+> npm run skill:check && node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build
+
+
+> cd@1.0.0 skill:check
+> node scripts/generate-sharing-skill.mjs --check
+
+design: wrote 1 docs -> public/design/docs.json
+install: synced scripts/install.sh -> public/install.sh
+install: synced scripts/install.ps1 -> public/install.ps1
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 93 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/resume-opfs-worker-BbGOYGsi.js    0.78 kB
+dist/index.html                              14.40 kB │ gzip:  3.14 kB
+dist/assets/index-CU_BlWTk.css               26.85 kB │ gzip:  6.49 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js      0.72 kB │ gzip:  0.42 kB
+dist/assets/share-page-dxMiiguL.js            1.22 kB │ gzip:  0.69 kB
+dist/assets/index-o_BRyvNb.js                 4.45 kB │ gzip:  1.92 kB
+dist/assets/sink-DqO2aTNn.js                 15.18 kB │ gzip:  5.27 kB
+dist/assets/share-DhnVPzRi.js                15.84 kB │ gzip:  6.07 kB
+dist/assets/browser-DfYHeeW3.js              23.46 kB │ gzip:  8.86 kB
+dist/assets/resume-browser-Dyq8sQql.js       36.71 kB │ gzip: 12.17 kB
+dist/assets/main-DHeLat27.js                 72.49 kB │ gzip: 23.85 kB
+dist/assets/bundler-D6CBOI20.js              86.46 kB │ gzip: 23.11 kB
+dist/assets/jsQR-DMfxOdIb.js                129.98 kB │ gzip: 47.51 kB
+
+✓ built in 220ms
+verified terminal->terminal: 393267 exact bytes; --force preserves existing staging files and symlink targets
+verified the share code is released once the receiver pairs
+verified admitted old-client POST /api/codes claims and resolves through the sharded directory
+verified browser->terminal: 393267 exact bytes
+verified terminal receive flows through CLI, Worker, encryption, and flow control

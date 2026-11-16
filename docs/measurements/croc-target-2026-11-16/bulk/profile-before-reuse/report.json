@@ -1,0 +1,48 @@
+{
+  "method": "CPU diagnosis only: tagged Go test binary profiles the actual CLI for one forced-relay transfer through the unchanged Wrangler development proxy. Profiler/test-harness startup and shutdown are included, so timings MUST NOT be used as a performance comparison. Full input/output SHA256 verifies bytes.",
+  "mib": 512,
+  "sourceCommit": "d71a05152d20c6b211cf24d8f3a491f07d1e4a08",
+  "processes": {
+    "31705": {
+      "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/work/cd/node_modules/wrangler/wrangler-dist/cli.js dev --config /workspace/work/cd/scripts/bench-worker.wrangler.jsonc --port 38407 --ip 127.0.0.1 --persist-to /workspace/work/relay-profile/wrangler-state",
+      "before": {
+        "cpuTicks": 193,
+        "rssPages": 61904
+      },
+      "after": {
+        "cpuTicks": 195,
+        "rssPages": 61968
+      },
+      "cpuSeconds": 0.02
+    },
+    "31732": {
+      "command": "/workspace/work/cd/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64/bin/workerd serve --binary --experimental --socket-addr=entry=127.0.0.1:38407 --external-addr=loopback=127.0.0.1:38073 --control-fd=3 -",
+      "before": {
+        "cpuTicks": 20,
+        "rssPages": 22234
+      },
+      "after": {
+        "cpuTicks": 173,
+        "rssPages": 22754
+      },
+      "cpuSeconds": 1.53
+    },
+    "31737": {
+      "command": "/workspace/work/cd/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64/bin/workerd serve --binary --experimental --socket-addr=entry=127.0.0.1:0 --external-addr=loopback=127.0.0.1:33123 --control-fd=3 - --inspector-addr=127.0.0.1:0 --debug-port=127.0.0.1:0",
+      "before": {
+        "cpuTicks": 34,
+        "rssPages": 34053
+      },
+      "after": {
+        "cpuTicks": 182,
+        "rssPages": 88016
+      },
+      "cpuSeconds": 1.48
+    }
+  },
+  "ticksPerSecond": 100,
+  "inputSHA256": "814c91aae95da0044b8b915cb2f2ba605d7aef0b9220d1264430d71540ea1065",
+  "instrumentedElapsedMs": 2096.648717,
+  "outputSHA256": "814c91aae95da0044b8b915cb2f2ba605d7aef0b9220d1264430d71540ea1065",
+  "verified": true
+}

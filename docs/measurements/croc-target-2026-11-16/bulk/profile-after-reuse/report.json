@@ -1,0 +1,57 @@
+{
+  "method": "CPU diagnosis only: tagged Go test binary profiles the actual CLI for one forced-relay transfer through the unchanged Wrangler development proxy. Profiler/test-harness startup and shutdown are included, so timings MUST NOT be used as a performance comparison. Full input/output SHA256 verifies bytes.",
+  "mib": 512,
+  "sourceCommit": "d71a05152d20c6b211cf24d8f3a491f07d1e4a08",
+  "processes": {
+    "33958": {
+      "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/work/cd/node_modules/wrangler/wrangler-dist/cli.js dev --config /workspace/work/cd/scripts/bench-worker.wrangler.jsonc --port 44711 --ip 127.0.0.1 --persist-to /workspace/work/relay-profile-reuse/wrangler-state",
+      "before": {
+        "cpuTicks": 217,
+        "rssPages": 61936
+      },
+      "after": {
+        "cpuTicks": 226,
+        "rssPages": 61968
+      },
+      "cpuSeconds": 0.09
+    },
+    "33985": {
+      "command": "/workspace/work/cd/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64/bin/workerd serve --binary --experimental --socket-addr=entry=127.0.0.1:44711 --external-addr=loopback=127.0.0.1:38197 --control-fd=3 -",
+      "before": {
+        "cpuTicks": 29,
+        "rssPages": 22130
+      },
+      "after": {
+        "cpuTicks": 241,
+        "rssPages": 22742
+      },
+      "cpuSeconds": 2.12
+    },
+    "33990": {
+      "command": "/workspace/work/cd/node_modules/wrangler/node_modules/@cloudflare/workerd-linux-64/bin/workerd serve --binary --experimental --socket-addr=entry=127.0.0.1:0 --external-addr=loopback=127.0.0.1:37283 --control-fd=3 - --inspector-addr=127.0.0.1:0 --debug-port=127.0.0.1:0",
+      "before": {
+        "cpuTicks": 63,
+        "rssPages": 34262
+      },
+      "after": {
+        "cpuTicks": 348,
+        "rssPages": 86999
+      },
+      "cpuSeconds": 2.85
+    }
+  },
+  "ticksPerSecond": 100,
+  "binarySHA256": "847fedacf9f3ac0166b110714967a3f190ceeacfaa08732fac6b07dd3cd5183c",
+  "diffSHA256": "84458d1560db1c45a13c6619ef1154709dbbcc120a8822a1ada51cb27a53a7e8",
+  "sourceSHA256": {
+    "cmd/cdx/link.go": "acbca64fa833badfb11bd027da78b0553ff18eec0b434e23e2dbb41b2384c959",
+    "cmd/cdx/receive.go": "7d1bdab8298a86749a25181b4281233475ec2fe371956bf2808391684942b004",
+    "cmd/cdx/retry.go": "7a6651487586782341df1ed5d7f5884e09f740b10c7db51d7e192a8591a5344c",
+    "cmd/cdx/compression.go": "3fc6039938b54483ca8d20bff1f8cad434d101757f9432f838361329481cc332",
+    "worker/index.ts": "b33da2cc5978359de741ffff352eaf0c2e6078679a047de749d5f3aff977e86a"
+  },
+  "inputSHA256": "41c4b96c1c8d7a1b1bb6ff1cd877d1864ed694184d28a72667caa329fb7ec8de",
+  "instrumentedElapsedMs": 3905.869536,
+  "outputSHA256": "41c4b96c1c8d7a1b1bb6ff1cd877d1864ed694184d28a72667caa329fb7ec8de",
+  "verified": true
+}
