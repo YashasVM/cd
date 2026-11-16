@@ -1,0 +1,119 @@
+disk/auto/random-4k croc-no-compress #1: 554.60 ms durable
+disk/auto/random-4k croc #1: 547.98 ms durable
+disk/auto/random-4k cd #1: 39.74 ms durable
+disk/auto/random-4k croc #2: 576.65 ms durable
+disk/auto/random-4k cd #2: 38.11 ms durable
+disk/auto/random-4k croc-no-compress #2: 545.93 ms durable
+disk/auto/random-4k croc #3: 554.69 ms durable
+disk/auto/random-4k croc-no-compress #3: 560.60 ms durable
+disk/auto/random-4k cd #3: 46.54 ms durable
+disk/auto/random-4k croc-no-compress #4: 560.51 ms durable
+disk/auto/random-4k cd #4: 43.95 ms durable
+disk/auto/random-4k croc #4: 559.16 ms durable
+disk/auto/random-4k croc #5: 553.88 ms durable
+disk/auto/random-4k cd #5: 34.23 ms durable
+disk/auto/random-4k croc-no-compress #5: 563.81 ms durable
+disk/relay/random-4k croc-no-compress #1: 109.51 ms durable
+disk/relay/random-4k croc #1: 106.07 ms durable
+disk/relay/random-4k cd #1: 48.54 ms durable
+disk/relay/random-4k croc-no-compress #2: 113.50 ms durable
+disk/relay/random-4k cd #2: 37.32 ms durable
+disk/relay/random-4k croc #2: 103.91 ms durable
+disk/relay/random-4k cd #3: 37.75 ms durable
+disk/relay/random-4k croc #3: 97.29 ms durable
+disk/relay/random-4k croc-no-compress #3: 99.25 ms durable
+disk/relay/random-4k croc-no-compress #4: 101.44 ms durable
+disk/relay/random-4k cd #4: 49.82 ms durable
+disk/relay/random-4k croc #4: 107.22 ms durable
+disk/relay/random-4k croc-no-compress #5: 110.89 ms durable
+disk/relay/random-4k cd #5: 46.55 ms durable
+disk/relay/random-4k croc #5: 107.10 ms durable
+disk/auto/random-1m croc #1: 553.42 ms durable
+disk/auto/random-1m cd #1: 1026.15 ms durable
+disk/auto/random-1m croc-no-compress #1: 560.94 ms durable
+disk/auto/random-1m croc #2: 558.45 ms durable
+disk/auto/random-1m croc-no-compress #2: 559.31 ms durable
+disk/auto/random-1m cd #2: 1033.99 ms durable
+disk/auto/random-1m croc #3: 558.20 ms durable
+disk/auto/random-1m cd #3: 1038.61 ms durable
+disk/auto/random-1m croc-no-compress #3: 553.22 ms durable
+disk/auto/random-1m croc-no-compress #4: 573.66 ms durable
+disk/auto/random-1m croc #4: 562.70 ms durable
+disk/auto/random-1m cd #4: 1034.48 ms durable
+disk/auto/random-1m croc #5: 554.10 ms durable
+disk/auto/random-1m cd #5: 1026.72 ms durable
+disk/auto/random-1m croc-no-compress #5: 561.64 ms durable
+disk/relay/random-1m croc #1: 105.03 ms durable
+disk/relay/random-1m croc-no-compress #1: 108.69 ms durable
+disk/relay/random-1m cd #1: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/relay/random-1m cd #2: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/relay/random-1m croc #2: 122.92 ms durable
+disk/relay/random-1m croc-no-compress #2: 105.69 ms durable
+disk/relay/random-1m croc #3: 111.72 ms durable
+disk/relay/random-1m croc-no-compress #3: 113.51 ms durable
+disk/relay/random-1m cd #3: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/relay/random-1m croc-no-compress #4: 108.27 ms durable
+disk/relay/random-1m cd #4: 191.25 ms durable
+disk/relay/random-1m croc #4: 111.75 ms durable
+disk/relay/random-1m croc-no-compress #5: 112.44 ms durable
+disk/relay/random-1m croc #5: 111.79 ms durable
+disk/relay/random-1m cd #5: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/auto/random-64m croc #1: 784.76 ms durable
+disk/auto/random-64m croc-no-compress #1: 643.82 ms durable
+disk/auto/random-64m cd #1: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/auto/random-64m croc #2: 638.85 ms durable
+disk/auto/random-64m cd #2: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/auto/random-64m croc-no-compress #2: 718.55 ms durable
+disk/auto/random-64m cd #3: 1239.83 ms durable
+disk/auto/random-64m croc #3: 694.94 ms durable
+disk/auto/random-64m croc-no-compress #3: 633.38 ms durable
+disk/auto/random-64m croc-no-compress #4: 642.44 ms durable
+disk/auto/random-64m cd #4: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/auto/random-64m croc #4: 711.42 ms durable
+disk/auto/random-64m croc-no-compress #5: 630.62 ms durable
+disk/auto/random-64m cd #5: 1357.88 ms durable
+disk/auto/random-64m croc #5: 870.87 ms durable
+disk/relay/random-64m croc #1: 228.93 ms durable
+disk/relay/random-64m cd #1: cdx: share code lookup temporarily unavailable (HTTP 429): wait a moment and try again
+
+
+1 !== 0
+
+disk/relay/random-64m croc-no-compress #1: 215.51 ms durable
+disk/relay/random-64m cd #2: 664.58 ms durable
+disk/relay/random-64m croc-no-compress #2: 321.07 ms durable
+disk/relay/random-64m croc #2: 188.72 ms durable
+disk/relay/random-64m croc #3: 174.73 ms durable
+disk/relay/random-64m croc-no-compress #3: 189.37 ms durable
+disk/relay/random-64m cd #3: cdx: transfer canceled
+
+
+1 !== 0
