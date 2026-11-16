@@ -1,0 +1,17 @@
+browser-cli: verified 67108941 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-cli",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:39837",
+      "bytes": 67108941,
+      "sha256": "0ba0e249cebc8db4a2be87b36ad0b18937b5a411a0214a6288b5c927890e8ce1",
+      "preparationMs": 2876.1555929999995,
+      "transferMs": 5735.954621999999,
+      "milliseconds": 8612.110214999999
+    }
+  ]
+}

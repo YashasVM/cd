@@ -10,6 +10,7 @@ import { buildCLI, captureOutput, childExit, cliEnv, findChromium, firstLine, st
 // Exercises the built UI, native browser storage, and the actual v2 Worker.
 const work = await mkdtemp(join(tmpdir(), 'cd-browser-resume-'));
 const children = [], contexts = [], measurements = [];
+const cpuSessions = new Map();
 const payloadSize = Number(process.env.CD_BROWSER_RESUME_BYTES ?? 8 * 1024 * 1024 + 77);
 assert.ok(Number.isSafeInteger(payloadSize) && payloadSize > 0);
 const payload = process.env.CD_BROWSER_RESUME_INPUT ? await readFile(process.env.CD_BROWSER_RESUME_INPUT) : randomBytes(payloadSize);
@@ -17,8 +18,9 @@ assert.equal(payload.length, payloadSize);
 const source = join(work, 'payload.bin');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const only = process.env.CD_BROWSER_RESUME_ONLY;
+const profiling = process.env.CD_RESUME_PROFILE === '1';
 assert.ok(!only || ['browser-cli', 'browser-browser', 'browser-browser-fallback', 'browser-cli-restart', 'cli-browser-same-page-restart'].includes(only));
-let worker, browser;
+let worker, browser, cliSHA256;
 let failure;
 let interrupted = false;
 const interrupt = () => { interrupted = true; void browser?.close().catch(() => {}); };
@@ -27,6 +29,7 @@ try {
   await writeFile(source, payload);
   const browserOnly = only === 'browser-browser' || only === 'browser-browser-fallback';
   const executable = browserOnly ? null : await buildCLI(work);
+  if (executable) cliSHA256 = sha(await readFile(executable));
   worker = await startWorker(work);
   assert.ok(!interrupted, 'verification interrupted');
   browser = await chromium.launch({ executablePath: await findChromium(), headless: true });
@@ -39,17 +42,53 @@ try {
   const page = async (interrupt = false, fallback = false) => {
     const context = await browser.newContext({ acceptDownloads: true });
     contexts.push(context);
-    await context.addInitScript(fallback => {
+    await context.addInitScript(({ fallback, profiling }) => {
       globalThis.__resumeWorkerWrites = 0;
+      const stats = globalThis.__resumeProfile = {};
+      const record = (label, start) => {
+        const elapsed = performance.now() - start;
+        const stat = stats[label] ??= { calls: 0, ms: 0, maxMs: 0 };
+        stat.calls++; stat.ms += elapsed; stat.maxMs = Math.max(stat.maxMs, elapsed);
+      };
+      if (profiling) {
+        const measure = (prototype, method, label = () => method) => {
+          if (!prototype?.[method]) return;
+          const native = prototype[method];
+          prototype[method] = async function(...args) {
+            const start = performance.now();
+            try { return await native.apply(this, args); }
+            finally { record(label(args), start); }
+          };
+        };
+        measure(SubtleCrypto.prototype, 'deriveBits', args => new TextDecoder().decode(args[0].info).endsWith(' checkpoint') ? 'deriveCheckpoint' : 'deriveOther');
+        measure(SubtleCrypto.prototype, 'importKey', args => `import:${args[2].name ?? args[2]}`);
+        for (const method of ['sign', 'encrypt', 'decrypt']) measure(SubtleCrypto.prototype, method);
+        measure(Blob.prototype, 'arrayBuffer', () => 'blobRead');
+        for (const method of ['write', 'close']) measure(globalThis.FileSystemWritableFileStream?.prototype, method, () => `stream:${method}`);
+        const transaction = IDBDatabase.prototype.transaction;
+        IDBDatabase.prototype.transaction = function(stores, mode, ...args) {
+          const start = performance.now(), result = transaction.call(this, stores, mode, ...args);
+          result.addEventListener('complete', () => record(`idb:${mode ?? 'readonly'}:${stores}`, start), { once: true });
+          return result;
+        };
+      }
       if (fallback) { globalThis.Worker = undefined; return; }
       const NativeWorker = Worker;
       globalThis.Worker = class extends NativeWorker {
+        constructor(...args) {
+          super(...args);
+          if (profiling) this.addEventListener('message', () => {
+            if (this.profileRequest) record(this.profileRequest.label, this.profileRequest.start);
+            this.profileRequest = undefined;
+          });
+        }
         postMessage(...args) {
           if (args[0]?.type === 'write') globalThis.__resumeWorkerWrites++;
+          if (profiling) this.profileRequest = { label: `worker:${args[0]?.type}`, start: performance.now() };
           return super.postMessage(...args);
         }
       };
-    }, fallback);
+    }, { fallback, profiling });
     if (interrupt) await context.addInitScript(() => {
       const sockets = [];
       const NativeSocket = WebSocket;
@@ -68,6 +107,12 @@ try {
     const result = await context.newPage();
     result.setDefaultTimeout(30_000);
     await result.goto(worker.publicBase);
+    if (profiling) {
+      const session = await context.newCDPSession(result);
+      await session.send('Profiler.enable');
+      await session.send('Profiler.start');
+      cpuSessions.set(result, session);
+    }
     return result;
   };
   const send = async (sender, link = '') => {
@@ -96,11 +141,13 @@ try {
     const invitation = await send(sender);
     const ready = performance.now();
     const destination = join(work, `${direction}.bin`);
+    let receiverPage;
     if (direction === 'browser-cli') {
       const receiver = launch(['receive', '--json', invitation, '--out', destination]);
       assert.equal(await childExit(receiver.child), 0, receiver.output.stderr);
     } else {
       const receiver = await page(false, direction === 'browser-browser-fallback');
+      receiverPage = receiver;
       const downloading = receiver.waitForEvent('download', { timeout: 60_000 });
       await receiver.goto(invitation);
       const download = await downloading;
@@ -115,10 +162,27 @@ try {
     }
     await complete(sender);
     const completed = performance.now();
+    const cpu = {};
+    if (profiling) for (const [role, page] of [['sender', sender], ['receiver', receiverPage]]) {
+      if (!page) continue;
+      const { profile } = await cpuSessions.get(page).send('Profiler.stop');
+      for (const node of profile.nodes) node.callFrame.url = node.callFrame.url.split(/[?#]/)[0];
+      if (process.env.CD_BROWSER_RESUME_REPORT) await writeFile(`${process.env.CD_BROWSER_RESUME_REPORT}.${direction}.${role}.cpuprofile`, JSON.stringify(profile));
+      assert.equal(profile.samples.length, profile.timeDeltas.length);
+      const nodes = new Map(profile.nodes.map(node => [node.id, node.callFrame]));
+      const totals = new Map();
+      for (let i = 0; i < profile.samples.length; i++) {
+        const frame = nodes.get(profile.samples[i]);
+        const key = `${frame.functionName || '(anonymous)'} ${frame.url}:${frame.lineNumber + 1}:${frame.columnNumber + 1}`;
+        totals.set(key, (totals.get(key) ?? 0) + profile.timeDeltas[i] / 1000);
+      }
+      cpu[role] = [...totals].map(([frame, selfMs]) => ({ frame, selfMs })).sort((a, b) => b.selfMs - a.selfMs).slice(0, 20);
+    }
     const received = await readFile(destination);
     assert.equal(received.length, payload.length);
     assert.equal(sha(received), sha(payload));
-    measurements.push({ scenario: direction, route: 'local-v2-relay', bytes: payload.length, sha256: sha(payload), preparationMs: ready - started, transferMs: completed - ready, milliseconds: completed - started });
+    const profile = profiling ? { sender: await sender.evaluate(() => globalThis.__resumeProfile), receiver: await receiverPage?.evaluate(() => globalThis.__resumeProfile), cpu } : undefined;
+    measurements.push({ scenario: direction, route: 'v2-relay', relayOrigin: worker.publicBase, bytes: payload.length, sha256: sha(payload), preparationMs: ready - started, transferMs: completed - ready, milliseconds: completed - started, profile });
     console.error(`${direction}: verified ${payload.length} bytes`);
   }
   // A killed receiver retains its durable prefix. The same browser must resume
@@ -205,9 +269,9 @@ try {
 } finally {
   try {
     if (process.env.CD_BROWSER_RESUME_REPORT) await writeFile(process.env.CD_BROWSER_RESUME_REPORT, JSON.stringify({
-      version: 1, chromium: browser?.version(), temporaryStorage: tmpdir(), bytes: payload.length, sha256: sha(payload),
+      version: 1, profiling, chromium: browser?.version(), cliSHA256, temporaryStorage: tmpdir(), bytes: payload.length, sha256: sha(payload),
       assets: process.env.CD_VERIFY_ASSET_DIR ?? null, measurements, failure,
-      method: 'One Chromium host and local v2 relay; OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. No physical disk durability, LAN or WAN speed claim.'
+      method: 'One Chromium host; v2 relay origin recorded per measurement. OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. Profiling adds overhead; async operation latency totals can overlap and are not CPU time. No physical disk durability, LAN or WAN speed claim.'
     }, null, 2) + '\n');
   } finally {
     for (const child of children) await stopChild(child);

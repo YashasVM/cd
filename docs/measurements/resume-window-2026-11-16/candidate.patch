@@ -1,0 +1,45 @@
+diff --git c/src/resume-browser.js w/src/resume-browser.js
+index 17afe8f..a90e77d 100644
+--- c/src/resume-browser.js
++++ w/src/resume-browser.js
+@@ -8,6 +8,7 @@ import { downloadUrlFor } from './sink.js';
+ import { createResumeWriter } from './resume-opfs.js';
+ 
+ export const RESUME_CHUNK_SIZE = 256 * 1024;
++const RESUME_WINDOW_CHUNKS = 16;
+ export const RESUME_LIMIT_MS = 24 * 60 * 60 * 1000;
+ export const RESUME_DB_NAME = 'cd-resume-v2';
+ const textEncoder = new TextEncoder();
+@@ -432,7 +433,7 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+       createResumeSealer(invitation, SENDER_DIRECTION, sessionParams(session)),
+       createResumeOpener(invitation, RECEIVER_DIRECTION, sessionParams(session))
+     ]);
+-    const offer = { name: file.name, size: String(file.size), chunkSize: RESUME_CHUNK_SIZE, wholeSha256, expiresAt: activeExpiry };
++    const offer = { name: file.name, size: String(file.size), chunkSize: RESUME_CHUNK_SIZE, windowBytes: RESUME_WINDOW_CHUNKS * RESUME_CHUNK_SIZE, wholeSha256, expiresAt: activeExpiry };
+     sendRecord(socket, await sealer.seal(KIND_OFFER, textEncoder.encode(JSON.stringify(offer))));
+     const acceptanceBytes = await nextRecord(connection.inbox, opener, KIND_ACCEPT);
+     if (acceptanceBytes.byteLength > 2048) throw new Error('The receiver sent oversized saved progress.');
+@@ -460,8 +461,8 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+     let position = offset;
+     while (position < file.size || outstanding.length) {
+       if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
+-      // Four records fit the receiver's bounded inbox while durable ACKs are in flight.
+-      if (position < file.size && outstanding.length < 4) {
++      // Match the CLI's four-MiB window within the receiver's data and control budget.
++      if (position < file.size && outstanding.length < RESUME_WINDOW_CHUNKS) {
+         const block = new Uint8Array(await file.slice(position, Math.min(file.size, position + RESUME_CHUNK_SIZE)).arrayBuffer());
+         if (cancelled || paused) throw new Error(paused ? 'Transfer interrupted. Saved progress retained.' : 'Transfer canceled.');
+         if (block.byteLength !== Math.min(RESUME_CHUNK_SIZE, file.size - position)) throw new Error('The selected file changed while sending.');
+@@ -478,8 +479,10 @@ export function startResumableSend(file, { link = '', secrets, checkpoints, hook
+         continue;
+       }
+       const ack = decodeResumeAck(await nextRecord(connection.inbox, opener, KIND_ACK));
+-      const expected = outstanding.shift();
+-      if (ack.bytes !== BigInt(expected.bytes) || ack.chunks !== expected.chunks) throw new Error('The receiver acknowledged invalid saved progress.');
++      const acknowledgedIndex = outstanding.findIndex(expected => ack.bytes === BigInt(expected.bytes) && ack.chunks === expected.chunks);
++      if (acknowledgedIndex < 0) throw new Error('The receiver acknowledged invalid saved progress.');
++      const expected = outstanding[acknowledgedIndex];
++      outstanding.splice(0, acknowledgedIndex + 1);
+       ackedBytes = expected.bytes;
+       const savedCheckpoint = await signResumeCheckpoint({
+         version: 2, role: 'sender', rootId, filename: file.name, size: file.size, chunkSize: RESUME_CHUNK_SIZE,

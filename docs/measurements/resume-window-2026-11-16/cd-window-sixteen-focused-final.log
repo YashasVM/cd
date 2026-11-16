@@ -1,0 +1,19 @@
+✔ pipelines bounded encrypted chunks and checkpoints only acknowledged prefix bytes (660.333822ms)
+✔ retains only acknowledged progress after interruption with chunks in flight (205.809137ms)
+✔ accepts cumulative durable ACKs within its bounded window (188.22603ms)
+✔ rejects cumulative ACKs with mismatched byte or chunk counts (328.982033ms)
+✔ rejects a repeated cumulative ACK without advancing beyond its first durable prefix (162.245433ms)
+✔ rejects invalid durable ACKs without advancing its checkpoint (174.003781ms)
+✔ preserves its last durable checkpoint when the source fails with records in flight (135.331821ms)
+✔ cancel removes sender secrets and checkpoints while ACKs are pending (164.338039ms)
+✔ cancel removes retained records after a disconnected sender has settled (148.928244ms)
+✔ completes resumed, empty, and short encrypted sources (728.341581ms)
+✔ drains an encrypted COMPLETE and queued completed event before a socket close (176.393088ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3228.663104

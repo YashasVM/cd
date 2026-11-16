@@ -1,0 +1,68 @@
+✔ pipelines bounded encrypted chunks and checkpoints only acknowledged prefix bytes (150.905391ms)
+✔ retains only acknowledged progress after interruption with chunks in flight (83.891127ms)
+✖ accepts cumulative durable ACKs within its bounded window (74.486994ms)
+✖ rejects cumulative ACKs with mismatched byte or chunk counts (69.057521ms)
+✔ rejects invalid durable ACKs without advancing its checkpoint (76.238043ms)
+✔ preserves its last durable checkpoint when the source fails with records in flight (74.120421ms)
+✔ cancel removes sender secrets and checkpoints while ACKs are pending (79.068633ms)
+✔ cancel removes retained records after a disconnected sender has settled (74.428997ms)
+✖ completes resumed, empty, and short encrypted sources (166.907287ms)
+✔ drains an encrypted COMPLETE and queued completed event before a socket close (91.957237ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 7
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 990.490752
+
+✖ failing tests:
+
+test at src/resume-sender.test.js:146:1
+✖ accepts cumulative durable ACKs within its bounded window (74.486994ms)
+  AssertionError [ERR_ASSERTION]: sender must advertise its bounded window before receiving batched ACKs
+      at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:47:38 {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src/resume-sender.test.js:168:1
+✖ rejects cumulative ACKs with mismatched byte or chunk counts (69.057521ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /invalid saved progress/. Input:
+  
+  'Error: The transfer connection was interrupted. Your saved progress can be resumed from the same private link.'
+  
+      at async TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:172:7)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: The transfer connection was interrupted. Your saved progress can be resumed from the same private link.
+        at resumeCloseError (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:762:17)
+        at Socket.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:268:64)
+        at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+        at Socket.dispatchEvent (node:internal/event_target:813:26)
+        at Socket.close (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:36:105)
+        at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:73:53,
+    expected: /invalid saved progress/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at src/resume-sender.test.js:219:1
+✖ completes resumed, empty, and short encrypted sources (166.907287ms)
+  Error: The transfer connection was interrupted. Your saved progress can be resumed from the same private link.
+      at resumeCloseError (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:762:17)
+      at Socket.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:268:64)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+      at Socket.dispatchEvent (node:internal/event_target:813:26)
+      at Socket.close (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:36:105)
+      at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:73:53 {
+    closeCode: 1011,
+    reconnect: false
+  }
