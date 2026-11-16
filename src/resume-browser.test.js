@@ -130,6 +130,85 @@ describe('resume browser primitives', () => {
     await assert.rejects(createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets }), /integrity or file identity/);
   });
 
+  it('batches only advertised windows and retains only flushed, checkpointed prefixes', async () => {
+    for (const windowBytes of [undefined, 0, RESUME_CHUNK_SIZE, 4 * RESUME_CHUNK_SIZE, 16 * RESUME_CHUNK_SIZE, Number.MAX_SAFE_INTEGER]) {
+      const { storage, files } = opfs(), checkpoints = makeKV(), secrets = makeKV();
+      const id = new Uint8Array(16), key = new Uint8Array(32).fill(3), rootId = encodeBase64Url(id);
+      const expectedBatch = windowBytes >= 16 * RESUME_CHUNK_SIZE ? 8 * RESUME_CHUNK_SIZE : windowBytes >= 4 * RESUME_CHUNK_SIZE ? 4 * RESUME_CHUNK_SIZE : RESUME_CHUNK_SIZE;
+      const bytes = new Uint8Array(expectedBatch + 7).fill(17);
+      const offer = { name: 'batch.bin', size: String(bytes.length), chunkSize: RESUME_CHUNK_SIZE, windowBytes, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+      const stage = await createReceiverStage({ invitation: { id, key }, rootId, offer, storage, checkpoints, secrets });
+      assert.equal(stage.ackEveryBytes, expectedBatch);
+      await stage.bindSession('A'.repeat(43));
+      for (let offset = 0; offset < expectedBatch; offset += RESUME_CHUNK_SIZE) {
+        const committed = await stage.append(bytes.subarray(offset, offset + RESUME_CHUNK_SIZE), 'A'.repeat(43));
+        const expected = offset + RESUME_CHUNK_SIZE === expectedBatch ? expectedBatch : 0;
+        assert.equal(committed, expected > 0);
+        assert.equal(stage.currentOffset, expected);
+        assert.equal(checkpoints.values.get(`receiver:${rootId}`).offset, expected);
+        assert.equal(files.get(stage.stagingId).length, expected);
+      }
+      assert.equal(await stage.append(bytes.subarray(expectedBatch), 'A'.repeat(43)), true);
+      assert.equal(stage.currentOffset, bytes.length);
+      assert.deepEqual(new Uint8Array(await (await stage.finish()).arrayBuffer()), bytes);
+      await stage.cancel();
+    }
+  });
+
+  it('discards a buffered receive tail on interruption and resumes from its committed prefix', async () => {
+    for (const legacyPrefix of [false, true]) {
+      const { storage, files } = opfs(), checkpoints = makeKV(), secrets = makeKV();
+      const id = new Uint8Array(16), key = new Uint8Array(32).fill(4), rootId = encodeBase64Url(id);
+      const bytes = new Uint8Array(RESUME_CHUNK_SIZE * 9 + 7).fill(19);
+      const offer = { name: 'resume-batch.bin', size: String(bytes.length), chunkSize: RESUME_CHUNK_SIZE, windowBytes: legacyPrefix ? 0 : 4 * RESUME_CHUNK_SIZE, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+      const options = { invitation: { id, key }, rootId, offer, storage, checkpoints, secrets };
+      const stage = await createReceiverStage(options);
+      await stage.bindSession('A'.repeat(43));
+      for (let i = 0; i < 5; i++) await stage.append(bytes.subarray(i * RESUME_CHUNK_SIZE, (i + 1) * RESUME_CHUNK_SIZE), 'A'.repeat(43));
+      await stage.release();
+      const committed = (legacyPrefix ? 5 : 4) * RESUME_CHUNK_SIZE;
+      assert.equal(checkpoints.values.get(`receiver:${rootId}`).offset, committed);
+      assert.equal(files.get(stage.stagingId).length, committed);
+      if (legacyPrefix) offer.windowBytes = 16 * RESUME_CHUNK_SIZE;
+      const resumed = await createReceiverStage(options);
+      assert.equal(resumed.offset, committed);
+      for (let offset = resumed.offset; offset < bytes.length; offset += RESUME_CHUNK_SIZE) await resumed.append(bytes.subarray(offset, offset + RESUME_CHUNK_SIZE), 'B'.repeat(43));
+      assert.deepEqual(new Uint8Array(await (await resumed.finish()).arrayBuffer()), bytes);
+      await resumed.cancel();
+    }
+  });
+
+  it('never advances progress after a batch checkpoint fails and truncates its disk tail on reopen', async () => {
+    const { storage, files } = opfs(), checkpoints = makeKV(), secrets = makeKV();
+    const id = new Uint8Array(16), key = new Uint8Array(32).fill(5), rootId = encodeBase64Url(id);
+    const bytes = new Uint8Array(4 * RESUME_CHUNK_SIZE + 7).fill(23);
+    const offer = { name: 'failed-batch.bin', size: String(bytes.length), chunkSize: RESUME_CHUNK_SIZE, windowBytes: 4 * RESUME_CHUNK_SIZE, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+    const options = { invitation: { id, key }, rootId, offer, storage, checkpoints, secrets };
+    const stage = await createReceiverStage(options);
+    await stage.bindSession('A'.repeat(43));
+    const put = checkpoints.put;
+    checkpoints.put = async () => { throw new Error('checkpoint unavailable'); };
+    for (let i = 0; i < 3; i++) assert.equal(await stage.append(bytes.subarray(i * RESUME_CHUNK_SIZE, (i + 1) * RESUME_CHUNK_SIZE), 'A'.repeat(43)), false);
+    await assert.rejects(stage.append(bytes.subarray(3 * RESUME_CHUNK_SIZE, 4 * RESUME_CHUNK_SIZE), 'A'.repeat(43)), /checkpoint unavailable/);
+    assert.equal(stage.currentOffset, 0);
+    assert.equal(checkpoints.values.get(`receiver:${rootId}`).offset, 0);
+    assert.equal(files.get(stage.stagingId).length, 4 * RESUME_CHUNK_SIZE);
+    await assert.rejects(stage.append(bytes.subarray(4 * RESUME_CHUNK_SIZE), 'A'.repeat(43)), /checkpoint unavailable/);
+    await stage.release();
+    checkpoints.put = put;
+    const reopened = await createReceiverStage(options);
+    assert.equal(reopened.offset, 0);
+    assert.equal(files.get(stage.stagingId).length, 0);
+    await reopened.cancel();
+  });
+
+  it('rejects invalid advertised receive windows before allocating storage', async () => {
+    for (const windowBytes of [-1, 1, 1.5, '4194304', Infinity, Number.MAX_SAFE_INTEGER + 1, null]) {
+      const storage = { getDirectory() { assert.fail('invalid window must fail before storage allocation'); } };
+      await assert.rejects(createReceiverStage({ invitation: { id: new Uint8Array(16), key: new Uint8Array(32) }, rootId: 'A'.repeat(22), offer: { name: 'bad.bin', size: '0', chunkSize: RESUME_CHUNK_SIZE, windowBytes, wholeSha256: new IncrementalSHA256().digestHex() }, storage, checkpoints: makeKV() }), /send window/);
+    }
+  });
+
   it('round-trips v2 progress records and confirms the fallback cap', () => {
     const ack = encodeResumeAck(12, 2n ** 40n);
     assert.deepEqual(decodeResumeAck(ack), { chunks: 12, bytes: 2n ** 40n });

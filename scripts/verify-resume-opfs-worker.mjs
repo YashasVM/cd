@@ -30,47 +30,51 @@ try {
     return route.fulfill({ contentType: 'text/javascript', body });
   });
   await page.goto('http://127.0.0.1/opfs-check');
-  const interrupted = await page.evaluate(async () => {
-    const module = await import('/src/resume-browser.js');
-    const { IncrementalSHA256 } = await import('/src/incremental-sha256.js');
-    const db = await module.openResumeDatabase();
-    const checkpoints = module.createResumeKV(db, 'checkpoints'), secrets = module.createResumeKV(db, 'secrets');
-    const id = crypto.getRandomValues(new Uint8Array(16)), key = crypto.getRandomValues(new Uint8Array(32));
-    const rootId = [...id].map(byte => String.fromCharCode(byte)).join('');
-    const root = btoa(rootId).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-    const bytes = Uint8Array.from({ length: module.RESUME_CHUNK_SIZE + 19 }, (_, i) => i % 251);
-    const offer = { name: 'worker-crash.bin', size: String(bytes.length), chunkSize: module.RESUME_CHUNK_SIZE, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
-    const options = { invitation: { id, key }, rootId: root, offer, checkpoints, secrets };
-    const stage = await module.createReceiverStage(options);
-    await stage.bindSession('A'.repeat(43));
-    let message;
-    try { await stage.append(bytes.subarray(0, module.RESUME_CHUNK_SIZE), 'A'.repeat(43)); }
-    catch (error) { message = error.message; }
-    if (!message?.includes('Simulated OPFS worker crash')) throw new Error(`Expected worker crash, received ${message}`);
-    const checkpoint = await checkpoints.get(`receiver:${root}`);
-    if (checkpoint.offset !== 0 || stage.currentOffset !== 0) throw new Error('Failed worker advanced checkpoint');
-    await stage.release();
-    window.recovery = { module, options, bytes, stage, db };
-    return { error: message, checkpointOffset: checkpoint.offset };
-  });
-  crashWorker = false;
-  const recovered = await page.evaluate(async () => {
-    const { module, options, bytes, stage: prior, db } = recovery;
-    // Same page, same file and checkpoint. No navigation releases the old lock.
-    const stage = await module.createReceiverStage(options);
-    if (stage.offset !== 0) throw new Error('Recovered an uncheckpointed prefix');
-    const directory = await navigator.storage.getDirectory();
-    const handle = await directory.getFileHandle(prior.stagingId);
-    if ((await handle.getFile()).size !== 0) throw new Error('Uncheckpointed tail was not truncated');
-    await stage.append(bytes.subarray(0, module.RESUME_CHUNK_SIZE), 'B'.repeat(43));
-    await stage.append(bytes.subarray(module.RESUME_CHUNK_SIZE), 'B'.repeat(43));
-    const file = await stage.finish();
-    const actual = new Uint8Array(await file.arrayBuffer());
-    if (actual.length !== bytes.length || actual.some((byte, i) => byte !== bytes[i])) throw new Error('Recovered bytes differ');
-    await stage.cancel();
-    db.close();
-    return { bytes: actual.length, offset: stage.offset, verified: true };
-  });
-  assert.equal(recovered.bytes, 256 * 1024 + 19);
-  console.log(JSON.stringify({ interrupted, recovered, chromium: browser.version() }, null, 2));
+  for (const windowBytes of [0, 4 * 1024 * 1024]) {
+    crashWorker = true;
+    const interrupted = await page.evaluate(async windowBytes => {
+      const module = await import('/src/resume-browser.js');
+      const { IncrementalSHA256 } = await import('/src/incremental-sha256.js');
+      const db = await module.openResumeDatabase();
+      const checkpoints = module.createResumeKV(db, 'checkpoints'), secrets = module.createResumeKV(db, 'secrets');
+      const id = crypto.getRandomValues(new Uint8Array(16)), key = crypto.getRandomValues(new Uint8Array(32));
+      const rootId = [...id].map(byte => String.fromCharCode(byte)).join('');
+      const root = btoa(rootId).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+      const bytes = Uint8Array.from({ length: (windowBytes ? 2 * 1024 * 1024 : module.RESUME_CHUNK_SIZE) + 19 }, (_, i) => i % 251);
+      const offer = { name: 'worker-crash.bin', windowBytes, size: String(bytes.length), chunkSize: module.RESUME_CHUNK_SIZE, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+      const options = { invitation: { id, key }, rootId: root, offer, checkpoints, secrets };
+      const stage = await module.createReceiverStage(options);
+      await stage.bindSession('A'.repeat(43));
+      let message;
+      try {
+        for (let offset = 0; offset < bytes.length - 19; offset += module.RESUME_CHUNK_SIZE) await stage.append(bytes.subarray(offset, offset + module.RESUME_CHUNK_SIZE), 'A'.repeat(43));
+      }
+      catch (error) { message = error.message; }
+      if (!message?.includes('Simulated OPFS worker crash')) throw new Error(`Expected worker crash, received ${message}`);
+      const checkpoint = await checkpoints.get(`receiver:${root}`);
+      if (checkpoint.offset !== 0 || stage.currentOffset !== 0) throw new Error('Failed worker advanced checkpoint');
+      await stage.release();
+      window.recovery = { module, options, bytes, stage, db };
+      return { error: message, checkpointOffset: checkpoint.offset };
+    }, windowBytes);
+    crashWorker = false;
+    const recovered = await page.evaluate(async () => {
+      const { module, options, bytes, stage: prior, db } = recovery;
+      // Same page, same file and checkpoint. No navigation releases the old lock.
+      const stage = await module.createReceiverStage(options);
+      if (stage.offset !== 0) throw new Error('Recovered an uncheckpointed prefix');
+      const directory = await navigator.storage.getDirectory();
+      const handle = await directory.getFileHandle(prior.stagingId);
+      if ((await handle.getFile()).size !== 0) throw new Error('Uncheckpointed tail was not truncated');
+      for (let offset = 0; offset < bytes.length; offset += module.RESUME_CHUNK_SIZE) await stage.append(bytes.subarray(offset, offset + module.RESUME_CHUNK_SIZE), 'B'.repeat(43));
+      const file = await stage.finish();
+      const actual = new Uint8Array(await file.arrayBuffer());
+      if (actual.length !== bytes.length || actual.some((byte, i) => byte !== bytes[i])) throw new Error('Recovered bytes differ');
+      await stage.cancel();
+      db.close();
+      return { bytes: actual.length, offset: stage.offset, verified: true };
+    });
+    assert.equal(recovered.bytes, (windowBytes ? 2 * 1024 * 1024 : 256 * 1024) + 19);
+    console.log(JSON.stringify({ windowBytes, interrupted, recovered, chromium: browser.version() }, null, 2));
+  }
 } finally { await browser.close(); }

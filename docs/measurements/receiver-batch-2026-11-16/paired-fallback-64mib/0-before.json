@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "profiling": false,
+  "chromium": "155.0.8059.84",
+  "temporaryStorage": "/home/yvm/.cache/cd-goal-tmp",
+  "bytes": 67108941,
+  "sha256": "978a0749f4770841e7792fd11aca895d81cf9c691c54569f2b445ec44b8ce4df",
+  "assets": "/home/yvm/.cache/cd-goal-tmp/cd-resume-paired-BLHDBk/before",
+  "measurements": [
+    {
+      "scenario": "browser-browser-fallback",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:46185",
+      "bytes": 67108941,
+      "sha256": "978a0749f4770841e7792fd11aca895d81cf9c691c54569f2b445ec44b8ce4df",
+      "preparationMs": 1821.701878,
+      "transferMs": 20843.926262,
+      "milliseconds": 22665.62814
+    }
+  ],
+  "method": "One Chromium host; v2 relay origin recorded per measurement. OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. Profiling adds overhead; async operation latency totals can overlap and are not CPU time. No physical disk durability, LAN or WAN speed claim."
+}

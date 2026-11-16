@@ -1,0 +1,28 @@
+▶ resume browser primitives
+  ✔ parses only private v2 links and validates safe filenames (1.90952ms)
+  ✔ hashes files incrementally in bounded chunks (18.990643ms)
+  ✔ binds a resumed sender to the original name, size, and whole digest (0.384608ms)
+  ✔ writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption (20.125758ms)
+  ✔ batches only advertised windows and retains only flushed, checkpointed prefixes (78.25978ms)
+  ✔ discards a buffered receive tail on interruption and resumes from its committed prefix (75.88916ms)
+  ✔ never advances progress after a batch checkpoint fails and truncates its disk tail on reopen (12.916112ms)
+  ✔ rejects invalid advertised receive windows before allocating storage (0.435631ms)
+  ✔ round-trips v2 progress records and confirms the fallback cap (0.370478ms)
+✔ resume browser primitives (210.960753ms)
+✔ cancel waits for an in-flight append and removes any checkpoint it finishes writing (28.24686ms)
+✔ worker flush completes before the checkpoint, and cancellation waits then closes before cleanup (1.95625ms)
+✔ explicit cancellation removes its checkpoint and staging even when worker close fails (1.261914ms)
+✔ cancel discards an incomplete advertised batch without publishing progress (7.847555ms)
+✔ worker writes all partial writes and flushes before acknowledging, then closes once (2.854463ms)
+✔ uses the writable-stream fallback only when sync worker initialization is unavailable (1.376701ms)
+✔ propagates zero writes and flush failures without falling back after initialization (2.529654ms)
+✔ propagates worker crashes during writes and releases the worker (0.47957ms)
+✔ flushes a bounded two-MiB batch and rejects oversized batches before writing (1.916261ms)
+ℹ tests 18
+ℹ suites 1
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 298.514625

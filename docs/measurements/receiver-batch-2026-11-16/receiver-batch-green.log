@@ -1,0 +1,25 @@
+▶ resume browser primitives
+  ✔ parses only private v2 links and validates safe filenames (1.751299ms)
+  ✔ hashes files incrementally in bounded chunks (23.93142ms)
+  ✔ binds a resumed sender to the original name, size, and whole digest (0.331211ms)
+  ✔ writes and reopens only durable OPFS bytes, truncates uncheckpointed tail, and detects corruption (18.131648ms)
+  ✔ batches only advertised windows and retains only flushed, checkpointed prefixes (86.20201ms)
+  ✔ discards a buffered receive tail on interruption and resumes from its committed prefix (39.774362ms)
+  ✔ rejects invalid advertised receive windows before allocating storage (0.711241ms)
+  ✔ round-trips v2 progress records and confirms the fallback cap (0.43073ms)
+✔ resume browser primitives (173.074ms)
+✔ cancel waits for an in-flight append and removes any checkpoint it finishes writing (16.43349ms)
+✔ worker flush completes before the checkpoint, and cancellation waits then closes before cleanup (2.172267ms)
+✔ explicit cancellation removes its checkpoint and staging even when worker close fails (1.560032ms)
+✔ worker writes all partial writes and flushes before acknowledging, then closes once (3.00204ms)
+✔ uses the writable-stream fallback only when sync worker initialization is unavailable (1.468023ms)
+✔ propagates zero writes and flush failures without falling back after initialization (1.449152ms)
+✔ propagates worker crashes during writes and releases the worker (0.30441ms)
+ℹ tests 15
+ℹ suites 1
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 230.909658

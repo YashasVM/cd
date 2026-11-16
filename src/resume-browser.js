@@ -107,6 +107,9 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
   if (!storage?.getDirectory) throw new Error('Resume needs browser durable storage (OPFS). Open this link in a supported browser with site storage enabled.');
   if (!Number.isSafeInteger(Number(offer.size)) || Number(offer.size) < 0 || String(Number(offer.size)) !== String(offer.size)) throw new Error('The sender offered an invalid file size.');
   if (offer.chunkSize !== RESUME_CHUNK_SIZE || !/^[0-9a-f]{64}$/.test(offer.wholeSha256)) throw new Error('The sender offered invalid resumable file details.');
+  const windowBytes = offer.windowBytes === undefined ? 0 : offer.windowBytes;
+  if (!Number.isSafeInteger(windowBytes) || windowBytes < 0 || (windowBytes > 0 && windowBytes < RESUME_CHUNK_SIZE)) throw new Error('The sender offered an invalid resumable send window.');
+  const ackEveryBytes = windowBytes >= 4 * 1024 * 1024 ? 2 * 1024 * 1024 : windowBytes >= 1024 * 1024 ? 1024 * 1024 : RESUME_CHUNK_SIZE;
   const directory = await storage.getDirectory();
   const checkpointKey = `receiver:${rootId}`;
   let checkpoint = await checkpoints.get(checkpointKey);
@@ -143,6 +146,9 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
   const writer = await createResumeWriter(handle);
   const expiresAt = checkpoint?.expiresAt ?? Math.min(now + RESUME_LIMIT_MS, Number(offer.expiresAt) || now + RESUME_LIMIT_MS);
   let currentOffset = offset;
+  const batch = ackEveryBytes > RESUME_CHUNK_SIZE ? new Uint8Array(ackEveryBytes) : null;
+  let bufferedBytes = 0;
+  let appendFailure;
   let closed = false;
   async function persist(nextOffset, nextHash, priorSessionNonce) {
     const unsigned = checkpointFor({ role: 'receiver', rootId, offer, offset: nextOffset, prefixSha256: nextHash.digestHex(), stagingId, destination, expiresAt, priorSessionNonce });
@@ -152,14 +158,22 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
   let operation = Promise.resolve();
   async function appendInner(bytes, priorSessionNonce) {
     if (closed) throw new Error('The saved receive stage is closed.');
+    if (appendFailure) throw appendFailure;
     const value = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    const nextOffset = currentOffset + value.byteLength;
+    const nextOffset = currentOffset + bufferedBytes + value.byteLength;
     if (!value.byteLength || value.byteLength > RESUME_CHUNK_SIZE || nextOffset > Number(offer.size) || (nextOffset < Number(offer.size) && value.byteLength !== RESUME_CHUNK_SIZE)) throw new Error('The sender sent an invalid chunk boundary.');
-    const nextHash = hash.clone().update(value);
-    await writer.write(value, currentOffset);
-    await persist(nextOffset, nextHash, priorSessionNonce);
+    if (batch) { batch.set(value, bufferedBytes); bufferedBytes += value.byteLength; }
+    if (batch && bufferedBytes < ackEveryBytes && nextOffset < Number(offer.size)) return false;
+    const committed = batch ? batch.subarray(0, bufferedBytes) : value;
+    const nextHash = hash.clone().update(committed);
+    try {
+      await writer.write(committed, currentOffset);
+      await persist(nextOffset, nextHash, priorSessionNonce);
+    } catch (error) { appendFailure = error; throw error; }
     currentOffset = nextOffset;
     hash = nextHash;
+    bufferedBytes = 0;
+    return true;
   }
   function append(bytes, priorSessionNonce) {
     const current = operation.then(() => appendInner(bytes, priorSessionNonce));
@@ -198,7 +212,7 @@ export async function createReceiverStage({ invitation, rootId, offer, storage =
     operation = current.catch(() => {});
     return current;
   }
-  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, bindSession, append, finish, cancel, release, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
+  return { offset, prefixSha256: hash.digestHex(), expiresAt, stagingId, ackEveryBytes, maxWorkingBytes: 2 * ackEveryBytes, bindSession, append, finish, cancel, release, get currentOffset() { return currentOffset; }, get wholeHash() { return hash.digestHex(); } };
 }
 
 export async function hashFilePrefix(file, offset) {
@@ -605,7 +619,7 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
     status.textContent = 'Receiving with saved progress. Keep this tab open.';
     hooks.onState?.('transferring');
     if (stopped) { if (discard) await stage.cancel(); else await stage.release(); return; }
-    const resumeControl = { offset: String(stage.offset), prefixSha256: stage.prefixSha256 };
+    const resumeControl = { offset: String(stage.offset), prefixSha256: stage.prefixSha256, ackEveryBytes: stage.ackEveryBytes };
     sendRecord(socket, await sealer.seal(KIND_ACCEPT, textEncoder.encode(JSON.stringify(resumeControl))));
     let chunks = Math.ceil(stage.offset / RESUME_CHUNK_SIZE);
     let maxWorkingBytes = 0;
@@ -614,9 +628,10 @@ export function mountResumableReceiver(container, link, { storage = globalThis.n
       if (typeof event.data === 'string') continue;
       const opened = await opener.open(event.data);
       if (opened.kind === KIND_CHUNK) {
-        maxWorkingBytes = Math.max(maxWorkingBytes, event.data.byteLength + opened.plaintext.byteLength * 2);
-        await stage.append(opened.plaintext, encodeBase64Url(session.sessionNonce));
+        maxWorkingBytes = Math.max(maxWorkingBytes, stage.maxWorkingBytes + event.data.byteLength + opened.plaintext.byteLength * 2);
+        const committed = await stage.append(opened.plaintext, encodeBase64Url(session.sessionNonce));
         chunks++;
+        if (!committed) continue;
         const ack = encodeResumeAck(chunks, stage.currentOffset);
         sendRecord(socket, await sealer.seal(KIND_ACK, ack));
         const percent = offer.size === '0' ? 100 : Math.min(stage.currentOffset * 100 / Number(offer.size), 100);

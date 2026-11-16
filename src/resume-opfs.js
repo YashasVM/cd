@@ -60,7 +60,7 @@ export async function createResumeWriter(file, WorkerImpl) {
   return {
     async write(bytes, offset) {
       if (closed) throw new Error('Resumable storage is closed.');
-      // Clone one bounded chunk so the receiver can still hash its own bytes.
+      // Clone one bounded batch so the receiver retains its checkpoint bytes.
       await request({ type: 'write', bytes, offset });
     },
     close() {
