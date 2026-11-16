@@ -1,0 +1,13 @@
+browser-browser-fallback: verified 8388685 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-browser-fallback",
+      "bytes": 8388685,
+      "sha256": "ecf45ebe6f065b9f5520bec24dbc6b49cfa9226274ca533dc17d319ba814e678",
+      "milliseconds": 6460.806046999999
+    }
+  ]
+}

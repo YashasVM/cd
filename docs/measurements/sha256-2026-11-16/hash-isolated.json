@@ -1,0 +1,96 @@
+{
+  "method": "Alternating versions, 7 trials each, 16 MiB identical random input in 256 KiB chunks; Chromium headless hashing only, not transfer throughput",
+  "chromium": "156.0.8078.79",
+  "expected": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "ms": 380.9000000000233,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "ms": 128.79999999998836,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "ms": 117.39999999996508,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "ms": 365.8999999999651,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "ms": 385,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "ms": 131.19999999995343,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "ms": 117.90000000002328,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "ms": 355.20000000001164,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "ms": 341.1000000000349,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "ms": 133.09999999997672,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "ms": 119.5,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "ms": 344.8999999999651,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "ms": 345.29999999998836,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "ms": 119.39999999996508,
+      "digest": "0f3c3392bb6c4d90c1fe3cc5b6878c5b3f0886edf9c853366f15b8162df75048"
+    }
+  ],
+  "medians": {
+    "before": 355.20000000001164,
+    "after": 119.5
+  },
+  "speedup": 2.972384937238591
+}

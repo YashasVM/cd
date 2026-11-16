@@ -1,0 +1,96 @@
+{
+  "method": "Alternating versions, 7 trials each, 16 MiB identical random input in 256 KiB chunks; Chromium headless hashing only, not transfer throughput",
+  "chromium": "156.0.8078.79",
+  "expected": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "ms": 373.79999999998836,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "ms": 131.29999999998836,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "ms": 127.29999999998836,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "ms": 370.6000000000349,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "ms": 363.5999999999767,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "ms": 123.59999999997672,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "ms": 123.5,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "ms": 375.5999999999767,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "ms": 382.3999999999651,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "ms": 130,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "ms": 193.29999999998836,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "ms": 409.5999999999767,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "ms": 393.6000000000349,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "ms": 128.30000000004657,
+      "digest": "cd1c9cd89145954b0d4e82ed8eda90aed2dce15babd0c37edc7fd24ee3501f49"
+    }
+  ],
+  "medians": {
+    "before": 375.5999999999767,
+    "after": 128.30000000004657
+  },
+  "speedup": 2.927513639905225
+}
