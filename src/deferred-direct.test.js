@@ -22,19 +22,37 @@ test('deferred negotiation requires explicit pending consent and bounds decoded 
   assert.throws(() => deferredDirectSDP(encoder.encode('{"sdp":"offer","candidate":{}}')), /invalid/);
 });
 
-function receiverFixture(t, { hint = true, pending = true, duplicate = false, conflicting = false } = {}) {
+function receiverFixture(t, { hint = true, pending = true, duplicate = false, conflicting = false, autoReceive = true, picker = false, holdPicker = false } = {}) {
   const descriptors = ['window', 'location', 'WebSocket', 'RTCPeerConnection', 'requestAnimationFrame'].map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
   class Element extends EventTarget {
     classList = { add() {} }; style = {}; hidden = false; textContent = '';
     children = new Map();
-    querySelector(name) { if (!this.children.has(name)) this.children.set(name, new Element()); return this.children.get(name); }
+    constructor(selector = '') { super(); this.selector = selector; }
+    querySelector(name) { if (!this.children.has(name)) this.children.set(name, new Element(name)); return this.children.get(name); }
     setAttribute() {}
-    click() {} // A download UI action must not start a real browser in this test.
+    click() { if (this.selector === '[data-relay="accept"]' && !this.disabled) this.dispatchEvent(new Event('click')); }
   }
   const container = new Element();
   const events = new EventTarget();
   const location = new URL('http://localhost:9999/');
   globalThis.window = { location, addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events) };
+  let pickerStarted, releasePicker, sinkAborted;
+  const pickerStartedPromise = new Promise(resolve => { pickerStarted = resolve; });
+  const pickerGate = new Promise(resolve => { releasePicker = resolve; });
+  const sinkAbortedPromise = new Promise(resolve => { sinkAborted = resolve; });
+  const storage = { pickers: 0, created: 0, writes: [], closed: 0, aborted: 0 };
+  if (picker) window.showSaveFilePicker = async () => {
+    storage.pickers++; pickerStarted();
+    if (holdPicker) await pickerGate;
+    return { async createWritable() {
+      storage.created++;
+      return {
+        async write(bytes) { storage.writes.push(bytes.slice()); },
+        async close() { storage.closed++; },
+        async abort() { storage.aborted++; sinkAborted(); }
+      };
+    } };
+  };
   globalThis.location = location;
   globalThis.requestAnimationFrame = callback => queueMicrotask(callback);
   const peers = [];
@@ -51,6 +69,8 @@ function receiverFixture(t, { hint = true, pending = true, duplicate = false, co
   const invitation = { id: new Uint8Array(16).fill(3), key: new Uint8Array(32).fill(7) };
   const bytes = new Uint8Array([1, 5, 9, 13]);
   let socket;
+  let answered;
+  const answeredPromise = new Promise(resolve => { answered = resolve; });
   class Socket extends EventTarget {
     static OPEN = 1;
     readyState = 1; bufferedAmount = 0; chain = Promise.resolve(); hellos = []; sent = [];
@@ -81,6 +101,7 @@ function receiverFixture(t, { hint = true, pending = true, duplicate = false, co
         const { kind, plaintext } = await this.opener.open(data);
         this.sent.push(kind);
         if (kind === KIND_SIGNAL && isDeferredDirectHello(plaintext)) { this.hellos.push(plaintext); await this.offer(); }
+        if (kind === KIND_SIGNAL && JSON.parse(new TextDecoder().decode(plaintext)).sdp === 'answer') answered();
         if (kind === KIND_ACCEPT) {
           await this.emit(KIND_CHUNK, bytes);
           const counts = new Uint8Array(12), view = new DataView(counts.buffer);
@@ -96,7 +117,7 @@ function receiverFixture(t, { hint = true, pending = true, duplicate = false, co
   let finish;
   const done = new Promise(resolve => { finish = resolve; });
   const stop = mountRelayReceiver(container, `http://localhost:9999/s/${encodeBase64Url(invitation.id)}#v1.${encodeBase64Url(invitation.key)}`, {
-    autoReceive: true,
+    autoReceive,
     hooks: { onState(state) { if (state === 'complete' || state === 'failed') finish(state); } }
   });
   t.after(() => {
@@ -105,7 +126,7 @@ function receiverFixture(t, { hint = true, pending = true, duplicate = false, co
     if (url) URL.revokeObjectURL(url);
     for (const [name, descriptor] of descriptors) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
   });
-  return { done, peers, bytes, socket: () => socket, container };
+  return { done, peers, bytes, socket: () => socket, container, stop, answered: answeredPromise, storage, pickerStarted: pickerStartedPromise, releasePicker, sinkAborted: sinkAbortedPromise };
 }
 
 test('browser receiver negotiates one late SDP and verifies the same fallback bytes', { timeout: 5000 }, async t => {
@@ -123,6 +144,59 @@ test('browser receiver emits no capability record to legacy sender or relay', { 
   assert.equal(await fixture.done, 'complete');
   assert.equal(fixture.socket().hellos.length, 0);
   assert.equal(fixture.socket().sent[0], KIND_ACCEPT);
+});
+
+test('browser establishes deferred direct signaling while consent is held and writes only after explicit acceptance', { timeout: 5000 }, async t => {
+  const fixture = receiverFixture(t, { autoReceive: false, picker: true });
+  await fixture.answered;
+  assert.deepEqual(fixture.peers[0].remoteDescription, { type: 'offer', sdp: 'deferred offer' });
+  assert.equal(fixture.storage.pickers, 0);
+  assert.equal(fixture.storage.writes.length, 0);
+  assert.equal(fixture.socket().sent.includes(KIND_ACCEPT), false);
+  fixture.container.querySelector('[data-relay="accept"]').click();
+  assert.equal(await fixture.done, 'complete');
+  assert.equal(fixture.storage.pickers, 1);
+  assert.equal(fixture.storage.closed, 1);
+  assert.deepEqual(fixture.storage.writes, [fixture.bytes]);
+});
+
+test('browser rejects file records before consent without opening storage or sending ACCEPT', { timeout: 5000 }, async t => {
+  const fixture = receiverFixture(t, { autoReceive: false, picker: true });
+  await fixture.answered;
+  await fixture.socket().emit(KIND_CHUNK, fixture.bytes);
+  assert.equal(await fixture.done, 'failed');
+  assert.equal(fixture.storage.pickers, 0);
+  assert.equal(fixture.storage.writes.length, 0);
+  assert.equal(fixture.socket().sent.includes(KIND_ACCEPT), false);
+  fixture.container.querySelector('[data-relay="accept"]').click();
+  assert.equal(fixture.storage.pickers, 0, 'a failed consent dialog cannot be revived');
+});
+
+test('browser cancellation aborts a sink whose picker resolves later without reviving acceptance', { timeout: 5000 }, async t => {
+  const fixture = receiverFixture(t, { autoReceive: false, picker: true, holdPicker: true });
+  await fixture.answered;
+  fixture.container.querySelector('[data-relay="accept"]').click();
+  await fixture.pickerStarted;
+  fixture.stop();
+  fixture.releasePicker();
+  await fixture.sinkAborted;
+  assert.equal(fixture.storage.aborted, 1);
+  assert.equal(fixture.storage.writes.length, 0);
+  assert.equal(fixture.socket().sent.includes(KIND_ACCEPT), false);
+});
+
+test('a pre-consent protocol failure aborts a sink whose picker is still pending', { timeout: 5000 }, async t => {
+  const fixture = receiverFixture(t, { autoReceive: false, picker: true, holdPicker: true });
+  await fixture.answered;
+  fixture.container.querySelector('[data-relay="accept"]').click();
+  await fixture.pickerStarted;
+  await fixture.socket().emit(KIND_CHUNK, fixture.bytes);
+  assert.equal(await fixture.done, 'failed');
+  fixture.releasePicker();
+  await fixture.sinkAborted;
+  assert.equal(fixture.storage.aborted, 1);
+  assert.equal(fixture.storage.writes.length, 0);
+  assert.equal(fixture.socket().sent.includes(KIND_ACCEPT), false);
 });
 
 for (const [name, options] of [['unnegotiated pending offer', { hint: false }], ['duplicate late offer', { duplicate: true }], ['conflicting initial and pending offers', { conflicting: true }]]) {

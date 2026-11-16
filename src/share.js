@@ -229,6 +229,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
       : 'Ready when you are. The file stays with the sender until you accept.';
     return new Promise((resolve, reject) => {
       elements.accept.addEventListener('click', async () => {
+        if (stopped || failureShown || elements.accept.disabled) return;
         elements.accept.disabled = true;
         try { resolve(await createSink(offer)); }
         catch (error) {
@@ -434,26 +435,33 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
         return;
       }
       const { kind, plaintext } = await opener.open(data);
+      if (stopped || failureShown) return;
       if (state === 'connecting' && kind === KIND_OFFER) {
         offer = parseOffer(plaintext);
         pendingDirect = parseDirectPending(offer.directPending, deferredHelloSent, offer.directSdp);
         if (pendingDirect) opener.enableDirectSignal();
         state = 'offered';
         if (offer.directSdp && typeof RTCPeerConnection === 'function') startDirect(offer.directSdp);
-        sink = await waitForAcceptance(offer);
-        if (failureShown) {
-          await sink.abort();
-          return;
-        }
-        elements.offer.hidden = true;
-        elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
-        state = 'receiving';
-        hooks.onState?.('transferring');
-        renderProgress(0n, offer.size, true);
-        await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
+        // Consent and storage selection may take arbitrarily long. Keep the
+        // authenticated record queue free to establish the negotiated direct
+        // path meanwhile; file records still require the receiving state.
+        void waitForAcceptance(offer).then(async (acceptedSink) => {
+          if (stopped || failureShown || state !== 'offered') {
+            await acceptedSink.abort();
+            return;
+          }
+          sink = acceptedSink;
+          elements.offer.hidden = true;
+          elements.status.textContent = `Receiving ${offerLabel(offer)}...`;
+          await send(KIND_ACCEPT, offer.chunkSize === offer.baseChunkSize ? new Uint8Array() : new TextEncoder().encode(JSON.stringify({ chunkSize: offer.chunkSize })));
+          if (stopped || failureShown || state !== 'offered') return;
+          state = 'receiving';
+          hooks.onState?.('transferring');
+          renderProgress(0n, offer.size, true);
+        }).catch((error) => fail(error, socket, sink));
         return;
       }
-      if (state === 'receiving' && kind === KIND_SIGNAL) {
+      if ((state === 'offered' || state === 'receiving') && kind === KIND_SIGNAL) {
         if (!pendingDirect) throw new Error('The sender sent unnegotiated direct signaling.');
         const sdp = deferredDirectSDP(plaintext);
         pendingDirect = false; // Only one deferred offer can change this path.
@@ -520,6 +528,8 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     };
     window.addEventListener('pagehide', leave, { once: true });
     stop = () => {
+      stopped = true;
+      failureShown = true;
       window.removeEventListener('pagehide', leave);
       closeDirect();
       if (state !== 'complete') void sink?.abort().catch(() => {});
