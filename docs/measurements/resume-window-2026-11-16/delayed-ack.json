@@ -1,0 +1,160 @@
+{
+  "method": "Alternating fresh Node processes, real encrypted v2 records and full byte verification in deterministic 8MiB simulated receiver fixture; 30ms added ACK delay and receiver batching offered window. No disk, real network, Chromium, LAN or WAN speed claim.",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "rootId": "1u_M_HJGcTa3nr2kLx4-Hg",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 342.98435099999995
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "rootId": "e4zpVS62D_q2KqADly5dgA",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 376.555569
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "rootId": "5v56MCf0Q1hbzCvmbhUJ3A",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 373.37384499999996
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "rootId": "98WQEhijhi7S71RO3pS1Aw",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 338.3254979999999
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "rootId": "ggmV6SBeIt-c-RzjoVqYTQ",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 336.16569100000004
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "rootId": "_z0nAkKPRncTEcVoyFDXHg",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 370.110508
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "rootId": "7ZG23_aoB_9ngVDMdNM2sg",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 377.68630299999995
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "rootId": "om3OpIzsP3D94wOVcSQKhw",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 336.976612
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "rootId": "5Kb7denkaNM4uR3WP0HSDA",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 338.307364
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "rootId": "VL_HVfwlvrn3rh9JufEW1A",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 378.757257
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "rootId": "YSuBsTXeVIOs4gMRUp0OJw",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 376.11700999999994
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "rootId": "M3FK3cOKI1ylemE6SybxnA",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 341.9625
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "rootId": "2jhDANXWaWSss_gdqdwiBQ",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 339.23027899999994
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "rootId": "f7SOBUPZwG36gmSRfFpumQ",
+      "bytesRead": 16777216,
+      "bytesSent": 8388608,
+      "resumedBytes": 0,
+      "retainedBytes": 0,
+      "maxWorkingBytes": 1310832,
+      "elapsedMs": 401.49533700000006
+    }
+  ],
+  "redaction": "Removed generated private capability URLs from simulated test fixture results; timings and byte accounting are unchanged."
+}

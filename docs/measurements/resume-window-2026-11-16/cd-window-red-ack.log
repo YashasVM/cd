@@ -1,0 +1,40 @@
+✔ pipelines bounded encrypted chunks and checkpoints only acknowledged prefix bytes (147.704229ms)
+✔ retains only acknowledged progress after interruption with chunks in flight (83.677803ms)
+✖ accepts cumulative durable ACKs within its bounded window (3085.758574ms)
+✔ rejects cumulative ACKs with mismatched byte or chunk counts (156.334939ms)
+✔ rejects invalid durable ACKs without advancing its checkpoint (75.956991ms)
+✔ preserves its last durable checkpoint when the source fails with records in flight (72.11369ms)
+✔ cancel removes sender secrets and checkpoints while ACKs are pending (80.801507ms)
+✔ cancel removes retained records after a disconnected sender has settled (75.059079ms)
+✖ completes resumed, empty, and short encrypted sources (170.54657ms)
+✔ drains an encrypted COMPLETE and queued completed event before a socket close (90.897334ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 8
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4092.195121
+
+✖ failing tests:
+
+test at src/resume-sender.test.js:146:1
+✖ accepts cumulative durable ACKs within its bounded window (3085.758574ms)
+  AssertionError [ERR_ASSERTION]: sender did not make expected progress
+      at Object.waitFor (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:97:130)
+      at async TestContext.<anonymous> (file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-sender.test.js:153:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src/resume-sender.test.js:219:1
+✖ completes resumed, empty, and short encrypted sources (170.54657ms)
+  Error: The receiver acknowledged invalid saved progress.
+      at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/src/resume-browser.js:483:89
