@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
+import { sanitizeDiagnostic } from './v2-browser-diagnostics.mjs';
 import { buildCLI, captureOutput, childExit, cliEnv, findChromium, firstLine, startWorker, stopChild } from './harness.mjs';
 
 // Exercises the built UI, native browser storage, and the actual v2 Worker.
@@ -44,6 +45,8 @@ try {
     contexts.push(context);
     await context.addInitScript(({ fallback, profiling }) => {
       globalThis.__resumeWorkerWrites = 0;
+      globalThis.__resumeWorkerWriteBytes = 0;
+      globalThis.__resumeMaxWorkerWriteBytes = 0;
       const stats = globalThis.__resumeProfile = {};
       const record = (label, start) => {
         const elapsed = performance.now() - start;
@@ -83,7 +86,11 @@ try {
           });
         }
         postMessage(...args) {
-          if (args[0]?.type === 'write') globalThis.__resumeWorkerWrites++;
+          if (args[0]?.type === 'write') {
+            globalThis.__resumeWorkerWrites++;
+            globalThis.__resumeWorkerWriteBytes += args[0].bytes.byteLength;
+            globalThis.__resumeMaxWorkerWriteBytes = Math.max(globalThis.__resumeMaxWorkerWriteBytes, args[0].bytes.byteLength);
+          }
           if (profiling) this.profileRequest = { label: `worker:${args[0]?.type}`, start: performance.now() };
           return super.postMessage(...args);
         }
@@ -150,15 +157,20 @@ try {
       receiverPage = receiver;
       const downloading = receiver.waitForEvent('download', { timeout: 60_000 });
       await receiver.goto(invitation);
-      const download = await downloading;
-      try { await download.saveAs(destination); }
+      let download;
+      try { download = await downloading; await download.saveAs(destination); }
       catch (error) {
-        throw new Error(`Download failed: ${await download.failure()}; receiver: ${await receiver.locator('[data-resume-status]').textContent()}`, { cause: error });
+        const detail = { error: error.message, download: await download?.failure(), receiver: await receiver.locator('[data-resume-status]').allTextContents(), progress: await receiver.locator('[data-resume-progress]').allTextContents(), sender: await sender.locator('#sender-status, #sender-error').allTextContents() };
+        throw new Error(`Download failed: ${sanitizeDiagnostic(JSON.stringify(detail))}`, { cause: error });
       }
       await receiver.locator('[data-resume-status]').filter({ hasText: 'File verified. Download started; check your downloads.' }).waitFor();
-      const workerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
-      if (direction === 'browser-browser-fallback') assert.equal(workerWrites, 0);
-      else assert.equal(workerWrites, Math.ceil(payload.length / 262144));
+      const workerWrites = await receiver.evaluate(() => ({ calls: globalThis.__resumeWorkerWrites, bytes: globalThis.__resumeWorkerWriteBytes, maxBytes: globalThis.__resumeMaxWorkerWriteBytes }));
+      if (direction === 'browser-browser-fallback') assert.deepEqual(workerWrites, { calls: 0, bytes: 0, maxBytes: 0 });
+      else {
+        assert.equal(workerWrites.bytes, payload.length, 'Worker must write every payload byte exactly once');
+        assert.ok(workerWrites.calls >= Math.ceil(payload.length / (2 * 1024 * 1024)) && workerWrites.calls <= Math.ceil(payload.length / 262144));
+        assert.ok(workerWrites.maxBytes <= 2 * 1024 * 1024, 'Worker writes must stay bounded');
+      }
     }
     await complete(sender);
     const completed = performance.now();
@@ -240,7 +252,7 @@ try {
       };
     }), root);
     assert.ok(savedOffset > 0 && savedOffset < payload.length);
-    const priorWorkerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
+    const priorWorkerBytes = await receiver.evaluate(() => globalThis.__resumeWorkerWriteBytes);
     await receiver.locator('#relay-done-btn').click();
     const resumed = launch(['send', '--resume', root, '--json', source]);
     const resumedExit = childExit(resumed.child);
@@ -251,15 +263,15 @@ try {
     const destination = join(work, 'browser-same-page-restart.bin');
     try { await (await downloading).saveAs(destination); }
     catch (error) {
-      throw new Error(`Same-page receive stalled: ${await receiver.locator('[data-resume-status]').textContent()}; sender: ${resumed.output.stderr}`, { cause: error });
+      throw new Error(sanitizeDiagnostic(`Same-page receive stalled: ${await receiver.locator('[data-resume-status]').textContent()}; sender: ${resumed.output.stderr}`), { cause: error });
     }
     assert.equal(await resumedExit, 0, resumed.output.stderr);
     await receiver.locator('[data-resume-status]').filter({ hasText: 'File verified. Download started; check your downloads.' }).waitFor();
     assert.equal(sha(await readFile(destination)), sha(payload));
     const observedOffset = await receiver.evaluate(() => globalThis.__resumeProgress.filter(value => value.role === 'receiver').at(-1).resumedBytes);
     assert.equal(observedOffset, savedOffset);
-    const resumedWorkerWrites = await receiver.evaluate(() => globalThis.__resumeWorkerWrites);
-    assert.equal(resumedWorkerWrites - priorWorkerWrites, Math.ceil((payload.length - savedOffset) / 262144));
+    const resumedWorkerBytes = await receiver.evaluate(() => globalThis.__resumeWorkerWriteBytes);
+    assert.equal(resumedWorkerBytes - priorWorkerBytes, payload.length - savedOffset, 'Worker must write exactly the remaining resumed bytes');
     measurements.push({ scenario: 'cli-browser-same-page-restart', bytes: payload.length, resumedBytes: savedOffset, sha256: sha(payload) });
   }
   console.log(JSON.stringify({ version: 1, completed: measurements.length, measurements }, null, 2));

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "profiling": false,
+  "chromium": "155.0.8059.84",
+  "cliSHA256": "4511857b2050bd03ea4c655f5e993dc608787d7a8003d0b79117e3942053fa00",
+  "temporaryStorage": "/home/yvm/.cache/cd-goal-tmp",
+  "bytes": 8388685,
+  "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "browser-cli",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44951",
+      "bytes": 8388685,
+      "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f",
+      "preparationMs": 1184.285088,
+      "transferMs": 319.1007800000002,
+      "milliseconds": 1503.3858680000003
+    },
+    {
+      "scenario": "browser-browser",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44951",
+      "bytes": 8388685,
+      "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f",
+      "preparationMs": 1184.6290600000002,
+      "transferMs": 649.3532699999996,
+      "milliseconds": 1833.9823299999998
+    },
+    {
+      "scenario": "browser-browser-fallback",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:44951",
+      "bytes": 8388685,
+      "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f",
+      "preparationMs": 1231.5116440000002,
+      "transferMs": 692.4530399999994,
+      "milliseconds": 1923.9646839999996
+    },
+    {
+      "scenario": "browser-cli-restart",
+      "bytes": 8388685,
+      "resumedBytes": 4194304,
+      "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f"
+    },
+    {
+      "scenario": "cli-browser-same-page-restart",
+      "bytes": 8388685,
+      "resumedBytes": 2097152,
+      "sha256": "f05bfd670dd8f576001b45019c43827c49504744d5ccd36f9a985a198a25570f"
+    }
+  ],
+  "method": "One Chromium host; v2 relay origin recorded per measurement. OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. Profiling adds overhead; async operation latency totals can overlap and are not CPU time. No physical disk durability, LAN or WAN speed claim."
+}

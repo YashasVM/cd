@@ -67,42 +67,46 @@ function makeStorage(blockClose) {
 }
 
 it('cancel waits for an in-flight append and removes any checkpoint it finishes writing', async () => {
-  const closeGate = { entered: deferred(), release: deferred() };
-  const putGate = { entered: deferred(), release: deferred() };
-  const { storage, files } = makeStorage(closeGate);
-  const checkpoints = makeKV({ blockPut: putGate });
-  const id = Uint8Array.from({ length: 16 }, (_, index) => index);
-  const key = Uint8Array.from({ length: 32 }, (_, index) => 255 - index);
-  const invitation = { id, key };
-  const rootId = encodeBase64Url(id);
-  const chunk = Uint8Array.of(42);
-  const offer = {
-    name: 'cancel.bin', size: String(chunk.length), chunkSize: RESUME_CHUNK_SIZE,
-    wholeSha256: new IncrementalSHA256().update(chunk).digestHex(), expiresAt: Date.now() + 60_000
-  };
-  const stage = await createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets: makeKV() });
+  for (const windowBytes of [undefined, 4 * RESUME_CHUNK_SIZE]) {
+    const closeGate = { entered: deferred(), release: deferred() };
+    const putGate = { entered: deferred(), release: deferred() };
+    const { storage, files } = makeStorage(closeGate);
+    const checkpoints = makeKV({ blockPut: putGate });
+    const id = Uint8Array.from({ length: 16 }, (_, index) => index);
+    const key = Uint8Array.from({ length: 32 }, (_, index) => 255 - index);
+    const invitation = { id, key };
+    const rootId = encodeBase64Url(id);
+    const chunk = new Uint8Array(windowBytes ? RESUME_CHUNK_SIZE : 1).fill(42);
+    const full = new Uint8Array(windowBytes || 1).fill(42);
+    const offer = {
+      name: 'cancel.bin', size: String(full.length), chunkSize: RESUME_CHUNK_SIZE, windowBytes,
+      wholeSha256: new IncrementalSHA256().update(full).digestHex(), expiresAt: Date.now() + 60_000
+    };
+    const stage = await createReceiverStage({ invitation, rootId, offer, storage, checkpoints, secrets: makeKV() });
 
-  const append = stage.append(chunk, 'A'.repeat(43));
-  await closeGate.entered.promise;
-  const cancelling = stage.cancel();
-  let cancelSettled = false;
-  void cancelling.then(() => { cancelSettled = true; });
-  await Promise.resolve();
-  assert.equal(cancelSettled, false, 'cancel must wait for the in-flight file close');
+    if (windowBytes) for (let i = 0; i < 3; i++) assert.equal(await stage.append(chunk, 'A'.repeat(43)), false);
+    const append = stage.append(chunk, 'A'.repeat(43));
+    await closeGate.entered.promise;
+    const cancelling = stage.cancel();
+    let cancelSettled = false;
+    void cancelling.then(() => { cancelSettled = true; });
+    await Promise.resolve();
+    assert.equal(cancelSettled, false, 'cancel must wait for the in-flight file close');
 
-  closeGate.release.resolve();
-  await putGate.entered.promise;
-  await Promise.resolve();
-  assert.equal(cancelSettled, false, 'cancel must wait for the in-flight checkpoint write');
+    closeGate.release.resolve();
+    await putGate.entered.promise;
+    await Promise.resolve();
+    assert.equal(cancelSettled, false, 'cancel must wait for the in-flight checkpoint write');
 
-  putGate.release.resolve();
-  await append;
-  await cancelling;
-  assert.equal(files.size, 0, 'cancel removes the staged file after append settles');
-  assert.equal(checkpoints.values.has(`receiver:${rootId}`), false, 'cancel removes a checkpoint written by the in-flight append');
-  await assert.rejects(stage.append(chunk, 'B'.repeat(43)), /stage is closed/);
-  assert.equal(files.size, 0, 'a later append cannot recreate staged data');
-  assert.equal(checkpoints.values.has(`receiver:${rootId}`), false, 'a later append cannot recreate the checkpoint');
+    putGate.release.resolve();
+    await append;
+    await cancelling;
+    assert.equal(files.size, 0, 'cancel removes the staged file after append settles');
+    assert.equal(checkpoints.values.has(`receiver:${rootId}`), false, 'cancel removes a checkpoint written by the in-flight append');
+    await assert.rejects(stage.append(chunk, 'B'.repeat(43)), /stage is closed/);
+    assert.equal(files.size, 0, 'a later append cannot recreate staged data');
+    assert.equal(checkpoints.values.has(`receiver:${rootId}`), false, 'a later append cannot recreate the checkpoint');
+  }
 });
 
 it('worker flush completes before the checkpoint, and cancellation waits then closes before cleanup', async () => {
@@ -177,4 +181,20 @@ it('explicit cancellation removes its checkpoint and staging even when worker cl
     if (originalWorker === undefined) delete globalThis.Worker;
     else globalThis.Worker = originalWorker;
   }
+});
+
+it('cancel discards an incomplete advertised batch without publishing progress', async () => {
+  const { storage, files } = makeStorage(), checkpoints = makeKV();
+  const id = new Uint8Array(16), key = new Uint8Array(32).fill(6), rootId = encodeBase64Url(id);
+  const bytes = new Uint8Array(4 * RESUME_CHUNK_SIZE).fill(31);
+  const offer = { name: 'buffered.bin', size: String(bytes.length), chunkSize: RESUME_CHUNK_SIZE, windowBytes: bytes.length, wholeSha256: new IncrementalSHA256().update(bytes).digestHex(), expiresAt: Date.now() + 60_000 };
+  const stage = await createReceiverStage({ invitation: { id, key }, rootId, offer, storage, checkpoints });
+  await stage.bindSession('A'.repeat(43));
+  assert.equal(await stage.append(bytes.subarray(0, RESUME_CHUNK_SIZE), 'A'.repeat(43)), false);
+  assert.equal(stage.currentOffset, 0);
+  assert.equal(checkpoints.values.get(`receiver:${rootId}`).offset, 0);
+  assert.equal(files.get(stage.stagingId).length, 0);
+  await stage.cancel();
+  assert.equal(files.size, 0);
+  assert.equal(checkpoints.values.size, 0);
 });

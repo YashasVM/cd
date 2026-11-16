@@ -5,7 +5,7 @@ self.onmessage = async ({ data }) => {
     if (data?.type === 'open' && !handle) {
       handle = await data.file.createSyncAccessHandle();
     } else if (data?.type === 'write' && handle) {
-      if (!(data.bytes instanceof Uint8Array) || !data.bytes.length || data.bytes.length > 256 * 1024 || !Number.isSafeInteger(data.offset) || data.offset < 0) {
+      if (!(data.bytes instanceof Uint8Array) || !data.bytes.length || data.bytes.length > 2 * 1024 * 1024 || !Number.isSafeInteger(data.offset) || data.offset < 0) {
         throw new Error('Invalid resumable storage write.');
       }
       let written = 0;

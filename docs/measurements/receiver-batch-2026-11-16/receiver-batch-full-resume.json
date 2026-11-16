@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "profiling": false,
+  "chromium": "155.0.8059.84",
+  "cliSHA256": "4511857b2050bd03ea4c655f5e993dc608787d7a8003d0b79117e3942053fa00",
+  "temporaryStorage": "/home/yvm/.cache/cd-goal-tmp",
+  "bytes": 8388685,
+  "sha256": "8c89dae6b81429bc649d211a12efb99135666562ed98a855c8b8dfe8862b72db",
+  "assets": null,
+  "measurements": [
+    {
+      "scenario": "browser-cli",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:35709",
+      "bytes": 8388685,
+      "sha256": "8c89dae6b81429bc649d211a12efb99135666562ed98a855c8b8dfe8862b72db",
+      "preparationMs": 1233.661267,
+      "transferMs": 363.2199389999996,
+      "milliseconds": 1596.8812059999996
+    }
+  ],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n5 !== 33\n\n    at file:///home/yvm/.t3/worktrees/cd/codex-sol-cd-improvemen-7e2f437ec5ccafc4/scripts/verify-browser-resume.mjs:161:19",
+  "method": "One Chromium host; v2 relay origin recorded per measurement. OPFS commits preserved. OS cache allowed. Timing ends at download save and sender completion; full output digest checked outside timing. Profiling adds overhead; async operation latency totals can overlap and are not CPU time. No physical disk durability, LAN or WAN speed claim."
+}

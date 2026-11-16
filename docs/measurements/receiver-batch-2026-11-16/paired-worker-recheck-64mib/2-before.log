@@ -1,0 +1,17 @@
+browser-browser: verified 67108941 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-browser",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:41331",
+      "bytes": 67108941,
+      "sha256": "fcb5507c09134bba75d1788671ef2c58fd7d3a32e5af5a1c39930aea59db63c8",
+      "preparationMs": 1862.0684810000002,
+      "transferMs": 3589.369328,
+      "milliseconds": 5451.437809000001
+    }
+  ]
+}

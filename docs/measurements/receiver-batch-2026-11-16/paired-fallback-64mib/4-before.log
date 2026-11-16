@@ -1,0 +1,17 @@
+browser-browser-fallback: verified 67108941 bytes
+{
+  "version": 1,
+  "completed": 1,
+  "measurements": [
+    {
+      "scenario": "browser-browser-fallback",
+      "route": "v2-relay",
+      "relayOrigin": "http://127.0.0.1:37435",
+      "bytes": 67108941,
+      "sha256": "b111d6815beb6ec9948f13e5f7e59e2b9cb01a12c86003561e9cbf6fdc6fd7ec",
+      "preparationMs": 1812.330045,
+      "transferMs": 20634.444249,
+      "milliseconds": 22446.774294
+    }
+  ]
+}
