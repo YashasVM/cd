@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -167,15 +168,47 @@ func receiveFilename(name string) (string, error) {
 }
 
 type receiveDestination struct {
-	root *os.Root
-	dir  string
-	name string
+	root      *os.Root
+	dir       string
+	name      string
+	overwrite bool
 }
+
+// receivePolicy selects how a single-file receive handles a name collision.
+type receivePolicy struct {
+	force  bool
+	rename bool
+}
+
+// receiveInteractive reports whether a receive runs interactively and may
+// prompt on stdin for a filename collision. It is a variable so tests can
+// force either behavior without a real terminal.
+var receiveInteractive = func() bool {
+	return isTerminal(os.Stdin) && isTerminal(os.Stderr) && !jsonProgress
+}
+
+// The interactive collision prompt choices.
+const (
+	receiveRename    = "rename"
+	receiveOverwrite = "overwrite"
+)
+
+// uniqueNameMaxAttempts bounds how many "name (2)", "name (3)" candidates are
+// tried before giving up on finding an unused name.
+const uniqueNameMaxAttempts = 1000
 
 // resolveReceiveDest keeps the locally selected directory separate from the
 // sender's single-component name. Explicit --out file paths remain local input.
 // The caller owns the root until publication and cleanup are finished.
 func resolveReceiveDest(offerName, out string, force bool) (*receiveDestination, error) {
+	return resolveReceiveDestWithPolicy(offerName, out, receivePolicy{force: force})
+}
+
+// resolveReceiveDestWithPolicy resolves the destination like resolveReceiveDest
+// but honors --rename and the interactive collision prompt. When !force and the
+// target already exists inside the open root it either renames, prompts, or
+// refuses with the failureExists error.
+func resolveReceiveDestWithPolicy(offerName, out string, policy receivePolicy) (*receiveDestination, error) {
 	name, err := receiveFilename(offerName)
 	if err != nil {
 		return nil, err
@@ -192,13 +225,102 @@ func resolveReceiveDest(offerName, out string, force bool) (*receiveDestination,
 	if err != nil {
 		return nil, fmt.Errorf("cannot write to %q: %s", dir, underlyingReason(err))
 	}
-	if !force {
+	if !policy.force {
 		if _, statErr := root.Lstat(name); statErr == nil {
-			_ = root.Close()
-			return nil, failuref(failureExists, retryNever, "%q already exists: use --out <path> or --force to overwrite", filepath.Join(dir, name))
+			return resolveReceiveCollision(root, dir, name, policy)
 		}
 	}
-	return &receiveDestination{root: root, dir: dir, name: name}, nil
+	return &receiveDestination{root: root, dir: dir, name: name, overwrite: policy.force}, nil
+}
+
+// resolveReceiveCollision handles an existing destination inside an open root.
+// The caller transfers ownership of root; this function closes it on the paths
+// that return an error.
+func resolveReceiveCollision(root *os.Root, dir, name string, policy receivePolicy) (*receiveDestination, error) {
+	if policy.rename {
+		unique, err := uniqueReceiveName(root, name)
+		if err != nil {
+			_ = root.Close()
+			return nil, err
+		}
+		transferInfo("saving as %s (%s already exists)\n", unique, name)
+		return &receiveDestination{root: root, dir: dir, name: unique}, nil
+	}
+	if receiveInteractive() {
+		unique, err := uniqueReceiveName(root, name)
+		if err != nil {
+			_ = root.Close()
+			return nil, err
+		}
+		choice, err := promptReceiveCollision(root, name, unique)
+		if err != nil {
+			return nil, err
+		}
+		if choice == receiveOverwrite {
+			return &receiveDestination{root: root, dir: dir, name: name, overwrite: true}, nil
+		}
+		return &receiveDestination{root: root, dir: dir, name: unique}, nil
+	}
+	_ = root.Close()
+	return nil, failuref(failureExists, retryNever, "%q already exists: use --out <path>, --rename, or --force to overwrite", filepath.Join(dir, name))
+}
+
+// promptReceiveCollision asks on stderr how to resolve a collision and reads one
+// line from stdin. Cancel, EOF, or a read error closes root and returns the
+// canceled failure; the caller owns root on success.
+func promptReceiveCollision(root *os.Root, name, unique string) (string, error) {
+	fmt.Fprintf(os.Stderr, "%q already exists — [r]ename to %q, [o]verwrite, or [c]ancel? [R/o/c]: ", name, unique)
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && len(line) == 0 {
+		_ = root.Close()
+		return "", NewFailure(failureCanceled, "transfer canceled", retryNever)
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "", "r", "rename":
+		return receiveRename, nil
+	case "o", "overwrite":
+		return receiveOverwrite, nil
+	default: // "c", "cancel", or anything else
+		_ = root.Close()
+		return "", NewFailure(failureCanceled, "transfer canceled", retryNever)
+	}
+}
+
+// uniqueReceiveName returns name when it is unused inside root, or the first
+// unused "name (2)", "name (3)", ... variant. The number is inserted before the
+// extension and dotfiles stay whole: ".env" becomes ".env (2)". It gives up
+// after uniqueNameMaxAttempts candidates and never returns a name longer than
+// 255 bytes.
+func uniqueReceiveName(root *os.Root, name string) (string, error) {
+	if !rootNameExists(root, name) {
+		return name, nil
+	}
+	base, ext := uniqueNameParts(name)
+	for attempt := 2; attempt <= uniqueNameMaxAttempts; attempt++ {
+		candidate := fmt.Sprintf("%s (%d)%s", base, attempt, ext)
+		if len(candidate) > 255 {
+			return "", failuref(failureLocal, retryNever, "cannot save %q: no unused name fits within 255 bytes", name)
+		}
+		if !rootNameExists(root, candidate) {
+			return candidate, nil
+		}
+	}
+	return "", failuref(failureLocal, retryNever, "cannot save %q: no unused name after %d attempts", name, uniqueNameMaxAttempts)
+}
+
+// rootNameExists reports whether name exists inside the open root.
+func rootNameExists(root *os.Root, name string) bool {
+	_, err := root.Lstat(name)
+	return err == nil
+}
+
+// uniqueNameParts splits name into its base and extension. A leading dot means
+// the whole name is a dotfile, so it has no extension to preserve.
+func uniqueNameParts(name string) (base, ext string) {
+	if dot := strings.LastIndexByte(name, '.'); dot > 0 {
+		return name[:dot], name[dot:]
+	}
+	return name, ""
 }
 
 // createReceiveStaging never derives a directory or scratch name from the offer.
@@ -210,7 +332,7 @@ func createReceiveStaging(root *os.Root) (*os.File, string, error) {
 
 // receiveFile joins the relay as the receiver, accepts one file offer, and
 // writes it to disk. onOffer observes the validated offer before acceptance.
-func receiveFile(ctx context.Context, code, out string, force bool, onReceived func(receiveResult) error) error {
+func receiveFile(ctx context.Context, code, out string, force, rename bool, onReceived func(receiveResult) error) error {
 	relayBase, publicBase, err := endpointBase()
 	if err != nil {
 		return err
@@ -302,7 +424,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 		dest = &receiveDestination{root: root, dir: dir, name: "cd-bundle.zip"}
 		transferInfo("receiving several files (%s)\n", formatBytes(size))
 	} else {
-		if dest, err = resolveReceiveDest(offer.Name, out, force); err != nil {
+		if dest, err = resolveReceiveDestWithPolicy(offer.Name, out, receivePolicy{force: force, rename: rename}); err != nil {
 			return err
 		}
 		transferInfo("receiving %s (%s)\n", offer.Name, formatBytes(size))
@@ -418,7 +540,7 @@ func receiveFile(ctx context.Context, code, out string, force bool, onReceived f
 			if err := stagingFile.Close(); err != nil {
 				return failuref(failureLocal, retryNever, "save file while receiving: %s", underlyingReason(err))
 			}
-			if err := publishReceivedFile(dest.root, staging, dest.name, force); err != nil {
+			if err := publishReceivedFile(dest.root, staging, dest.name, dest.overwrite); err != nil {
 				return failuref(failureLocal, retryNever, "save received file: %s", underlyingReason(err))
 			}
 			if err := link.send(kindComplete, encodeCounts(chunks, received)); err != nil {

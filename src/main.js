@@ -8,6 +8,7 @@ import { startQrScanner } from './qr-scanner.js';
 import { parseManifest } from './p2p-manifest.js';
 import { generateTunnelCapability, openRelayTunnel, parseTunnelCapability } from './relay-tunnel.js';
 import { openRawChannel, parseTransferOffer, receiveWindowFor } from './raw-channel.js';
+import { formatCountdown } from './share.js';
 import {
   DOWNLOAD_TOO_LARGE,
   createSink,
@@ -151,6 +152,7 @@ const els = {
   shareQr: document.getElementById('share-qr'),
   copyCodeBtn: document.getElementById('copy-code-btn'),
   senderStatus: document.getElementById('sender-status'),
+  senderWaitCancelBtn: document.getElementById('sender-wait-cancel-btn'),
   senderProgress: document.getElementById('sender-progress'),
   senderCancelBtn: document.getElementById('sender-cancel-btn'),
   senderError: document.getElementById('sender-error'),
@@ -372,6 +374,31 @@ const Sender = (() => {
   let startedAt = 0;
   const lastProgressUpdate = { value: 0 };
 
+  // A non-v2 share waits up to 15 minutes for a receiver; a 1-second tick
+  // keeps a live countdown in the status line until the state leaves waiting.
+  const WAIT_SECONDS = 15 * 60;
+  let waitCountdownTimer = null;
+  function clearWaitCountdown() {
+    if (waitCountdownTimer !== null) {
+      clearInterval(waitCountdownTimer);
+      waitCountdownTimer = null;
+    }
+  }
+  function startWaitCountdown() {
+    clearWaitCountdown();
+    let remaining = WAIT_SECONDS;
+    els.senderStatus.textContent = `Waiting for the receiver · ${formatCountdown(remaining)} left`;
+    waitCountdownTimer = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearWaitCountdown();
+        els.senderStatus.textContent = `Waiting for the receiver · ${formatCountdown(0)} left`;
+        return;
+      }
+      els.senderStatus.textContent = `Waiting for the receiver · ${formatCountdown(remaining)} left`;
+    }, 1000);
+  }
+
   function init(selectedFiles) {
     if (BUSY_STATES.has(els.appState.dataset.state)) return;
     reset();
@@ -417,10 +444,14 @@ const Sender = (() => {
         els.receiveCommand.textContent = receiveCommand(value);
         if (value.code) els.senderCodeSection.querySelector('.code-help').textContent = 'On the other device, open CD and enter this code in Receive, or scan the QR.';
         els.senderCodeSection.classList.remove('hidden');
+        // Resumable (#v2.) sends wait up to 24 hours; the 15-minute countdown
+        // applies only to one-shot v1 shares.
+        if (!value.url.includes('#v2.')) startWaitCountdown();
         void renderQr(value.url, current);
       },
       onState(state) {
         if (current !== generation) return;
+        if (state !== 'waiting') clearWaitCountdown();
         if (state === 'transferring' && !startedAt) {
           startedAt = Date.now();
           els.senderCodeSection.classList.add('hidden');
@@ -432,7 +463,10 @@ const Sender = (() => {
         if (state !== 'complete') setState(state);
       },
       onStatus(text) {
-        if (current === generation) els.senderStatus.textContent = text;
+        if (current !== generation) return;
+        // The live countdown owns the status line while waiting for a v1 receiver.
+        if (waitCountdownTimer !== null) return;
+        els.senderStatus.textContent = text;
       },
       onProgress(done, total) {
         if (current !== generation) return;
@@ -521,6 +555,7 @@ const Sender = (() => {
 
   function reset() {
     generation += 1;
+    clearWaitCountdown();
     active?.cancel();
     active = null;
     files = [];
@@ -698,7 +733,16 @@ const Receiver = (() => {
     els.receiverConnecting.classList.add('hidden');
     els.receiverRelay.classList.remove('hidden');
     setState('connecting');
-    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url, { autoReceive: true, hooks: { onState: setState } });
+    stopRelay = mountRelayReceiver(els.receiverRelayPanel, url, {
+      autoReceive: true,
+      hooks: {
+        onState: setState,
+        onProgress(received, total, percent) {
+          document.title = `${Math.floor(percent)}% · ${BASE_TITLE}`;
+        },
+        onCancel: () => Receiver.reset()
+      }
+    });
   }
 
   function closeRelay() {
@@ -1431,6 +1475,7 @@ els.sendAnotherBtn.addEventListener('click', () => {
   setState('idle');
 });
 els.senderCancelBtn.addEventListener('click', () => Sender.cancel());
+els.senderWaitCancelBtn.addEventListener('click', () => Sender.cancel());
 els.senderRetryBtn.addEventListener('click', () => { setState('idle'); Sender.launch(); });
 document.getElementById('choose-different-btn').addEventListener('click', () => { Sender.reset(); els.fileInput.value = ''; setState('idle'); els.fileInput.click(); });
 els.copyCmdBtn.addEventListener('click', () => void Sender.copyCommand());

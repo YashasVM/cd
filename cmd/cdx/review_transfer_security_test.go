@@ -78,7 +78,7 @@ func reviewReceive(t *testing.T, bundle bool, payload []byte, out string, accept
 	t.Setenv("CD_DIRECT", "0")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, nil)
+	return receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, false, nil)
 }
 
 func fmtUint(n uint64) string { return fmt.Sprintf("%d", n) }

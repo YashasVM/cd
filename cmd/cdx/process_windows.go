@@ -2,7 +2,10 @@
 
 package main
 
-import "syscall"
+import (
+	"os"
+	"syscall"
+)
 
 const (
 	detachedProcess                = 0x00000008
@@ -30,4 +33,13 @@ func processAlive(pid int) bool {
 		return false
 	}
 	return code == stillActive
+}
+
+// terminateProcess stops a background holder by killing its process.
+func terminateProcess(pid int) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return process.Kill()
 }

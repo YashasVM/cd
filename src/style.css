@@ -646,6 +646,7 @@ html.scanning, html.scanning body { overflow: hidden; }
 .share-transfer-page .share-panel { margin-top: 0; padding-top: 20px; border-top: 0; }
 .share-transfer-page .status { margin-top: 0; }
 .share-download { margin-top: 16px; }
+.relay-cancel { margin-top: 16px; }
 .bundle-files { display: grid; gap: 6px; margin: 14px 0 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--line); }
 .bundle-files li { display: flex; justify-content: space-between; gap: 14px; min-width: 0; }
 .bundle-files a { min-width: 0; overflow-wrap: anywhere; color: inherit; }
