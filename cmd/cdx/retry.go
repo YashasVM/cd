@@ -13,6 +13,23 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Client WebSockets must mask every byte. Gorilla's default 4 KiB write
+// buffer fragments a 768 KiB encrypted record into 193 frames/write calls.
+// One bounded maximum-record buffer emits it in one frame. End-to-end local
+// Worker trials favored this over a 64 KiB buffer even though the smaller
+// buffer won an isolated client-only benchmark. Record/ACK limits do not
+// change; read bodies already bypass bufio's small buffer.
+const relayWriteBufferSize = maxRecordBytes
+
+func newRelayDialer() *websocket.Dialer {
+	dialer := *websocket.DefaultDialer
+	dialer.WriteBufferSize = relayWriteBufferSize
+	// A caller's pool could contain default-sized buffers; pools cannot be
+	// shared across write buffer sizes. Connections own one fixed buffer.
+	dialer.WriteBufferPool = nil
+	return &dialer
+}
+
 // Only call retrySetup for operations that have not admitted a relay room or
 // otherwise changed remote state. Code claims and transfer records cannot retry.
 func retrySetup(ctx context.Context, operation func() error) error {
@@ -68,12 +85,13 @@ func dialRelay(ctx context.Context, endpoint string) (*websocket.Conn, error) {
 	setupCtx, cancelSetup := context.WithTimeout(ctx, 20*time.Second)
 	defer cancelSetup()
 	var connection *websocket.Conn
+	dialer := newRelayDialer()
 	err := retrySetup(setupCtx, func() error {
 		dialCtx, cancel := context.WithTimeout(setupCtx, 10*time.Second)
 		defer cancel()
 		var response *http.Response
 		var err error
-		connection, response, err = websocket.DefaultDialer.DialContext(dialCtx, endpoint, http.Header{})
+		connection, response, err = dialer.DialContext(dialCtx, endpoint, http.Header{})
 		if err == nil {
 			return nil
 		}

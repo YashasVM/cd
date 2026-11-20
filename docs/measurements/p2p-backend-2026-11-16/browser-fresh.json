@@ -1,0 +1,366 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-16T13:55:17.562Z",
+  "commit": "2b3a5ae6abad4e91fcbf90b57234c9e51f93a58d",
+  "host": "5aa585d0bb07",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "load": [
+    0.63,
+    0.96,
+    0.96
+  ],
+  "mib": 64,
+  "runs": 3,
+  "topology": "two Chromium processes and local Worker on one Linux host",
+  "method": "Independent random bytes per MiB. Timer starts before receive code entry and ends after download.saveAs. Full output SHA-256 and size verified outside timing. OS page cache allowed; no fsync durability claim. Auto route must disclose actual WebRTC and relay payload bytes. This is not a physical-phone or WAN benchmark.",
+  "rows": [
+    {
+      "run": 0,
+      "route": "auto",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 291.710376,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 4772.494859,
+      "receiveMs": 5239.255573,
+      "senderCompleteMs": 5248.494178000001,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 2130.600000000093,
+        "lastAt": 6639.100000000093,
+        "maxGapMs": 194.69999999995343,
+        "records": 256,
+        "peers": [
+          {
+            "states": [],
+            "candidateTypes": [],
+            "iceStates": [],
+            "candidatesAdded": [],
+            "channels": [
+              {
+                "label": "cd-direct",
+                "events": [
+                  {
+                    "event": "close",
+                    "at": 6718.100000000093,
+                    "bufferedAmount": 0
+                  }
+                ]
+              }
+            ],
+            "closeCalledAt": 6706,
+            "sctpState": "closed"
+          }
+        ],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 3176,
+            "maxGapMs": 236,
+            "lastAt": 6705.300000000047,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 1657828,
+          "inFlight": 0,
+          "minRTT": 40,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 12.215475864513623
+    },
+    {
+      "run": 0,
+      "route": "relay",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 1062.3561519999985,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 4071.595344000001,
+      "receiveMs": 4513.047343999999,
+      "senderCompleteMs": 4521.734307999999,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 1805,
+        "lastAt": 5658.600000000093,
+        "maxGapMs": 176.5,
+        "records": 256,
+        "peers": [],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 2648,
+            "maxGapMs": 148.19999999995343,
+            "lastAt": 5756.600000000093,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 1572864,
+          "inFlight": 0,
+          "minRTT": 42.199999999953434,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 14.181105386604608
+    },
+    {
+      "run": 1,
+      "route": "relay",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 201.39508800000112,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 3620.739902000001,
+      "receiveMs": 4044.837660000001,
+      "senderCompleteMs": 4051.9389850000007,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 1957.3000000000466,
+        "lastAt": 5383.600000000093,
+        "maxGapMs": 194.80000000004657,
+        "records": 256,
+        "peers": [],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 2648,
+            "maxGapMs": 193.5,
+            "lastAt": 5446.800000000047,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 1572864,
+          "inFlight": 0,
+          "minRTT": 38.200000000186265,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 15.82263748998025
+    },
+    {
+      "run": 1,
+      "route": "auto",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 199.21150900000066,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 3741.547437000001,
+      "receiveMs": 4181.343747999999,
+      "senderCompleteMs": 4188.475448000001,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 1727.3999999999069,
+        "lastAt": 5271.5,
+        "maxGapMs": 186.89999999990687,
+        "records": 256,
+        "peers": [
+          {
+            "states": [],
+            "candidateTypes": [],
+            "iceStates": [],
+            "candidatesAdded": [],
+            "channels": [
+              {
+                "label": "cd-direct",
+                "events": [
+                  {
+                    "event": "close",
+                    "at": 5341.5,
+                    "bufferedAmount": 0
+                  }
+                ]
+              }
+            ],
+            "closeCalledAt": 5331.600000000093,
+            "sctpState": "closed"
+          }
+        ],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 3177,
+            "maxGapMs": 163.29999999981374,
+            "lastAt": 5331.100000000093,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 1572864,
+          "inFlight": 0,
+          "minRTT": 36.89999999990687,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 15.306084325311014
+    },
+    {
+      "run": 2,
+      "route": "auto",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 1073.913953000003,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 3472.9266050000006,
+      "receiveMs": 3890.4250759999995,
+      "senderCompleteMs": 3895.6443070000023,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 1677.8999999999069,
+        "lastAt": 4930.299999999814,
+        "maxGapMs": 159.5,
+        "records": 256,
+        "peers": [
+          {
+            "states": [],
+            "candidateTypes": [],
+            "iceStates": [],
+            "candidatesAdded": [],
+            "channels": [
+              {
+                "label": "cd-direct",
+                "events": [
+                  {
+                    "event": "close",
+                    "at": 5037.199999999953,
+                    "bufferedAmount": 0
+                  }
+                ]
+              }
+            ],
+            "closeCalledAt": 5031.699999999953,
+            "sctpState": "closed"
+          }
+        ],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 3177,
+            "maxGapMs": 148.5,
+            "lastAt": 5031.09999999986,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 1867549,
+          "inFlight": 0,
+          "minRTT": 38.5,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 16.450644531060494
+    },
+    {
+      "run": 2,
+      "route": "relay",
+      "ok": true,
+      "networkErrors": [],
+      "readyMs": 1074.312840999999,
+      "assets": [
+        "/assets/index-OnV3bxAU.js"
+      ],
+      "downloadEventMs": 3604.8747680000015,
+      "receiveMs": 3937.642899999999,
+      "senderCompleteMs": 3943.2261940000026,
+      "received": {
+        "bytes": 67108864,
+        "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd"
+      },
+      "transport": {
+        "relay": 67108864,
+        "direct": 0,
+        "firstAt": 1802.1999999999534,
+        "lastAt": 5112.399999999907,
+        "maxGapMs": 206,
+        "records": 256,
+        "peers": [],
+        "sockets": [
+          {
+            "path": "/ws/v1/<id>",
+            "received": 2648,
+            "maxGapMs": 220.10000000009313,
+            "lastAt": 5260.299999999814,
+            "extensions": "permessage-deflate; client_max_window_bits=15",
+            "closeCode": 4404
+          }
+        ],
+        "window": {
+          "size": 3088992,
+          "inFlight": 0,
+          "minRTT": 73.5,
+          "acknowledged": "67108864"
+        }
+      },
+      "mibPerSecond": 16.253378385327938
+    }
+  ],
+  "input": {
+    "bytes": 67108864,
+    "sha256": "4f1f1a9cddff6e61cb915e70ec90b1b8c790577312636c9218bc016f9497f9fd",
+    "generated": true
+  },
+  "benchmarkSHA256": "012dfba0eab5b8dc9b0afcd7dc27bf1b530086de1d73de6bc4e0e9dc6b355974",
+  "probeSHA256": "01ed2c4f01b1e94e3eadbd1bef492cf78f301ac346938e4d574fdc45c622daa4",
+  "localSource": {
+    "worker/index.ts": "a2e408b735264bc0e32dcb9e115307f447b328293ce17eda42ccf3ad9690d1e6",
+    "src/relay-sender.js": "883b43758c5aa7317eb5bac16369b84f083d097815cb404feef46a95a05d82ab",
+    "src/share.js": "3c3f28271a75d7688bdfbe32501e87f139c7487b6122dcca3019acf12fad3e1b",
+    "src/sink.js": "c2062746f37942c55617e0d5b97c9531ce1ffccb30660679b5a1f90867557470",
+    "src/send-window.js": "3a574d758337fb6380e79ecc8977f856ddb3bbe78b01e35952852d653ef95473",
+    "dist/index.html": "35b1944c85aec97b4f14ce36756948785c9ece0a716d768ed82b63897b30fd81"
+  },
+  "dirty": [
+    "?? docs/measurements/p2p-backend-2026-11-16/"
+  ],
+  "runtimeOverride": null,
+  "serviceOrigin": "http://127.0.0.1:33513",
+  "runtime": "Wrangler development proxy",
+  "assetOverride": null,
+  "chromium": [
+    "156.0.8078.79",
+    "156.0.8078.79"
+  ],
+  "finishedAt": "2026-11-16T13:56:00.223Z"
+}

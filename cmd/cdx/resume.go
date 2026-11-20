@@ -107,7 +107,7 @@ func resumeConnectWithExpiry(ctx context.Context, invite invitation, role string
 		join["receiverToken"] = resumeEncoded(token)
 		join["receiverNonce"] = resumeEncoded(nonce)
 	}
-	socket, _, err := websocket.DefaultDialer.DialContext(ctx, relay+"/"+invite.encodedID(), http.Header{})
+	socket, _, err := newRelayDialer().DialContext(ctx, relay+"/"+invite.encodedID(), http.Header{})
 	if err != nil {
 		return nil, NewFailure(failureNetwork, "connect resumable relay: "+err.Error(), retrySameRequest, err)
 	}

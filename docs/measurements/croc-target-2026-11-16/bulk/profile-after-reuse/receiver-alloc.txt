@@ -1,0 +1,17 @@
+File: cdx-profile.test
+Build ID: c91e863eb6918b3cab08e171e9cd8fce2fcbbdb5
+Type: alloc_space
+Time: 2026-11-16 20:46:25 IST
+Showing nodes accounting for 19176.60kB, 100% of 19176.60kB total
+Showing top 10 nodes out of 39
+      flat  flat%   sum%        cum   cum%
+14916.78kB 77.79% 77.79% 14916.78kB 77.79%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).acquireInbound (inline)
+ 1184.27kB  6.18% 83.96%  1184.27kB  6.18%  runtime/pprof.StartCPUProfile
+ 1025.05kB  5.35% 89.31%  1025.05kB  5.35%  runtime.mallocgc
+  514.38kB  2.68% 91.99%   514.38kB  2.68%  runtime/pprof.(*profileBuilder).stringIndex
+  512.08kB  2.67% 94.66%   512.08kB  2.67%  compress/gzip.NewWriterLevel
+  512.02kB  2.67% 97.33%   512.02kB  2.67%  regexp.makeOnePass.func1
+  512.02kB  2.67%   100%   512.02kB  2.67%  golang.org/x/net/ipv4.map.init.1
+         0     0%   100% 14916.78kB 77.79%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).readRelay
+         0     0%   100%   512.02kB  2.67%  github.com/YashasVM/cd/cmd/cdx.init
+         0     0%   100%   512.02kB  2.67%  golang.org/x/net/ipv4.init

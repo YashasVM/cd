@@ -1,0 +1,23 @@
+File: cdx-profile.test
+Build ID: c91e863eb6918b3cab08e171e9cd8fce2fcbbdb5
+Type: cpu
+Time: 2026-11-16 20:46:21 IST
+Duration: 3.81s, Total samples = 1.84s (48.30%)
+Showing nodes accounting for 1.82s, 98.91% of 1.84s total
+Showing top 15 nodes out of 101
+      flat  flat%   sum%        cum   cum%
+     1.53s 83.15% 83.15%      1.53s 83.15%  internal/runtime/syscall/linux.Syscall6
+     0.15s  8.15% 91.30%      0.15s  8.15%  crypto/internal/fips140/aes/gcm.gcmAesDec
+     0.02s  1.09% 92.39%      0.02s  1.09%  internal/poll.(*fdMutex).rwlock
+     0.01s  0.54% 92.93%      0.28s 15.22%  github.com/gorilla/websocket.(*messageReader).Read
+     0.01s  0.54% 93.48%      0.02s  1.09%  internal/poll.(*pollDesc).wait
+     0.01s  0.54% 94.02%      0.01s  0.54%  internal/runtime/atomic.(*Uint32).Add
+     0.01s  0.54% 94.57%      0.01s  0.54%  internal/runtime/atomic.(*UnsafePointer).StoreNoWB
+     0.01s  0.54% 95.11%      0.01s  0.54%  internal/runtime/gc/scan.scanSpanPackedAVX512
+     0.01s  0.54% 95.65%      0.01s  0.54%  runtime.futex
+     0.01s  0.54% 96.20%      0.01s  0.54%  runtime.gopark
+     0.01s  0.54% 96.74%      0.01s  0.54%  runtime.memmove
+     0.01s  0.54% 97.28%      0.08s  4.35%  runtime.netpoll
+     0.01s  0.54% 97.83%      0.01s  0.54%  runtime.pMask.read
+     0.01s  0.54% 98.37%      0.01s  0.54%  runtime.scanObjectsSmall
+     0.01s  0.54% 98.91%      0.04s  2.17%  runtime.systemstack

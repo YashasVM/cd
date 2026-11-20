@@ -1,0 +1,52 @@
+{
+  "sourceCommit": "4b881fdd989ac51417ade92bb84bcc10a1047bd1",
+  "planned": 480,
+  "verified": 480,
+  "failures": 0,
+  "runtime": "Wrangler development proxy",
+  "scope": "Separate complete mode families from one unchanged full cohort; all-mode failures retained. Ratios are descriptive ratios of medians, not a confidence guarantee or worldwide ranking.",
+  "overall": {
+    "pass1_5": false,
+    "pass2": false,
+    "completionPass1_5": false,
+    "completionPass2": false
+  },
+  "families": {
+    "auto": {
+      "cells": 16,
+      "completed": true,
+      "passes1_5": 16,
+      "passes2": 16,
+      "worst": {
+        "ratio": 2.0619740966149394,
+        "case": "tmpfs/auto/random-256m",
+        "competitor": "croc",
+        "metric": "totalMs"
+      },
+      "best": {
+        "ratio": 15.034449266801822,
+        "case": "disk/auto/compressible-4k",
+        "competitor": "croc",
+        "metric": "receiverMs"
+      }
+    },
+    "relay": {
+      "cells": 16,
+      "completed": true,
+      "passes1_5": 7,
+      "passes2": 0,
+      "worst": {
+        "ratio": 0.29619701007187105,
+        "case": "disk/relay/random-256m",
+        "competitor": "croc-no-compress",
+        "metric": "receiverMs"
+      },
+      "best": {
+        "ratio": 3.138111148447991,
+        "case": "tmpfs/relay/compressible-4k",
+        "competitor": "croc-no-compress",
+        "metric": "receiverMs"
+      }
+    }
+  }
+}

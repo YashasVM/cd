@@ -1,0 +1,90 @@
+usage: cdx devices [--json] | cdx devices forget <name>
+cdx: cannot load paired device "phone": statat phone.json: no such file or directory; saved names: . Pair explicitly with cdx pair
+cdx: multiple paired devices: Galaxy, Pixel; choose one with --to <name> (cdx devices --json)
+cdx: targeted sends do not support --request-id
+cdx: cannot load paired device "nonexistent": statat nonexistent.json: no such file or directory; saved names: . Pair explicitly with cdx pair
+cdx: cannot load paired device "phone": statat phone.json: no such file or directory; saved names: . Pair explicitly with cdx pair
+cdx: missing share code or link (paste the link from `cdx send`)
+
+usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>
+
+  <code>           the 4-5 digit code from `cdx send` or a browser sender
+                   (a full share link works too)
+  --out <path>   save to this file or directory (default: sender's filename)
+                 several files unpack into this folder (created if missing)
+  --force        overwrite an existing file
+  --progress     show transfer progress (JSON lines with --json)
+  --json         print {"version","filename","size","path","files"} instead of the bare path(s)
+  --             treat the next argument as the code even if it starts with -
+  -h, --help     show this help
+
+examples:
+  cdx receive 48291
+  cdx receive 48291 --out ./downloads/ --force
+resumable transfers (foreground, private links):
+  send --resumable <paths> | send --resume <transferID> <paths>
+  receive --resume <private #v2 link> --out <path>
+  v2 uses durable checkpoints; status/wait apply to v1 background sends.
+
+environment:
+  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)
+  CD_PUBLIC_URL  share-link origin (default https://cd.yash0.in)
+
+Exit status 0 means the transfer verified every byte (for a background
+send: the code is live; `cdx wait` reports verification). Exit status 1
+means the transfer failed; exit status 2 means the command was used incorrectly;
+exit status 3 means `cdx wait --timeout` ran out first.
+
+With --json, a failure also prints {"version","error":{"kind","message","retry"}} to
+stdout. Errors also include retry: never, same_request, or new_transfer.
+Kinds include canceled, invalid_code, not_found, expired, claimed, exists, busy,
+stalled, disconnected, network, local_file, protocol, timeout, request_conflict, failed.
+Progress is automatic in human terminals; scripts and --json are quiet.
+Use --progress to opt in; --json --progress writes stderr as
+{"progress":{"phase","done","total","bytesPerSecond","etaSeconds"}} lines.
+cdx: receive one transfer at a time
+
+usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>
+
+  <code>           the 4-5 digit code from `cdx send` or a browser sender
+                   (a full share link works too)
+  --out <path>   save to this file or directory (default: sender's filename)
+                 several files unpack into this folder (created if missing)
+  --force        overwrite an existing file
+  --progress     show transfer progress (JSON lines with --json)
+  --json         print {"version","filename","size","path","files"} instead of the bare path(s)
+  --             treat the next argument as the code even if it starts with -
+  -h, --help     show this help
+
+examples:
+  cdx receive 48291
+  cdx receive 48291 --out ./downloads/ --force
+resumable transfers (foreground, private links):
+  send --resumable <paths> | send --resume <transferID> <paths>
+  receive --resume <private #v2 link> --out <path>
+  v2 uses durable checkpoints; status/wait apply to v1 background sends.
+
+environment:
+  CD_RELAY_URL   relay WebSocket base (default wss://cd.yash0.in/ws/v1)
+  CD_PUBLIC_URL  share-link origin (default https://cd.yash0.in)
+
+Exit status 0 means the transfer verified every byte (for a background
+send: the code is live; `cdx wait` reports verification). Exit status 1
+means the transfer failed; exit status 2 means the command was used incorrectly;
+exit status 3 means `cdx wait --timeout` ran out first.
+
+With --json, a failure also prints {"version","error":{"kind","message","retry"}} to
+stdout. Errors also include retry: never, same_request, or new_transfer.
+Kinds include canceled, invalid_code, not_found, expired, claimed, exists, busy,
+stalled, disconnected, network, local_file, protocol, timeout, request_conflict, failed.
+Progress is automatic in human terminals; scripts and --json are quiet.
+Use --progress to opt in; --json --progress writes stderr as
+{"progress":{"phase","done","total","bytesPerSecond","etaSeconds"}} lines.
+--- FAIL: TestResumeRejectsStagingSymlinkAndUnsafeMetadata (0.00s)
+    resume_storage_test.go:108: accepted exposed checkpoint permissions
+cdx: cannot load paired device "missing-alias": statat missing-alias.json: no such file or directory; saved names: . Pair explicitly with cdx pair
+cdx: --to picker requires an interactive terminal; use --to <saved-name>
+FAIL
+FAIL	github.com/YashasVM/cd/cmd/cdx	17.566s
+ok  	github.com/YashasVM/cd/internal/devices	0.035s
+FAIL

@@ -1,0 +1,37 @@
+{
+  "sourceCommit": "2b3a5ae6abad4e91fcbf90b57234c9e51f93a58d",
+  "reproducedCdxSHA256": "5d37ff50a2940644c4d8965ba4369eedeeb21b6ad58d43514afdb155a0290be1",
+  "native": {
+    "verified": 120,
+    "failed": 0,
+    "allCase1_5xGate": false,
+    "allCase2xGate": false
+  },
+  "browser": {
+    "verified64MiBTransfers": 6,
+    "directPayloadBytes": 0,
+    "requiredDirectPerformanceGate": "failed: managed browser does not gather direct ICE candidates"
+  },
+  "toffeeshare": {
+    "attempted": 1,
+    "verified": 0,
+    "comparison": "unavailable; download timeout, zero ICE candidates"
+  },
+  "correctness": {
+    "javascriptTests": 221,
+    "javascriptFailures": 0,
+    "goFullSuite": "passed with umask022",
+    "goDirectRace": "passed",
+    "typecheck": "passed",
+    "sdkTypecheck": "passed",
+    "build": "passed",
+    "cloudflareDeployDryRun": "passed",
+    "securityVerifier": "passed",
+    "agentVerifier": "passed",
+    "browserVerifier": "passed",
+    "terminalVerifier": "passed",
+    "v2Verifier": "passed"
+  },
+  "deployment": "not performed; wrangler whoami reports not authenticated",
+  "worldwideFastestProven": false
+}

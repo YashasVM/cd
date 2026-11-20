@@ -4,20 +4,30 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { mkdir, mkdtemp, open, readdir, rm, stat, lstat, writeFile } from 'node:fs/promises';
+import { createReadStream, constants } from 'node:fs';
+import { access, mkdir, mkdtemp, open, readdir, rm, stat, lstat, writeFile } from 'node:fs/promises';
 import { cpus, homedir, release } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connect } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { availablePort, buildCLI, cliEnv, startWorker, stopChild } from './harness.mjs';
+import { trialOrder } from './bench-order.mjs';
 
 export const cases = Object.fromEntries(['random', 'compressible'].flatMap(kind => [['4k', 4096], ['1m', 1048576], ['64m', 67108864], ['256m', 268435456]].map(([size, bytes]) => [`${kind}-${size}`, { kind, bytes }])));
 export function median(values) {
   assert.ok(values.length > 0);
   const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+export function validateTransportReports(reports, route) {
+  assert.ok(Array.isArray(reports) && reports.length > 0, 'missing CD transport telemetry');
+  assert.ok(reports.every(report => ['directBytes', 'relayBytes'].every(key => Number.isSafeInteger(report[key]) && report[key] >= 0)), 'invalid CD transport counters');
+  // These are encrypted wire-byte counters. Negotiated compression can make
+  // them much smaller than the original file. Full plaintext manifests and
+  // SHA256 equality establish completion; counters establish the used route.
+  assert.ok(reports.some(report => report.directBytes > 0 || report.relayBytes > 0), 'missing CD ciphertext transport evidence');
+  if (route === 'relay') assert.ok(reports.every(report => report.directBytes === 0), 'forced relay used direct bytes');
 }
 export function summarize(rows, runs) {
   const groups = new Map();
@@ -28,26 +38,68 @@ export function summarize(rows, runs) {
   }
   return [...groups].map(([caseKey, entries]) => {
     const tools = Object.fromEntries(['cd', 'croc', 'croc-no-compress'].map(tool => {
-      const trials = entries.filter(row => row.tool === tool), good = trials.filter(row => row.ok);
-      return [tool, { complete: trials.length === runs && good.length === runs, runs: trials.length, successful: good.length,
+      const trials = entries.filter(row => row.tool === tool), good = trials.filter(row => row.ok && ['readyMs', 'receiverMs', 'durableMs', 'totalMs'].every(metric => Number.isFinite(row[metric]) && row[metric] > 0));
+      const identities = new Set(good.map(row => row.run));
+      const complete = trials.length === runs && good.length === runs && identities.size === runs && good.every(row => Number.isSafeInteger(row.run) && row.run >= 0 && row.run < runs);
+      return [tool, { complete, runs: trials.length, successful: good.length,
         ...Object.fromEntries(['readyMs', 'receiverMs', 'durableMs', 'totalMs'].map(metric => [metric, good.length ? median(good.map(row => row[metric])) : null])),
         spread: Object.fromEntries(['readyMs', 'receiverMs', 'durableMs', 'totalMs'].map(metric => [metric, good.length ? { min: Math.min(...good.map(row => row[metric])), max: Math.max(...good.map(row => row[metric])) } : null])) }];
     }));
     const complete = Object.values(tools).every(tool => tool.complete);
     const comparisons = Object.fromEntries(['croc', 'croc-no-compress'].map(tool => [tool, Object.fromEntries(['readyMs', 'receiverMs', 'durableMs', 'totalMs'].map(metric => [metric, complete ? tools[tool][metric] / tools.cd[metric] : null]))]));
     const ratios = Object.values(comparisons).flatMap(Object.values);
-    return { case: caseKey, tools, speedup: comparisons, pass1_5: complete && ratios.every(value => value >= 1.5), pass2: complete && ratios.every(value => value >= 2) };
+    const completionRatios = Object.values(comparisons).flatMap(metrics => ['receiverMs', 'durableMs', 'totalMs'].map(metric => metrics[metric]));
+    return { case: caseKey, tools, speedup: comparisons, pass1_5: complete && ratios.every(value => value >= 1.5), pass2: complete && ratios.every(value => value >= 2),
+      completionPass1_5: complete && completionRatios.every(value => value >= 1.5),
+      completionPass2: complete && completionRatios.every(value => value >= 2) };
   });
 }
 
+// Separate completion-only acceptance; legacy four-metric gates above stay
+// unchanged. Recompute from rows so stale/manually edited summaries cannot pass.
+export function completionGates(report) {
+  const failed = { completionPass1_5: false, completionPass2: false };
+  const opts = report?.options;
+  if (report?.error || report?.interrupted || !report?.finishedAt || !opts || !Number.isSafeInteger(opts.runs) || opts.runs < 5 || !Array.isArray(report.rows)) return failed;
+  for (const key of ['storage', 'routes', 'cases']) {
+    if (!Array.isArray(opts[key]) || !opts[key].length || opts[key].some(value => typeof value !== 'string' || !value) || new Set(opts[key]).size !== opts[key].length) return failed;
+  }
+  const expected = new Set(opts.storage.flatMap(storage => opts.routes.flatMap(route => opts.cases.map(name => [storage, route, name].join('/')))));
+  if (report.rows.length !== expected.size * opts.runs * 3 || report.rows.some(row => !row || typeof row !== 'object' || row.ok !== true || !['cd', 'croc', 'croc-no-compress'].includes(row.tool) || !expected.has([row.storage, row.route, row.case].join('/')))) return failed;
+  const summary = summarize(report.rows, opts.runs);
+  if (summary.length !== expected.size || summary.some(row => !expected.has(row.case))) return failed;
+  const completionPass1_5 = summary.every(row => row.completionPass1_5);
+  return { completionPass1_5, completionPass2: completionPass1_5 && summary.every(row => row.completionPass2) };
+}
+
+// Match startWorker's precedence exactly: an explicit direct-runtime bundle
+// wins over a hosted URL, and both bypass Wrangler configuration/persistence.
+export function workerRuntimeSelection(environment, config) {
+  const bundle = environment.CD_BENCH_RUNTIME_BUNDLE;
+  const hosted = !bundle && Boolean(environment.CD_VERIFY_URL);
+  const direct = Boolean(bundle);
+  return {
+    runtime: direct ? 'direct workerd (Miniflare)' : hosted ? 'hosted' : 'Wrangler development proxy',
+    hosted, config: direct || hosted ? null : config || null,
+    bundlePath: direct ? resolve(bundle) : null,
+    selectedCompatibilityFlags: direct ? environment.CD_BENCH_NO_COMPRESSION === '1' ? ['no_web_socket_compression'] : [] : null,
+    compressionObservation: 'selected compatibility flags are configuration, not negotiated WebSocket extension evidence',
+    runtimeControl: direct,
+    note: direct ? 'Separate local runtime configuration control. The explicit Worker bundle bypasses Wrangler, uses ephemeral Miniflare state, and the shared harness adds its frontend HTTP/WebSocket proxy. Do not pool this with Wrangler baselines or call it production throughput.' : hosted ? 'Configured hosted service; local configuration and source hashes do not prove the deployed service matches this checkout.' : 'Local Wrangler development proxy; not a production Cloudflare bandwidth measurement.',
+    requestedOverrides: Object.fromEntries(['CD_BENCH_RUNTIME_BUNDLE', 'CD_BENCH_NO_COMPRESSION', 'CD_VERIFY_URL', 'CD_VERIFY_WRANGLER_CONFIG', 'MINIFLARE_WORKERD_PATH'].map(key => [key, environment[key] ?? null]))
+  };
+}
+
 function options(argv) {
-  const opts = { 'croc-zip': '0', input: '', cdx: process.env.CD_BENCH_CDX, croc: process.env.CD_BENCH_CROC || 'croc', runs: '5', cases: Object.keys(cases).join(','), routes: 'auto,relay', storage: 'disk,tmpfs', 'disk-dir': join(homedir(), '.cache'), 'tmpfs-dir': '/dev/shm', 'control-dir': '/dev/shm', timeout: '120000', output: resolve('cd-croc-matrix.json') };
+  const opts = { 'cd-interval-ms': '5500', seed: randomBytes(16).toString('hex'), 'croc-zip': '0', input: '', cdx: process.env.CD_BENCH_CDX, croc: process.env.CD_BENCH_CROC || 'croc', runs: '5', cases: Object.keys(cases).join(','), routes: 'auto,relay', storage: 'disk,tmpfs', 'disk-dir': join(homedir(), '.cache'), 'tmpfs-dir': '/dev/shm', 'control-dir': '/dev/shm', timeout: '120000', output: resolve('cd-croc-matrix.json') };
   for (let i = 0; i < argv.length; i += 2) {
     assert.ok(argv[i].startsWith('--') && argv[i + 1] && argv[i].slice(2) in opts, `unknown/missing option ${argv[i]}`);
     opts[argv[i].slice(2)] = argv[i + 1];
   }
   assert.ok(['0', '1'].includes(opts['croc-zip']), '--croc-zip must be 0 or 1');
   for (const key of ['runs', 'timeout']) { opts[key] = Number(opts[key]); assert.ok(Number.isInteger(opts[key]) && opts[key] > 0, `invalid ${key}`); }
+  opts['cd-interval-ms'] = Number(opts['cd-interval-ms']);
+  assert.ok(Number.isSafeInteger(opts['cd-interval-ms']) && opts['cd-interval-ms'] >= 0, 'invalid cd-interval-ms');
   for (const key of ['cases', 'routes', 'storage']) opts[key] = [...new Set(opts[key].split(','))];
   assert.ok(opts.cases.every(key => key in cases), 'unknown payload case');
   if (opts.input) { opts.input = resolve(opts.input); opts.cases = ['input']; }
@@ -142,7 +194,7 @@ async function trial({ tool, route, input, output, state, executable, croc, work
       sender = launch(executable, ['send', '--wait', input], env);
       code = await ready(sender, text => text.match(/^(\d{4,5})\s*$/m)?.[1], timeout);
     } else {
-      sender = launch(croc, [...flags, 'send', ...(route === 'relay' ? ['--no-local'] : []), ...(zipFolder ? ['--zip'] : []), input], crocEnv, zipFolder ? state : undefined);
+      sender = launch(croc, [...flags, 'send', ...(route === 'relay' ? ['--transport', 'relay', '--no-local'] : []), ...(zipFolder ? ['--zip'] : []), input], crocEnv, zipFolder ? state : undefined);
       await ready(sender, text => /Code is:|On the other computer, run:/.test(text), timeout);
     }
     const receiverStarted = performance.now();
@@ -157,7 +209,7 @@ async function trial({ tool, route, input, output, state, executable, croc, work
     assert.deepEqual(actual, expected, 'file manifest or SHA256 mismatch');
     const text = sender.stderr + '\n' + receiver.stderr;
     const reports = text.split('\n').flatMap(line => { try { const item = JSON.parse(line); return item.transport ? [item] : []; } catch { return []; } });
-    if (tool === 'cd' && route === 'relay') assert.ok(reports.every(report => report.directBytes === 0), 'forced relay used direct bytes');
+    if (tool === 'cd') validateTransportReports(reports, route);
     return { ok: true, crocZip: tool !== 'cd' && zipFolder, routeObserved: reports.length ? [...new Set(reports.map(report => report.transport))].join(',') : 'unconfirmed; see textual route evidence', readyMs: receiverStarted - started, receiverMs: received - receiverStarted, durableMs: durable - receiverStarted, totalMs: durable - started, verificationMs: performance.now() - verifyStarted, sha256: actual.length === 1 ? actual[0].sha256 : null, manifest: actual, reports,
       routeEvidence: text.split(/[\r\n]+/).filter(line => /switched to|connecting|connected|local|relay/i.test(line)), diagnostics: { sender: sender.stderr, receiver: receiver.stderr } };
   } catch (error) { return { ok: false, error: error.message, diagnostics: { sender: sender?.stderr, receiver: receiver?.stderr } }; }
@@ -171,6 +223,8 @@ export async function main(argv = process.argv.slice(2)) {
   --input PATH       Existing regular file or directory; replaces synthetic --cases
   --croc PATH        croc binary, default croc (CD_BENCH_CROC)
   --runs N           Repetitions per tool/case, default 5
+  --seed TEXT        Seeded randomized block order (default random, recorded)
+  --cd-interval-ms N Minimum CD trial-start spacing outside timings, default 5500
   --cases LIST       random-4k,random-1m,random-256m,compressible-4k,compressible-1m,compressible-256m
   --routes LIST      auto,relay (default both); auto allows direct and fallback
   --storage LIST     disk,tmpfs (default both)
@@ -186,11 +240,14 @@ Control infrastructure defaults to RAM for BOTH disk and tmpfs output suites.
 Use --control-dir ~/.cache for a separate disk-infrastructure diagnostic.
 SHA256 verification is outside timings; durable timing fsyncs file and directory.
 Speed gates in JSON require all metrics against both croc variants.
+Legacy pass1_5/pass2 retain all four metrics including invitation display.
+Separate completionPass1_5/completionPass2 require receiver/durable/total wins
+against both croc variants, all configured groups, and >=5 repetitions.
 Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
     return;
   }
   const opts = options(argv), rows = [], roots = [];
-  let worker, relayProcess;
+  let worker, relayProcess, lastCdStart = -Infinity;
   const interrupt = async signal => {
     await Promise.all([...children].map(stopChild));
     await worker?.stop();
@@ -203,29 +260,46 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
   const report = { version: 1, startedAt: new Date().toISOString(), options: opts,
     source: { commit: metadata(['git', 'rev-parse', 'HEAD']), dirty: metadata(['git', 'status', '--porcelain']), diffSha256: createHash('sha256').update(spawnSync('git', ['diff', 'HEAD'], { maxBuffer: 64 * 1024 * 1024 }).stdout || '').digest('hex'), note: 'Dirty listing includes untracked files; diff hash includes tracked files only. Binary SHA256 identifies the tested CD executable.' },
     environment: { platform: process.platform, arch: process.arch, release: release(), cpu: cpus()[0]?.model, cores: cpus().length,
-      transferFlags: Object.fromEntries(['CD_LAN', 'CD_WEBRTC', 'CD_LARGE_RECORDS', 'CD_LAN_GRACE', 'CD_RELAY_STREAMING'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]])) },
+      transferFlags: Object.fromEntries(['CD_LAN', 'CD_WEBRTC', 'CD_DIRECT', 'CD_STRIPE', 'CD_LARGE_RECORDS', 'CD_LAN_GRACE', 'CD_RELAY_STREAMING'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]])) },
     method: { crocFolderMode: opts['croc-zip'] === '1' ? 'directory inputs use send --zip, including native archive preparation and extraction before receiver exit; regular files unchanged' : 'default per-file transfer', topology: 'same-host loopback, local relays; auto allows direct discovery and fallback, actual telemetry determines route', durability: 'receiver exit measured separately; timed durable completion adds file fsync and directory fsync equally to both tools. Internal tool fsync differences remain part of native completion.', verification: 'SHA256 every output outside all reported transfer timings', cache: 'warm input/page cache, output deleted after SHA256; sync before each trial; no privileged cache dropping', limits: 'No WAN, packet-loss, browser, concurrency or cross-host claims. Directory-tree cases require --input. tmpfs fsync does not represent physical persistence. croc auto telemetry is textual and does not prove direct routing.' }, rows };
   try {
+    report.method.readiness = 'readyMs is native invitation-display observation, not equivalent server registration: CD emits its numeric code after live relay/directory admission; upstream croc 11.6.5 prints instructions before local relay setup and remote relay connection. The separate bench-croc-readiness.mjs diagnostic checks pinned source and passive relay logs. No elapsed time is added to croc and the legacy timing fields/gates are unchanged.';
+    report.method.completionAcceptance = 'Separately named completionPass1_5/completionPass2 require receiverMs, durableMs and totalMs median speedups of >=1.5 or >=2 against BOTH croc modes in EVERY configured storage/route/payload group, with at least five complete repetitions. They make no invitation-readiness, WAN, concurrency or worldwide claim.';
     await mkdir(opts['disk-dir'], { recursive: true });
     assert.ok((await stat(opts['control-dir'])).isDirectory(), '--control-dir must be an existing writable directory; default /dev/shm requires RAM storage, or choose another directory explicitly');
     const controlFilesystem = metadata(['stat', '-f', '-c', '%T', opts['control-dir']]);
     assert.ok(controlFilesystem, 'cannot determine --control-dir filesystem');
     if (resolve(opts['control-dir']) === '/dev/shm') assert.equal(controlFilesystem, 'tmpfs', 'default /dev/shm is not tmpfs; choose --control-dir explicitly');
+    report.benchmarkSources = Object.fromEntries(await Promise.all(['bench-croc-matrix.mjs', 'bench-order.mjs', 'harness.mjs'].map(async name => [name, await digest(fileURLToPath(new URL(name, import.meta.url)))])));
+    report.method.admission = `CD trial starts spaced at least ${opts['cd-interval-ms']} ms outside timed phases; production code-lookup rate limits remain active`;
+    report.method.transportAccounting = 'CD counters are encrypted wire bytes, potentially compressed below plaintext size. Full output SHA256/manifest equality proves completion; nonzero valid counters and forced-relay checks prove transport use.';
+    report.inputs = [];
     const control = await mkdtemp(join(opts['control-dir'], 'cd-matrix-control-')); roots.push(control);
     report.infrastructure = { controlParent: resolve(opts['control-dir']), filesystem: controlFilesystem,
-      storage: controlFilesystem === 'tmpfs' ? 'RAM' : 'disk or other filesystem', localWorkerPersistence: process.env.CD_VERIFY_URL ? null : join(control, 'wrangler-state'),
-      note: 'Local Worker SQLite persistence uses this infrastructure directory for both disk and tmpfs payload suites. Disk output remains on --disk-dir. Compare --control-dir on disk as a separate infrastructure diagnostic.' };
+      storage: controlFilesystem === 'tmpfs' ? 'RAM' : 'disk or other filesystem', localWorkerPersistence: process.env.CD_BENCH_RUNTIME_BUNDLE || process.env.CD_VERIFY_URL ? null : join(control, 'wrangler-state'),
+      note: '--control-dir selects SQLite persistence only for local Wrangler. Direct-runtime controls use separate ephemeral Miniflare state; hosted services use remote state. Disk output remains on --disk-dir for every mode. Compare runtime/control configurations as separate experiments.' };
     // /dev/shm is commonly noexec, so keep newly built executables on disk.
     let executable = opts.cdx;
     if (!executable) {
       const buildRoot = await mkdtemp(join(opts['disk-dir'], 'cd-matrix-build-')); roots.push(buildRoot);
       executable = await buildCLI(buildRoot);
     }
-    report.binary = { cdx: executable, sha256: await digest(executable), croc: metadata([opts.croc, '--version']) };
+    const crocCandidates = opts.croc.includes('/') ? [resolve(opts.croc)] : (process.env.PATH || '').split(delimiter).map(path => join(path, opts.croc));
+    let crocPath;
+    for (const path of crocCandidates) { try { await access(path, constants.X_OK); crocPath = path; break; } catch {} }
+    assert.ok(crocPath, 'croc executable unavailable');
+    opts.croc = crocPath;
+    report.binary = { cdx: executable, sha256: await digest(executable), croc: metadata([opts.croc, '--version']), crocSha256: await digest(opts.croc) };
+    report.order = { method: 'seeded Fisher-Yates per storage/case/route/run block', seed: opts.seed };
+    const requestedRuntimeEnvironment = { ...process.env };
     const previousConfig = process.env.CD_VERIFY_WRANGLER_CONFIG;
-    if (!process.env.CD_VERIFY_URL && !previousConfig) process.env.CD_VERIFY_WRANGLER_CONFIG = fileURLToPath(new URL('./bench-worker.wrangler.jsonc', import.meta.url));
-    report.worker = { hosted: Boolean(process.env.CD_VERIFY_URL), config: process.env.CD_VERIFY_URL ? null : process.env.CD_VERIFY_WRANGLER_CONFIG };
-    try { worker = await startWorker(control); }
+    if (!process.env.CD_BENCH_RUNTIME_BUNDLE && !process.env.CD_VERIFY_URL && !previousConfig) process.env.CD_VERIFY_WRANGLER_CONFIG = fileURLToPath(new URL('./bench-worker.wrangler.jsonc', import.meta.url));
+    report.worker = workerRuntimeSelection(requestedRuntimeEnvironment, process.env.CD_VERIFY_WRANGLER_CONFIG);
+    report.worker.sourceWorkerSHA256 = await digest(fileURLToPath(new URL('../worker/index.ts', import.meta.url)));
+    report.worker.bundleSHA256 = report.worker.bundlePath ? await digest(report.worker.bundlePath) : null;
+    report.worker.configSHA256 = report.worker.config ? await digest(report.worker.config) : null;
+    report.worker.workerdExecutableOverride = report.worker.runtime !== 'hosted' && process.env.MINIFLARE_WORKERD_PATH ? { path: resolve(process.env.MINIFLARE_WORKERD_PATH), sha256: await digest(process.env.MINIFLARE_WORKERD_PATH), version: metadata([process.env.MINIFLARE_WORKERD_PATH, '--version']) } : null;
+    try { worker = await startWorker(control); report.worker.publicBase = worker.publicBase; report.worker.relayBase = worker.relayBase; }
     finally {
       if (previousConfig === undefined) delete process.env.CD_VERIFY_WRANGLER_CONFIG;
       else process.env.CD_VERIFY_WRANGLER_CONFIG = previousConfig;
@@ -249,15 +323,17 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
         if (!opts.input) await payload(input, cases[name]);
         const expected = await manifest(input);
         const bytes = expected.reduce((total, entry) => total + (entry.size || 0), 0);
+        report.inputs.push({ storage, case: name, bytes, manifest: expected });
         for (const route of opts.routes) for (let run = 0; run < opts.runs; run++) {
           const tools = ['cd', 'croc', 'croc-no-compress'];
-          // Rotate first position each repetition rather than favoring CD with fixed order.
-          const order = tools.slice(run % 3).concat(tools.slice(0, run % 3));
+          const order = trialOrder(tools, opts.seed, [storage, name, route, run]);
           for (const tool of order) {
+            if (tool === 'cd') await delay(Math.max(0, lastCdStart + opts['cd-interval-ms'] - performance.now()));
             const output = await mkdtemp(join(root, 'receive-'));
             const flush = spawnSync('sync'); assert.equal(flush.status, 0, 'sync failed');
+            if (tool === 'cd') lastCdStart = performance.now();
             const result = await trial({ tool, route, input, output, state: join(root, `state-${name}-${route}-${run}-${tool}`), executable, croc: opts.croc, worker, relay, timeout: opts.timeout, expected, crocZip: opts['croc-zip'] === '1' });
-            rows.push({ tool, route, storage, case: name, bytes, run, ...result });
+            rows.push({ tool, route, storage, case: name, bytes, run, position: order.indexOf(tool), order, ...result });
             await rm(output, { recursive: true, force: true });
             console.error(`${storage}/${route}/${name} ${tool} #${run + 1}: ${result.ok ? `${result.durableMs.toFixed(2)} ms durable` : result.error}`);
             report.summary = summarize(rows, opts.runs); await writeFile(opts.output, JSON.stringify(report, null, 2) + '\n');
@@ -273,10 +349,11 @@ Exit 1 indicates setup/transfer failure; speed gate failure alone exits 0.`);
     report.summary = summarize(rows, opts.runs); report.finishedAt = new Date().toISOString();
     report.pass1_5 = !report.error && report.summary.length === opts.storage.length * opts.routes.length * opts.cases.length && report.summary.every(item => item.pass1_5);
     report.pass2 = report.pass1_5 && report.summary.every(item => item.pass2);
+    Object.assign(report, completionGates(report));
     await writeFile(opts.output, JSON.stringify(report, null, 2) + '\n');
   }
   process.removeListener('SIGINT', sigint); process.removeListener('SIGTERM', sigterm);
-  console.log(JSON.stringify({ output: opts.output, pass1_5: report.pass1_5, pass2: report.pass2, error: report.error }));
+  console.log(JSON.stringify({ output: opts.output, pass1_5: report.pass1_5, pass2: report.pass2, completionPass1_5: report.completionPass1_5, completionPass2: report.completionPass2, error: report.error }));
   if (report.error || rows.some(row => !row.ok)) process.exitCode = 1;
   return report;
 }

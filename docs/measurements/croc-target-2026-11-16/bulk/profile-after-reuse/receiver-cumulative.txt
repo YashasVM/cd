@@ -1,0 +1,28 @@
+File: cdx-profile.test
+Build ID: c91e863eb6918b3cab08e171e9cd8fce2fcbbdb5
+Type: cpu
+Time: 2026-11-16 20:46:21 IST
+Duration: 3.81s, Total samples = 1.84s (48.30%)
+Showing nodes accounting for 1.54s, 83.70% of 1.84s total
+Showing top 20 nodes out of 101
+      flat  flat%   sum%        cum   cum%
+     1.53s 83.15% 83.15%      1.53s 83.15%  internal/runtime/syscall/linux.Syscall6
+         0     0% 83.15%      1.48s 80.43%  syscall.Syscall
+         0     0% 83.15%      1.47s 79.89%  internal/poll.ignoringEINTRIO (inline)
+         0     0% 83.15%      1.46s 79.35%  syscall.RawSyscall6
+         0     0% 83.15%      1.40s 76.09%  github.com/YashasVM/cd/cmd/cdx.TestProfileCLI
+         0     0% 83.15%      1.40s 76.09%  github.com/YashasVM/cd/cmd/cdx.receiveFile
+         0     0% 83.15%      1.40s 76.09%  github.com/YashasVM/cd/cmd/cdx.run
+         0     0% 83.15%      1.40s 76.09%  github.com/YashasVM/cd/cmd/cdx.runReceive
+         0     0% 83.15%      1.40s 76.09%  testing.tRunner
+         0     0% 83.15%      1.23s 66.85%  internal/poll.(*FD).Write
+         0     0% 83.15%      1.22s 66.30%  os.(*File).Write
+         0     0% 83.15%      1.22s 66.30%  os.(*File).write (inline)
+         0     0% 83.15%      1.22s 66.30%  syscall.Write (inline)
+         0     0% 83.15%      1.22s 66.30%  syscall.write
+         0     0% 83.15%      0.30s 16.30%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).readRelay
+     0.01s  0.54% 83.70%      0.28s 15.22%  github.com/gorilla/websocket.(*messageReader).Read
+         0     0% 83.70%      0.28s 15.22%  internal/poll.(*FD).Read
+         0     0% 83.70%      0.28s 15.22%  io.ReadAtLeast
+         0     0% 83.70%      0.28s 15.22%  io.ReadFull (inline)
+         0     0% 83.70%      0.28s 15.22%  net.(*conn).Read

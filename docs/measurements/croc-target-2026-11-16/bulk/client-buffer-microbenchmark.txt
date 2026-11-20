@@ -1,0 +1,15 @@
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkRelayWriteBuffer/4096-4         	     552	    916535 ns/op	 858.08 MB/s	       193.0 writes/record	      86 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/4096-4         	     687	    978236 ns/op	 803.96 MB/s	       193.0 writes/record	      92 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/4096-4         	     684	    781915 ns/op	1005.81 MB/s	       193.0 writes/record	      56 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/65536-4        	    2289	    259296 ns/op	3033.06 MB/s	        13.00 writes/record	      63 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/65536-4        	    2430	    262105 ns/op	3000.56 MB/s	        13.00 writes/record	      63 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/65536-4        	    2172	    252181 ns/op	3118.64 MB/s	        13.00 writes/record	      56 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/262144-4       	    1732	    288962 ns/op	2721.67 MB/s	         4.000 writes/record	      66 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/262144-4       	    1932	    313806 ns/op	2506.20 MB/s	         4.000 writes/record	      73 B/op	       2 allocs/op
+BenchmarkRelayWriteBuffer/262144-4       	    2308	    283293 ns/op	2776.14 MB/s	         4.000 writes/record	      56 B/op	       2 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	6.778s

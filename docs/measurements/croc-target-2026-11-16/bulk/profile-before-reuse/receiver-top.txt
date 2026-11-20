@@ -1,0 +1,28 @@
+File: cdx-profile.test
+Build ID: ce2489f976c54c95c15d92907df48cdc6a3877d0
+Type: cpu
+Time: 2026-11-16 20:39:31 IST
+Duration: 2.02s, Total samples = 1.08s (53.48%)
+Showing nodes accounting for 1s, 92.59% of 1.08s total
+Showing top 20 nodes out of 141
+      flat  flat%   sum%        cum   cum%
+     0.47s 43.52% 43.52%      0.47s 43.52%  internal/runtime/syscall/linux.Syscall6
+     0.16s 14.81% 58.33%      0.16s 14.81%  crypto/internal/fips140/aes/gcm.gcmAesDec
+     0.06s  5.56% 63.89%      0.06s  5.56%  runtime.futex
+     0.04s  3.70% 67.59%      0.04s  3.70%  runtime.memclrNoHeapPointers
+     0.04s  3.70% 71.30%      0.06s  5.56%  runtime.scanObject
+     0.03s  2.78% 74.07%      0.03s  2.78%  runtime.(*mLockProfile).store
+     0.03s  2.78% 76.85%      0.03s  2.78%  runtime.heapArenaOf (inline)
+     0.03s  2.78% 79.63%      0.03s  2.78%  runtime.madvise
+     0.02s  1.85% 81.48%      0.05s  4.63%  runtime.scanblock
+     0.02s  1.85% 83.33%      0.05s  4.63%  runtime.tryDeferToSpanScan
+     0.01s  0.93% 84.26%      0.01s  0.93%  internal/poll.(*fdMutex).rwlock
+     0.01s  0.93% 85.19%      0.01s  0.93%  runtime.(*gcControllerState).assignWaitingGCWorker
+     0.01s  0.93% 86.11%      0.01s  0.93%  runtime.(*spanSet).pop
+     0.01s  0.93% 87.04%      0.01s  0.93%  runtime.casgstatus
+     0.01s  0.93% 87.96%      0.01s  0.93%  runtime.getempty
+     0.01s  0.93% 88.89%      0.01s  0.93%  runtime.lock2
+     0.01s  0.93% 89.81%      0.01s  0.93%  runtime.osyield
+     0.01s  0.93% 90.74%      0.01s  0.93%  runtime.pMask.read
+     0.01s  0.93% 91.67%      0.01s  0.93%  runtime.procyieldAsm
+     0.01s  0.93% 92.59%      0.01s  0.93%  runtime.stealWork

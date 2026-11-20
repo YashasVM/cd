@@ -1,0 +1,126 @@
+{
+  "method": "Isolated IEEE CRC32 CPU microbenchmark in Chromium headless. Same preloaded 16 MiB random bytes repeated eight times (128 MiB/trial), incremental 256 KiB blocks, one unmeasured warm-up per version, seven alternating pairs with order reversed per pair. Input conversion/module loading/checksum verification outside timing. No network, file reading, encryption, transfer, storage, or end-to-end speed claim.",
+  "runs": 7,
+  "bytesPerTrial": 134217728,
+  "inputSha256": "4ec175df4dd4cc3a28d88bcebd538c3e78340257098b6c6acb0f058871d2fa61",
+  "expectedCRC32": 273036324,
+  "sourceSHA256": {
+    "before": "2efcc20cd4efde5762d6cf763b5315dd2d344510bea26b7cd3422a112a5e403a",
+    "after": "7b991d8065df5e2560347e57e123c1bc8562c85919e8d1108ac82be2d180eaf7"
+  },
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "load": [
+    2.72,
+    2.39,
+    1.02
+  ],
+  "node": "v24.22.1",
+  "startedAt": "2026-11-16T13:41:01.455Z",
+  "rows": [
+    {
+      "run": 0,
+      "variant": "before",
+      "milliseconds": 310.5,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 0,
+      "variant": "after",
+      "milliseconds": 224.70000000006985,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 1,
+      "variant": "after",
+      "milliseconds": 226.09999999997672,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 1,
+      "variant": "before",
+      "milliseconds": 348.69999999995343,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 2,
+      "variant": "before",
+      "milliseconds": 396.80000000004657,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 2,
+      "variant": "after",
+      "milliseconds": 328.5999999999767,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 3,
+      "variant": "after",
+      "milliseconds": 281.79999999993015,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 3,
+      "variant": "before",
+      "milliseconds": 353.9000000000233,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 4,
+      "variant": "before",
+      "milliseconds": 332.30000000004657,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 4,
+      "variant": "after",
+      "milliseconds": 225.09999999997672,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 5,
+      "variant": "after",
+      "milliseconds": 217,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 5,
+      "variant": "before",
+      "milliseconds": 316.5,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 6,
+      "variant": "before",
+      "milliseconds": 323.9000000000233,
+      "crc32": 273036324,
+      "verified": true
+    },
+    {
+      "run": 6,
+      "variant": "after",
+      "milliseconds": 219.30000000004657,
+      "crc32": 273036324,
+      "verified": true
+    }
+  ],
+  "chromium": "156.0.8078.79",
+  "medians": {
+    "before": 332.30000000004657,
+    "after": 225.09999999997672
+  },
+  "speedup": 1.476232785429058,
+  "finishedAt": "2026-11-16T13:41:10.405Z"
+}

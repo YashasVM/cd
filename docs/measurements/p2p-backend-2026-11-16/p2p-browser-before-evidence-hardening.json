@@ -1,0 +1,387 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-16T13:45:17.502Z",
+  "runs": 1,
+  "mib": 1,
+  "seed": "02d5c250860878b09ef61aca5d17396f",
+  "tools": [
+    "cd",
+    "toffeeshare"
+  ],
+  "rows": [
+    {
+      "tool": "cd",
+      "run": 0,
+      "order": [
+        "cd",
+        "toffeeshare"
+      ],
+      "position": 0,
+      "ok": true,
+      "load": [
+        1.04,
+        1.7,
+        1.07
+      ],
+      "pageErrors": [],
+      "requestErrors": [],
+      "scriptAssets": [
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/index-OnV3bxAU.js",
+          "status": 200,
+          "sha256": "732a586fc4ccdfe2ee7b1306e80729c8dec7a739592f05cacd6da1db9ea7ab46"
+        },
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/sink-rUWPr_8U.js",
+          "status": 200,
+          "sha256": "53c4276574a5fa7d39ea4ff963b12e4517ac0ddd5e6dab0e1b0d8a873cca2b90"
+        },
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/rolldown-runtime-XKyaHtl9.js",
+          "status": 200,
+          "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
+        },
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/main-CnXGRlel.js",
+          "status": 200,
+          "sha256": "7a7b8879c7751feaeb9aac018a2de8d61e3dc24ef8f51d02bacf5a7382ca24b1"
+        },
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/resume-browser-C39PKeHS.js",
+          "status": 200,
+          "sha256": "4efed0a971547982e881e1dcf816a2677a9337c5277d43b426f105c46f381dfa"
+        },
+        {
+          "role": "sender",
+          "host": "127.0.0.1",
+          "path": "/assets/browser-DfYHeeW3.js",
+          "status": 200,
+          "sha256": "196465751bb4db4318bbd9c45b5459e31ee3bacadb305cef353ca3576f9c4e90"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/index-OnV3bxAU.js",
+          "status": 200,
+          "sha256": "732a586fc4ccdfe2ee7b1306e80729c8dec7a739592f05cacd6da1db9ea7ab46"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/rolldown-runtime-XKyaHtl9.js",
+          "status": 200,
+          "sha256": "548d1dbf321e7d2ae804fcc158b588706a7c52f8ca175de1490c6ccb4dbe55b7"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/sink-rUWPr_8U.js",
+          "status": 200,
+          "sha256": "53c4276574a5fa7d39ea4ff963b12e4517ac0ddd5e6dab0e1b0d8a873cca2b90"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/main-CnXGRlel.js",
+          "status": 200,
+          "sha256": "7a7b8879c7751feaeb9aac018a2de8d61e3dc24ef8f51d02bacf5a7382ca24b1"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/resume-browser-C39PKeHS.js",
+          "status": 200,
+          "sha256": "4efed0a971547982e881e1dcf816a2677a9337c5277d43b426f105c46f381dfa"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/browser-DfYHeeW3.js",
+          "status": 200,
+          "sha256": "196465751bb4db4318bbd9c45b5459e31ee3bacadb305cef353ca3576f9c4e90"
+        },
+        {
+          "role": "receiver",
+          "host": "127.0.0.1",
+          "path": "/assets/share-BOuAPjp5.js",
+          "status": 200,
+          "sha256": "db1a389d24c1218c2c427076d462983b42bbb51564bd94ea9dcea9e85fd25b10"
+        }
+      ],
+      "readyMs": 1196.8163919999997,
+      "downloadEventMs": 617.5828430000001,
+      "receiveMs": 626.4098000000004,
+      "totalMs": 1823.2922419999995,
+      "received": {
+        "bytes": 1048576,
+        "sha256": "68c076edd4242bf0139d3a9c3cc6bf4ff23d762b42295173790026facaeea33f"
+      },
+      "mibPerSecond": 1.596399034625575,
+      "transport": [
+        {
+          "peers": [
+            {
+              "states": [],
+              "candidateTypes": [],
+              "selectedPairs": []
+            }
+          ],
+          "dataChannelSentBytes": 0,
+          "dataChannelReceivedBytes": 0,
+          "webSocketSentBytes": 1049387,
+          "webSocketReceivedBytes": 657
+        },
+        {
+          "peers": [
+            {
+              "states": [],
+              "candidateTypes": [],
+              "selectedPairs": []
+            }
+          ],
+          "dataChannelSentBytes": 0,
+          "dataChannelReceivedBytes": 0,
+          "webSocketSentBytes": 657,
+          "webSocketReceivedBytes": 1049387
+        }
+      ],
+      "iceRoute": "unconfirmed",
+      "route": "unconfirmed"
+    },
+    {
+      "tool": "toffeeshare",
+      "run": 0,
+      "order": [
+        "cd",
+        "toffeeshare"
+      ],
+      "position": 1,
+      "ok": false,
+      "load": [
+        1.51,
+        1.79,
+        1.1
+      ],
+      "pageErrors": [],
+      "requestErrors": [],
+      "scriptAssets": [
+        {
+          "role": "sender",
+          "host": "toffeeshare.com",
+          "path": "/static/js/15.615392af.chunk.js",
+          "status": 200,
+          "sha256": "7bdfb14272d0b9b8363385c86a59dc7ba3327f36e0ae2c030b323981624a6c5e"
+        },
+        {
+          "role": "sender",
+          "host": "toffeeshare.com",
+          "path": "/libs/webstreams.polyfill.js",
+          "status": 200,
+          "sha256": "1494446e0755bc3c2bb3a0918308395b3e8a7881f7e763970fbf8aa2eaa3499a"
+        },
+        {
+          "role": "sender",
+          "host": "toffeeshare.com",
+          "path": "/static/js/2.2fd3dbd2.chunk.js",
+          "status": 200,
+          "sha256": "fddaf17085b100bfa9125ebf048f26748c6acfbf31b2f2b2478eb7ba49a0da3b"
+        },
+        {
+          "role": "sender",
+          "host": "toffeeshare.com",
+          "path": "/static/js/0.5521cf18.chunk.js",
+          "status": 200,
+          "sha256": "d5a947ab4992f3f096487bb44350272eaebc801c1391b5f3396153bb87efb878"
+        },
+        {
+          "role": "sender",
+          "host": "toffeeshare.com",
+          "path": "/static/js/main.e68fa251.js",
+          "status": 200,
+          "sha256": "98b5133dc45fd6fe894c401d708fabcef8305bceaeb55b079b9759e1823b20b7"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/2.2fd3dbd2.chunk.js",
+          "status": 200,
+          "sha256": "fddaf17085b100bfa9125ebf048f26748c6acfbf31b2f2b2478eb7ba49a0da3b"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/libs/webstreams.polyfill.js",
+          "status": 200,
+          "sha256": "1494446e0755bc3c2bb3a0918308395b3e8a7881f7e763970fbf8aa2eaa3499a"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/0.5521cf18.chunk.js",
+          "status": 200,
+          "sha256": "d5a947ab4992f3f096487bb44350272eaebc801c1391b5f3396153bb87efb878"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/15.615392af.chunk.js",
+          "status": 200,
+          "sha256": "7bdfb14272d0b9b8363385c86a59dc7ba3327f36e0ae2c030b323981624a6c5e"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/main.e68fa251.js",
+          "status": 200,
+          "sha256": "98b5133dc45fd6fe894c401d708fabcef8305bceaeb55b079b9759e1823b20b7"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/14.a4bf3159.chunk.js",
+          "status": 200,
+          "sha256": "101ef6bbde960595381ca0ce776d681966adc2a2ec0b66c57362f502256f3b91"
+        },
+        {
+          "role": "receiver",
+          "host": "toffeesha.re",
+          "path": "/static/js/3.20020c54.chunk.js",
+          "status": 200,
+          "sha256": "c2232b959f97f74b19b5c62b0408d1e51cb6895eff23eb7e8bed13747fac10d4"
+        }
+      ],
+      "readyMs": 1092.4759079999994,
+      "error": "page.waitForEvent: Timeout 30000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================",
+      "transport": [
+        {
+          "peers": [
+            {
+              "states": [],
+              "candidateTypes": [],
+              "selectedPairs": []
+            }
+          ],
+          "dataChannelSentBytes": 0,
+          "dataChannelReceivedBytes": 0,
+          "webSocketSentBytes": 0,
+          "webSocketReceivedBytes": 0
+        },
+        {
+          "peers": [
+            {
+              "states": [],
+              "candidateTypes": [],
+              "selectedPairs": []
+            }
+          ],
+          "dataChannelSentBytes": 0,
+          "dataChannelReceivedBytes": 0,
+          "webSocketSentBytes": 0,
+          "webSocketReceivedBytes": 0
+        }
+      ],
+      "iceRoute": "unconfirmed",
+      "route": "unconfirmed"
+    }
+  ],
+  "source": {
+    "commit": "11136c008b01e282b1528c23861384e63dd050aa",
+    "dirty": "M README.md\n M cmd/cdx/direct.go\n M package.json\n M scripts/bench-croc-matrix.mjs\n M scripts/bench-croc-matrix.test.mjs\n M src/direct-link.js\n M src/direct-link.test.js\n M src/main.js\n M src/zip-bundle.js\n M src/zip-bundle.test.js\n M worker/index.ts\n?? .github/workflows/p2p-benchmarks.yml\n?? cmd/cdx/direct_assembly_bench_test.go\n?? cmd/cdx/direct_assembly_test.go\n?? docs/cloudflare-free-tier.md\n?? docs/measurements/browser-backend-2026-11-16/\n?? docs/measurements/cli-assembly-2026-11-16/\n?? docs/measurements/p2p-backend-2026-11-16/\n?? docs/measurements/relay-handler-2026-11-16/\n?? scripts/bench-order.mjs\n?? scripts/bench-p2p-browser.mjs\n?? scripts/bench-p2p-browser.test.mjs\n?? scripts/bench-zip-crc.mjs\n?? scripts/worker-relay-bench.mjs\n?? scripts/worker-relay-harness.mjs\n?? scripts/worker-relay.test.mjs",
+    "runnerSha256": "13c71eb3fbec8f1c5a80b5902aa6962db96284f5c77016f637c743613a4c8b64"
+  },
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "6.18.57",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "cores": 5,
+    "node": "v24.22.1",
+    "initialLoad": [
+      1.04,
+      1.7,
+      1.07
+    ]
+  },
+  "method": {
+    "order": "seeded randomized blocks",
+    "topology": "two browser processes on one host; public ToffeeShare; CD endpoint recorded below",
+    "ready": "preloaded sender file selection through usable share code/link",
+    "receive": "receiver navigation through completed download.saveAs",
+    "total": "sender file selection through saved receiver output; SHA256 verification outside timing",
+    "verification": "full output byte count and SHA256 equality per trial",
+    "durability": "no fsync; output page cache allowed",
+    "defaults": "product defaults including transport fallback; CD explicitly selects numeric code flow"
+  },
+  "input": {
+    "bytes": 1048576,
+    "sha256": "68c076edd4242bf0139d3a9c3cc6bf4ff23d762b42295173790026facaeea33f"
+  },
+  "cdEndpoint": "http://127.0.0.1:41833",
+  "chromiumExecutable": {
+    "path": "/usr/bin/chromium",
+    "bytes": 5064,
+    "sha256": "2c8d32d29dc6781c35ae196ea83299d507ac88fc339301abe74672feda299779"
+  },
+  "chromiumVersions": [
+    "156.0.8078.79",
+    "156.0.8078.79"
+  ],
+  "summary": {
+    "complete": false,
+    "repeatedComparison": false,
+    "tools": {
+      "cd": {
+        "status": "measured",
+        "successful": 1,
+        "attempted": 1,
+        "routes": [
+          "unconfirmed"
+        ],
+        "medians": {
+          "readyMs": 1196.8163919999997,
+          "receiveMs": 626.4098000000004,
+          "totalMs": 1823.2922419999995
+        },
+        "spread": {
+          "readyMs": {
+            "min": 1196.8163919999997,
+            "max": 1196.8163919999997
+          },
+          "receiveMs": {
+            "min": 626.4098000000004,
+            "max": 626.4098000000004
+          },
+          "totalMs": {
+            "min": 1823.2922419999995,
+            "max": 1823.2922419999995
+          }
+        }
+      },
+      "toffeeshare": {
+        "status": "incomplete",
+        "successful": 0,
+        "attempted": 1,
+        "routes": [
+          "unconfirmed"
+        ],
+        "medians": null,
+        "spread": null
+      }
+    },
+    "toffeeOverCd": null,
+    "fastestWorldwideProven": false,
+    "scope": "Two Chromium processes on one host; product defaults, same random file and browser. CD and ToffeeShare signaling/relay paths may differ. No WAN, cross-device, loss, concurrency or worldwide ranking follows. Ratios compare medians, not statistical confidence intervals."
+  },
+  "finishedAt": "2026-11-16T13:45:56.437Z",
+  "interrupted": false
+}

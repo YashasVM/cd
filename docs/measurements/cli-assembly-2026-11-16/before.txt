@@ -1,0 +1,40 @@
+go: downloading github.com/gorilla/websocket v1.5.3
+go: downloading github.com/pion/ice/v4 v4.4.9
+go: downloading github.com/pion/logging v0.2.4
+go: downloading github.com/pion/webrtc/v4 v4.2.23
+go: downloading github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+go: downloading github.com/pion/stun/v4 v4.0.1
+go: downloading golang.org/x/net v0.60.0
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/pion/dtls/v3 v3.1.10
+go: downloading github.com/pion/mdns/v2 v2.2.2
+go: downloading github.com/pion/randutil v0.1.0
+go: downloading github.com/pion/transport/v5 v5.1.1
+go: downloading github.com/pion/turn/v5 v5.1.2
+go: downloading golang.org/x/sys v0.48.0
+go: downloading github.com/pion/datachannel v1.6.3
+go: downloading github.com/pion/interceptor v0.1.49
+go: downloading github.com/pion/rtcp v1.2.19
+go: downloading github.com/pion/rtp v1.10.5
+go: downloading github.com/pion/sctp v1.12.0
+go: downloading github.com/pion/sdp/v3 v3.0.20
+go: downloading github.com/pion/srtp/v3 v3.1.3
+go: downloading github.com/wlynxg/anet v0.0.5
+go: downloading golang.org/x/time v0.14.0
+go: downloading golang.org/x/crypto v0.57.0
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: AMD EPYC 9V74 80-Core Processor                
+BenchmarkDirectRecordAssembly/256KiB-4         	    6753	   1034128 ns/op	 253.49 MB/s	  983068 B/op	       6 allocs/op
+BenchmarkDirectRecordAssembly/256KiB-4         	    1495	    726304 ns/op	 360.93 MB/s	  983068 B/op	       6 allocs/op
+BenchmarkDirectRecordAssembly/256KiB-4         	    2857	    525518 ns/op	 498.83 MB/s	  983068 B/op	       6 allocs/op
+BenchmarkDirectRecordAssembly/256KiB-4         	    1647	   1460806 ns/op	 179.45 MB/s	  983069 B/op	       6 allocs/op
+BenchmarkDirectRecordAssembly/256KiB-4         	    2012	    928275 ns/op	 282.40 MB/s	  983067 B/op	       6 allocs/op
+BenchmarkDirectRecordAssembly/768KiB-4         	     475	   3193017 ns/op	 246.30 MB/s	 4390949 B/op	      11 allocs/op
+BenchmarkDirectRecordAssembly/768KiB-4         	     711	   2744443 ns/op	 286.55 MB/s	 4390953 B/op	      11 allocs/op
+BenchmarkDirectRecordAssembly/768KiB-4         	     398	   3786198 ns/op	 207.71 MB/s	 4390946 B/op	      11 allocs/op
+BenchmarkDirectRecordAssembly/768KiB-4         	     376	   3075269 ns/op	 255.73 MB/s	 4390944 B/op	      11 allocs/op
+BenchmarkDirectRecordAssembly/768KiB-4         	     664	   2938569 ns/op	 267.62 MB/s	 4390950 B/op	      11 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	26.364s

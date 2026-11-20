@@ -18,6 +18,7 @@ import { fileSource, rechunk } from './zip-bundle.js';
 import { createRecordMerger, offerDirect, DIRECT_BUFFER_BYTES } from './direct-link.js';
 import { createSendWindow } from './send-window.js';
 import { CHUNK_SIZE, LARGE_CHUNK_SIZE, acceptedSendChunkSize } from './transfer-limits.js';
+import { DEFERRED_DIRECT_MODE, isDeferredDirectHello, MAX_DIRECT_SIGNAL_BYTES, MAX_DIRECT_SDP_BYTES } from './deferred-direct.js';
 
 // Browser relay sender: mints a numeric share code plus a share link and
 // streams one byte source with the same encrypted records `cdx send` uses,
@@ -88,6 +89,9 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
   let directUsed = false;
   let switched = false;
   let complete = false;
+  let endQueued = false;
+  let pendingDirectPreparation = false;
+  let directPreparationSettled = false;
   let retainedBytes = 0;
   let incomingBytes = 0;
   const retained = [];
@@ -172,13 +176,16 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
     });
   }
 
-  function pump(timeoutMs, handle, timeoutMessage) {
+  function pump(timeoutMs, handle, timeoutMessage, until = null) {
     return new Promise((resolve, reject) => {
       if (cancelled) {
         reject(new RelaySendError('Transfer canceled.'));
         return;
       }
       let settled = false;
+      let handling = false;
+      let untilReady = false;
+      let untilValue;
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
@@ -190,6 +197,8 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        const index = waiters.indexOf(entry);
+        if (index !== -1) waiters.splice(index, 1);
         if (error) reject(error);
         else resolve(result);
       };
@@ -198,17 +207,22 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
           finish(cancelled ? new RelaySendError('Transfer canceled.') : closedError);
           return;
         }
+        handling = true;
         void Promise.resolve()
           .then(() => handle(event))
           .then((result) => {
+            handling = false;
             if (result === null || result === undefined) {
               // Not what this wait wanted; keep waiting for the next message.
-              if (!settled) next();
+              if (!settled) {
+                if (untilReady) finish(null, untilValue);
+                else next();
+              }
               return;
             }
             finish(null, result);
           })
-          .catch((error) => finish(error));
+          .catch((error) => { handling = false; finish(error); });
       };
       const next = () => {
         if (closedError) { entry(null); return; }
@@ -217,6 +231,13 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
         } else waiters.push(entry);
       };
       next();
+      // SDP readiness must not cancel an in-flight decrypt: doing so could
+      // advance its sequence concurrently with the acceptance reader.
+      until?.then((value) => {
+        untilReady = true;
+        untilValue = value;
+        if (!handling) finish(null, value);
+      }, (error) => finish(error));
     });
   }
 
@@ -302,6 +323,7 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
     // shareKey asks the relay to claim the share code during the join.
     socket.send(JSON.stringify({
       type: 'join', protocol: 'cd-transfer-v1', role: 'sender',
+      directOfferMode: DEFERRED_DIRECT_MODE,
       receiverTokenHash: encodeBase64Url(digest), ...(sharing === 'private' ? {} : { shareKey: encodedKey })
     }));
     const accepted = await waitForText('accepted', ADMISSION_WAIT_MS, 'CD did not answer. Check your connection and try again.');
@@ -311,7 +333,7 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
     onShare({ code, url: shareUrl });
     onState('waiting');
     onStatus('Waiting for the receiver. The invitation works for 15 minutes.');
-    const offerPromise = typeof RTCPeerConnection === 'function' ? offerDirect({
+    const offerPromise = (typeof RTCPeerConnection === 'function' ? offerDirect({
       onRecord: (record) => { directUsed = true; receiveRecord(record); },
       onOpen: () => {
         sendChain = sendChain.then(() => switchDirect()).catch((error) => failPump(new RelaySendError(error.message)));
@@ -321,18 +343,37 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
         else if (!complete) { direct?.close(); direct = null; retained.length = 0; retainedBytes = 0; }
       }
     }).then((path) => {
-      if (cancelled || closedError || complete) { path.close(); return null; }
+      if (cancelled || closedError || complete || endQueued) { path.close(); return null; }
       direct = path;
       return path;
-    }).catch(() => null) : Promise.resolve(null);
+    }).catch(() => null) : Promise.resolve(null)).then((path) => {
+      directPreparationSettled = true;
+      pendingDirectPreparation = false;
+      if (!path) { retained.length = 0; retainedBytes = 0; }
+      return path;
+    });
     await waitForText('peer-joined', PEER_WAIT_MS, 'Nobody used the code within 15 minutes. Send again for a fresh code.');
 
-    direct = await offerPromise;
-    if (cancelled) { direct?.close(); throw new RelaySendError('Transfer canceled.'); }
     const [sealer, opener] = await Promise.all([
       createSealer(invitation, SENDER_DIRECTION),
       createOpener(invitation, RECEIVER_DIRECTION)
     ]);
+    const readiness = await pump(ADMISSION_WAIT_MS, async (event) => {
+      if (typeof event.data === 'string') {
+        const value = JSON.parse(event.data);
+        if (value.type === 'peer-left') throw new RelaySendError('The receiver left.');
+        return null;
+      }
+      if (event.data.byteLength > 1024 + 28) throw new RelaySendError('The receiver sent oversized direct capabilities.');
+      const { kind, plaintext } = await opener.open(event.data);
+      if (kind !== KIND_SIGNAL) throw new RelaySendError('The receiver sent a message before the file offer.');
+      return isDeferredDirectHello(plaintext) ? { deferred: true } : null;
+    }, 'Direct connection preparation stalled.', offerPromise.then(path => ({ path })));
+    const deferred = readiness.deferred === true && !direct;
+    pendingDirectPreparation = deferred && !directPreparationSettled;
+    if (!deferred) direct = readiness.path ?? direct;
+    else sealer.enableDirectSignal();
+    if (cancelled) { direct?.close(); throw new RelaySendError('Transfer canceled.'); }
     const send = (kind, payload = new Uint8Array(), endingBytes = 0n) => {
       sendChain = sendChain.then(async () => {
         if (cancelled || closedError) throw closedError || new RelaySendError('Transfer canceled.');
@@ -341,7 +382,7 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
           await switchDirect();
           await direct.send(record); directUsed = true; stats.directBytes += record.byteLength;
         } else {
-          if (direct && !switched) {
+          if ((direct || pendingDirectPreparation) && !switched) {
             if (retained.length >= MAX_RETAINED_RECORDS || retainedBytes + record.byteLength > MAX_RETAINED_BYTES) throw new RelaySendError('The direct replay buffer is full. Send again for a fresh transfer.');
             retained.push({ record, endingBytes }); retainedBytes += record.byteLength;
             stats.maxRetainedBytes = Math.max(stats.maxRetainedBytes, retainedBytes);
@@ -364,8 +405,22 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
       chunkSize: CHUNK_SIZE,
       maxChunkSize: LARGE_CHUNK_SIZE,
       ...(source.bundle ? { bundle: true, files: source.files } : {}),
+      ...(deferred ? { directPending: true } : {}),
       ...(direct ? { direct: { sdp: direct.sdp } } : {})
     })));
+    if (deferred) {
+      // At most one bounded signaling record joins the ordinary send chain.
+      // The guard is set synchronously before END is queued, so a late SDP
+      // can never appear after END or after a completed/canceled handoff.
+      void offerPromise.then(async (path) => {
+        if (!path || endQueued || cancelled || closedError || complete) return;
+        const sdp = path.sdp;
+        if (!sdp || encoder.encode(sdp).byteLength > MAX_DIRECT_SDP_BYTES) throw new RelaySendError('The direct offer is too large.');
+        const signal = encoder.encode(JSON.stringify({ sdp }));
+        if (signal.byteLength > MAX_DIRECT_SIGNAL_BYTES) throw new RelaySendError('The direct offer is too large.');
+        await send(KIND_SIGNAL, signal);
+      }).catch(error => { if (!complete && !cancelled) failPump(error); });
+    }
     const acceptance = await waitForRecord(opener, [KIND_ACCEPT], CONSENT_WAIT_MS, 'The receiver did not accept within 10 minutes.');
     const chunkSize = acceptedSendChunkSize(acceptance.plaintext);
     releaseRetained(0n);
@@ -437,6 +492,8 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
     await Promise.all([sendSource(), readAcknowledgements()]);
 
     onState('verifying');
+    pendingDirectPreparation = false;
+    endQueued = true;
     await send(KIND_END, encodeCounts(chunks, sent));
     const { plaintext } = await waitForRecord(opener, [KIND_COMPLETE], TRANSFER_IDLE_MS, 'The receiver did not confirm the file.');
     const done = decodeCounts(plaintext);
@@ -451,6 +508,10 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
   }
 
   const done = run().catch((error) => {
+    endQueued = true;
+    pendingDirectPreparation = false;
+    retained.length = 0; retainedBytes = 0;
+    closedError ??= error;
     window.removeEventListener('pagehide', onPageHide);
     direct?.close();
     try { socket?.close(cancelled ? 1000 : 4400, cancelled ? 'sender canceled' : 'sender failed'); } catch { /* Best effort. */ }
@@ -463,6 +524,8 @@ export function startRelaySend(source, hooks = {}, { sharing = 'numeric' } = {})
     cancel() {
       if (cancelled) return;
       cancelled = true;
+      pendingDirectPreparation = false;
+      retained.length = 0; retainedBytes = 0;
       direct?.close();
       try { socket?.close(1000, 'sender canceled'); } catch { /* Best effort. */ }
       for (const waiter of waiters.splice(0)) waiter(null);

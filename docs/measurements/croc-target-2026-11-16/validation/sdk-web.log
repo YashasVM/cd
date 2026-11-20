@@ -1,0 +1,48 @@
+
+> cd@1.0.0 verify:sdk:web
+> CD_SDK_SUITE=web node scripts/verify-transfer-sdk.mjs
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✔ failed writable construction removes its staging entry and preserves the failure (3.428215ms)
+✔ cancel during getFile never publishes a late download (1.250224ms)
+✔ pagehide during getFile never publishes a late download (0.887177ms)
+✔ validates public app ID, source metadata, lifetime and invitation before network IO (2.72096ms)
+✔ cancel before run never connects or reports success (0.680465ms)
+✔ cancel from the connecting callback starts no hashing, connection or invitation (0.294764ms)
+✔ explicit host consent precedes all chunks; exact bytes/hash cross several windows (542.826202ms)
+✔ empty file verifies (48.622455ms)
+✔ rejection is explicit at both endpoints and sends no file bytes (239.787572ms)
+✔ sender cancellation wakes waiting socket (244.384843ms)
+✔ receiver cancellation during a pending consent callback wakes run and aborts a late sink (228.607092ms)
+✔ expiry wakes sender and expired invitation cannot deliver (1227.0091ms)
+✔ host storage failure prevents receiver COMPLETE and sender success (467.940694ms)
+✔ socket loss is recoverable and a fresh invitation works (410.932212ms)
+✔ modified source fails authenticated whole-file verification (471.276871ms)
+✔ host can transfer each chunk buffer to a worker without breaking verification (424.330282ms)
+✔ peer departure interrupts pending consent and aborts the late sink (307.861206ms)
+✔ verified publication stays successful if the host cancels as commit returns (25.121102ms)
+✔ pipelines bounded encrypted chunks and checkpoints only acknowledged prefix bytes (345.461221ms)
+✔ retains only acknowledged progress after interruption with chunks in flight (291.16317ms)
+✔ accepts cumulative durable ACKs within its bounded window (278.263895ms)
+✔ rejects cumulative ACKs with mismatched byte or chunk counts (570.160799ms)
+✔ rejects a repeated cumulative ACK without advancing beyond its first durable prefix (253.031243ms)
+✔ rejects invalid durable ACKs without advancing its checkpoint (224.54843ms)
+✔ preserves its last durable checkpoint when the source fails with records in flight (190.39675ms)
+✔ cancel removes sender secrets and checkpoints while ACKs are pending (218.000294ms)
+✔ pause preserves sender secrets and the last durable checkpoint (223.223233ms)
+✔ cancel removes retained records after a disconnected sender has settled (237.55608ms)
+✔ completes resumed, empty, and short encrypted sources (1066.966356ms)
+✔ drains an encrypted COMPLETE and queued completed event before a socket close (242.561782ms)
+✔ accepts cumulative ACKs and reaches intervals larger than the default four-chunk window (916.0088ms)
+✔ default sends use relay-assigned expiry when the browser clock is five minutes ahead (8.540278ms)
+✔ rejects unaligned or excessive cumulative ACK intervals before sending chunks (636.629873ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14453.654165

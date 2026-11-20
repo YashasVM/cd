@@ -155,6 +155,26 @@ CD_RELAY_URL=ws://127.0.0.1:8787/ws/v1 CD_PUBLIC_URL=http://127.0.0.1:8787 ./bin
 | `npm run bench` | Throughput benchmarks |
 | `npm run deploy:dry` | Worker bundle |
 
+### Reproducible performance comparisons
+
+`npm run bench:p2p:cli -- --croc /absolute/path/to/croc --runs 5 --storage disk`
+compares CD with croc defaults and croc without compression. Every output is
+SHA-256 verified, tool order is randomized with a recorded seed, and readiness,
+receiver completion and synced output timings are retained separately. Automatic
+routes may use LAN TCP, WebRTC, striping or relay: inspect the recorded route
+evidence before calling a result P2P. Forced relay is a separate comparison.
+The runner spaces CD attempts outside timed phases to respect share-code limits.
+
+`npm run bench:p2p:browser` compares the numeric-code browser flow with the real
+public ToffeeShare service using synthetic files. It records actual browser
+transport, service script hashes, complete download timings and verified outputs.
+Connection failures stay in the report and suppress comparison ratios.
+
+Run the manual **P2P comparison benchmarks** GitHub Actions workflow for a
+checksum-pinned croc comparison; optionally enable its public ToffeeShare test.
+These local runs cannot establish a worldwide fastest product. Read
+[Cloudflare free-tier capacity](docs/cloudflare-free-tier.md) before deployment.
+
 Set `CD_VERIFY_URL=https://cd.yash0.in` to run the `verify:*` scripts against production, and
 `CHROMIUM_PATH` if Chromium isn't installed in a standard location.
 

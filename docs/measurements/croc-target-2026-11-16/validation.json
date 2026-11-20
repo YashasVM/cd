@@ -1,0 +1,57 @@
+{
+  "sourceCommit": "4b881fdd989ac51417ade92bb84bcc10a1047bd1",
+  "reproducedBinarySHA256": "f58b80deb7b364d3fffef01adbbae4269274b86eda66e518e224ee65769a058b",
+  "legacyInteropBinarySHA256": "f58b80deb7b364d3fffef01adbbae4269274b86eda66e518e224ee65769a058b",
+  "legacyInteropVerified": 8,
+  "nativeTrials": {
+    "planned": 480,
+    "verified": 480,
+    "failures": 0
+  },
+  "automaticMode": {
+    "cells": 16,
+    "completion1_5x": true,
+    "completion2x": true,
+    "worstRatioOfMedians": 2.0619740966149394,
+    "routes": {
+      "localTCPTrials": 60,
+      "relayTrials": 20
+    }
+  },
+  "forcedRelay": {
+    "cells": 16,
+    "cellsPassing1_5x": 7,
+    "cellsPassing2x": 0,
+    "overall1_5x": false,
+    "overall2x": false
+  },
+  "wholeMatrix": {
+    "legacyAllMetrics1_5x": false,
+    "legacyAllMetrics2x": false,
+    "completion1_5x": false,
+    "completion2x": false
+  },
+  "validation": {
+    "javascriptPassed": 247,
+    "javascriptFailed": 0,
+    "goFull": "passed with umask022",
+    "goFocusedRace": "passed",
+    "typecheck": "passed",
+    "sdkTypecheck": "passed",
+    "securityIntegration": "passed",
+    "agentIntegration": "passed",
+    "browserIntegration": "passed",
+    "terminalIntegration": "passed",
+    "resumeIntegration": "passed",
+    "webSDKIntegration": "passed",
+    "build": "passed",
+    "deployDryRun": "passed",
+    "productUXIntegration": "passed"
+  },
+  "browserP2PPerformance": "unmeasured: managed non-proxied UDP restriction retained",
+  "deployment": "none; no authenticated Cloudflare account",
+  "worldwideFastestProven": false,
+  "browserConsentSourceCommit": "abacf1248ed6a3aa1ae8455f05fcc8e48cd364b9",
+  "browserConsentSourceSHA256": "1bfa1365bcabc1b423fe29e06236cb4b7e54bb7b00689c5801182f56a44d064d",
+  "nativeSourcesUnchangedAfterBrowserFix": true
+}

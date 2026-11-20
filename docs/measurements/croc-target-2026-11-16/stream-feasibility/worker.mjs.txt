@@ -1,0 +1,101 @@
+// LOOPBACK-ONLY DIAGNOSTIC. No CD production route, no deployment target.
+import { DurableObject } from 'cloudflare:workers';
+
+async function digest(token) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)));
+}
+function bearer(request) {
+  return request.headers.get('Authorization')?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1] ?? null;
+}
+function equal(left, right) {
+  return left && right && left.byteLength === right.byteLength && crypto.subtle.timingSafeEqual(left, right);
+}
+export class StreamRoom extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.bridge = null;
+    this.uploadClaimed = false;
+    this.downloadClaimed = false;
+    this.complete = false;
+    this.failed = false;
+  }
+  async fetch(request) {
+    const path = new URL(request.url).pathname;
+    const token = bearer(request);
+    if (path.endsWith('/setup') && request.method === 'POST') {
+      if (token !== this.env.SETUP_SECRET) return new Response('unauthorized', { status: 401 });
+      if (this.mode || this.initializing) return new Response('already initialized', { status: 409 });
+      this.initializing = true;
+      const values = await request.json();
+      if (!/^[A-Za-z0-9_-]{43}$/.test(values.sender) || !/^[A-Za-z0-9_-]{43}$/.test(values.receiver)) return new Response('bad setup', { status: 400 });
+      this.senderHash = await digest(values.sender);
+      this.receiverHash = await digest(values.receiver);
+      this.mode = values.transport === 'websocket' ? 'websocket' : 'http';
+      if (this.mode === 'http') this.bridge = new IdentityTransformStream();
+      return new Response(null, { status: 204 });
+    }
+    if (!this.mode) return new Response('not initialized', { status: 404 });
+    if (path.endsWith('/status') && token === this.env.SETUP_SECRET) {
+      return Response.json({ uploadClaimed: this.uploadClaimed, downloadClaimed: this.downloadClaimed, complete: this.complete, failed: this.failed });
+    }
+    if (!token) return new Response('unauthorized', { status: 401 });
+    const actual = await digest(token);
+    if (path.includes('/ws/') && request.method === 'GET' && request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+      if (this.mode !== 'websocket') return new Response('wrong transport', { status: 409 });
+      const role = path.endsWith('/upload') ? 'sender' : 'receiver';
+      if (!equal(actual, role === 'sender' ? this.senderHash : this.receiverHash)) return new Response('unauthorized', { status: 401 });
+      if ((role === 'sender' ? this.uploadClaimed : this.downloadClaimed) || this.failed) return new Response('unavailable', { status: 409 });
+      const pair = new WebSocketPair();
+      const socket = pair[1];
+      socket.serializeAttachment({ role });
+      this.ctx.acceptWebSocket(socket);
+      if (role === 'sender') { this.uploadClaimed = true; this.senderWS = socket; }
+      else { this.downloadClaimed = true; this.receiverWS = socket; }
+      return new Response(null, { status: 101, webSocket: pair[0] });
+    }
+    if (this.mode !== 'http') return new Response('wrong transport', { status: 409 });
+    if (path.endsWith('/download') && request.method === 'GET') {
+      if (!equal(actual, this.receiverHash)) return new Response('unauthorized', { status: 401 });
+      if (this.downloadClaimed || this.failed) return new Response('unavailable', { status: 409 });
+      this.downloadClaimed = true;
+      return new Response(this.bridge.readable, { headers: { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' } });
+    }
+    if (path.endsWith('/upload') && request.method === 'POST') {
+      if (!equal(actual, this.senderHash)) return new Response('unauthorized', { status: 401 });
+      if (!request.body || this.uploadClaimed || this.failed) return new Response('unavailable', { status: 409 });
+      this.uploadClaimed = true;
+      try {
+        // Native pipe: deliberately no JavaScript per-chunk loop or payload storage.
+        await request.body.pipeTo(this.bridge.writable);
+        this.complete = true;
+        return new Response(null, { status: 204 });
+      } catch {
+        this.failed = true;
+        return new Response('stream interrupted', { status: 499 });
+      }
+    }
+    return new Response('not found', { status: 404 });
+  }
+  webSocketMessage(socket, data) {
+    if (socket.deserializeAttachment()?.role !== 'sender') { socket.close(4403, 'sender only'); return; }
+    const receiver = this.receiverWS;
+    if (!receiver || receiver.readyState !== WebSocket.OPEN) { socket.close(4404, 'no receiver'); return; }
+    if (data === 'end') { receiver.send('end'); this.complete = true; return; }
+    if (typeof data === 'string' || data.byteLength > 1048576) { socket.close(4403, 'invalid frame'); return; }
+    if (receiver.bufferedAmount + data.byteLength > 32 * 1048576) { this.failed = true; socket.close(4429, 'slow receiver'); receiver.close(4429, 'slow receiver'); return; }
+    receiver.send(data);
+  }
+  webSocketClose(socket, code) { try { socket.close(code === 1005 || code === 1006 ? 1000 : code); } catch {} }
+  webSocketError(socket) { this.failed = true; try { socket.close(1011); } catch {} }
+}
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (!['127.0.0.1', 'localhost'].includes(url.hostname)) return new Response('loopback only', { status: 403 });
+    if (request.headers.has('Origin') && request.headers.get('Origin') !== url.origin) return new Response('origin forbidden', { status: 403 });
+    if (url.pathname === '/health') return Response.json({ ok: true });
+    const room = /^\/room\/([a-f0-9]{32})\/(setup|upload|download|status|ws\/upload|ws\/download)$/.exec(url.pathname);
+    if (!room) return new Response('not found', { status: 404 });
+    return env.ROOMS.getByName(room[1]).fetch(request);
+  }
+};

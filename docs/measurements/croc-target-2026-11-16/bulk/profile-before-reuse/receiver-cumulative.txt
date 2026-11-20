@@ -1,0 +1,43 @@
+File: cdx-profile.test
+Build ID: ce2489f976c54c95c15d92907df48cdc6a3877d0
+Type: cpu
+Time: 2026-11-16 20:39:31 IST
+Duration: 2.02s, Total samples = 1080ms (53.48%)
+Showing nodes accounting for 630ms, 58.33% of 1080ms total
+Showing top 35 nodes out of 141
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%      480ms 44.44%  github.com/YashasVM/cd/cmd/cdx.TestProfileCLI
+         0     0%     0%      480ms 44.44%  github.com/YashasVM/cd/cmd/cdx.receiveFile
+         0     0%     0%      480ms 44.44%  github.com/YashasVM/cd/cmd/cdx.run
+         0     0%     0%      480ms 44.44%  github.com/YashasVM/cd/cmd/cdx.runReceive
+         0     0%     0%      480ms 44.44%  syscall.Syscall
+         0     0%     0%      480ms 44.44%  testing.tRunner
+         0     0%     0%      470ms 43.52%  internal/poll.ignoringEINTRIO (inline)
+     470ms 43.52% 43.52%      470ms 43.52%  internal/runtime/syscall/linux.Syscall6
+         0     0% 43.52%      460ms 42.59%  syscall.RawSyscall6
+         0     0% 43.52%      290ms 26.85%  internal/poll.(*FD).Write
+         0     0% 43.52%      290ms 26.85%  os.(*File).Write
+         0     0% 43.52%      290ms 26.85%  os.(*File).write (inline)
+         0     0% 43.52%      290ms 26.85%  syscall.Write (inline)
+         0     0% 43.52%      290ms 26.85%  syscall.write
+         0     0% 43.52%      270ms 25.00%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).readRelay
+         0     0% 43.52%      230ms 21.30%  runtime.systemstack
+         0     0% 43.52%      190ms 17.59%  bufio.(*Reader).Read
+         0     0% 43.52%      190ms 17.59%  github.com/gorilla/websocket.(*messageReader).Read
+         0     0% 43.52%      190ms 17.59%  internal/poll.(*FD).Read
+         0     0% 43.52%      190ms 17.59%  io.ReadAtLeast
+         0     0% 43.52%      190ms 17.59%  io.ReadFull (inline)
+         0     0% 43.52%      190ms 17.59%  net.(*conn).Read
+         0     0% 43.52%      190ms 17.59%  net.(*netFD).Read
+         0     0% 43.52%      180ms 16.67%  syscall.Read (inline)
+         0     0% 43.52%      180ms 16.67%  syscall.read
+         0     0% 43.52%      170ms 15.74%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).next
+         0     0% 43.52%      160ms 14.81%  crypto/internal/fips140/aes/gcm.(*GCM).Open
+     160ms 14.81% 58.33%      160ms 14.81%  crypto/internal/fips140/aes/gcm.gcmAesDec
+         0     0% 58.33%      160ms 14.81%  crypto/internal/fips140/aes/gcm.open
+         0     0% 58.33%      160ms 14.81%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).ready
+         0     0% 58.33%      160ms 14.81%  github.com/YashasVM/cd/cmd/cdx.(*recordOpener).consume (inline)
+         0     0% 58.33%      160ms 14.81%  github.com/YashasVM/cd/cmd/cdx.(*recordOpener).openRecord
+         0     0% 58.33%      160ms 14.81%  runtime.gcBgMarkWorker
+         0     0% 58.33%      160ms 14.81%  runtime.gcBgMarkWorker.func2
+         0     0% 58.33%      160ms 14.81%  runtime.gcDrain
