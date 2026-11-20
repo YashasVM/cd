@@ -68,7 +68,9 @@
     { "tag": "v1", "new_sqlite_classes": ["TransferRoom"] },
     { "tag": "v2", "new_sqlite_classes": ["PeerSignal"] },
     { "tag": "v3", "new_sqlite_classes": ["CodeDirectory"] },
-    { "tag": "v4", "new_sqlite_classes": ["DeviceRoom"] }
+    { "tag": "v4", "new_sqlite_classes": ["DeviceRoom"] },
+    { "tag": "v5", "new_sqlite_classes": ["AccountRoom"] },
+    { "tag": "v6", "deleted_classes": ["AccountRoom"] }
   ],
   "assets": {
     "directory": "./dist",
