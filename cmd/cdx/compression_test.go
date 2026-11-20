@@ -283,7 +283,7 @@ func TestReceiveCompressedFileAndRejectInflatedLimit(t *testing.T) {
 			out := filepath.Join(t.TempDir(), "received.txt")
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			err = receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, nil)
+			err = receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, false, nil)
 			<-done
 			if invalid {
 				if err == nil {

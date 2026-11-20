@@ -18,3 +18,9 @@ func processAlive(pid int) bool {
 	err := syscall.Kill(pid, 0)
 	return err == nil || errors.Is(err, syscall.EPERM)
 }
+
+// terminateProcess asks a background holder to stop with SIGTERM, which the
+// holder's shutdown-signal context turns into a "transfer canceled" state.
+func terminateProcess(pid int) error {
+	return syscall.Kill(pid, syscall.SIGTERM)
+}

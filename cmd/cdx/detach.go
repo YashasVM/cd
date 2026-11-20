@@ -344,6 +344,71 @@ func runStatus(args []string) int {
 	return 0
 }
 
+// runCancel stops a detached background send. It accepts a share code or a
+// transfer ID, terminates the holder, and records a canceled state when the
+// holder did not update its own state before exiting.
+func runCancel(args []string) int {
+	jsonOutput, timeout, rest, err := parseStateArgs(args)
+	if err != nil || len(rest) != 1 || timeout != 0 {
+		fmt.Fprintln(os.Stderr, "usage: cdx cancel [--json] <code>")
+		return 2
+	}
+	dir, err := stateDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cdx:", err)
+		return 1
+	}
+	state, code := lookupState(dir, rest[0], jsonOutput)
+	if code != 0 {
+		return code
+	}
+	state = effectiveState(dir, state)
+	if state.finished() {
+		writeStateOutput(os.Stdout, state, jsonOutput)
+		if !jsonOutput {
+			fmt.Fprintf(os.Stderr, "cdx: %s already %s\n", rest[0], state.Phase)
+		}
+		return 0
+	}
+	if processAlive(state.PID) {
+		if err := terminateProcess(state.PID); err != nil && processAlive(state.PID) {
+			reportFailure(os.Stdout, os.Stderr, fmt.Errorf("stop the background sender: %w", err), jsonOutput)
+			return 1
+		}
+		// Give the holder a moment to write its own canceled state before
+		// recording one here.
+		deadline := time.Now().Add(3 * time.Second)
+		for {
+			if fresh, readErr := readState(dir, state.TransferID); readErr == nil && fresh.finished() {
+				state = fresh
+				break
+			}
+			if !processAlive(state.PID) {
+				break
+			}
+			if time.Now().After(deadline) {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	if fresh, readErr := readState(dir, state.TransferID); readErr == nil {
+		state = fresh
+	}
+	if !state.finished() {
+		state.Phase = phaseFailed
+		state.Error = "transfer canceled"
+		state.ErrorKind = failureCanceled
+		state.Retry = retryNever
+		if err := writeState(dir, state); err != nil {
+			fmt.Fprintln(os.Stderr, "cdx:", err)
+			return 1
+		}
+	}
+	writeStateOutput(os.Stdout, state, jsonOutput)
+	return 0
+}
+
 // runWait blocks until the transfer finishes. Exit 0 means the receiver
 // verified the file, 1 means it failed.
 func runWait(args []string) int {

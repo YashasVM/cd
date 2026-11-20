@@ -44,7 +44,8 @@ const PANEL_HTML = `
     <span data-relay="progress-copy">0%</span>
   </div>
   <a class="primary-btn share-download" data-relay="download" hidden>Download file</a>
-  <ul class="bundle-files" data-relay="files" hidden></ul>`;
+  <ul class="bundle-files" data-relay="files" hidden></ul>
+  <button class="cancel-btn relay-cancel" type="button" data-relay="cancel">Cancel</button>`;
 
 function formatSize(bytes) {
   const value = Number(bytes);
@@ -52,6 +53,31 @@ function formatSize(bytes) {
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
   return `${(value / 1024 ** 3).toFixed(2)} GB`;
+}
+
+// Human-friendly remaining-time label for a transfer. Returns an empty
+// string for invalid/negative input so callers can drop the suffix cleanly.
+export function formatEta(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '';
+  if (seconds < 1) return '<1s';
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  const total = Math.ceil(seconds);
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  if (minutes < 60) return `${minutes}m ${secs}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+// Countdown label for a wait timer, as `M:SS` (e.g. `14:59`). Returns an
+// empty string for invalid/negative input and `<1s` for sub-second values.
+export function formatCountdown(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '';
+  if (seconds < 1) return '<1s';
+  const total = Math.floor(seconds);
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
 function parseOffer(plaintext) {
@@ -129,12 +155,30 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     progressFill: pick('progress').querySelector('.progress-fill'),
     progressCopy: pick('progress-copy'),
     download: pick('download'),
-    files: pick('files')
+    files: pick('files'),
+    cancel: pick('cancel')
   };
   let failureShown = false;
   // Leaving before the socket exists must still stop receive() from joining.
   let stopped = false;
   let stop = () => { stopped = true; failureShown = true; };
+
+  // Cancel stops the transfer and returns the caller (via hooks) to an idle
+  // state without surfacing a failure. Shown while connecting, offered, or
+  // receiving; hidden once complete, failed, or canceled.
+  function cancelTransfer() {
+    if (stopped || failureShown) return;
+    stopped = true;
+    failureShown = true;
+    stop();
+    elements.offer.hidden = true;
+    elements.progress.hidden = true;
+    elements.cancel.hidden = true;
+    elements.status.textContent = 'Transfer canceled.';
+    hooks.onState?.('idle');
+    hooks.onCancel?.();
+  }
+  elements.cancel.addEventListener('click', cancelTransfer);
 
   async function createSink(offer) {
     if (offer.bundle) {
@@ -253,7 +297,10 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     elements.progress.hidden = false;
     elements.progressFill.style.transform = `scaleX(${percent / 100})`;
     elements.progressBar.setAttribute('aria-valuenow', percent.toFixed(1));
-    elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}${speed > 0 ? ` · ${formatSize(BigInt(Math.floor(speed)))}/s · ${Math.ceil(Number(total - received) / speed)}s left` : ''}`;
+    const done = received >= total;
+    const eta = speed > 0 && !done ? formatEta(Number(total - received) / speed) : '';
+    elements.progressCopy.textContent = `${percent.toFixed(1)}% · ${formatSize(received)} / ${formatSize(total)}${speed > 0 ? ` · ${formatSize(BigInt(Math.floor(speed)))}/s` : ''}${eta ? ` · ${eta} left` : ''}`;
+    hooks.onProgress?.(received, total, percent);
     if (received === total) elements.status.textContent = 'Verifying file…';
   }
 
@@ -291,6 +338,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
     if (socket?.readyState === WebSocket.OPEN) socket.close(4400, 'receiver failed');
     elements.offer.hidden = true;
     elements.progress.hidden = true;
+    elements.cancel.hidden = true;
     elements.status.textContent = error instanceof Error ? error.message : 'The transfer failed.';
   }
 
@@ -457,6 +505,7 @@ export function mountRelayReceiver(container, shareUrl, { autoReceive = false, h
         hooks.onState?.('verifying');
         const result = await sink.close();
         state = 'complete';
+        elements.cancel.hidden = true;
         renderProgress(received, offer.size, true);
         await send(KIND_COMPLETE, encodeCounts(chunks, received));
         if (sink.kind === 'bundle') await showBundle(offer, result);

@@ -88,6 +88,7 @@ func usage(output io.Writer) {
 	fmt.Fprintln(output, "  pair [--name phone]  scan once in CD Android to trust this computer")
 	fmt.Fprintln(output, "  devices [forget name]  list or forget paired devices")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
+	fmt.Fprintln(output, "  cancel <code>      stop a background send by share code or transfer ID")
 	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
 	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
 	fmt.Fprintln(output, "  welcome            replay the getting-started tour")
@@ -148,13 +149,14 @@ func sendUsage(output io.Writer) {
 
 func receiveUsage(output io.Writer) {
 	defer transferUsage(output)
-	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force] [--json] [--progress] [--] <code>")
+	fmt.Fprintln(output, "usage: cdx receive [--out <path>] [--force|--rename] [--json] [--progress] [--] <code>")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "  <code>           the 4-5 digit code from `cdx send` or a browser sender")
 	fmt.Fprintln(output, "                   (a full share link works too)")
 	fmt.Fprintln(output, "  --out <path>   save to this file or directory (default: sender's filename)")
 	fmt.Fprintln(output, "                 several files unpack into this folder (created if missing)")
 	fmt.Fprintln(output, "  --force        overwrite an existing file")
+	fmt.Fprintln(output, "  --rename       if the file exists, save as \"name (2)\" instead")
 	fmt.Fprintln(output, "  --progress     show transfer progress (JSON lines with --json)")
 	fmt.Fprintln(output, "  --json         print {\"version\",\"filename\",\"size\",\"path\",\"files\"} instead of the bare path(s)")
 	fmt.Fprintln(output, "  --             treat the next argument as the code even if it starts with -")
@@ -189,6 +191,7 @@ type receiveRequest struct {
 	jsonOutput bool
 	progress   bool
 	force      bool
+	rename     bool
 	out        string
 	code       string
 	help       bool
@@ -376,6 +379,11 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 			index++
 			continue
 		}
+		if !endOfFlags && argument == "--rename" {
+			request.rename = true
+			index++
+			continue
+		}
 		if !endOfFlags && (argument == "--out" || strings.HasPrefix(argument, "--out=")) {
 			value := ""
 			if strings.HasPrefix(argument, "--out=") {
@@ -401,6 +409,8 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 				hint = " (did you mean --out?)"
 			case strings.HasPrefix(argument, "--for"):
 				hint = " (did you mean --force?)"
+			case strings.HasPrefix(argument, "--ren"):
+				hint = " (did you mean --rename?)"
 			case strings.HasPrefix(argument, "--js") || argument == "--JSON":
 				hint = " (did you mean --json?)"
 			case strings.HasPrefix(argument, "--he"):
@@ -422,6 +432,9 @@ func parseReceiveArgs(args []string) (receiveRequest, error) {
 		return receiveRequest{}, errors.New("cdx: receive one transfer at a time")
 	}
 	request.code = codes[0]
+	if request.force && request.rename {
+		return receiveRequest{}, errors.New("cdx: --force and --rename cannot be combined")
+	}
 	return request, nil
 }
 
@@ -456,7 +469,7 @@ func editDistance(a, b string) int {
 }
 
 func suggestCommand(argument string) string {
-	candidates := []string{"send", "receive", "status", "wait", "update", "pair", "devices", "agent", "welcome", "help", "version"}
+	candidates := []string{"send", "receive", "status", "cancel", "wait", "update", "pair", "devices", "agent", "welcome", "help", "version"}
 	best := ""
 	bestDistance := 3
 	for _, candidate := range candidates {
@@ -573,7 +586,7 @@ func runReceive(request receiveRequest) int {
 	progressRequested = request.progress
 	ctx, stop := signal.NotifyContext(context.Background(), shutdownSignals()...)
 	defer stop()
-	err := receiveFile(ctx, request.code, request.out, request.force, func(value receiveResult) error {
+	err := receiveFile(ctx, request.code, request.out, request.force, request.rename, func(value receiveResult) error {
 		return writeReceived(os.Stdout, value, request.jsonOutput)
 	})
 	if err != nil {
@@ -630,6 +643,8 @@ func run(argv []string) int {
 		return runUpdate(argv[1:])
 	case "status":
 		return runStatus(argv[1:])
+	case "cancel":
+		return runCancel(argv[1:])
 	case "wait":
 		return runWait(argv[1:])
 	case "pair":

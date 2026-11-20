@@ -242,7 +242,7 @@ func TestReliabilityReceiveFailureNeverPublishes(t *testing.T) {
 			dir := t.TempDir()
 			out := filepath.Join(dir, "failure.bin")
 			completed := false
-			err := receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, func(receiveResult) error { completed = true; return nil })
+			err := receiveFile(ctx, inv.encodedID()+"#v1."+inv.encodedKey(), out, false, false, func(receiveResult) error { completed = true; return nil })
 			if err == nil || completed {
 				t.Fatalf("invalid receive reported success: %v", err)
 			}

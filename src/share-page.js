@@ -27,5 +27,18 @@ const shareUrl = window.location.href;
 history.replaceState(null, '', window.location.pathname);
 let receiving = true;
 window.addEventListener('beforeunload', event => { if (receiving) event.preventDefault(); });
-const stop = mountRelayReceiver(document.getElementById('relay-receiver'), shareUrl, { hooks: { onState(state) { receiving = !['complete', 'failed'].includes(state); } } });
+const baseTitle = document.title;
+const stop = mountRelayReceiver(document.getElementById('relay-receiver'), shareUrl, {
+  hooks: {
+    onState(state) {
+      receiving = !['complete', 'failed', 'idle'].includes(state);
+      if (state === 'complete') document.title = `Done · ${baseTitle}`;
+      else if (state === 'failed') document.title = `Failed · ${baseTitle}`;
+      else if (state === 'idle') document.title = baseTitle;
+    },
+    onProgress(received, total, percent) {
+      document.title = `${Math.floor(percent)}% · ${baseTitle}`;
+    }
+  }
+});
 window.addEventListener('pagehide', stop, { once: true });
