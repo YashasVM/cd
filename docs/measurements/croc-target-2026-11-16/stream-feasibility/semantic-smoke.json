@@ -1,0 +1,21 @@
+{
+  "method": "Loopback-only unencrypted native HTTP POST body → native IdentityTransformStream in SQLite Durable Object → separate authenticated GET. Same random preloaded buffer each trial. Client receive buffers are retained in RAM; timer includes native HTTP upload/download and Node client bookkeeping, excludes SHA and source generation. No CD file protocol, encryption, ACKs, disk saving, croc comparison or production speed claim. Server has no JavaScript per-chunk loop or payload storage. Setup admission excluded from transfer timer.",
+  "mib": 1,
+  "runs": 1,
+  "inputSHA256": "a5c7e1fc5cefcb6ca2943cbc9a72f6d9960b3db410abedf33987c601863d52cd",
+  "workerSHA256": "f843bfec095f620caac310268f62288dd1f37400491f345412402814e9902dbd",
+  "node": "v24.22.1",
+  "startedAt": "2026-11-16T15:17:02.994Z",
+  "rows": [
+    {
+      "run": 0,
+      "ok": true,
+      "bytes": 1048576,
+      "receivedSHA256": "a5c7e1fc5cefcb6ca2943cbc9a72f6d9960b3db410abedf33987c601863d52cd",
+      "elapsedMs": 9.153569999999945,
+      "firstByteMs": 2.8157919999999876,
+      "mibPerSecond": 109.24699324962893
+    }
+  ],
+  "finishedAt": "2026-11-16T15:17:03.331Z"
+}

@@ -1,0 +1,132 @@
+{
+  "sourceCommit": "d71a05152d20c6b211cf24d8f3a491f07d1e4a08",
+  "startedAt": "2026-11-16T15:28:11.164Z",
+  "method": "Actual old and new binaries, same current local Worker, numeric code, exact full output SHA256 and size. Both ordinary direct discovery and forced relay. Compatibility check, not performance evidence.",
+  "rows": [
+    {
+      "kind": "random",
+      "route": "auto",
+      "from": "legacy",
+      "to": "current",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      }
+    },
+    {
+      "kind": "random",
+      "route": "auto",
+      "from": "current",
+      "to": "legacy",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      }
+    },
+    {
+      "kind": "random",
+      "route": "relay",
+      "from": "legacy",
+      "to": "current",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      }
+    },
+    {
+      "kind": "random",
+      "route": "relay",
+      "from": "current",
+      "to": "legacy",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "43220ab4f2c52214c42b65169317fcfc4abe873e8144fa766e89d692c0324e36"
+      }
+    },
+    {
+      "kind": "compressible",
+      "route": "auto",
+      "from": "legacy",
+      "to": "current",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      }
+    },
+    {
+      "kind": "compressible",
+      "route": "auto",
+      "from": "current",
+      "to": "legacy",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      }
+    },
+    {
+      "kind": "compressible",
+      "route": "relay",
+      "from": "legacy",
+      "to": "current",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      }
+    },
+    {
+      "kind": "compressible",
+      "route": "relay",
+      "from": "current",
+      "to": "legacy",
+      "ok": true,
+      "input": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      },
+      "received": {
+        "bytes": 4194321,
+        "sha256": "8f0493ad0ade64445f3dc9caed026c230fe52859c751d0a554552c4a131cc458"
+      }
+    }
+  ],
+  "binaries": {
+    "legacy": "5d37ff50a2940644c4d8965ba4369eedeeb21b6ad58d43514afdb155a0290be1",
+    "current": "f58b80deb7b364d3fffef01adbbae4269274b86eda66e518e224ee65769a058b"
+  },
+  "finishedAt": "2026-11-16T15:28:18.287Z"
+}

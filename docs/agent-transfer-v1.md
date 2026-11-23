@@ -87,7 +87,7 @@ Clients connect to `/ws/v1/<transfer-id>`. Their first message is bounded JSON:
 
 The relay replies with JSON events named `accepted`, `peer-joined`, and
 `peer-left`. A receiver cannot create a room. Duplicate roles, invalid joins,
-wrong versions, text after admission, and frames above 80 KiB are rejected with
+wrong versions, text after admission, and frames above 1 MiB are rejected with
 stable private WebSocket close codes.
 
 An upgraded socket has 10 seconds to send a valid join. Silent sockets are
@@ -118,7 +118,9 @@ Sequence starts at zero in each direction. Reuse, gaps, overflow, unknown kinds,
 and non-canonical lengths are terminal errors.
 
 Sender kinds are `offer`, `chunk`, and `end`. Receiver kinds are `accept`,
-`ack`, and `complete`. Offer metadata is encrypted JSON. Size is a decimal
+`ack`, and `complete`, with receiver `signal` for direct negotiation. Sender
+`signal` is rejected unless the deferred-offer extension below is negotiated.
+Offer metadata is encrypted JSON. Size is a decimal
 string so Go `uint64` and JavaScript `BigInt` have one exact wire
 representation. Chunk content is raw bytes. Ack, end, and complete are fixed
 binary counters. Either peer closes the socket to abort.
@@ -219,12 +221,47 @@ of 1 MiB or more, `cdx send` gathers ICE candidates (host, then STUN) while
 it waits for the receiver and adds `"direct": {"sdp": "<offer>"}` to the
 encrypted file offer. Receivers that predate it ignore the field.
 
-A current receiver (`cdx receive` or the browser share page) answers with a
+A signal-aware receiver (`cdx receive` or the browser share page) answers with a
 `signal` record (kind `9`, receiver→sender, JSON `{"sdp": ...}`), then sends
 one `signal` record per local ICE candidate as it is found (`{"candidate":
 {...}}`, trickle ICE). It sends `signal` only when the offer included SDP, so
-older senders never see it. Both sides create a pre-negotiated data channel
+older senders never see unsupported signaling. Both sides create a pre-negotiated data channel
 (`cd-direct`, stream id 1).
+
+### Optional deferred offer
+
+To avoid blocking file data on STUN discovery, a supporting sender includes
+`"directOfferMode":"deferred-v1"` in its relay join. The relay preserves that
+exact mode on its admitted sender attachment and includes it in the receiver's
+`accepted` event. An old relay or sender supplies no hint, so the receiver sends
+no unsolicited control record and keeps the initial-SDP behavior.
+
+After receiving this hint, a supporting receiver may send one encrypted
+receiver `signal` before the file offer:
+
+```json
+{"candidate":{"candidate":""},"deferredOffer":true}
+```
+
+Only this authenticated opt-in allows the sender to emit an encrypted file
+offer with `"directPending":true` before gathering finishes. The same full
+bounded ICE gathering continues, preserving public candidates. Once ready, the
+sender may emit one encrypted sender `signal` with `{"sdp":"..."}` while file
+data continues. It must not emit this optional signal after `end`. A transfer
+that finishes first needs no late SDP. The receiver rejects conflicting initial
+SDP and pending metadata, duplicate late SDP, or unnegotiated sender signals.
+The SDP limit is 64 KiB; its JSON control record is bounded at 128 KiB.
+
+Sender signal permission is scoped to each negotiated sealer/opener. Record
+format, encryption, nonces, sequence ordering, flow control and consent remain
+unchanged. A failed or unused direct attempt retains ordinary relay fallback.
+This extension applies to ordinary v1 file transfers; v2 resume is unchanged.
+
+Both implementations retain early unacknowledged ciphertext under the existing
+replay caps while direct preparation is pending. Go ordinary receivers may
+explicitly release processed relay record buffers into a private bounded pool;
+queued records never share storage, and other callers retain the default
+payload ownership lifetime.
 
 The transfer starts on the relay immediately after `accept`. Each side sends
 on the data channel once it is open, otherwise on the relay, and splits each

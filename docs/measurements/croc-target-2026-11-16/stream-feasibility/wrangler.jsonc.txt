@@ -1,0 +1,12 @@
+{
+  // LOCAL DIAGNOSTIC ONLY. NEVER DEPLOY THIS CONFIGURATION.
+  "name": "cd-stream-feasibility-local-only",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": false,
+  "routes": [],
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "StreamRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["StreamRoom"] }]
+}

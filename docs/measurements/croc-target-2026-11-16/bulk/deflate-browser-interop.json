@@ -1,0 +1,24 @@
+{
+  "method": "Independent Chromium DecompressionStream(deflate-raw) reads chunks emitted by optimized Go RFC1951 encoder; full byte equality and SHA256. Correctness only, no throughput claim.",
+  "chromium": "156.0.8078.79",
+  "rows": [
+    {
+      "name": "zeros",
+      "bytes": 786432,
+      "sha256": "599c1bb5ffd4b87229a81958f33f1060821cd01cd7aa7ccafa0d862f4522f3f6",
+      "verified": true
+    },
+    {
+      "name": "boundary",
+      "bytes": 1024,
+      "sha256": "49abd65bbf7f7e40c7055093ed2e3fd75f2f602f2c5fcf955c213e3135eb03f7",
+      "verified": true
+    },
+    {
+      "name": "source",
+      "bytes": 786432,
+      "sha256": "d93b1b3b11ee2596a8b281910f379ad883f42d2ad003f406e92c296795da5b50",
+      "verified": true
+    }
+  ]
+}

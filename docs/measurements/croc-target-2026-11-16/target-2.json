@@ -1,0 +1,297 @@
+{
+  "ok": false,
+  "minimum": 2,
+  "completionPass1_5": false,
+  "completionPass2": false,
+  "failedCells": [
+    {
+      "case": "disk/relay/random-4k",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.27431047640129214,
+          "receiverMs": 2.921579063796086,
+          "durableMs": 2.864599094278944,
+          "totalMs": 1.9092434263733484
+        },
+        "croc-no-compress": {
+          "readyMs": 0.3753741133647355,
+          "receiverMs": 3.0389042348484105,
+          "durableMs": 2.98908154776019,
+          "totalMs": 1.8924373264020724
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/random-1m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.25819138970511096,
+          "receiverMs": 2.0135908278104497,
+          "durableMs": 1.9489119295089925,
+          "totalMs": 1.1689125101975693
+        },
+        "croc-no-compress": {
+          "readyMs": 0.2924884617036166,
+          "receiverMs": 2.0456613380854027,
+          "durableMs": 1.991364944761946,
+          "totalMs": 1.2025431047812343
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/random-64m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.31620586287853225,
+          "receiverMs": 0.7031943198164342,
+          "durableMs": 0.771212714656967,
+          "totalMs": 0.7388597658728793
+        },
+        "croc-no-compress": {
+          "readyMs": 0.40704756136749076,
+          "receiverMs": 0.8560684013498571,
+          "durableMs": 0.9072064923964416,
+          "totalMs": 0.8830305994104801
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/random-256m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.36307892403752945,
+          "receiverMs": 0.3116557710225633,
+          "durableMs": 0.3810324674751273,
+          "totalMs": 0.38452729502339844
+        },
+        "croc-no-compress": {
+          "readyMs": 0.4469611229846887,
+          "receiverMs": 0.29619701007187105,
+          "durableMs": 0.36286359933280943,
+          "totalMs": 0.3671566904285318
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/compressible-4k",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.3277742433221878,
+          "receiverMs": 2.440277322684648,
+          "durableMs": 2.3659566121252547,
+          "totalMs": 1.604069426559416
+        },
+        "croc-no-compress": {
+          "readyMs": 0.40516875109046324,
+          "receiverMs": 2.3231815871122303,
+          "durableMs": 2.2404353627030975,
+          "totalMs": 1.5509041811874156
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/compressible-1m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.3429589898594274,
+          "receiverMs": 2.6880241550092183,
+          "durableMs": 2.614029856240225,
+          "totalMs": 1.7605716974578673
+        },
+        "croc-no-compress": {
+          "readyMs": 0.4328180548198221,
+          "receiverMs": 2.5993427441187635,
+          "durableMs": 2.530883784994202,
+          "totalMs": 1.7353676124890578
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/compressible-64m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.23302354074036571,
+          "receiverMs": 1.0209924951035458,
+          "durableMs": 1.0750851002449089,
+          "totalMs": 1.0060070341707028
+        },
+        "croc-no-compress": {
+          "readyMs": 0.2713472945168973,
+          "receiverMs": 0.8515481443174509,
+          "durableMs": 0.9109527756866818,
+          "totalMs": 0.8595755756226148
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "disk/relay/compressible-256m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.2563780426271183,
+          "receiverMs": 2.1543874879068112,
+          "durableMs": 2.2946804158692697,
+          "totalMs": 1.9767850618607539
+        },
+        "croc-no-compress": {
+          "readyMs": 0.33928927307955764,
+          "receiverMs": 0.989083233592897,
+          "durableMs": 1.1345168941566761,
+          "totalMs": 1.0084999350557802
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/random-4k",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.43097373010229895,
+          "receiverMs": 2.8181255680631394,
+          "durableMs": 2.790637575660075,
+          "totalMs": 1.9180676241544652
+        },
+        "croc-no-compress": {
+          "readyMs": 0.4324327047819949,
+          "receiverMs": 2.7350023106785346,
+          "durableMs": 2.7028576016661394,
+          "totalMs": 1.9001398006994128
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/random-1m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.2928205589203949,
+          "receiverMs": 2.461190914260346,
+          "durableMs": 2.434212099515277,
+          "totalMs": 1.6571480833919294
+        },
+        "croc-no-compress": {
+          "readyMs": 0.4658715075280559,
+          "receiverMs": 2.4543401357882932,
+          "durableMs": 2.4227173247946827,
+          "totalMs": 1.7028634505676592
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/random-64m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.2961101609856396,
+          "receiverMs": 0.5928417735474996,
+          "durableMs": 0.6044543643696416,
+          "totalMs": 0.5943216589157662
+        },
+        "croc-no-compress": {
+          "readyMs": 0.3466911378356888,
+          "receiverMs": 0.672893639184029,
+          "durableMs": 0.6711311761681962,
+          "totalMs": 0.6596137085680757
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/random-256m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.1867558412639294,
+          "receiverMs": 0.37149370467809495,
+          "durableMs": 0.37163997045417596,
+          "totalMs": 0.36000743030045285
+        },
+        "croc-no-compress": {
+          "readyMs": 0.1229186435925104,
+          "receiverMs": 0.39617247806102945,
+          "durableMs": 0.39675256803969194,
+          "totalMs": 0.38108971004122805
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/compressible-4k",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.4653979149869314,
+          "receiverMs": 3.031655928373983,
+          "durableMs": 3.008304413661559,
+          "totalMs": 1.9034094153465426
+        },
+        "croc-no-compress": {
+          "readyMs": 0.3287109702361233,
+          "receiverMs": 3.138111148447991,
+          "durableMs": 3.0996532236857504,
+          "totalMs": 1.8657900089642274
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/compressible-1m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.3559448213802646,
+          "receiverMs": 2.763294384858515,
+          "durableMs": 2.71726090051202,
+          "totalMs": 1.6914945413985292
+        },
+        "croc-no-compress": {
+          "readyMs": 0.355077032780935,
+          "receiverMs": 2.6323146633870786,
+          "durableMs": 2.588617725887728,
+          "totalMs": 1.6340340632842956
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/compressible-64m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.33443781593948235,
+          "receiverMs": 2.4176414207728145,
+          "durableMs": 2.39781638300459,
+          "totalMs": 2.052026255212964
+        },
+        "croc-no-compress": {
+          "readyMs": 0.2720351850901948,
+          "receiverMs": 1.3353689642927133,
+          "durableMs": 1.3260266065582826,
+          "totalMs": 1.1527617802833814
+        }
+      },
+      "repetitionsComplete": true
+    },
+    {
+      "case": "tmpfs/relay/compressible-256m",
+      "speedup": {
+        "croc": {
+          "readyMs": 0.22186850146615072,
+          "receiverMs": 2.5017526926419498,
+          "durableMs": 2.4964453999965657,
+          "totalMs": 2.39095026222664
+        },
+        "croc-no-compress": {
+          "readyMs": 0.2904712347110167,
+          "receiverMs": 1.108202031724346,
+          "durableMs": 1.1064377784054682,
+          "totalMs": 1.0755983908434354
+        }
+      },
+      "repetitionsComplete": true
+    }
+  ],
+  "scope": "Receiver, fsynced completion and total elapsed time against both croc configurations, in every configured cell, with at least five repetitions. Invitation-display timing is retained separately. This is not a worldwide claim."
+}

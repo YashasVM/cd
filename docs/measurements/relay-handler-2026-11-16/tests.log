@@ -1,0 +1,21 @@
+{"event":"connection_rejected","code":4404,"reason":"peer unavailable"}
+{"event":"backpressure_limit","bufferedBytes":33554432}
+{"event":"connection_rejected","code":4429,"reason":"peer is too slow"}
+{"event":"connection_rejected","code":4429,"reason":"peer is too slow"}
+{"event":"room_terminal"}
+{"event":"connection_rejected","code":4400,"reason":"invalid connection"}
+{"event":"connection_rejected","code":4403,"reason":"invalid relay frame"}
+✔ warm relay forwards identical records and ACKs without scanning peers again (19.105283ms)
+✔ a reconstructed instance rebuilds role cache from persisted attachments (1.881554ms)
+✔ cached closed socket is replaced only by an admitted open role (0.282405ms)
+✔ cached closed receiver cannot receive another frame (3.955016ms)
+✔ buffer limit remains enforced for a cached peer (0.919264ms)
+✔ malformed attachments and oversized records cannot use the cache (0.393602ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 139.02317

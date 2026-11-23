@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-16T15:10:57.263Z",
+  "options": {
+    "croc": "/workspace/work/toolchains/bin/croc",
+    "runs": 3,
+    "timeout": 20000,
+    "output": "/workspace/work/croc-readiness.json"
+  },
+  "rows": [
+    {
+      "run": 0,
+      "startedAt": "2026-11-16T15:10:58.152Z",
+      "ok": true,
+      "codeDisplayedMs": 6.572130000000016,
+      "roomRegisteredMs": 18.38437399999998,
+      "senderText": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 a53d201696a10a19c25ef925-readiness\n\nOr open:\n  https://getcroc.com/?code=a53d201696a10a19c25ef925-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+      "relayText": "[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46508 connected\n[debug]\t20:40:58 comm.go:261: initial read error: EOF\n[debug]\t20:40:58 tcp.go:317: relay-127.0.0.1:46508: read first relay message: EOF\n[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46522 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n",
+      "observedRegistrationAfterDisplayMs": 11.812243999999964,
+      "rawSender": {
+        "stdout": "",
+        "stderr": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 a53d201696a10a19c25ef925-readiness\n\nOr open:\n  https://getcroc.com/?code=a53d201696a10a19c25ef925-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+        "exitCode": 0,
+        "signal": null,
+        "termination": "intentionally stopped after passive observations; no transfer attempted"
+      }
+    },
+    {
+      "run": 1,
+      "startedAt": "2026-11-16T15:10:58.174Z",
+      "ok": true,
+      "codeDisplayedMs": 6.369185000000016,
+      "roomRegisteredMs": 22.055763999999954,
+      "senderText": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 d5f8bdba374602de9f720b1c-readiness\n\nOr open:\n  https://getcroc.com/?code=d5f8bdba374602de9f720b1c-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+      "relayText": "[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46536 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n",
+      "observedRegistrationAfterDisplayMs": 15.686578999999938,
+      "rawSender": {
+        "stdout": "",
+        "stderr": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 d5f8bdba374602de9f720b1c-readiness\n\nOr open:\n  https://getcroc.com/?code=d5f8bdba374602de9f720b1c-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+        "exitCode": 0,
+        "signal": null,
+        "termination": "intentionally stopped after passive observations; no transfer attempted"
+      }
+    },
+    {
+      "run": 2,
+      "startedAt": "2026-11-16T15:10:58.197Z",
+      "ok": true,
+      "codeDisplayedMs": 14.366963000000055,
+      "roomRegisteredMs": 28.014661000000046,
+      "senderText": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 d2749f3a1f26203b4e3e078e-readiness\n\nOr open:\n  https://getcroc.com/?code=d2749f3a1f26203b4e3e078e-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+      "relayText": "[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46540 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n",
+      "observedRegistrationAfterDisplayMs": 13.647697999999991,
+      "rawSender": {
+        "stdout": "",
+        "stderr": "On the other computer, run:\n  croc --relay 127.0.0.1:35245 d2749f3a1f26203b4e3e078e-readiness\n\nOr open:\n  https://getcroc.com/?code=d2749f3a1f26203b4e3e078e-readiness\n\r                                 \rSending 0 files (31 B)\r                                 \rSending 'synthetic-readiness.txt' (31 B)\n",
+        "exitCode": 0,
+        "signal": null,
+        "termination": "intentionally stopped after passive observations; no transfer attempted"
+      }
+    }
+  ],
+  "method": "Separate passive diagnostic. One pinned upstream croc relay, serial senders, no receiver and no transfer. Code-display observation is complete invitation text on the sender pipe; usable relay-registration observation is room has first peer on the relay pipe. Timestamps are Node receipt times, not synchronized internal process clocks; pipe scheduling can obscure or invert a tiny observed gap. Source ordering is checked independently. No elapsed time is added to the main matrix. No advertised-readiness metric or acceptance gate is changed.",
+  "caveats": [
+    "Relay debug logging adds observation overhead and is not suitable for acceptance speed comparisons.",
+    "Global --debug invokes an external-IP lookup; only the relay uses it, before sender timing.",
+    "This measures the custom local relay registration, not public-relay availability or completion.",
+    "Main matrix readyMs remains native invitation display; totalMs remains sender launch through durable completion."
+  ],
+  "binary": {
+    "path": "/workspace/work/toolchains/bin/croc",
+    "sha256": "d6cde9a91bb16007e96355ef68b64da1b5cc714a8999c16e10d050f6407c5d5c",
+    "version": "croc version 11.6.5"
+  },
+  "runnerSHA256": "ecc63d170fb2acf7400981760dda2698ec84a1b81082c7134c64ac957d8ca527",
+  "commit": "d71a05152d20c6b211cf24d8f3a491f07d1e4a08",
+  "upstream": [
+    {
+      "url": "https://raw.githubusercontent.com/schollz/croc/v11.6.5/src/croc/croc.go",
+      "sha256": "c3481ceef3fe6329c2ee8b1388c20dea2c3c7db01e5a50a1723d6a1dcff26914"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/schollz/croc/v11.6.5/src/tcp/tcp.go",
+      "sha256": "292153627553a32ba5c6863fb3591254054eaaf1bdc04ffbf786f7b84899a9aa"
+    }
+  ],
+  "sourceOrdering": {
+    "instructionsLine": 1845,
+    "localSetupLine": 1862,
+    "remoteConnectLine": 1875,
+    "roomAdmitLine": 604,
+    "admissionReplyLine": 616,
+    "passiveMarkerLine": 622,
+    "conclusion": "Send prints complete instructions before local relay setup and remote relay connection. The passive relay marker follows room admission and its successful reply."
+  },
+  "input": {
+    "bytes": 31,
+    "sha256": "945ed6d1d4d54fc8d6e3258d9bbd795823ab0b539c9d2cec0fa2fa8da9edf54d"
+  },
+  "relay": {
+    "address": "127.0.0.1:35245",
+    "flags": [
+      "--debug",
+      "relay",
+      "--host",
+      "127.0.0.1"
+    ],
+    "timing": "outside all sender observations"
+  },
+  "rawRelay": {
+    "stdout": "[info]\t2026/11/16 20:40:58 starting croc relay version 11.6.5\n[debug]\t20:40:58 logger.go:139: starting relay with configured authentication\n[info]\t2026/11/16 20:40:58 starting TCP server on 127.0.0.1:35245\n[debug]\t20:40:58 logger.go:139: starting relay with configured authentication\n[debug]\t20:40:58 logger.go:139: starting relay with configured authentication\n[debug]\t20:40:58 logger.go:139: starting relay with configured authentication\n[debug]\t20:40:58 logger.go:139: starting relay with configured authentication\n[info]\t2026/11/16 20:40:58 starting TCP server on 127.0.0.1:35247\n[info]\t2026/11/16 20:40:58 starting TCP server on 127.0.0.1:35248\n[info]\t2026/11/16 20:40:58 starting TCP server on 127.0.0.1:35249\n[info]\t2026/11/16 20:40:58 starting TCP server on 127.0.0.1:35246\n[debug]\t20:40:58 tcp.go:274: started TCP server on 127.0.0.1:35245\n[debug]\t20:40:58 tcp.go:274: started TCP server on 127.0.0.1:35247\n[debug]\t20:40:58 tcp.go:274: started TCP server on 127.0.0.1:35248\n[debug]\t20:40:58 tcp.go:274: started TCP server on 127.0.0.1:35249\n[debug]\t20:40:58 tcp.go:274: started TCP server on 127.0.0.1:35246\n[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46508 connected\n[debug]\t20:40:58 comm.go:261: initial read error: EOF\n[debug]\t20:40:58 tcp.go:317: relay-127.0.0.1:46508: read first relay message: EOF\n[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46522 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46536 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n[debug]\t20:40:58 tcp.go:283: client 127.0.0.1:46540 connected\n[debug]\t20:40:58 logger.go:139: received relay PAKE initiator payload\n[debug]\t20:40:58 tcp.go:488: waiting for password\n[debug]\t20:40:58 tcp.go:547: sending '35246,35247,35248,35249'\n[debug]\t20:40:58 logger.go:139: waiting for answer\n[debug]\t20:40:58 logger.go:139: room has first peer\n[debug]\t20:40:58 tcp.go:402: stop TCP server on 127.0.0.1:35247\n[debug]\t20:40:58 tcp.go:402: stop TCP server on 127.0.0.1:35246\n[debug]\t20:40:58 tcp.go:402: stop TCP server on 127.0.0.1:35248\n[debug]\t20:40:58 tcp.go:402: stop TCP server on 127.0.0.1:35249\n[debug]\t20:40:58 logger.go:139: deleting room\n[debug]\t20:40:58 logger.go:139: deleting room\n[debug]\t20:40:58 logger.go:139: deleting room\n[debug]\t20:40:58 tcp.go:402: stop TCP server on 127.0.0.1:35245\n[debug]\t20:40:58 logger.go:139: stop room cleanup fired\n[debug]\t20:40:58 logger.go:139: room cleanup stopped\n[debug]\t20:40:58 logger.go:139: stop room cleanup fired\n[debug]\t20:40:58 logger.go:139: room cleanup stopped\n[debug]\t20:40:58 logger.go:139: stop room cleanup fired\n[debug]\t20:40:58 logger.go:139: room cleanup stopped\n[debug]\t20:40:58 logger.go:139: stop room cleanup fired\n[debug]\t20:40:58 logger.go:139: room cleanup stopped\n[debug]\t20:40:58 logger.go:139: stop room cleanup fired\n[debug]\t20:40:58 logger.go:139: room cleanup stopped\n",
+    "stderr": ""
+  },
+  "interrupted": null,
+  "finishedAt": "2026-11-16T15:10:58.235Z"
+}

@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "startedAt": "2026-11-16T13:43:51.880Z",
+  "runs": 1,
+  "mib": 1,
+  "seed": "3b721845a2f5ab84d909d1b0f3c56f5b",
+  "tools": [
+    "cd",
+    "toffeeshare"
+  ],
+  "rows": [],
+  "source": {
+    "commit": "11136c008b01e282b1528c23861384e63dd050aa",
+    "dirty": "M cmd/cdx/direct.go\n M package.json\n M scripts/bench-croc-matrix.mjs\n M scripts/bench-croc-matrix.test.mjs\n M src/direct-link.js\n M src/direct-link.test.js\n M src/main.js\n M src/zip-bundle.js\n M src/zip-bundle.test.js\n M worker/index.ts\n?? .github/workflows/p2p-benchmarks.yml\n?? cmd/cdx/direct_assembly_bench_test.go\n?? cmd/cdx/direct_assembly_test.go\n?? docs/cloudflare-free-tier.md\n?? docs/measurements/browser-backend-2026-11-16/\n?? docs/measurements/p2p-backend-2026-11-16/\n?? docs/measurements/relay-handler-2026-11-16/\n?? scripts/bench-order.mjs\n?? scripts/bench-p2p-browser.mjs\n?? scripts/bench-p2p-browser.test.mjs\n?? scripts/bench-zip-crc.mjs\n?? scripts/worker-relay-bench.mjs\n?? scripts/worker-relay-harness.mjs\n?? scripts/worker-relay.test.mjs",
+    "runnerSha256": "e5c96e02cc6fd0c47709c83a052d5348587f08bac8312726c7690439dd47c3b6"
+  },
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "release": "6.18.57",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "cores": 5,
+    "node": "v24.22.1",
+    "initialLoad": [
+      0.95,
+      1.85,
+      1.04
+    ]
+  },
+  "method": {
+    "order": "seeded randomized blocks",
+    "topology": "two browser processes on one host; public ToffeeShare; CD endpoint recorded below",
+    "ready": "preloaded sender file selection through usable share code/link",
+    "receive": "receiver navigation through completed download.saveAs",
+    "total": "sender file selection through saved receiver output; SHA256 verification outside timing",
+    "verification": "full output byte count and SHA256 equality per trial",
+    "durability": "no fsync; output page cache allowed",
+    "defaults": "product defaults including transport fallback; CD explicitly selects numeric code flow"
+  },
+  "input": {
+    "bytes": 1048576,
+    "sha256": "dc4791ce90ae3eaa5840397d9253ec6c319dd6e8a731a243cfa1fdc97505b7a8"
+  },
+  "error": "wrangler stopped before becoming ready: \u001b[33m▲ \u001b[43;33m[\u001b[43;30mWARNING\u001b[43;33m]\u001b[0m \u001b[1mProxy environment variables detected. We'll use your proxy for fetch requests.\u001b[0m\n\n\n\n ⛅️ wrangler 4.161.0 (update available 4.163.0)\n───────────────────────────────────────────────\nYour Worker has access to the following bindings:\nBinding                                             Resource            Mode\nenv.TRANSFERS (TransferRoom)                        Durable Object      local\nenv.PEERS (PeerSignal)                              Durable Object      local\nenv.CODES (CodeDirectory)                           Durable Object      local\nenv.DEVICES (DeviceRoom)                            Durable Object      local\nenv.CONNECTION_RATE_LIMITER (30 requests/60s)       Rate Limit          local\nenv.PEER_RATE_LIMITER (120 requests/60s)            Rate Limit          local\nenv.ASSETS                                          Assets              local\n\n❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct.\n⎔ Starting local server...\n[wrangler:info] ✨ Parsed 9 valid header rules.\n\n\u001b[31m✘ \u001b[41;31m[\u001b[41;97mERROR\u001b[41;31m]\u001b[0m \u001b[1mAddress already in use (socket \"direct:1:default\"). Please check that you are not already running a server on this address or specify a different port with --port.\u001b[0m\n\n\n🪵  Logs were written to \"/home/agent/.config/.wrangler/logs/wrangler-2026-11-16_13-43-52_651.log\"",
+  "finishedAt": "2026-11-16T13:43:53.791Z",
+  "interrupted": false,
+  "summary": {
+    "complete": false,
+    "repeatedComparison": false,
+    "tools": {
+      "cd": {
+        "status": "not_run",
+        "successful": 0,
+        "attempted": 0,
+        "routes": [],
+        "medians": null,
+        "spread": null
+      },
+      "toffeeshare": {
+        "status": "not_run",
+        "successful": 0,
+        "attempted": 0,
+        "routes": [],
+        "medians": null,
+        "spread": null
+      }
+    },
+    "toffeeOverCd": null,
+    "fastestWorldwideProven": false,
+    "scope": "Two Chromium processes on one host; product defaults, same random file and browser. CD and ToffeeShare signaling/relay paths may differ. No WAN, cross-device, loss, concurrency or worldwide ranking follows. Ratios compare medians, not statistical confidence intervals."
+  }
+}

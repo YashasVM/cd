@@ -1,0 +1,24 @@
+goos: linux
+goarch: amd64
+pkg: github.com/YashasVM/cd/cmd/cdx
+cpu: AMD EPYC 9V74 80-Core Processor
+BenchmarkDeflateEncoder/source/stdlib-4         	     210	   1622942 ns/op	 484.57 MB/s	         0.05184 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/source/stdlib-4         	     200	   1684903 ns/op	 466.75 MB/s	         0.05184 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/source/stdlib-4         	     186	   1642185 ns/op	 478.89 MB/s	         0.05184 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/source/optimized-4      	     631	    435841 ns/op	1804.40 MB/s	         0.04648 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/source/optimized-4      	     697	    457857 ns/op	1717.63 MB/s	         0.04648 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/source/optimized-4      	     592	    469652 ns/op	1674.50 MB/s	         0.04648 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/stdlib-4          	     823	    447378 ns/op	1757.87 MB/s	         0.001245 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/stdlib-4          	     650	    412203 ns/op	1907.88 MB/s	         0.001245 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/stdlib-4          	     792	    424312 ns/op	1853.43 MB/s	         0.001245 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/optimized-4       	    1492	    222555 ns/op	3533.66 MB/s	         0.001058 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/optimized-4       	    1592	    207034 ns/op	3798.56 MB/s	         0.001058 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/zeros/optimized-4       	    1375	    220285 ns/op	3570.06 MB/s	         0.001058 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/stdlib-4         	  720856	       441.4 ns/op	1781803.31 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/stdlib-4         	  750073	       462.9 ns/op	1698859.10 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/stdlib-4         	  781372	       457.9 ns/op	1717392.43 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/optimized-4      	  718926	       441.9 ns/op	1779512.68 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/optimized-4      	  663394	       444.1 ns/op	1770745.58 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+BenchmarkDeflateEncoder/random/optimized-4      	  738717	       432.8 ns/op	1817202.52 MB/s	         1.000 wire/raw	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/YashasVM/cd/cmd/cdx	7.104s

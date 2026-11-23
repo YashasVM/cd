@@ -73,7 +73,11 @@ test('direct native sends and queued ciphertext have independent hard caps', asy
     send(piece) {
       this.records.push(piece.slice()); this.bufferedAmount += piece.byteLength;
       this.maxBuffered = Math.max(this.maxBuffered, this.bufferedAmount);
-      setTimeout(() => { this.bufferedAmount -= piece.byteLength; }, 2);
+      setTimeout(() => {
+        const previous = this.bufferedAmount;
+        this.bufferedAmount -= piece.byteLength;
+        if (previous > this.bufferedAmountLowThreshold && this.bufferedAmount <= this.bufferedAmountLowThreshold) this.dispatchEvent(new Event('bufferedamountlow'));
+      }, 2);
     }
   }
   class Connection extends EventTarget {
@@ -97,6 +101,60 @@ test('direct native sends and queued ciphertext have independent hard caps', asy
   for (let index = 0; index < 64; index += 1) await path.signal({ candidate: { candidate: 'x' } });
   await assert.rejects(path.signal({ candidate: { candidate: 'x' } }), /Too many direct candidates/);
   path.close();
+});
+
+test('direct native drain wakes immediately on capacity and cancels without polling', async () => {
+  class Channel extends EventTarget {
+    readyState = 'open'; bufferedAmount = DIRECT_BUFFER_BYTES; sent = [];
+    send(piece) { this.sent.push(piece.slice()); this.bufferedAmount += piece.byteLength; }
+  }
+  class Connection extends EventTarget {
+    iceGatheringState = 'complete'; channel = new Channel();
+    createDataChannel() { return this.channel; }
+    async createOffer() { return { type: 'offer', sdp: 'v=0' }; }
+    async setLocalDescription(value) { this.localDescription = value; }
+    close() {}
+  }
+  const path = await offerDirect({ RTCPeerConnectionImpl: Connection, onRecord() {} });
+  const channel = path.connection.channel;
+  const expected = record(0, 100);
+  const sending = path.send(expected);
+  await Promise.resolve();
+  assert.equal(channel.sent.length, 0);
+  channel.bufferedAmount = DIRECT_BUFFER_BYTES - 65536;
+  channel.dispatchEvent(new Event('bufferedamountlow'));
+  await Promise.resolve();
+  assert.equal(channel.sent.length, 1, 'newly available capacity must resume in the event turn without a polling timer');
+  await sending;
+  assert.deepEqual(channel.sent, [expected]);
+  channel.bufferedAmount = DIRECT_BUFFER_BYTES;
+  const pending = path.send(expected);
+  await Promise.resolve();
+  path.close();
+  await assert.rejects(pending, /closed while sending/);
+  assert.equal(path.queuedSendBytes, 0);
+});
+
+test('native errors wake a blocked send and release its queue budget', async () => {
+  class Channel extends EventTarget {
+    readyState = 'open'; bufferedAmount = DIRECT_BUFFER_BYTES;
+    send() { assert.fail('must not send over the native cap'); }
+  }
+  class Connection extends EventTarget {
+    iceGatheringState = 'complete'; channel = new Channel();
+    createDataChannel() { return this.channel; }
+    async createOffer() { return { type: 'offer', sdp: 'v=0' }; }
+    async setLocalDescription(value) { this.localDescription = value; }
+    close() {}
+  }
+  for (const eventName of ['close', 'error']) {
+    const path = await offerDirect({ RTCPeerConnectionImpl: Connection, onRecord() {} });
+    const pending = path.send(record(0, 100));
+    await Promise.resolve();
+    path.connection.channel.dispatchEvent(new Event(eventName));
+    await assert.rejects(pending, /direct connection (closed|failed)/);
+    assert.equal(path.queuedSendBytes, 0);
+  }
 });
 
 test('offer includes public candidates discovered after the gathering deadline', async () => {

@@ -16,6 +16,28 @@ test('crc32 matches the standard check value', () => {
   assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
 });
 
+test('crc32 matches independent bitwise IEEE checks over tails, subviews and incremental updates', () => {
+  function reference(bytes, previous = 0) {
+    let crc = ~previous;
+    for (const byte of bytes) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+    }
+    return ~crc >>> 0;
+  }
+  const data = Uint8Array.from({ length: 16389 }, (_, index) => ((index * 197) ^ (index >>> 3)) & 255);
+  for (const offset of [0, 1, 3, 7, 16]) {
+    for (const length of [...Array.from({ length: 33 }, (_, index) => index), 255, 256, 257, 4096, 16373]) {
+      const bytes = data.subarray(offset, offset + length);
+      assert.equal(crc32(bytes), reference(bytes));
+      let previous = 0;
+      for (let start = 0; start < bytes.length; start += 13) previous = crc32(bytes.subarray(start, start + 13), previous);
+      assert.equal(previous, reference(bytes));
+      assert.equal(crc32(new Uint8Array(), previous), previous);
+    }
+  }
+});
+
 test('zip bundle size is exact and unzip restores every file', async () => {
   const files = [
     new File(['hello world'], 'a.txt'),

@@ -1,0 +1,967 @@
+{
+  "method": "Diagnostic only: Go -overlay changes only relayWriteBufferSize; same64MiB random input; unchanged Wrangler runtime; separate3-run blocks in forward then reverse variant order; native output hashes/fsync/transport checked by unchanged matrix. Not final product acceptance evidence.",
+  "sourceIdentity": "f65babf7244684dfe2454cd7fa7522c1094612637914eef4db0d31ff0eb3af40",
+  "startedAt": "2026-11-16T15:18:17.455Z",
+  "variants": {
+    "64": {
+      "binary": "/workspace/work/buffer-variants/cdx-64",
+      "binarySHA256": "01d68761ae6ddd4b691888513e7c7b75689361b6e42da91d9b34a8008f8e9f60",
+      "overlaySourceSHA256": "7a6651487586782341df1ed5d7f5884e09f740b10c7db51d7e192a8591a5344c"
+    },
+    "256": {
+      "binary": "/workspace/work/buffer-variants/cdx-256",
+      "binarySHA256": "b6d3e34bed51142e004428ced2165e6edf991200ef156aeed15b6ff66b0df028",
+      "overlaySourceSHA256": "ff9307c0ec047b6d3644a569fa2b8c75d5c725cb7626e34904f2b79e228ae530"
+    },
+    "1024": {
+      "binary": "/workspace/work/buffer-variants/cdx-1024",
+      "binarySHA256": "64ad5af6162c4d84f91464757b504722ac84d3e44fcd3a6835c1fdf2685ab9b8",
+      "overlaySourceSHA256": "95c49fcf5109d737a1fc44fd8f155f33e333ae9853f7494f63731406c558d9d7"
+    }
+  },
+  "blocks": [
+    {
+      "index": 0,
+      "kib": 64,
+      "output": "/workspace/work/buffer-variants/block-0-64.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 34.09644900000012,
+          "receiverMs": 465.96665600000006,
+          "durableMs": 468.5147999999999,
+          "totalMs": 502.61124900000004,
+          "verificationMs": 125.88999999999987,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 22.669066000000385,
+          "receiverMs": 334.0076009999998,
+          "durableMs": 335.21223499999996,
+          "totalMs": 357.88130100000035,
+          "verificationMs": 73.60436100000061,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 20.64255400000002,
+          "receiverMs": 251.93383099999937,
+          "durableMs": 253.96479,
+          "totalMs": 274.607344,
+          "verificationMs": 71.58325599999989,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "kib": 256,
+      "output": "/workspace/work/buffer-variants/block-1-256.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 27.264656999999943,
+          "receiverMs": 325.7507559999999,
+          "durableMs": 329.94571499999984,
+          "totalMs": 357.2103719999998,
+          "verificationMs": 91.11905200000001,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 24.056950000000143,
+          "receiverMs": 269.9225110000002,
+          "durableMs": 274.286525,
+          "totalMs": 298.3434750000001,
+          "verificationMs": 90.14346099999966,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 23.96824100000049,
+          "receiverMs": 352.93161599999985,
+          "durableMs": 359.54397599999993,
+          "totalMs": 383.5122170000004,
+          "verificationMs": 81.89294400000017,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "kib": 1024,
+      "output": "/workspace/work/buffer-variants/block-2-1024.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 33.143085000000156,
+          "receiverMs": 278.22832500000004,
+          "durableMs": 279.97131999999965,
+          "totalMs": 313.1144049999998,
+          "verificationMs": 63.68585299999995,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 26.30524000000014,
+          "receiverMs": 297.84757299999956,
+          "durableMs": 306.20723999999973,
+          "totalMs": 332.51247999999987,
+          "verificationMs": 79.99023899999975,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 26.403683000000456,
+          "receiverMs": 282.84912499999973,
+          "durableMs": 286.29628799999955,
+          "totalMs": 312.699971,
+          "verificationMs": 60.41564699999981,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "kib": 1024,
+      "output": "/workspace/work/buffer-variants/block-3-1024.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 45.371053000000074,
+          "receiverMs": 306.496302,
+          "durableMs": 309.4852999999998,
+          "totalMs": 354.8563529999999,
+          "verificationMs": 74.81115,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 23.958820000000287,
+          "receiverMs": 247.699114,
+          "durableMs": 249.03913299999977,
+          "totalMs": 272.99795300000005,
+          "verificationMs": 66.77468399999998,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 16.646694000000025,
+          "receiverMs": 254.46105399999942,
+          "durableMs": 255.8356649999996,
+          "totalMs": 272.48235899999963,
+          "verificationMs": 60.82918900000004,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "kib": 256,
+      "output": "/workspace/work/buffer-variants/block-4-256.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 28.432557999999972,
+          "receiverMs": 335.71336199999996,
+          "durableMs": 337.71678999999995,
+          "totalMs": 366.1493479999999,
+          "verificationMs": 86.88058999999976,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 23.905424999999923,
+          "receiverMs": 275.81030899999996,
+          "durableMs": 277.3190919999997,
+          "totalMs": 301.22451699999965,
+          "verificationMs": 77.38304500000004,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 25.238423000000694,
+          "receiverMs": 335.9785320000001,
+          "durableMs": 337.99197000000004,
+          "totalMs": 363.23039300000073,
+          "verificationMs": 85.51050200000009,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "kib": 64,
+      "output": "/workspace/work/buffer-variants/block-5-64.json",
+      "cdRows": [
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 0,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 31.585237000000006,
+          "receiverMs": 353.57387500000004,
+          "durableMs": 355.9209310000001,
+          "totalMs": 387.5061680000001,
+          "verificationMs": 76.33291299999973,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 1,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc-no-compress",
+            "croc"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 34.62538799999993,
+          "receiverMs": 313.49661000000015,
+          "durableMs": 316.1227660000004,
+          "totalMs": 350.74815400000034,
+          "verificationMs": 81.36617999999999,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        },
+        {
+          "tool": "cd",
+          "route": "relay",
+          "storage": "disk",
+          "case": "input",
+          "bytes": 67108864,
+          "run": 2,
+          "position": 0,
+          "order": [
+            "cd",
+            "croc",
+            "croc-no-compress"
+          ],
+          "ok": true,
+          "crocZip": false,
+          "routeObserved": "relay",
+          "readyMs": 20.69692599999962,
+          "receiverMs": 297.4413760000007,
+          "durableMs": 299.0318520000001,
+          "totalMs": 319.7287779999997,
+          "verificationMs": 73.41975899999943,
+          "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617",
+          "manifest": [
+            {
+              "name": "payload.bin",
+              "size": 67108864,
+              "sha256": "db124bfde48e17a67beedbc8c580adc46c080adc282754a347e2056c03592617"
+            }
+          ],
+          "reports": [
+            {
+              "transport": "relay",
+              "relayBytes": 67111573,
+              "directBytes": 0
+            },
+            {
+              "transport": "relay",
+              "relayBytes": 1835,
+              "directBytes": 0
+            }
+          ],
+          "routeEvidence": [
+            "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}",
+            "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}"
+          ],
+          "diagnostics": {
+            "sender": "{\"transport\":\"relay\",\"relayBytes\":67111573,\"directBytes\":0}\n",
+            "receiver": "{\"transport\":\"relay\",\"relayBytes\":1835,\"directBytes\":0}\n"
+          }
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-11-16T15:19:13.659Z"
+}

@@ -83,8 +83,7 @@ function isTemporarySignalingError(error) {
 
 function peerOptions() {
   const iceServers = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
   ];
   // TURN-ready: set window.__CD_TURN_SERVERS__ to an array of RTCIceServer
   // before creating a transfer to relay through TURN (symmetric NAT/CGNAT).

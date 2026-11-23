@@ -1,0 +1,28 @@
+File: cdx-profile.test
+Build ID: ce2489f976c54c95c15d92907df48cdc6a3877d0
+Type: cpu
+Time: 2026-11-16 20:39:31 IST
+Duration: 2.08s, Total samples = 680ms (32.74%)
+Showing nodes accounting for 680ms, 100% of 680ms total
+Showing top 20 nodes out of 57
+      flat  flat%   sum%        cum   cum%
+     460ms 67.65% 67.65%      460ms 67.65%  internal/runtime/syscall/linux.Syscall6
+     140ms 20.59% 88.24%      140ms 20.59%  crypto/internal/fips140/aes/gcm.gcmAesEnc
+      30ms  4.41% 92.65%       30ms  4.41%  github.com/gorilla/websocket.maskBytes
+      20ms  2.94% 95.59%       20ms  2.94%  runtime.memmove
+      10ms  1.47% 97.06%       10ms  1.47%  internal/chacha8rand.block
+      10ms  1.47% 98.53%       10ms  1.47%  runtime.(*timer).modify
+      10ms  1.47%   100%       10ms  1.47%  time.runtimeIsBubbled
+         0     0%   100%      140ms 20.59%  crypto/internal/fips140/aes/gcm.(*GCM).Seal
+         0     0%   100%      140ms 20.59%  crypto/internal/fips140/aes/gcm.(*GCM).sealAfterIndicator
+         0     0%   100%      140ms 20.59%  crypto/internal/fips140/aes/gcm.seal
+         0     0%   100%      490ms 72.06%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).sendReleasable
+         0     0%   100%      140ms 20.59%  github.com/YashasVM/cd/cmd/cdx.(*recordSealer).sealInto
+         0     0%   100%      670ms 98.53%  github.com/YashasVM/cd/cmd/cdx.TestProfileCLI
+         0     0%   100%      670ms 98.53%  github.com/YashasVM/cd/cmd/cdx.run
+         0     0%   100%      670ms 98.53%  github.com/YashasVM/cd/cmd/cdx.runSend
+         0     0%   100%      670ms 98.53%  github.com/YashasVM/cd/cmd/cdx.sendFile
+         0     0%   100%      670ms 98.53%  github.com/YashasVM/cd/cmd/cdx.transfer
+         0     0%   100%      350ms 51.47%  github.com/gorilla/websocket.(*Conn).WriteMessage
+         0     0%   100%      290ms 42.65%  github.com/gorilla/websocket.(*Conn).write
+         0     0%   100%      350ms 51.47%  github.com/gorilla/websocket.(*messageWriter).Write

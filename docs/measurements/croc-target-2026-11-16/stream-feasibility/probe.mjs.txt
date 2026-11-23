@@ -1,0 +1,136 @@
+import assert from 'node:assert/strict';
+import { randomBytes, createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
+import { setTimeout as delay } from 'node:timers/promises';
+import { setImmediate as yieldLoop } from 'node:timers/promises';
+import { once } from 'node:events';
+import WebSocket from 'ws';
+import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+
+const mib = Number(process.env.STREAM_MIB ?? 1);
+const runs = Number(process.env.STREAM_RUNS ?? 1);
+const transports = (process.env.STREAM_TRANSPORTS ?? 'http').split(',');
+assert.ok(transports.length && transports.every(value => ['http', 'websocket'].includes(value)));
+assert.ok(Number.isSafeInteger(mib) && mib > 0 && mib <= 64);
+assert.ok(Number.isSafeInteger(runs) && runs > 0 && runs <= 7);
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+const secret = () => randomBytes(32).toString('base64url');
+const setupSecret = secret();
+const payload = randomBytes(mib * 1048576);
+const expected = sha(payload);
+const scriptPath = new URL('./worker.mjs', import.meta.url).pathname;
+const report = { method: 'Loopback-only unencrypted native HTTP POST body → native IdentityTransformStream in SQLite Durable Object → separate authenticated GET, optionally paired against hibernatable DO WebSocket forwarding. Same random preloaded buffer and768KiB producer chunks each trial, with Node socket backpressure; contexts reset per row. Client receive buffers are retained in RAM; timer includes native HTTP or WebSocket upload/download and Node client bookkeeping, excludes SHA and source generation. No CD file protocol, encryption, ACKs, disk saving, croc comparison or production speed claim. HTTP server has no JavaScript per-chunk loop or payload storage. Setup admission excluded from transfer timer.', mib, runs, transports, inputSHA256: expected, workerSHA256: sha(await readFile(scriptPath)), runnerSHA256: sha(await readFile(new URL(import.meta.url))), node: process.version, startedAt: new Date().toISOString(), rows: [] };
+let mf;
+const authorization = token => ({ Authorization: `Bearer ${token}` });
+async function authenticated(url, token, options = {}) {
+  return fetch(url, { ...options, headers: { ...options.headers, ...authorization(token) }, signal: AbortSignal.timeout(10000) });
+}
+function download(url, token) {
+  const parts = [];
+  let firstAt = null;
+  let received = 0;
+  let response;
+  let request;
+  const done = new Promise((resolve, reject) => {
+    request = httpRequest(url, { headers: authorization(token) }, incoming => {
+      response = incoming;
+      if (incoming.statusCode !== 200) { incoming.resume(); reject(new Error(`download status ${incoming.statusCode}`)); return; }
+      incoming.on('data', part => { firstAt ??= performance.now(); parts.push(part); received += part.length; });
+      incoming.once('end', () => resolve({ parts, bytes: received, firstAt, completedAt: performance.now() }));
+      incoming.once('error', reject);
+    });
+    request.once('error', reject);
+    request.setTimeout(10000, () => request.destroy(new Error('download deadline')));
+    request.end();
+  });
+  done.catch(() => {});
+  return { done, abort: () => { response?.destroy(); request.destroy(); } };
+}
+async function upload(url, token, body) {
+  let request;
+  const done = new Promise((resolve, reject) => {
+    request = httpRequest(url, { method: 'POST', headers: { ...authorization(token), 'Content-Length': body.length, 'Content-Type': 'application/octet-stream' } }, response => {
+      response.resume();
+      response.once('end', () => resolve({ status: response.statusCode, completedAt: performance.now() }));
+      response.once('error', reject);
+    });
+    request.once('error', reject);
+    request.setTimeout(10000, () => request.destroy(new Error('upload deadline')));
+  });
+  done.catch(() => {});
+  for (let at = 0; at < body.length; at += 768 * 1024) {
+    if (!request.write(body.subarray(at, Math.min(body.length, at + 768 * 1024)))) await once(request, 'drain');
+  }
+  request.end();
+  return done;
+}
+async function websocketTrial(base, sender, receiver) {
+  const socketURL = role => { const url = new URL(`ws/${role}`, base); url.protocol = 'ws:'; return url; };
+  const incoming = new WebSocket(socketURL('download'), { headers: authorization(receiver), perMessageDeflate: false });
+  let outgoing;
+  try {
+    const parts = []; let bytes = 0, firstAt = null;
+    const done = new Promise((resolve, reject) => {
+      incoming.on('message', (data, binary) => {
+        if (!binary && data.toString() === 'end') { resolve({ parts, bytes, firstAt, completedAt: performance.now() }); return; }
+        if (!binary) { reject(new Error('unexpected WebSocket control')); return; }
+        firstAt ??= performance.now(); parts.push(data); bytes += data.length;
+      });
+      incoming.once('error', reject);
+      incoming.once('close', code => { if (code !== 1000) reject(new Error(`receiver WebSocket closed ${code}`)); });
+    });
+    done.catch(() => {});
+    await once(incoming, 'open');
+    outgoing = new WebSocket(socketURL('upload'), { headers: authorization(sender), perMessageDeflate: false });
+    await once(outgoing, 'open');
+    const started = performance.now();
+    for (let at = 0; at < payload.length; at += 768 * 1024) {
+      const part = payload.subarray(at, Math.min(payload.length, at + 768 * 1024));
+      while (outgoing.bufferedAmount + part.length > 4 * 1048576) await yieldLoop();
+      outgoing.send(part, { binary: true });
+    }
+    outgoing.send('end');
+    let timer;
+    const result = await Promise.race([done, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('WebSocket deadline')), 10000); })]).finally(() => clearTimeout(timer));
+    const ms = result.completedAt - started;
+    assert.equal(result.bytes, payload.length); const receivedSHA256 = sha(Buffer.concat(result.parts)); assert.equal(receivedSHA256, expected);
+    return { bytes: result.bytes, receivedSHA256, elapsedMs: ms, firstByteMs: result.firstAt - started, mibPerSecond: mib / (ms / 1000) };
+  } finally { incoming.terminate(); outgoing?.terminate(); }
+}
+try {
+  mf = new Miniflare(convertV4MiniflareOptions({ modules: true, modulesRoot: new URL('./', import.meta.url).pathname, scriptPath, compatibilityDate: '2026-09-12', bindings: { SETUP_SECRET: setupSecret }, durableObjects: { ROOMS: { className: 'StreamRoom', useSQLite: true } }, unsafeDirectSockets: [{ entrypoint: 'default', host: '127.0.0.1', port: 0 }] }));
+  const address = await mf.unsafeGetDirectURL();
+  assert.equal((await fetch(new URL('/health', address))).status, 200);
+  for (let run = 0; run < runs; run++) for (const transport of run % 2 ? transports.toReversed() : transports) {
+    const base = new URL(`/room/${randomBytes(16).toString('hex')}/`, address);
+    const sender = secret(), receiver = secret();
+    const setup = await authenticated(new URL('setup', base), setupSecret, { method: 'POST', body: JSON.stringify({ sender, receiver, transport }), headers: { 'Content-Type': 'application/json' } });
+    assert.equal(setup.status, 204);
+    if (transport === 'websocket') {
+      report.rows.push({ run, transport, ok: true, ...await websocketTrial(base, sender, receiver) });
+      continue;
+    }
+    assert.equal((await authenticated(new URL('download', base), sender)).status, 401, 'sender token must not read');
+    assert.equal((await authenticated(new URL('upload', base), receiver, { method: 'POST', body: 'wrong role' })).status, 401, 'receiver token must not write');
+    const pending = download(new URL('download', base), receiver);
+    try {
+      for (let i = 0;; i++) {
+        const status = await (await authenticated(new URL('status', base), setupSecret)).json();
+        if (status.downloadClaimed) break;
+        assert.ok(i < 100, 'download did not claim stream'); await delay(5);
+      }
+      assert.equal((await authenticated(new URL('download', base), receiver)).status, 409, 'second receiver denied');
+      const started = performance.now();
+      const [sent, result] = await Promise.all([upload(new URL('upload', base), sender, payload), pending.done]);
+      const ms = Math.max(sent.completedAt, result.completedAt) - started;
+      assert.equal(sent.status, 204); assert.equal(result.bytes, payload.length);
+      const receivedSHA256 = sha(Buffer.concat(result.parts));
+      assert.equal(receivedSHA256, expected);
+      assert.equal((await authenticated(new URL('upload', base), sender, { method: 'POST', body: 'again' })).status, 409, 'second sender denied');
+      report.rows.push({ run, transport, ok: true, bytes: result.bytes, receivedSHA256, elapsedMs: ms, firstByteMs: result.firstAt - started, mibPerSecond: mib / (ms / 1000) });
+    } finally { pending.abort(); }
+  }
+} catch (error) { report.error = error.stack; process.exitCode = 1; }
+finally { await mf?.dispose(); report.finishedAt = new Date().toISOString(); await writeFile(process.env.STREAM_OUTPUT ?? '/workspace/work/stream-feasibility/report.json', JSON.stringify(report, null, 2) + '\n'); }
+console.log(JSON.stringify(report));

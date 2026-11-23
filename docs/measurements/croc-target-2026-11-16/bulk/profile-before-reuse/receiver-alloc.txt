@@ -1,0 +1,8 @@
+File: cdx-profile.test
+Build ID: ce2489f976c54c95c15d92907df48cdc6a3877d0
+Type: alloc_space
+Time: 2026-11-16 20:39:33 IST
+Showing nodes accounting for 522.48MB, 99.03% of 527.60MB total
+Dropped 43 nodes (cum <= 2.64MB)
+      flat  flat%   sum%        cum   cum%
+  522.48MB 99.03% 99.03%   522.48MB 99.03%  github.com/YashasVM/cd/cmd/cdx.(*recordLink).readRelay

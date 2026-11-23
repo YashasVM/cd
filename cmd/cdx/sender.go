@@ -32,9 +32,10 @@ const (
 )
 
 type relayEvent struct {
-	Type     string `json:"type"`
-	Protocol string `json:"protocol"`
-	Reason   string `json:"reason,omitempty"`
+	Type            string `json:"type"`
+	Protocol        string `json:"protocol"`
+	Reason          string `json:"reason,omitempty"`
+	DirectOfferMode string `json:"directOfferMode,omitempty"`
 	// Code is set on the sender's `accepted` when the join asked for one.
 	Code string `json:"code,omitempty"`
 }
@@ -51,6 +52,8 @@ type fileOffer struct {
 	Direct     *directOffer `json:"direct,omitempty"`
 	LAN        *lanOffer    `json:"lan,omitempty"`
 	ReverseLAN bool         `json:"reverseLAN,omitempty"`
+	// DirectPending is sent only after a receiver explicitly opts in.
+	DirectPending bool `json:"directPending,omitempty"`
 	// Bundle marks a zip that cdx or the browser built from several files.
 	// Receivers that know it unpack the files; older ones keep the .zip.
 	Bundle bool `json:"bundle,omitempty"`
@@ -277,6 +280,9 @@ func sendFile(ctx context.Context, paths []string, linkMode bool, hooks sendHook
 	join := map[string]string{
 		"type": "join", "protocol": "cd-transfer-v1", "role": "sender",
 		"receiverTokenHash": base64.RawURLEncoding.EncodeToString(tokenHash),
+	}
+	if directEnabled() && source.size >= directMinBytes {
+		join["directOfferMode"] = deferredDirectOfferMode
 	}
 	if !linkMode {
 		// Code mode: the relay claims the share code during the join, saving
@@ -540,7 +546,8 @@ func waitReverseLAN(ctx context.Context, size uint64, done <-chan struct{}) erro
 }
 
 // transfer streams one source over a paired link. offerSDP, when not nil,
-// yields the direct-path offer to embed in the file offer.
+// yields the full direct SDP, embedded in a legacy file offer or sent later
+// after an authenticated modern receiver opts in to deferred signaling.
 func transfer(ctx context.Context, link *recordLink, file io.Reader, ready readyOutput, offerSDP <-chan string, hooks sendHooks) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -557,26 +564,23 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	if largeRecordsEnabled() {
 		offer.MaxChunkSize = largeChunkSize
 	}
-	if offerSDP != nil {
-		var sdp string
-		select {
-		case sdp = <-offerSDP:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-		if sdp != "" {
-			// Gathering continues while the recipient enters the code. Include
-			// public candidates discovered after the initial bounded wait.
-			if path := link.direct.Load(); path != nil && path.connection != nil {
-				if current := path.connection.LocalDescription(); current != nil {
-					sdp = current.SDP
-				}
+	deferred, sdp, err := prepareDirectOffer(ctx, link, offerSDP)
+	if err != nil {
+		return err
+	}
+	offer.DirectPending = deferred.pending != nil
+	if sdp != "" {
+		// Gathering continues while the recipient enters the code. Include
+		// public candidates discovered after the initial bounded wait.
+		if path := link.direct.Load(); path != nil && path.connection != nil {
+			if current := path.connection.LocalDescription(); current != nil {
+				sdp = current.SDP
 			}
-			if len(sdp) > maxSDPBytes {
-				return NewFailure(failureProtocol, "direct offer is too large", retryNever)
-			}
-			offer.Direct = &directOffer{SDP: sdp}
 		}
+		if len(sdp) > maxSDPBytes {
+			return NewFailure(failureProtocol, "direct offer is too large", retryNever)
+		}
+		offer.Direct = &directOffer{SDP: sdp}
 	}
 	encoded, err := json.Marshal(offer)
 	if err != nil {
@@ -624,7 +628,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 	selectedCompression := ""
 	transferInfo("waiting for receiver to accept (up to 10m)")
 	for {
-		kind, payload, err := link.next(ctx, consentWait)
+		kind, payload, err := deferred.next(ctx, link, consentWait)
 		if err != nil {
 			if isTimeoutError(err) {
 				return NewFailure(failureExpired, "receiver did not accept within 10m: they may have closed the link, run `cdx send` again", retryNewTransfer)
@@ -706,6 +710,9 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			// Take everything already received before deciding to wait, so
 			// acks reach the window estimate on time. After COMPLETE the
 			// relay's peer-left follows immediately; it is not a failure.
+			if err := deferred.flush(link); err != nil {
+				return linkError(err)
+			}
 			for !progress.completed {
 				if err := ctx.Err(); err != nil {
 					return err
@@ -724,7 +731,7 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			if done() {
 				return nil
 			}
-			kind, payload, err := link.next(ctx, transferIdle)
+			kind, payload, err := deferred.next(ctx, link, transferIdle)
 			if err != nil {
 				return linkError(err)
 			}
@@ -796,6 +803,8 @@ func transfer(ctx context.Context, link *recordLink, file io.Reader, ready ready
 			return err
 		}
 	}
+	// Never emit an optional late offer after END, including while waiting for COMPLETE.
+	deferred.pending = nil
 	if err := link.send(kindEnd, encodeCounts(progress.chunks, progress.sent)); err != nil {
 		finishLine()
 		return linkError(friendlyRelayError(fmt.Errorf("finish transfer: %w", err)))

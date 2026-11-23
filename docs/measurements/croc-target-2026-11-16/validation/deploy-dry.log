@@ -1,0 +1,60 @@
+
+> cd@1.0.0 deploy:dry
+> npm run build && wrangler deploy --dry-run
+
+
+> cd@1.0.0 build
+> npm run skill:check && node scripts/build-design.mjs && node scripts/sync-install.mjs && vite build
+
+
+> cd@1.0.0 skill:check
+> node scripts/generate-sharing-skill.mjs --check
+
+design: wrote 1 docs -> public/design/docs.json
+install: synced scripts/install.sh -> public/install.sh
+install: synced scripts/install.ps1 -> public/install.ps1
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 93 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/resume-opfs-worker-BbGOYGsi.js    0.78 kB
+dist/index.html                              14.40 kB │ gzip:  3.14 kB
+dist/assets/index-CU_BlWTk.css               26.85 kB │ gzip:  6.49 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js      0.72 kB │ gzip:  0.42 kB
+dist/assets/share-page-dxMiiguL.js            1.22 kB │ gzip:  0.69 kB
+dist/assets/index-o_BRyvNb.js                 4.45 kB │ gzip:  1.92 kB
+dist/assets/sink-DqO2aTNn.js                 15.18 kB │ gzip:  5.27 kB
+dist/assets/share-DhnVPzRi.js                15.84 kB │ gzip:  6.07 kB
+dist/assets/browser-DfYHeeW3.js              23.46 kB │ gzip:  8.86 kB
+dist/assets/resume-browser-Dyq8sQql.js       36.71 kB │ gzip: 12.17 kB
+dist/assets/main-DHeLat27.js                 72.49 kB │ gzip: 23.85 kB
+dist/assets/bundler-D6CBOI20.js              86.46 kB │ gzip: 23.11 kB
+dist/assets/jsQR-DMfxOdIb.js                129.98 kB │ gzip: 47.51 kB
+
+✓ built in 269ms
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+
+ ⛅️ wrangler 4.161.0 (update available 4.163.0)
+───────────────────────────────────────────────
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+
+  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the `-e|--env` flag or CLOUDFLARE_ENV env variable.
+  If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example `--env=""`.
+
+
+✨ Read 30 files from the assets directory /workspace/work/cd/dist
+Total Upload: 78.96 KiB / gzip: 17.23 KiB
+Your Worker has access to the following bindings:
+Binding                                             Resource
+env.TRANSFERS (TransferRoom)                        Durable Object
+env.PEERS (PeerSignal)                              Durable Object
+env.CODES (CodeDirectory)                           Durable Object
+env.DEVICES (DeviceRoom)                            Durable Object
+env.CONNECTION_RATE_LIMITER (30 requests/60s)       Rate Limit
+env.PEER_RATE_LIMITER (120 requests/60s)            Rate Limit
+env.ASSETS                                          Assets
+
+--dry-run: exiting now.

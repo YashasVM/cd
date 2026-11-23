@@ -389,13 +389,22 @@ func receiveFile(ctx context.Context, code, out string, force, rename bool, onRe
 	// Wait for admission, then for the sender's offer. The link skips relay
 	// events (peer-joined) and merges records from the relay and, once
 	// connected, the direct path.
-	if _, err := waitRelayEvent(ctx, connection, "accepted", admissionWait); err != nil {
+	admission, err := waitRelayEvent(ctx, connection, "accepted", admissionWait)
+	if err != nil {
 		return err
 	}
 	transferInfo("connected — waiting for sender's file offer")
 	link := newRecordLink(connection, sealer, opener, NewFailure(failureDisconnected, "sender disconnected (they closed the tab or lost network)", retryNewTransfer))
 	defer link.close()
+	link.enableReceiveReuse()
+	defer link.releaseInbound()
 	link.start()
+	deferredAllowed := admission.DirectOfferMode == deferredDirectOfferMode
+	if deferredAllowed {
+		if err := advertiseDeferredDirect(link); err != nil {
+			return err
+		}
+	}
 	kind, payload, err := link.next(ctx, offerWait)
 	if err != nil {
 		if isTimeoutError(err) {
@@ -410,6 +419,13 @@ func receiveFile(ctx context.Context, code, out string, force, rename bool, onRe
 	if err != nil {
 		return err
 	}
+	if offer.DirectPending && (!deferredAllowed || offer.Direct != nil) {
+		return NewFailure(failureProtocol, "the sender sent an unnegotiated direct offer", retryNever)
+	}
+	link.opener.allowDirectSignal = offer.DirectPending
+	// JSON parsing owns the offer's fields; no alias of its wire buffer escapes.
+	link.releaseInbound()
+	deferredSeen := false
 	var dest *receiveDestination
 	if offer.Bundle {
 		// Both the archive and its extracted files use this same open root.
@@ -498,6 +514,14 @@ func receiveFile(ctx context.Context, code, out string, force, rename bool, onRe
 			return err
 		}
 		switch kind {
+		case kindSignal:
+			if !offer.DirectPending || deferredSeen {
+				return NewFailure(failureProtocol, "the sender sent unexpected direct signaling", retryNever)
+			}
+			deferredSeen = true
+			if err := receiveDeferredDirect(link, payload); err != nil {
+				return err
+			}
 		case kindChunk:
 			if selectedCompression != "" {
 				payload, err = decompressor.decode(payload, selectedChunkSize)
@@ -562,6 +586,9 @@ func receiveFile(ctx context.Context, code, out string, force, rename bool, onRe
 			bar.finish()
 			return NewFailure(failureProtocol, "the sender sent a message out of order", retryNever)
 		}
+		// Decompression, validation, disk write and ACK encoding are synchronous.
+		// The next network record may reuse this storage only after this point.
+		link.releaseInbound()
 	}
 }
 

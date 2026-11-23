@@ -14,19 +14,35 @@ export const MAX_BUNDLE_BYTES = Number.MAX_SAFE_INTEGER;
 
 const encoder = new TextEncoder();
 
-const CRC_TABLE = (() => {
-  const table = new Uint32Array(256);
+const CRC_TABLES = (() => {
+  const tables = Array.from({ length: 8 }, () => new Uint32Array(256));
+  const table = tables[0];
   for (let n = 0; n < 256; n += 1) {
     let c = n;
     for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
     table[n] = c >>> 0;
   }
-  return table;
+  for (let slice = 1; slice < tables.length; slice++) {
+    for (let n = 0; n < 256; n++) {
+      const c = tables[slice - 1][n];
+      tables[slice][n] = table[c & 0xff] ^ (c >>> 8);
+    }
+  }
+  return tables;
 })();
 
 export function crc32(bytes, previous = 0) {
   let crc = ~previous >>> 0;
-  for (let index = 0; index < bytes.length; index += 1) crc = CRC_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  const [t0, t1, t2, t3, t4, t5, t6, t7] = CRC_TABLES;
+  let index = 0;
+  // ZIP uses IEEE CRC32, not CRC32C. Slicing by eight removes the serial
+  // dependency between byte lookups without changing the archive checksum.
+  for (; index + 8 <= bytes.length; index += 8) {
+    crc ^= bytes[index] | (bytes[index + 1] << 8) | (bytes[index + 2] << 16) | (bytes[index + 3] << 24);
+    crc = t7[crc & 0xff] ^ t6[(crc >>> 8) & 0xff] ^ t5[(crc >>> 16) & 0xff] ^ t4[crc >>> 24]
+      ^ t3[bytes[index + 4]] ^ t2[bytes[index + 5]] ^ t1[bytes[index + 6]] ^ t0[bytes[index + 7]];
+  }
+  for (; index < bytes.length; index++) crc = t0[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
   return ~crc >>> 0;
 }
 
