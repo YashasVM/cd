@@ -32,12 +32,49 @@ function readResult(directory) {
   if (!stat.isFile() || stat.size > 256 * 1024) throw new Error("Transfer artifact must be a regular file below 256 KiB");
   return validateResult(JSON.parse(fs.readFileSync(file, 'utf8')));
 }
+const SAME_THRESHOLD_PCT = 0.5;
 const median = values => {
   const sorted = values.toSorted((a, b) => a - b), middle = Math.floor(sorted.length / 2);
   return sorted.length ? (sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2) : undefined;
 };
-const format = (value, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : 'unavailable';
-const delta = (value, baseline) => Number.isFinite(value) && Number.isFinite(baseline) && baseline > 0 ? `${value >= baseline ? '+' : ''}${((value / baseline - 1) * 100).toFixed(1)}%` : 'unavailable';
+const trimFixed = (value, digits = 1) => Number(value.toFixed(digits)).toString();
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return '—';
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1048576) return `${trimFixed(bytes / 1024, 1)} KiB`;
+  if (bytes < 1073741824) return `${trimFixed(bytes / 1048576, 1)} MiB`;
+  return `${trimFixed(bytes / 1073741824, 2)} GiB`;
+}
+function formatDuration(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  if (ms >= 999.5) return `${(ms / 1000).toFixed(2)} s`;
+  if (ms === 0 || ms >= 10) return `${Math.round(ms)} ms`;
+  return `${trimFixed(ms, 1)} ms`;
+}
+const formatSpeed = speed => Number.isFinite(speed) ? `${speed.toFixed(1)} MiB/s` : '—';
+const formatCount = (count, total) => Number.isFinite(count) ? `${count}/${total}` : '—';
+function formatPercentChange(value, baseline, { mode = 'plain', formatAbs } = {}) {
+  if (!Number.isFinite(value) || !Number.isFinite(baseline)) return '—';
+  if (baseline === 0) {
+    if (value === 0) return '=';
+    return formatAbs ? `+${formatAbs(value)}` : '—';
+  }
+  const pct = (value / baseline - 1) * 100;
+  const rounded = Math.round(pct * 10) / 10;
+  const signed = `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)}%`;
+  if (Math.abs(pct) < SAME_THRESHOLD_PCT) return rounded === 0 ? '=' : `= (${signed})`;
+  if (mode === 'speed') return pct > 0 ? `↑ ${signed}` : `↓ ${signed}`;
+  if (mode === 'time') return pct < 0 ? `${signed} faster` : `${signed} slower`;
+  return signed;
+}
+function formatCountChange(value, baseline) {
+  if (!Number.isFinite(value) || !Number.isFinite(baseline)) return '—';
+  if (value === baseline) return '=';
+  const diff = value - baseline;
+  return `${diff > 0 ? '+' : ''}${diff}`;
+}
+const STATUS_BADGE = { PASS: '✅ PASS', FAIL: '❌ FAIL', INFO: 'ℹ️ INFO', 'NOT CHECKED': '⚠️ NOT CHECKED' };
 function summarize(result, route) {
   const rows = result.rows.filter(row => row.route === route);
   const measured = fn => rows.length && rows.every(row => Number.isFinite(fn(row)) && fn(row) >= 0);
@@ -53,36 +90,140 @@ function summarize(result, route) {
     evidence: rows.length ? rows.filter(row => Number.isSafeInteger(row.transport?.direct) && row.transport.direct >= 0 && Number.isSafeInteger(row.transport?.relay) && row.transport.relay >= 0 && row.transport.direct + row.transport.relay >= result.input.bytes).length : undefined,
   };
 }
+function evaluateRoute(current, baseline, comparable, route) {
+  const now = summarize(current, route), base = comparable ? summarize(baseline, route) : {};
+  const sizeLabel = formatBytes(current.input.bytes);
+  const metricStatus = (value, passes) => !Number.isFinite(value) || now.rows.length !== current.runs
+    ? 'NOT CHECKED'
+    : passes === undefined ? 'INFO' : passes ? 'PASS' : 'FAIL';
+  const metrics = [
+    {
+      label: 'Throughput (median)',
+      prior: formatSpeed(base.speed),
+      current: formatSpeed(now.speed),
+      change: formatPercentChange(now.speed, base.speed, { mode: 'speed' }),
+      limit: '≥ 8 MiB/s each',
+      status: metricStatus(now.speed, now.rows.every(row => row.receiveMs > 0 && current.input.bytes / 1048576 / (row.receiveMs / 1000) >= 8)),
+    },
+    {
+      label: 'Receive time (median)',
+      prior: formatDuration(base.ms),
+      current: formatDuration(now.ms),
+      change: formatPercentChange(now.ms, base.ms, { mode: 'time' }),
+      limit: 'Info',
+      status: metricStatus(now.ms, undefined),
+    },
+    {
+      label: 'Worst payload gap',
+      prior: formatDuration(base.gap),
+      current: formatDuration(now.gap),
+      change: formatPercentChange(now.gap, base.gap),
+      limit: '≤ 5 s each',
+      status: metricStatus(now.gap, now.gap <= 5000),
+    },
+    {
+      label: 'Direct payload (median)',
+      prior: formatBytes(base.direct),
+      current: formatBytes(now.direct),
+      change: formatPercentChange(now.direct, base.direct, { formatAbs: formatBytes }),
+      limit: route === 'auto' ? '≥ 4 MiB each' : '0 B each',
+      status: metricStatus(now.direct, now.rows.every(row => Number.isSafeInteger(row.transport?.direct) && (route === 'auto' ? row.transport.direct >= 4194304 : row.transport.direct === 0))),
+    },
+    {
+      label: 'Relay payload (median)',
+      prior: formatBytes(base.relay),
+      current: formatBytes(now.relay),
+      change: formatPercentChange(now.relay, base.relay, { formatAbs: formatBytes }),
+      limit: route === 'relay' ? `${sizeLabel} each` : 'Info',
+      status: metricStatus(now.relay, route === 'relay' ? now.rows.every(row => row.transport?.relay === current.input.bytes) : undefined),
+    },
+    {
+      label: 'Payload evidence',
+      prior: formatCount(base.evidence, baseline?.runs ?? current.runs),
+      current: formatCount(now.evidence, current.runs),
+      change: formatCountChange(now.evidence, base.evidence),
+      limit: `${current.runs}/${current.runs}`,
+      status: metricStatus(now.evidence, now.evidence === current.runs),
+    },
+    {
+      label: 'Verified (size + SHA-256)',
+      prior: formatCount(base.verified, baseline?.runs ?? current.runs),
+      current: formatCount(now.verified, current.runs),
+      change: formatCountChange(now.verified, base.verified),
+      limit: `${current.runs}/${current.runs}`,
+      status: metricStatus(now.verified, now.verified === current.runs),
+    },
+  ];
+  const enforced = metrics.filter(m => m.status !== 'INFO');
+  const routeStatus = enforced.some(m => m.status === 'FAIL')
+    ? 'FAIL'
+    : enforced.some(m => m.status === 'NOT CHECKED') ? 'NOT CHECKED' : 'PASS';
+  return {
+    route,
+    title: route === 'auto' ? 'Auto (WebRTC + relay)' : 'Relay (WebSocket)',
+    summaryLabel: route === 'auto' ? '**Auto** (WebRTC + relay)' : '**Relay** (WebSocket)',
+    now,
+    base,
+    speedChange: metrics[0].change,
+    status: routeStatus,
+    metrics,
+  };
+}
 function renderComment({ current, baseline, errors, currentRun, baselineRun }) {
-  const comparable = baseline && baseline.input.bytes === current.input.bytes && baseline.runs === current.runs && baseline.topology === current.topology;
-  const lines = [COMMENT_MARKER, resultShaMarker(currentRun.sha), '## Transfer performance', '',
-    errors.length ? `FAIL: ${errors.length} performance or integrity gate(s) failed.` : 'PASS: all fresh transfer gates passed.', '',
-    '| Scenario | Metric | Main baseline | This PR | Impact | Required limit | Status |',
-    '| --- | --- | ---: | ---: | ---: | ---: | --- |'];
-  for (const route of ['auto', 'relay']) {
-    const now = summarize(current, route), base = comparable ? summarize(baseline, route) : {};
-    const add = (label, key, limit, passes, digits = 1) => {
-      const value = now[key], prior = base[key];
-      const status = !Number.isFinite(value) || now.rows.length !== current.runs ? 'NOT CHECKED' : passes === undefined ? 'INFO' : passes ? 'PASS' : 'FAIL';
-      lines.push(`| ${route === 'auto' ? 'Auto / WebRTC + relay' : 'Relay / WebSocket'} | ${label} | ${format(prior, digits)} | ${format(value, digits)} | ${delta(value, prior)} | ${limit} | ${status} |`);
-    };
-    add('Receive time (median ms)', 'ms', 'Informational', undefined);
-    add('Throughput (median MiB/s)', 'speed', '>= 8 each trial', now.rows.every(row => row.receiveMs > 0 && current.input.bytes / 1048576 / (row.receiveMs / 1000) >= 8));
-    add('Worst payload gap (ms)', 'gap', '<= 5000 each trial', now.gap <= 5000);
-    add('Direct payload (median bytes)', 'direct', route === 'auto' ? '>= 4194304 each trial' : '= 0 each trial', now.rows.every(row => Number.isSafeInteger(row.transport?.direct) && (route === 'auto' ? row.transport.direct >= 4194304 : row.transport.direct === 0)), 0);
-    add('Relay payload (median bytes)', 'relay', route === 'relay' ? `= ${current.input.bytes} each trial` : 'Informational', route === 'relay' ? now.rows.every(row => row.transport?.relay === current.input.bytes) : undefined, 0);
-    add('Payload-evidence repetitions', 'evidence', `= ${current.runs}`, now.evidence === current.runs, 0);
-    add('Verified repetitions (size + SHA-256)', 'verified', `= ${current.runs}`, now.verified === current.runs, 0);
+  const comparable = Boolean(baseline && baseline.input.bytes === current.input.bytes && baseline.runs === current.runs && baseline.topology === current.topology);
+  const sizeLabel = formatBytes(current.input.bytes);
+  const routes = ['auto', 'relay'].map(route => evaluateRoute(current, baseline, comparable, route));
+  const headline = errors.length
+    ? `❌ **Failed: ${errors.length} transfer ${errors.length === 1 ? 'gate' : 'gates'}** · ${sizeLabel} × ${current.runs} runs per route`
+    : `✅ **All transfer gates passed** · ${sizeLabel} × ${current.runs} runs per route`;
+  const lines = [
+    COMMENT_MARKER,
+    resultShaMarker(currentRun.sha),
+    '## Transfer performance',
+    '',
+    headline,
+    '',
+    '| Route | Main speed | PR speed | Change | Receive time | Worst gap | Status |',
+    '| --- | ---: | ---: | :---: | ---: | ---: | :---: |',
+  ];
+  for (const r of routes) {
+    const prSpeed = Number.isFinite(r.now.speed) ? `**${formatSpeed(r.now.speed)}**` : '—';
+    lines.push(`| ${r.summaryLabel} | ${formatSpeed(r.base.speed)} | ${prSpeed} | ${r.speedChange} | ${formatDuration(r.now.ms)} | ${formatDuration(r.now.gap)} | ${STATUS_BADGE[r.status]} |`);
   }
-  lines.push('', `${current.runs} repetitions per route, ${(current.input.bytes / 1048576).toFixed(0)} MiB per transfer. Time includes receive entry through download save; SHA-256 and size are checked afterward.`,
-    'Each status checks every repetition, including metrics displayed as medians. INFO has no enforced limit; NOT CHECKED means measurements are missing. Auto measures WebRTC and relay payload usage. LAN and AI-provider usage are not measured by this fixture.',
-    'Loopback Chromium/Worker measurements do not certify WAN or physical-phone speed. Timing changes are observations; CI enforces the 8 MiB/s floor, 5-second gap limit, direct-route use and full-file integrity.', '',
-    `PR head: \`${currentRun.sha.slice(0, 7)}\`; tested checkout: \`${current.commit.slice(0, 7)}\`. [Source CI](${currentRun.url}) concluded ${currentRun.conclusion}.`);
-  if (baseline) {
-    lines.push(`Baseline: [\`${baselineRun.sha.slice(0, 7)}\`](${baselineRun.url}). ${baselineRun.matchesBase ? 'Matches the PR base.' : 'Latest successful default-branch artifact; differs from the PR base.'}`);
-    if (!comparable) lines.push('Baseline input size, repetitions or topology differs; percentage comparisons are unavailable.');
-  } else lines.push('No successful default-branch baseline artifact is available yet. Percentage comparisons are unavailable.');
-  if (errors.length) lines.push('', 'Failed gates:', ...errors.map(error => `- ${error}`));
+  if (comparable) {
+    lines.push('', '> **Legend:** `↑` faster than `main` · `↓` slower than `main` · `=` unchanged (within ±0.5%) · Gates: `≥ 8 MiB/s`, gap `≤ 5 s` on every run.');
+  } else if (baseline) {
+    lines.push('', '> ℹ️ Baseline differs in input size, repetitions, or topology — percentage comparisons are unavailable. Gates: `≥ 8 MiB/s`, gap `≤ 5 s` on every run.');
+  } else {
+    lines.push('', '> ℹ️ No successful default-branch baseline artifact is available yet — percentage comparisons are unavailable. Gates: `≥ 8 MiB/s`, gap `≤ 5 s` on every run.');
+  }
+  if (errors.length) {
+    lines.push('', '**Failed gates**', ...errors.map(error => `- ${error}`));
+  }
+  lines.push('', `<details${errors.length ? ' open' : ''}>`, '<summary>Full breakdown & gate checks (Auto + Relay)</summary>');
+  for (const r of routes) {
+    lines.push('', `#### ${r.title}`, '', '| Metric | Main | This PR | Change | Gate | Status |', '| --- | ---: | ---: | ---: | ---: | :---: |');
+    for (const m of r.metrics) {
+      lines.push(`| ${m.label} | ${m.prior} | ${m.current} | ${m.change} | ${m.limit} | ${STATUS_BADGE[m.status]} |`);
+    }
+  }
+  lines.push('',
+    '**Notes**',
+    `- ${current.runs} repetitions per route, ${sizeLabel} per transfer. Time covers receive entry through download save; SHA-256 and size are checked afterward.`,
+    '- Each PASS/FAIL checks every repetition, including metrics displayed as medians. `INFO` has no enforced limit; `NOT CHECKED` means measurements are missing.',
+    '- Auto measures WebRTC and relay payload usage. LAN and AI-provider usage are not measured by this fixture.',
+    '- Loopback Chromium/Worker measurements do not certify WAN or physical-phone speed. Speed deltas are observations; CI enforces the 8 MiB/s floor, 5 s gap limit, direct-route use, and full-file integrity.',
+    '',
+    '</details>',
+    '',
+    '---');
+  const headPart = currentRun.sha === current.commit
+    ? `PR head \`${currentRun.sha.slice(0, 7)}\``
+    : `PR head \`${currentRun.sha.slice(0, 7)}\` (tested \`${current.commit.slice(0, 7)}\`)`;
+  const baselinePart = baseline
+    ? `Baseline [\`${baselineRun.sha.slice(0, 7)}\`](${baselineRun.url}) (${baselineRun.matchesBase ? 'matches PR base' : 'latest default-branch run; differs from PR base'})`
+    : 'Baseline: none yet';
+  lines.push(`${headPart} · [Source CI](${currentRun.url}) (\`${currentRun.conclusion}\`) · ${baselinePart}`);
   lines.push('', '_Updated in place by a trusted default-branch workflow. Artifact contents are validated as data and never executed._');
   return lines.join('\n');
 }
@@ -271,8 +412,14 @@ async function publish({ github, context, core }) {
   try { baseline = readResult(process.env.BASELINE_RESULT_DIR); } catch { core.info('Ignoring invalid baseline artifact'); }
   let body;
   if (!current) {
-    body = [COMMENT_MARKER, '## Transfer performance', '', `${invalid ? 'Invalid' : 'Missing'} performance artifact for head \`${currentRun.sha.slice(0, 7)}\`. [Source CI](${currentRun.url}) concluded ${currentRun.conclusion}.`,
-      'No pass or regression result is available. CI may have failed before benchmarking, or artifact upload was unavailable for this fork run.'].join('\n');
+    body = [
+      COMMENT_MARKER,
+      '## Transfer performance',
+      '',
+      `⚠️ **${invalid ? 'Invalid' : 'Missing'} performance artifact** for head \`${currentRun.sha.slice(0, 7)}\`. [Source CI](${currentRun.url}) concluded \`${currentRun.conclusion}\`.`,
+      '',
+      'No pass or regression result is available. CI may have failed before benchmarking, or artifact upload was unavailable for this fork run.',
+    ].join('\n');
   } else {
     const { transferGateErrors } = await import('../../scripts/fresh-transfer-gates.mjs');
     body = renderComment({ current, baseline, errors: transferGateErrors(current), currentRun, baselineRun: baseline ? {
@@ -282,4 +429,16 @@ async function publish({ github, context, core }) {
   }
   await upsertCommentForCurrentHead(github, context, core, pullNumber, currentRun.sha, body, !current ? { preserveResultSha: currentRun.sha } : {});
 }
-module.exports = { validateResult, readResult, renderComment, summarize, resolve, publish, upsertCommentForCurrentHead };
+module.exports = {
+  validateResult,
+  readResult,
+  renderComment,
+  summarize,
+  resolve,
+  publish,
+  upsertCommentForCurrentHead,
+  formatBytes,
+  formatDuration,
+  formatSpeed,
+  formatPercentChange,
+};
