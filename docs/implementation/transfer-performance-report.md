@@ -15,12 +15,15 @@ repetition count or topology disables percentage comparisons. Timing differences
 are observations, not a statistical regression test; the existing performance
 gates determine pass/fail.
 
-The table follows the [T3 Code report example](https://github.com/pingdotgg/t3code/pull/36530#issuecomment-6873608838):
-one row per scenario and metric, with main baseline, PR value, impact, required
-limit and status. Unlike T3's AI-provider fixtures, CD's scenarios are automatic
-WebRTC plus relay and forced WebSocket relay. Each PASS or FAIL checks every
-trial, including metrics displayed as medians. Receive time and automatic-route
-relay usage are informational. Missing measurements show NOT CHECKED.
+The comment opens with an at-a-glance summary table (one row per route: automatic
+WebRTC plus relay, and forced WebSocket relay) showing `main` speed vs PR speed,
+directional speed change (`↑` faster, `↓` slower, `=` unchanged within ±0.5%),
+human-readable durations (`s` / `ms`) and payload sizes (`MiB` / `B`), and route
+gate status. An expandable details section holds the full per-route metric
+breakdown (automatically expanded when any gate fails). Each PASS or FAIL checks
+every trial, including metrics displayed as medians. Receive time and
+automatic-route relay usage are informational. Missing measurements show
+NOT CHECKED.
 
 The measured transports are WebRTC and the WebSocket relay. This
 fixture does not measure a LAN socket path, AI-provider usage, WAN throughput,

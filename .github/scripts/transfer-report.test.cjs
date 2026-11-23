@@ -3,7 +3,17 @@ const test = require('node:test');
 const { mkdtempSync, writeFileSync, symlinkSync, rmSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
-const { validateResult, readResult, renderComment, resolve, publish, upsertCommentForCurrentHead } = require('./transfer-report.cjs');
+const {
+  validateResult,
+  readResult,
+  renderComment,
+  resolve,
+  publish,
+  upsertCommentForCurrentHead,
+  formatBytes,
+  formatDuration,
+  formatPercentChange,
+} = require('./transfer-report.cjs');
 const sha = 'a'.repeat(40), hash = 'b'.repeat(64), bytes = 64 * 1048576;
 function result(ms = 1000) {
   return { schema: 1, commit: sha, runs: 3, topology: 'loopback', input: { bytes, sha256: hash }, rows: Array.from({ length: 3 }, (_, run) => ['auto', 'relay'].map(route => ({
@@ -41,20 +51,77 @@ test('validates bounded numeric metrics and fixed trial routes', () => {
     const r = result(); change(r); assert.throws(() => validateResult(r));
   }
 });
-test('renders medians, measured provider bytes, deltas and gate failures', () => {
-  const body = renderComment({ current: result(2000), baseline: result(), errors: ['0/auto fell below 8 MiB/s'], currentRun: { sha, url: 'https://example.test/pr', conclusion: 'failure' }, baselineRun: { sha, url: 'https://example.test/base', matchesBase: true } });
-  assert.match(body, /FAIL: 1/);
-  assert.match(body, /Receive time \(median ms\) \| 1000\.0 \| 2000\.0 \| \+100\.0% \| Informational \| INFO/);
-  assert.match(body, /Throughput \(median MiB\/s\) \| 64\.0 \| 32\.0 \| -50\.0% \| >= 8 each trial \| PASS/);
-  assert.match(body, /WebRTC \+ relay/);
-  assert.match(body, /Direct payload \(median bytes\) \| 67108864 \| 67108864 \| \+0\.0% \| >= 4194304 each trial \| PASS/);
+test('formats bytes, durations, and speed change arrows clearly', () => {
+  assert.equal(formatBytes(0), '0 B');
+  assert.equal(formatBytes(512), '512 B');
+  assert.equal(formatBytes(1536), '1.5 KiB');
+  assert.equal(formatBytes(4194304), '4 MiB');
+  assert.equal(formatBytes(67108864), '64 MiB');
+  assert.equal(formatBytes(1610612736), '1.5 GiB');
+  assert.equal(formatBytes(undefined), '—');
+
+  assert.equal(formatDuration(0), '0 ms');
+  assert.equal(formatDuration(5), '5 ms');
+  assert.equal(formatDuration(219.4), '219 ms');
+  assert.equal(formatDuration(999.6), '1.00 s');
+  assert.equal(formatDuration(4513.4), '4.51 s');
+  assert.equal(formatDuration(undefined), '—');
+
+  assert.equal(formatPercentChange(12.0, 11.0, { mode: 'speed' }), '↑ +9.1%');
+  assert.equal(formatPercentChange(11.6, 14.2, { mode: 'speed' }), '↓ -18.3%');
+  assert.equal(formatPercentChange(14.2, 14.2, { mode: 'speed' }), '=');
+  assert.equal(formatPercentChange(14.23, 14.2, { mode: 'speed' }), '= (+0.2%)');
+  assert.equal(formatPercentChange(14.2, undefined, { mode: 'speed' }), '—');
+
+  assert.equal(formatPercentChange(5313.5, 5800.4, { mode: 'time' }), '-8.4% faster');
+  assert.equal(formatPercentChange(5510.4, 4513.4, { mode: 'time' }), '+22.1% slower');
+  assert.equal(formatPercentChange(0, 0, { formatAbs: formatBytes }), '=');
+  assert.equal(formatPercentChange(4194304, 0, { formatAbs: formatBytes }), '+4 MiB');
+});
+test('renders summary speed arrows, human-readable units, and gate failures', () => {
+  const current = result(2000);
+  // Make Relay faster than baseline while Auto is slower than baseline.
+  for (const row of current.rows) if (row.route === 'relay') row.receiveMs = 500;
+  const body = renderComment({
+    current,
+    baseline: result(1000),
+    errors: ['0/auto fell below 8 MiB/s'],
+    currentRun: { sha, url: 'https://example.test/pr', conclusion: 'failure' },
+    baselineRun: { sha, url: 'https://example.test/base', matchesBase: true },
+  });
+  assert.match(body, /❌ \*\*Failed: 1 transfer gate\*\* · 64 MiB × 3 runs per route/);
+  assert.match(body, /\| \*\*Auto\*\* \(WebRTC \+ relay\) \| 64\.0 MiB\/s \| \*\*32\.0 MiB\/s\*\* \| ↓ -50\.0% \| 2\.00 s \| 5 ms \| ✅ PASS \|/);
+  assert.match(body, /\| \*\*Relay\*\* \(WebSocket\) \| 64\.0 MiB\/s \| \*\*128\.0 MiB\/s\*\* \| ↑ \+100\.0% \| 500 ms \| 5 ms \| ✅ PASS \|/);
+  assert.match(body, /<details open>/);
+  assert.match(body, /\| Throughput \(median\) \| 64\.0 MiB\/s \| 32\.0 MiB\/s \| ↓ -50\.0% \| ≥ 8 MiB\/s each \| ✅ PASS \|/);
+  assert.match(body, /\| Receive time \(median\) \| 1\.00 s \| 2\.00 s \| \+100\.0% slower \| Info \| ℹ️ INFO \|/);
+  assert.match(body, /\| Receive time \(median\) \| 1\.00 s \| 500 ms \| -50\.0% faster \| Info \| ℹ️ INFO \|/);
+  assert.match(body, /\| Direct payload \(median\) \| 64 MiB \| 64 MiB \| = \| ≥ 4 MiB each \| ✅ PASS \|/);
+  assert.match(body, /\| Relay payload \(median\) \| 0 B \| 0 B \| = \| Info \| ℹ️ INFO \|/);
+  assert.match(body, /\| Verified \(size \+ SHA-256\) \| 3\/3 \| 3\/3 \| = \| 3\/3 \| ✅ PASS \|/);
   assert.match(body, /LAN and AI-provider usage are not measured/);
+});
+test('renders = when speed is unchanged and collapses details on pass', () => {
+  const body = renderComment({
+    current: result(1000),
+    baseline: result(1000),
+    errors: [],
+    currentRun: { sha, url: 'https://example.test/pr', conclusion: 'success' },
+    baselineRun: { sha, url: 'https://example.test/base', matchesBase: true },
+  });
+  assert.match(body, /✅ \*\*All transfer gates passed\*\*/);
+  assert.match(body, /\| \*\*Auto\*\* \(WebRTC \+ relay\) \| 64\.0 MiB\/s \| \*\*64\.0 MiB\/s\*\* \| = \| 1\.00 s \| 5 ms \| ✅ PASS \|/);
+  assert.match(body, /\| \*\*Relay\*\* \(WebSocket\) \| 64\.0 MiB\/s \| \*\*64\.0 MiB\/s\*\* \| = \| 1\.00 s \| 5 ms \| ✅ PASS \|/);
+  assert.match(body, /<details>/);
+  assert.doesNotMatch(body, /<details open>/);
 });
 test('does not compare incompatible scenarios', () => {
   const base = result(); base.topology = 'WAN';
   const body = renderComment({ current: result(), baseline: base, errors: [], currentRun: { sha, url: 'url', conclusion: 'success' }, baselineRun: { sha, url: 'url', matchesBase: false } });
   assert.match(body, /percentage comparisons are unavailable/);
-  assert.doesNotMatch(body, /\+0\.0%/);
+  assert.doesNotMatch(body, /[↑↓]/);
+  assert.doesNotMatch(body, /[+-]\d+\.\d+%/);
+  assert.match(body, /\| \*\*Auto\*\* \(WebRTC \+ relay\) \| — \| \*\*64\.0 MiB\/s\*\* \| — \|/);
 });
 test('does not follow result symlinks or read oversized artifacts', () => {
   const dir = mkdtempSync(join(tmpdir(), 'cd-report-test-'));
@@ -108,13 +175,15 @@ test('uses the trusted performance gates for complete artifacts', async () => {
   Object.assign(process.env, { PR_NUMBER: '3', PR_SHA: sha, PR_CONCLUSION: 'success', PR_RUN_ID: '1', PR_RESULT_DIR: dir, BASELINE_RESULT_DIR: '/nonexistent-cd-base' });
   try {
     const input = mock(); await publish(input);
-    assert.match(input.writes[0].create.body, /PASS: all fresh transfer gates passed/);
+    assert.match(input.writes[0].create.body, /All transfer gates passed/);
   } finally { process.env = saved; rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('per-metric status catches a slow trial hidden by a passing median and missing evidence', () => {
   const current = result(); current.rows[0].receiveMs = 10000; delete current.rows[1].transport.maxGapMs;
   const body = renderComment({ current, errors: ['slow trial', 'missing gap'], currentRun: { sha, url: 'url', conclusion: 'failure' } });
-  assert.match(body, /Auto \/ WebRTC \+ relay \| Throughput \(median MiB\/s\) \| unavailable \| 64\.0 \| unavailable \| >= 8 each trial \| FAIL/);
-  assert.match(body, /Relay \/ WebSocket \| Worst payload gap \(ms\) \| unavailable \| unavailable \| unavailable \| <= 5000 each trial \| NOT CHECKED/);
+  assert.match(body, /\| \*\*Auto\*\* \(WebRTC \+ relay\) \| — \| \*\*64\.0 MiB\/s\*\* \| — \| 1\.00 s \| 5 ms \| ❌ FAIL \|/);
+  assert.match(body, /\| \*\*Relay\*\* \(WebSocket\) \| — \| \*\*64\.0 MiB\/s\*\* \| — \| 1\.00 s \| — \| ⚠️ NOT CHECKED \|/);
+  assert.match(body, /\| Throughput \(median\) \| — \| 64\.0 MiB\/s \| — \| ≥ 8 MiB\/s each \| ❌ FAIL \|/);
+  assert.match(body, /\| Worst payload gap \| — \| — \| — \| ≤ 5 s each \| ⚠️ NOT CHECKED \|/);
 });
