@@ -223,9 +223,17 @@ function renderComment({ current, baseline, errors, currentRun, baselineRun }) {
   const baselinePart = baseline
     ? `Baseline [\`${baselineRun.sha.slice(0, 7)}\`](${baselineRun.url}) (${baselineRun.matchesBase ? 'matches PR base' : 'latest default-branch run; differs from PR base'})`
     : 'Baseline: none yet';
-  lines.push(`${headPart} · [Source CI](${currentRun.url}) (\`${currentRun.conclusion}\`) · ${baselinePart}`);
+  lines.push(`${headPart} · [Speedtest run](${currentRun.url}) (\`${currentRun.conclusion}\`) · ${baselinePart}`);
   lines.push('', '_Updated in place by a trusted default-branch workflow. Artifact contents are validated as data and never executed._');
   return lines.join('\n');
+}
+
+const SPEEDTEST_COMMAND_RE = /^\s*\/speedtest\s*$/i;
+const ALLOWED_PERMISSIONS = new Set(["admin", "maintain", "write"]);
+const BASELINE_WORKFLOWS = ["speedtest.yml", "ci.yml"];
+
+function isSpeedtestCommand(body) {
+  return typeof body === "string" && SPEEDTEST_COMMAND_RE.test(body);
 }
 
 async function artifactsForRun(github, owner, repo, runId) {
@@ -239,6 +247,122 @@ async function artifactsForRun(github, owner, repo, runId) {
 
 function findResultArtifact(artifacts) {
   return artifacts.find((artifact) => artifact.name === ARTIFACT_NAME && !artifact.expired);
+}
+
+async function findBaselineRun(github, owner, repo, defaultBranch, baseSha, workflowIds = BASELINE_WORKFLOWS) {
+  const seenWorkflows = new Set();
+  for (const workflowId of workflowIds) {
+    if (workflowId === undefined || workflowId === null || seenWorkflows.has(workflowId)) continue;
+    seenWorkflows.add(workflowId);
+    // One page each for the exact base and the newest runs; paging through
+    // every successful main run costs up to ten requests to keep 20.
+    const listRuns = async (filters) => {
+      try {
+        const { data } = await github.rest.actions.listWorkflowRuns({
+          owner,
+          repo,
+          workflow_id: workflowId,
+          branch: defaultBranch,
+          status: "success",
+          per_page: 20,
+          ...filters,
+        });
+        return data.workflow_runs.filter((run) => run.event === "push" || run.event === "workflow_dispatch");
+      } catch (error) {
+        if (error?.status === 404) return [];
+        throw error;
+      }
+    };
+    const [baseRuns, recentRuns] = await Promise.all([
+      baseSha ? listRuns({ head_sha: baseSha }) : Promise.resolve([]),
+      listRuns({}),
+    ]);
+    const orderedRuns = [
+      ...baseRuns,
+      ...recentRuns.filter((run) => run.head_sha !== baseSha),
+    ].slice(0, 20);
+
+    for (const run of orderedRuns) {
+      const artifacts = await artifactsForRun(github, owner, repo, run.id);
+      if (findResultArtifact(artifacts)) return run;
+    }
+  }
+  return undefined;
+}
+
+async function reactToComment(github, owner, repo, commentId, content, core) {
+  if (!Number.isSafeInteger(commentId) || commentId <= 0) return;
+  try {
+    await github.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: commentId,
+      content,
+    });
+  } catch (error) {
+    core?.info?.(`Could not add ${content} reaction to comment ${commentId}: ${error?.message ?? error}`);
+  }
+}
+
+async function resolveCommand({ github, context, core }) {
+  const deny = (reason) => {
+    core.info(reason);
+    core.setOutput("authorized", "false");
+  };
+  const issue = context.payload.issue;
+  const comment = context.payload.comment;
+  if (!issue?.pull_request || !comment) {
+    deny("Ignoring comment outside a pull request.");
+    return;
+  }
+  if (!isSpeedtestCommand(comment.body)) {
+    deny("Comment does not match /speedtest command.");
+    return;
+  }
+  if (!comment.user?.login || comment.user.type === "Bot") {
+    deny("Ignoring /speedtest command from a bot or unknown user.");
+    return;
+  }
+  const { owner, repo } = context.repo;
+  const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({
+    owner,
+    repo,
+    username: comment.user.login,
+  });
+  if (!ALLOWED_PERMISSIONS.has(perm?.permission)) {
+    deny(`User ${comment.user.login} has permission "${perm?.permission ?? "none"}"; write access is required for /speedtest.`);
+    return;
+  }
+  const { data: pull } = await github.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: issue.number,
+  });
+  if (pull.state !== "open") {
+    deny(`PR #${issue.number} is ${pull.state}; skipping /speedtest.`);
+    await reactToComment(github, owner, repo, comment.id, "confused", core);
+    return;
+  }
+  await reactToComment(github, owner, repo, comment.id, "eyes", core);
+  core.setOutput("authorized", "true");
+  core.setOutput("pull_number", String(pull.number));
+  core.setOutput("head_sha", pull.head.sha);
+  core.setOutput("base_sha", pull.base.sha);
+  core.setOutput("comment_id", String(comment.id));
+}
+
+async function resolveBaseline({ github, context, core }) {
+  const { owner, repo } = context.repo;
+  const defaultBranch = context.payload.repository?.default_branch ?? "main";
+  const baseSha = process.env.BASE_SHA ?? "";
+  const baselineRun = await findBaselineRun(github, owner, repo, defaultBranch, baseSha, BASELINE_WORKFLOWS);
+  core.setOutput("baseline_artifact", baselineRun ? "true" : "false");
+  core.setOutput("baseline_run_id", baselineRun ? String(baselineRun.id) : "");
+  core.setOutput("baseline_sha", baselineRun?.head_sha ?? "");
+  core.setOutput(
+    "baseline_matches_base",
+    baselineRun && baseSha && baselineRun.head_sha === baseSha ? "true" : "false",
+  );
 }
 
 async function resolve({ github, context, core }) {
@@ -301,38 +425,14 @@ async function resolve({ github, context, core }) {
 
   const sourceArtifacts = await artifactsForRun(github, owner, repo, source.id);
   const sourceArtifact = findResultArtifact(sourceArtifacts);
-  // One page each for the exact base and the newest runs; paging through
-  // every successful main run costs up to ten requests to keep 20.
-  const listRuns = async (filters) => {
-    const { data } = await github.rest.actions.listWorkflowRuns({
-      owner,
-      repo,
-      workflow_id: source.workflow_id,
-      branch: context.payload.repository.default_branch,
-      event: "push",
-      status: "success",
-      per_page: 20,
-      ...filters,
-    });
-    return data.workflow_runs;
-  };
-  const [baseRuns, recentRuns] = await Promise.all([
-    listRuns({ head_sha: pull.base.sha }),
-    listRuns({}),
-  ]);
-  const orderedRuns = [
-    ...baseRuns,
-    ...recentRuns.filter((run) => run.head_sha !== pull.base.sha),
-  ].slice(0, 20);
-
-  let baselineRun;
-  for (const run of orderedRuns) {
-    const artifacts = await artifactsForRun(github, owner, repo, run.id);
-    if (findResultArtifact(artifacts)) {
-      baselineRun = run;
-      break;
-    }
-  }
+  const baselineRun = await findBaselineRun(
+    github,
+    owner,
+    repo,
+    context.payload.repository.default_branch,
+    pull.base.sha,
+    [source.workflow_id, ...BASELINE_WORKFLOWS],
+  );
 
   core.setOutput("publish", "true");
   core.setOutput("pull_number", String(pullNumber));
@@ -410,24 +510,30 @@ async function publish({ github, context, core }) {
   let current, baseline, invalid = false;
   try { current = readResult(process.env.PR_RESULT_DIR); } catch { invalid = true; }
   try { baseline = readResult(process.env.BASELINE_RESULT_DIR); } catch { core.info('Ignoring invalid baseline artifact'); }
-  let body;
+  let body, passed = false;
   if (!current) {
     body = [
       COMMENT_MARKER,
       '## Transfer performance',
       '',
-      `⚠️ **${invalid ? 'Invalid' : 'Missing'} performance artifact** for head \`${currentRun.sha.slice(0, 7)}\`. [Source CI](${currentRun.url}) concluded \`${currentRun.conclusion}\`.`,
+      `⚠️ **${invalid ? 'Invalid' : 'Missing'} performance artifact** for head \`${currentRun.sha.slice(0, 7)}\`. [Speedtest run](${currentRun.url}) concluded \`${currentRun.conclusion}\`.`,
       '',
-      'No pass or regression result is available. CI may have failed before benchmarking, or artifact upload was unavailable for this fork run.',
+      'No pass or regression result is available. The run may have failed before benchmarking, or artifact upload was unavailable for this fork run.',
     ].join('\n');
   } else {
     const { transferGateErrors } = await import('../../scripts/fresh-transfer-gates.mjs');
-    body = renderComment({ current, baseline, errors: transferGateErrors(current), currentRun, baselineRun: baseline ? {
+    const errors = transferGateErrors(current);
+    passed = errors.length === 0;
+    body = renderComment({ current, baseline, errors, currentRun, baselineRun: baseline ? {
       sha: process.env.BASELINE_SHA, matchesBase: process.env.BASELINE_MATCHES_BASE === 'true',
       url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.BASELINE_RUN_ID}`,
     } : undefined });
   }
-  await upsertCommentForCurrentHead(github, context, core, pullNumber, currentRun.sha, body, !current ? { preserveResultSha: currentRun.sha } : {});
+  const written = await upsertCommentForCurrentHead(github, context, core, pullNumber, currentRun.sha, body, !current ? { preserveResultSha: currentRun.sha } : {});
+  const triggerCommentId = Number(process.env.TRIGGER_COMMENT_ID);
+  if (Number.isSafeInteger(triggerCommentId) && triggerCommentId > 0) {
+    await reactToComment(github, context.repo.owner, context.repo.repo, triggerCommentId, written && passed ? 'rocket' : 'confused', core);
+  }
 }
 module.exports = {
   validateResult,
@@ -435,6 +541,10 @@ module.exports = {
   renderComment,
   summarize,
   resolve,
+  resolveCommand,
+  resolveBaseline,
+  findBaselineRun,
+  isSpeedtestCommand,
   publish,
   upsertCommentForCurrentHead,
   formatBytes,

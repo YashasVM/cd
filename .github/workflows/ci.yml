@@ -31,15 +31,6 @@ jobs:
       - run: npm run verify:agent
       - run: npm run verify:browser
       - run: npm run verify:product-ux
-      - run: npm run verify:performance
-      - name: Upload fresh transfer measurements
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: fresh-transfer-results
-          path: /tmp/cd-fresh-performance.json
-          if-no-files-found: warn
-          retention-days: 30
       - run: npm run deploy:dry
 
   android-unit:

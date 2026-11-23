@@ -8,6 +8,9 @@ const {
   readResult,
   renderComment,
   resolve,
+  resolveCommand,
+  resolveBaseline,
+  isSpeedtestCommand,
   publish,
   upsertCommentForCurrentHead,
   formatBytes,
@@ -20,15 +23,36 @@ function result(ms = 1000) {
     run, route, ok: true, receiveMs: ms, received: { bytes, sha256: hash }, transport: { direct: route === 'auto' ? bytes : 0, relay: route === 'auto' ? 0 : bytes, maxGapMs: 5 },
   }))).flat() };
 }
-function mock({ currentSha = sha, comments = [], artifacts = [], state = 'open', fallback = false } = {}) {
-  const writes = [], outputs = {};
+function mock({
+  currentSha = sha,
+  comments = [],
+  artifacts = [],
+  state = 'open',
+  fallback = false,
+  permission = 'write',
+  commentBody = '/speedtest',
+  commentUser = { login: 'maintainer', type: 'User' },
+  isPullRequest = true,
+  workflowRuns,
+} = {}) {
+  const writes = [], outputs = [], reactions = [];
+  const outputMap = {};
   const listWorkflowRunArtifacts = () => {};
   const listComments = () => {};
   const listPullRequestsAssociatedWithCommit = () => {};
-  const pull = { state, head: { sha: currentSha, ref: 'feature' }, base: { sha: 'c'.repeat(40), ref: 'main' } };
-  const context = { repo: { owner: 'test', repo: 'cd' }, payload: { repository: { default_branch: 'main' }, workflow_run: {
-    id: 1, workflow_id: 2, head_sha: sha, head_branch: 'feature', event: 'pull_request', conclusion: 'failure', pull_requests: fallback ? [] : [{ number: 3 }],
-  } } };
+  const pull = { number: 3, state, head: { sha: currentSha, ref: 'feature' }, base: { sha: 'c'.repeat(40), ref: 'main' } };
+  const context = {
+    repo: { owner: 'test', repo: 'cd' },
+    payload: {
+      repository: { default_branch: 'main' },
+      issue: { number: 3, ...(isPullRequest ? { pull_request: { url: 'https://example.test/pr/3' } } : {}) },
+      comment: { id: 77, body: commentBody, user: commentUser },
+      workflow_run: {
+        id: 1, workflow_id: 2, head_sha: sha, head_branch: 'feature', event: 'pull_request', conclusion: 'failure', pull_requests: fallback ? [] : [{ number: 3 }],
+      },
+    },
+  };
+  const defaultRuns = [{ id: 8, head_sha: 'c'.repeat(40), event: 'push' }];
   const github = {
     paginate: async (method, input) => {
       if (method === listWorkflowRunArtifacts) return artifacts.filter(a => a.runId === input.run_id);
@@ -38,12 +62,31 @@ function mock({ currentSha = sha, comments = [], artifacts = [], state = 'open',
     },
     rest: {
       pulls: { get: async () => ({ data: pull }) },
-      repos: { listPullRequestsAssociatedWithCommit },
-      actions: { listWorkflowRunArtifacts, listWorkflowRuns: async () => ({ data: { workflow_runs: [{ id: 8, head_sha: 'c'.repeat(40) }] } }) },
+      repos: {
+        listPullRequestsAssociatedWithCommit,
+        getCollaboratorPermissionLevel: async () => ({ data: { permission } }),
+      },
+      reactions: {
+        createForIssueComment: async input => reactions.push(input),
+      },
+      actions: {
+        listWorkflowRunArtifacts,
+        listWorkflowRuns: async (input) => {
+          const runs = typeof workflowRuns === 'function' ? workflowRuns(input) : (workflowRuns ?? defaultRuns);
+          return { data: { workflow_runs: runs } };
+        },
+      },
       issues: { listComments, createComment: async input => writes.push({ create: input }), updateComment: async input => writes.push({ update: input }) },
     },
   };
-  return { github, context, core: { setOutput: (key, value) => outputs[key] = value, info: () => {} }, writes, outputs };
+  return {
+    github,
+    context,
+    core: { setOutput: (key, value) => { outputMap[key] = value; outputs.push([key, value]); }, info: () => {} },
+    writes,
+    reactions,
+    outputs: outputMap,
+  };
 }
 test('validates bounded numeric metrics and fixed trial routes', () => {
   assert.equal(validateResult(result()).rows.length, 6);
@@ -186,4 +229,77 @@ test('per-metric status catches a slow trial hidden by a passing median and miss
   assert.match(body, /\| \*\*Relay\*\* \(WebSocket\) \| — \| \*\*64\.0 MiB\/s\*\* \| — \| 1\.00 s \| — \| ⚠️ NOT CHECKED \|/);
   assert.match(body, /\| Throughput \(median\) \| — \| 64\.0 MiB\/s \| — \| ≥ 8 MiB\/s each \| ❌ FAIL \|/);
   assert.match(body, /\| Worst payload gap \| — \| — \| — \| ≤ 5 s each \| ⚠️ NOT CHECKED \|/);
+});
+
+test('matches only standalone /speedtest commands', () => {
+  assert.equal(isSpeedtestCommand('/speedtest'), true);
+  assert.equal(isSpeedtestCommand('  /SPEEDTEST \n'), true);
+  assert.equal(isSpeedtestCommand('please run /speedtest later'), false);
+  assert.equal(isSpeedtestCommand('/speedtest --extra'), false);
+  assert.equal(isSpeedtestCommand(null), false);
+});
+
+test('resolveCommand authorizes write collaborators on open PRs and reacts with eyes', async () => {
+  const input = mock({ permission: 'admin', commentBody: ' /speedtest\n' });
+  await resolveCommand(input);
+  assert.equal(input.outputs.authorized, 'true');
+  assert.equal(input.outputs.pull_number, '3');
+  assert.equal(input.outputs.head_sha, sha);
+  assert.equal(input.outputs.base_sha, 'c'.repeat(40));
+  assert.equal(input.outputs.comment_id, '77');
+  assert.equal(input.reactions.length, 1);
+  assert.equal(input.reactions[0].content, 'eyes');
+});
+
+test('resolveCommand rejects non-collaborators, bots, non-PR issues, and closed PRs', async () => {
+  for (const options of [
+    { permission: 'read' },
+    { permission: 'none' },
+    { commentUser: { login: 'dependabot[bot]', type: 'Bot' } },
+    { isPullRequest: false },
+    { state: 'closed' },
+    { commentBody: 'not a command' },
+  ]) {
+    const input = mock(options);
+    await resolveCommand(input);
+    assert.equal(input.outputs.authorized, 'false');
+    assert.equal(input.reactions.some(r => r.content === 'eyes'), false);
+  }
+});
+
+test('resolveBaseline prefers speedtest.yml and falls back to ci.yml for historical baselines', async () => {
+  const saved = { ...process.env };
+  process.env.BASE_SHA = 'c'.repeat(40);
+  try {
+    const input = mock({
+      artifacts: [{ runId: 42, name: 'fresh-transfer-results', expired: false }],
+      workflowRuns: ({ workflow_id }) => workflow_id === 'ci.yml'
+        ? [{ id: 42, head_sha: 'c'.repeat(40), event: 'push' }]
+        : [],
+    });
+    await resolveBaseline(input);
+    assert.equal(input.outputs.baseline_artifact, 'true');
+    assert.equal(input.outputs.baseline_run_id, '42');
+    assert.equal(input.outputs.baseline_matches_base, 'true');
+  } finally { process.env = saved; }
+});
+
+test('publish adds rocket reaction on pass and confused on missing artifact for /speedtest', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cd-report-cmd-')), saved = { ...process.env };
+  writeFileSync(join(dir, 'cd-fresh-performance.json'), JSON.stringify(result()));
+  try {
+    Object.assign(process.env, {
+      PR_NUMBER: '3', PR_SHA: sha, PR_CONCLUSION: 'success', PR_RUN_ID: '9',
+      PR_RESULT_DIR: dir, BASELINE_RESULT_DIR: '/nonexistent-cd-base', TRIGGER_COMMENT_ID: '77',
+    });
+    const okRun = mock();
+    await publish(okRun);
+    assert.equal(okRun.reactions.at(-1)?.content, 'rocket');
+
+    process.env.PR_RESULT_DIR = '/nonexistent-cd-report';
+    process.env.PR_CONCLUSION = 'failure';
+    const failRun = mock();
+    await publish(failRun);
+    assert.equal(failRun.reactions.at(-1)?.content, 'confused');
+  } finally { process.env = saved; rmSync(dir, { recursive: true, force: true }); }
 });

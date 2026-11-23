@@ -1,0 +1,104 @@
+name: Transfer Speedtest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/entry.js'
+      - 'src/main.js'
+      - 'src/share.js'
+      - 'src/share-page.js'
+      - 'src/transfer-session.js'
+      - 'src/relay-sender.js'
+      - 'src/direct-link.js'
+      - 'src/raw-channel.js'
+      - 'src/relay-tunnel.js'
+      - 'src/send-window.js'
+      - 'src/sink.js'
+      - 'src/agent-protocol.js'
+      - 'src/agent-code.js'
+      - 'src/transfer-limits.js'
+      - 'src/incremental-sha256.js'
+      - 'src/resume-browser.js'
+      - 'src/resume-protocol.js'
+      - 'src/resume-opfs.js'
+      - 'src/resume-opfs-worker.js'
+      - 'src/zip-bundle.js'
+      - 'src/zip-unbundle.js'
+      - 'src/p2p-code.js'
+      - 'src/p2p-manifest.js'
+      - 'src/share-link.js'
+      - 'worker/index.ts'
+      - 'worker/resume-room.ts'
+      - 'worker/code-security.ts'
+      - 'wrangler.jsonc'
+      - 'scripts/bench-transfer-fresh.mjs'
+      - 'scripts/fresh-browser-probe.mjs'
+      - 'scripts/fresh-transfer-gates.mjs'
+      - 'scripts/harness.mjs'
+      - '.github/workflows/speedtest.yml'
+  pull_request:
+    paths:
+      - 'src/entry.js'
+      - 'src/main.js'
+      - 'src/share.js'
+      - 'src/share-page.js'
+      - 'src/transfer-session.js'
+      - 'src/relay-sender.js'
+      - 'src/direct-link.js'
+      - 'src/raw-channel.js'
+      - 'src/relay-tunnel.js'
+      - 'src/send-window.js'
+      - 'src/sink.js'
+      - 'src/agent-protocol.js'
+      - 'src/agent-code.js'
+      - 'src/transfer-limits.js'
+      - 'src/incremental-sha256.js'
+      - 'src/resume-browser.js'
+      - 'src/resume-protocol.js'
+      - 'src/resume-opfs.js'
+      - 'src/resume-opfs-worker.js'
+      - 'src/zip-bundle.js'
+      - 'src/zip-unbundle.js'
+      - 'src/p2p-code.js'
+      - 'src/p2p-manifest.js'
+      - 'src/share-link.js'
+      - 'worker/index.ts'
+      - 'worker/resume-room.ts'
+      - 'worker/code-security.ts'
+      - 'wrangler.jsonc'
+      - 'scripts/bench-transfer-fresh.mjs'
+      - 'scripts/fresh-browser-probe.mjs'
+      - 'scripts/fresh-transfer-gates.mjs'
+      - 'scripts/harness.mjs'
+      - '.github/workflows/speedtest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: transfer-speedtest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  speedtest:
+    name: Fresh transfer benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:performance
+      - name: Upload fresh transfer measurements
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fresh-transfer-results
+          path: /tmp/cd-fresh-performance.json
+          if-no-files-found: warn
+          retention-days: 30

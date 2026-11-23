@@ -1,0 +1,156 @@
+name: Transfer Speedtest (Command)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: transfer-speedtest-cmd-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  authorize:
+    name: Authorize /speedtest command
+    if: >-
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/speedtest')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    outputs:
+      authorized: ${{ steps.check.outputs.authorized }}
+      pull_number: ${{ steps.check.outputs.pull_number }}
+      head_sha: ${{ steps.check.outputs.head_sha }}
+      base_sha: ${{ steps.check.outputs.base_sha }}
+      comment_id: ${{ steps.check.outputs.comment_id }}
+    steps:
+      - name: Checkout trusted command handler
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - id: check
+        name: Validate command and permissions
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const reporter = require("./.github/scripts/transfer-report.cjs");
+            await reporter.resolveCommand({ github, context, core });
+
+  benchmark:
+    name: Run PR transfer benchmark
+    needs: authorize
+    if: needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Strictly read-only token and no persisted credentials while executing PR code.
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/pull/${{ needs.authorize.outputs.pull_number }}/head
+          persist-credentials: false
+
+      - name: Verify checked-out PR commit
+        env:
+          EXPECTED_SHA: ${{ needs.authorize.outputs.head_sha }}
+        run: |
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+            echo "PR head moved from $EXPECTED_SHA to $ACTUAL_SHA; aborting." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify:performance
+
+      - name: Upload fresh transfer measurements
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fresh-transfer-results
+          path: /tmp/cd-fresh-performance.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  publish:
+    name: Publish PR comment
+    needs: [authorize, benchmark]
+    if: always() && needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      # Only load the publisher from the trusted default branch and never execute PR code.
+      - name: Checkout trusted publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: |
+            .github/scripts
+            scripts/fresh-transfer-gates.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Test trusted publisher
+        run: node --test .github/scripts/transfer-report.test.cjs
+
+      - name: Download PR result
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: fresh-transfer-results
+          path: ${{ runner.temp }}/fresh-transfer/pr
+
+      - id: baseline
+        name: Resolve main baseline artifact
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          BASE_SHA: ${{ needs.authorize.outputs.base_sha }}
+        with:
+          script: |
+            const reporter = require("./.github/scripts/transfer-report.cjs");
+            await reporter.resolveBaseline({ github, context, core });
+
+      - name: Download main baseline
+        if: steps.baseline.outputs.baseline_artifact == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: fresh-transfer-results
+          path: ${{ runner.temp }}/fresh-transfer/main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.baseline.outputs.baseline_run_id }}
+
+      - name: Update transfer comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ needs.authorize.outputs.pull_number }}
+          PR_SHA: ${{ needs.authorize.outputs.head_sha }}
+          PR_CONCLUSION: ${{ needs.benchmark.result }}
+          PR_RUN_ID: ${{ github.run_id }}
+          PR_RESULT_DIR: ${{ runner.temp }}/fresh-transfer/pr
+          BASELINE_SHA: ${{ steps.baseline.outputs.baseline_sha }}
+          BASELINE_MATCHES_BASE: ${{ steps.baseline.outputs.baseline_matches_base }}
+          BASELINE_RUN_ID: ${{ steps.baseline.outputs.baseline_run_id }}
+          BASELINE_RESULT_DIR: ${{ runner.temp }}/fresh-transfer/main
+          TRIGGER_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
+        with:
+          script: |
+            const reporter = require("./.github/scripts/transfer-report.cjs");
+            await reporter.publish({ github, context, core });

@@ -1,19 +1,39 @@
 # PR transfer performance report
 
-CI uploads `fresh-transfer-results/cd-fresh-performance.json` after
-`npm run verify:performance`, including partial results when the benchmark fails.
+`Transfer Speedtest` (`.github/workflows/speedtest.yml`) runs
+`npm run verify:performance` and uploads
+`fresh-transfer-results/cd-fresh-performance.json`, including partial results
+when the benchmark fails. It triggers automatically only when a PR or a push to
+`main` changes the core browser sending/receiving modules, worker relay code, or
+the transfer benchmark scripts themselves (avoiding benchmark runs and bot
+comments on unrelated PRs like docs, Dependabot, Android, or CLI changes).
+
+To run the transfer benchmark on demand on any open PR (regardless of changed
+files), a repository collaborator with write access can comment:
+
+```text
+/speedtest
+```
+
+`Transfer Speedtest (Command)` (`.github/workflows/speedtest-command.yml`)
+verifies collaborator permission, reacts with 👀, runs the benchmark in a
+read-only job pinned to the authorized PR head SHA (`persist-credentials: false`),
+and then publishes the comment from a separate job running only trusted
+default-branch code (reacting with 🚀 on pass or 😕 on failure).
+
 The benchmark runs three fresh 64 MiB transfers per route. The existing
 `scripts/fresh-transfer-gates.mjs` checks full-file size and SHA-256, a minimum
 8 MiB/s, a maximum 5-second payload gap, and actual direct or relay payload use.
 
-After a pull-request CI run completes, `transfer-report.yml` updates one marked
-GitHub Actions comment with median receive time, throughput, direct and relay
-bytes, worst payload gap, and time/throughput changes from the default branch.
-The baseline prefers a successful default-branch CI run at the PR base commit,
-then the latest successful run with a retained artifact. Different input size,
-repetition count or topology disables percentage comparisons. Timing differences
-are observations, not a statistical regression test; the existing performance
-gates determine pass/fail.
+After an automatic PR `Transfer Speedtest` run completes, `transfer-report.yml`
+updates one marked GitHub Actions comment with median receive time, throughput,
+direct and relay bytes, worst payload gap, and speed/time changes from the
+default branch. The baseline prefers a successful default-branch run at the PR
+base commit, then the latest successful run with a retained artifact (checking
+`speedtest.yml` first and falling back to historical `ci.yml` runs). Different
+input size, repetition count or topology disables percentage comparisons. Timing
+differences are observations, not a statistical regression test; the existing
+performance gates determine pass/fail.
 
 The comment opens with an at-a-glance summary table (one row per route: automatic
 WebRTC plus relay, and forced WebSocket relay) showing `main` speed vs PR speed,
