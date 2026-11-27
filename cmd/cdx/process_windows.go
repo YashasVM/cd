@@ -9,6 +9,7 @@ import (
 
 const (
 	detachedProcess                = 0x00000008
+	createBreakawayFromJob         = 0x01000000
 	processQueryLimitedInformation = 0x1000
 	stillActive                    = 259
 )
@@ -17,6 +18,17 @@ const (
 // group, so it survives the caller's console closing.
 func detachAttributes() *syscall.SysProcAttr {
 	return &syscall.SysProcAttr{CreationFlags: detachedProcess | syscall.CREATE_NEW_PROCESS_GROUP, HideWindow: true}
+}
+
+// detachAttributesList returns process-creation attributes to try in order
+// when launching a background holder. Breaking away from a parent Job Object
+// keeps the holder alive when an agent runner or shell closes its job on exit,
+// falling back to standard detachment when breakaway is not permitted.
+func detachAttributesList() []*syscall.SysProcAttr {
+	return []*syscall.SysProcAttr{
+		{CreationFlags: detachedProcess | syscall.CREATE_NEW_PROCESS_GROUP | createBreakawayFromJob, HideWindow: true},
+		detachAttributes(),
+	}
 }
 
 func processAlive(pid int) bool {

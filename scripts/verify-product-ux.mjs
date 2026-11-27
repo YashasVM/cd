@@ -49,23 +49,20 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   page.setDefaultTimeout(30_000);
-  const requests = [];
-  const frames = [];
-  page.on('websocket', socket => socket.on('framesent', event => { if (typeof event.payload === 'string') frames.push(event.payload); }));
-  page.on('request', request => { if (request.method() === 'POST') requests.push({ url: request.url(), body: request.postData() ?? '' }); });
   await page.goto(`${publicBase}/send`);
   await page.locator('.workbench:not([inert])').waitFor();
-  await page.locator('#file-input').setInputFiles([singlePath, batchPaths[0]]);
-  assert.equal(await page.getByLabel('Sharing method').inputValue(), 'private');
-  await page.locator('.selection-panel summary').click();
-  await page.getByRole('button', { name: 'Remove a.txt', exact: true }).click();
-  assert.equal(await page.locator('.selection-panel li').count(), 1);
-  assert.equal(requests.length, 0, 'selection must not start a transfer');
+  await page.locator('#file-input').setInputFiles(singlePath);
+  await page.locator('#sender-code-section:not(.hidden)').waitFor();
+  assert.equal(await page.locator('.selection-panel').count(), 0, 'pre-send selection panel must not exist');
+  assert.equal(await page.getByLabel('Sharing method').count(), 0, 'sharing method selector must not exist');
+  assert.equal(await page.locator('#start-send-btn').count(), 0, 'start send button must not exist');
+  const code = (await page.locator('#share-code').textContent()).trim();
+  assert.match(code, /^\d{5}$/, `expected 5-digit share code, got ${code}`);
+  assert.equal((await page.locator('#receive-command').textContent()).trim(), `cdx receive ${code}`);
   for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `overflow at ${width}px`);
   }
-  await page.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
   await page.waitForFunction(() => {
     const canvas = document.getElementById('share-qr');
     return canvas.getContext('2d').getImageData(0, 0, 1, 1).data[3] > 0;
@@ -77,22 +74,21 @@ try {
   const link = jsQR(Uint8ClampedArray.from(qr.data), qr.width, qr.height)?.data;
   assert.ok(link?.startsWith(`${publicBase}/s/`), 'QR contains full receive URL');
   assert.match(link, /#v1\./);
-  assert.ok(!requests.some(request => request.url.endsWith('/api/codes')), 'private transfer requested numeric code');
-  assert.ok(![...requests.map(request => request.body), ...frames].some(body => body.includes('shareKey')), 'private transfer disclosed shareKey');
   await page.evaluate(() => {
     const clipboardData = new DataTransfer();
     clipboardData.items.add(new File(['replacement'], 'replacement.txt'));
     document.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true }));
   });
-  const outDir = join(work, 'private-received');
+  const outDir = join(work, 'code-received');
   await mkdir(outDir);
-  const receiver = spawn(executable, ['receive', link, '--out', outDir, '--json'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+  const receiver = spawn(executable, ['receive', code, '--out', outDir, '--json'], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
   const stdout = collect(receiver.stdout);
   const stderr = collect(receiver.stderr);
-  assert.equal(await withTimeout(childExit(receiver), 60_000, 'private receive stalled'), 0, await stderr);
+  assert.equal(await withTimeout(childExit(receiver), 60_000, 'code receive stalled'), 0, await stderr);
   const result = JSON.parse(await stdout);
   assert.equal(sha(await readFile(result.path)), sha(single), 'active paste replaced original bytes');
   await page.locator('#sender-complete:not(.hidden)').waitFor();
+
   const retryPage = await context.newPage();
   retryPage.setDefaultTimeout(30_000);
   await retryPage.addInitScript(() => {
@@ -114,63 +110,15 @@ try {
   await retryPage.goto(publicBase);
   await retryPage.locator('.workbench:not([inert])').waitFor();
   await retryPage.locator('#file-input').setInputFiles(singlePath);
-  await retryPage.getByLabel('Sharing method').selectOption('code');
-  await retryPage.locator('.selection-panel').getByRole('button', { name: 'Send', exact: true }).click();
   try { await retryPage.locator('#sender-retry-btn').waitFor({ state: 'visible' }); }
   catch (error) { throw new Error(`Retry did not appear. Fail triggered=${await retryPage.evaluate(() => window.__uxFailureTriggered)}; state=${await retryPage.locator('#app-state').textContent()}; error=${await retryPage.locator('#sender-error').textContent()}; status=${await retryPage.locator('#sender-status').textContent()}`, { cause: error }); }
   await retryPage.locator('#sender-retry-btn').click();
   await retryPage.locator('#sender-code-section:not(.hidden)').waitFor();
+  const retryCode = (await retryPage.locator('#share-code').textContent()).trim();
+  assert.match(retryCode, /^\d{5}$/, `expected 5-digit retry share code, got ${retryCode}`);
   assert.match(await retryPage.locator('body').textContent(), /holiday video/);
-  const cancelPage = await context.newPage();
-  await cancelPage.goto(publicBase);
-  await cancelPage.locator('.workbench:not([inert])').waitFor();
-  await cancelPage.locator('#file-input').setInputFiles(singlePath);
-  await cancelPage.getByLabel('Keep progress if interrupted').check();
-  await cancelPage.locator('#start-send-btn').click();
-  await cancelPage.locator('#receive-command').filter({ hasText: '#v2.' }).waitFor();
-  await cancelPage.locator('#sender-cancel-btn').click();
-  await cancelPage.waitForFunction(() => new Promise((resolve, reject) => {
-    const request = indexedDB.open('cd-resume-v2');
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const db = request.result;
-      const keys = db.transaction('secrets').objectStore('secrets').getAllKeys();
-      keys.onsuccess = () => { db.close(); resolve(!keys.result.some(key => String(key).startsWith('sender:'))); };
-    };
-  }));
-  assert.equal(await cancelPage.locator('#app-state').textContent(), 'ready');
-  const destinationPage = await context.newPage();
-  destinationPage.setDefaultTimeout(30_000);
-  await destinationPage.addInitScript(() => {
-    const request = indexedDB.open('cd-browser-devices', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('devices');
-    request.onsuccess = () => {
-      const db = request.result;
-      const pairId = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-      const secret = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-      const transaction = db.transaction('devices', 'readwrite');
-      transaction.objectStore('devices').put({ pairId, name: 'Saved phone', pair: { version: 1, pairId, secret, name: 'Saved phone', localUrls: [], expiresAt: Date.now() + 300000, relayUrl: `${location.origin.replace(/^http/, 'ws')}/ws/devices/v1/${pairId}` } }, `device:${pairId}`);
-      transaction.oncomplete = () => db.close();
-    };
-  });
-  await destinationPage.goto(publicBase);
-  await destinationPage.locator('.workbench:not([inert])').waitFor();
-  await destinationPage.locator('#file-input').setInputFiles([singlePath, batchPaths[0]]);
-  const keepProgressChoice = destinationPage.getByLabel('Keep progress if interrupted');
-  assert.equal(await keepProgressChoice.isDisabled(), true);
-  await destinationPage.getByText('Saved phone · saved in this browser', { exact: true }).waitFor();
-  await destinationPage.getByText('Saved phone · saved in this browser', { exact: true }).locator('..').locator('input').check();
-  await destinationPage.getByLabel('Share a link or code', { exact: false }).check();
-  assert.equal(await keepProgressChoice.isDisabled(), true);
-  assert.equal(await keepProgressChoice.isChecked(), false);
-  assert.equal(await destinationPage.getByLabel('Sharing method').isDisabled(), false);
-  await destinationPage.evaluate(() => { document.querySelector('.selection-panel input[type="checkbox"]').checked = true; });
-  await destinationPage.locator('#start-send-btn').click();
-  await destinationPage.locator('#sender-error:not(.hidden)').waitFor();
-  assert.match(await destinationPage.locator('#sender-error').textContent(), /works with one file/);
-  assert.equal(await destinationPage.locator('#app-state').textContent(), 'failed', 'stale keep-progress state must fail before starting a one-file transfer');
   await context.close();
-  console.log('verified private /send selection, QR, privacy, mobile layout, exact CLI bytes, and saved-phone destination switching');
+  console.log('verified instant 5-digit /send, QR, mobile layout, active paste protection, exact CLI bytes, and retry');
 } finally {
   for (const browser of browsers) await browser.close().catch(() => {});
   await stopChild(worker);

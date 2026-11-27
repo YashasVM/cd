@@ -78,26 +78,18 @@ func writeReceived(output io.Writer, value receiveResult, jsonOutput bool) error
 func usage(output io.Writer) {
 	fmt.Fprintln(output, "usage: cdx <command> [options]")
 	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Send to your phone: cdx send --to phone ./photo.jpg")
-	fmt.Fprintln(output, "Share a private link: cdx send --link ./photo.jpg")
-	fmt.Fprintln(output, "Receive into a folder: cdx receive 48291 --out ./downloads/")
+	fmt.Fprintln(output, "Send a file:     cdx send ./photo.jpg")
+	fmt.Fprintln(output, "Receive a file:  cdx receive 48291")
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "commands:")
-	fmt.Fprintln(output, "  send <path>...     send one or more files and folders with one code")
-	fmt.Fprintln(output, "  receive <code>     receive one file (the 4-5 digit code, or a full link)")
-	fmt.Fprintln(output, "  pair [--name phone]  scan once in CD Android to trust this computer")
-	fmt.Fprintln(output, "  devices [forget name]  list or forget paired devices")
+	fmt.Fprintln(output, "  send <path>...     send one or more files and folders and print a 5-digit code")
+	fmt.Fprintln(output, "  receive <code>     receive into the current folder (5-digit code or link)")
 	fmt.Fprintln(output, "  status [code]      show background sends from this machine")
-	fmt.Fprintln(output, "  cancel <code>      stop a background send by share code or transfer ID")
-	fmt.Fprintln(output, "  wait <code>        wait for a background send; exit 0 once the receiver verified it")
-	fmt.Fprintln(output, "                     (--timeout 5m gives up with exit 3; the send keeps going)")
-	fmt.Fprintln(output, "  welcome            replay the getting-started tour")
-	fmt.Fprintln(output, "  agent setup        teach your AI coding agents to share files with cdx")
-	fmt.Fprintln(output, "  help [send|receive] show help")
+	fmt.Fprintln(output, "  cancel <code>      stop a background send")
+	fmt.Fprintln(output, "  wait <code>        wait until the receiver verifies a background send")
+	fmt.Fprintln(output, "  help [send|receive] show full options")
 	fmt.Fprintln(output, "  update             update cdx to the latest release")
 	fmt.Fprintln(output, "  version            show version")
-	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "Run cdx help send or cdx help receive for full options and contracts.")
 }
 
 func transferUsage(output io.Writer) {
@@ -598,9 +590,6 @@ func runReceive(request receiveRequest) int {
 
 func run(argv []string) int {
 	if len(argv) == 0 {
-		if isTerminal(os.Stdin) && isTerminal(os.Stdout) && !welcomed() {
-			return runWelcome(nil)
-		}
 		usage(os.Stderr)
 		return 2
 	}

@@ -11,6 +11,10 @@ import (
 // caller's shell, terminal, and process-group cleanup.
 func detachAttributes() *syscall.SysProcAttr { return &syscall.SysProcAttr{Setsid: true} }
 
+func detachAttributesList() []*syscall.SysProcAttr {
+	return []*syscall.SysProcAttr{detachAttributes()}
+}
+
 func processAlive(pid int) bool {
 	if pid <= 0 {
 		return false

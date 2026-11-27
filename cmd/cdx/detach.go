@@ -120,16 +120,32 @@ func runDetachedSend(request sendRequest) int {
 	}
 	defer logFile.Close()
 
-	holder := exec.Command(executable, holderArgs(request, absolutePaths)...)
-	holder.Env = append(os.Environ(), "CD_STATE_DIR="+dir, "CD_HOLDER_LOG="+logPath)
-	holder.Stderr = logFile
-	holder.SysProcAttr = detachAttributes()
-	output, err := holder.StdoutPipe()
-	if err != nil {
-		return fail(err)
+	var (
+		holder   *exec.Cmd
+		output   io.ReadCloser
+		startErr error
+	)
+	for _, attrs := range detachAttributesList() {
+		candidate := exec.Command(executable, holderArgs(request, absolutePaths)...)
+		candidate.Env = append(os.Environ(), "CD_STATE_DIR="+dir, "CD_HOLDER_LOG="+logPath)
+		candidate.Stderr = logFile
+		candidate.SysProcAttr = attrs
+		pipe, pipeErr := candidate.StdoutPipe()
+		if pipeErr != nil {
+			return fail(pipeErr)
+		}
+		if err := candidate.Start(); err != nil {
+			_ = pipe.Close()
+			startErr = err
+			continue
+		}
+		holder = candidate
+		output = pipe
+		startErr = nil
+		break
 	}
-	if err := holder.Start(); err != nil {
-		return fail(fmt.Errorf("start the background sender: %w", err))
+	if startErr != nil {
+		return fail(fmt.Errorf("start the background sender: %w", startErr))
 	}
 	line := make(chan string, 1)
 	go func() {

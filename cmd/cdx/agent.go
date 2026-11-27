@@ -29,33 +29,14 @@ const (
 const agentBlock = agentBlockBegin + `
 ## Sharing files
 
-For generated APKs, documents and requested file handoffs, honor an explicit
-phone, named device, link or QR choice. For phone or unspecified delivery, run
-` + "`cdx devices --json`" + `. Saved pairings do not prove that a phone is online;
-listing errors are errors, not an empty list. An explicit phone request with one
-pair sends immediately. An explicit named device uses its exact alias without
-another question. Otherwise, with multiple pairs ask which phone. With none, explain
-` + "`cdx pair`" + `, phone approval and enabling receiving before sending.
-For an unspecified destination with pairs, offer each device and "Download link"
-in one question using the host's available ` + "`request_user_input`" + `,
-` + "`request_user_input_async`" + ` or T3 Code question tool, only where enabled.
-Otherwise ask in chat. Wait for the answer; a default is not a selection.
-Run ` + "`cdx send --to <saved-name> --json -- <path>...`" + ` with the exact alias.
-Its ` + "`pid`" + `/` + "`log`" + ` result means started. Read the returned private log;
-only ` + "`phase: verified`" + ` confirms receipt. For a pause, explain resuming in
-CD and rerunning the same command after the old sender exits; await user choice.
-Check the returned PID is alive before calling a waiting send pending. Keep it
-running and avoid duplicate sends. An exit without verified is unconfirmed.
-Keep credentials and raw private logs out of chat. Ask before replacing a failed
-phone send with a link. ` + "`cdx wait <code>`" + ` is for link sends, not phone logs.
-When a link is selected, or no pairs exist for an unspecified handoff, run
-` + "`cdx send --json -- <path>...`" + ` and return https://cd.yash0.in/#<code>.
-Use ` + "`CD_PUBLIC_URL`" + ` as the origin when set.
-For sensitive link sharing, add ` + "`--link`" + ` and return the exact JSON URL,
-including its fragment; paired delivery is already end-to-end encrypted.
+When asked to send, share, or hand off local files or folders, run
+` + "`cdx send --json -- <path>...`" + ` and reply with the 5-digit code,
+https://cd.yash0.in/#<code> (use ` + "`CD_PUBLIC_URL`" + ` when set), and
+` + "`cdx receive <code>`" + `. Quote paths and use ` + "`--`" + ` before filenames.
+For sensitive files when explicitly asked for a private link, add ` + "`--link`" + `
+and return the exact JSON URL including its fragment.
 For a QR, add ` + "`--qr <fresh-png-path>`" + ` and embed the returned absolute
-qrPath as a Markdown image alongside its receive link. Sensitive QR sharing also
-needs ` + "`--link`" + `. Quote paths and use ` + "`--`" + ` before filenames.
+qrPath as a Markdown image alongside its receive link.
 Use ` + "`cdx help send`" + ` for options. Update installed agents with
 ` + "`cdx agent setup`" + ` after updating the CLI.
 ` + agentBlockEnd + "\n"

@@ -1,8 +1,6 @@
 import { cleanCode, codeFromUrl, generateEphemeralId, isValidCode, peerIdFor } from './p2p-code.js';
 import { codeLookupPath, isShortCode, shortCodeFromInput, parseCapability, shareUrlFromCapability } from './agent-code.js';
-import { startBrowserSend } from './transfer-session.js';
-import { mountBrowserRecovery } from './recovery-ui.js';
-import { mountBrowserDevices, startDeviceSend } from './browser-devices.js';
+import { startRelaySend } from './relay-sender.js';
 import { createZipBundle, fileSource } from './zip-bundle.js';
 import { startQrScanner } from './qr-scanner.js';
 import { parseManifest } from './p2p-manifest.js';
@@ -150,7 +148,6 @@ const els = {
   shareCode: document.getElementById('share-code'),
   shareCodeKicker: document.getElementById('share-code-kicker'),
   shareQr: document.getElementById('share-qr'),
-  copyCodeBtn: document.getElementById('copy-code-btn'),
   senderStatus: document.getElementById('sender-status'),
   senderWaitCancelBtn: document.getElementById('sender-wait-cancel-btn'),
   senderProgress: document.getElementById('sender-progress'),
@@ -331,43 +328,11 @@ function receiveCommand(value) { return `cdx receive ${value.code || `'${value.u
 // Browser and CLI handoffs share one transfer protocol.
 els.senderProgress.after(els.senderStatus, els.senderCancelBtn);
 els.senderCancelBtn.hidden = true;
-let destination = null;
-let singleFileSelected = false;
-const selection = document.createElement('div');
-selection.hidden = true;
-selection.className = 'selection-panel';
-selection.innerHTML = `<fieldset><legend>Share using</legend><select aria-label="Sharing method"><option value="private">Private link</option><option value="code">Short code</option></select><p>Only people with the full link can receive. The key stays in the link, away from the server.</p></fieldset><label><input type="checkbox"> Keep progress if interrupted</label><p>For one file. Saves progress in this browser and uses the resumable relay instead of a direct connection.</p><details><summary>Selected files</summary><ul></ul></details><div class="destination-area"></div><button id="start-send-btn" type="button" class="primary-btn">Send</button>`;
-els.dropZone.after(selection);
-const sharing = selection.querySelector('select');
-const sharingHint = sharing.nextElementSibling;
-sharing.addEventListener('change', () => { sharingHint.textContent = sharing.value === 'private' ? 'Only people with the full link can receive. The key stays in the link, away from the server.' : 'Easy to type. The server holds the key; anyone who guesses the live code can receive.'; });
-const keepProgress = selection.querySelector('input');
-function syncKeepProgress() {
-  keepProgress.disabled = !singleFileSelected || Boolean(destination);
-  if (keepProgress.disabled) keepProgress.checked = false;
-  sharing.disabled = keepProgress.checked;
-  if (keepProgress.checked) {
-    sharing.value = 'private';
-    sharingHint.textContent = 'Only people with the full link can receive. The key stays in the link, away from the server.';
-  }
-}
-keepProgress.addEventListener('change', syncKeepProgress);
-selection.prepend(selection.querySelector('details'));
-selection.querySelector('details').after(selection.querySelector('.destination-area'));
-selection.querySelector('#start-send-btn').addEventListener('click', () => Sender.launch());
-const stopDevices = mountBrowserDevices(selection.querySelector('.destination-area'), { onSelect(device) { destination = device; syncKeepProgress(); sharing.closest('fieldset').hidden = Boolean(device); keepProgress.parentElement.hidden = Boolean(device); keepProgress.parentElement.nextElementSibling.hidden = Boolean(device); } });
-window.addEventListener('pagehide', stopDevices, { once: true });
-const recovery = document.createElement('div');
-els.senderView.parentElement.append(recovery);
-const recoveryPanel = mountBrowserRecovery(recovery, { onResumeSend(file, link) { if (BUSY_STATES.has(els.appState.dataset.state)) return; switchToSendMode(); Sender.init([file]); Sender.launch(link); }, onResumeReceive(link) { if (BUSY_STATES.has(els.appState.dataset.state)) return; switchToReceiveMode(); Receiver.openRelay(link); } });
-recoveryPanel.done.catch(() => { recovery.textContent = 'Saved transfers are unavailable because browser storage is disabled.'; });
-window.addEventListener('pagehide', () => recoveryPanel.stop(), { once: true });
 
 const Sender = (() => {
   let active = null;
   let files = [];
   let share = null;
-  let lastResumeLink = '';
   let totalSize = 0;
   let bundleDate = new Date();
   let generation = 0;
@@ -406,20 +371,16 @@ const Sender = (() => {
     files = selectedFiles.filter(Boolean);
     if (files.length === 0) return;
     totalSize = files.reduce((sum, item) => sum + item.size, 0);
-
-    renderSelection();
+    launch();
   }
 
-  function launch(resumeLink = lastResumeLink) {
+  function launch() {
     if (!files.length || BUSY_STATES.has(els.appState.dataset.state)) return;
-    if ((keepProgress.checked || resumeLink) && files.length !== 1) {
-      keepProgress.checked = false;
-      syncKeepProgress();
-      failSend('Keep progress works with one file. Remove the extra files and try again.');
-      return;
-    }
     els.senderError.classList.add('hidden');
-    selection.hidden = true;
+    startedAt = 0;
+    lastProgressUpdate.value = 0;
+    els.senderProgress.querySelector('.progress-mode').textContent = 'sending';
+    resetProgress(els.senderProgress);
     let source;
     try {
       source = files.length === 1 ? fileSource(files[0]) : createZipBundle(files, { now: bundleDate });
@@ -435,18 +396,12 @@ const Sender = (() => {
       onShare(value) {
         if (current !== generation) return;
         share = value;
-        if (value.url.includes('#v2.')) lastResumeLink = value.url;
-        els.shareCode.textContent = sharing.value === 'code' && !resumeLink ? value.code : '';
-        els.shareCodeKicker.textContent = value.code ? 'Share this code or link' : 'Share a private link';
-        document.getElementById('copy-link-btn').hidden = false;
-        document.getElementById('copy-short-code-btn').hidden = !value.code;
-        els.senderCodeSection.querySelector('.code-help').textContent = 'Open the link or scan the QR on the receiving device. Keep this tab open until it finishes.';
+        els.shareCode.textContent = value.code;
+        els.shareCodeKicker.textContent = 'share this code';
+        els.senderCodeSection.querySelector('.code-help').textContent = 'On the other device, open CD and enter this code in Receive, or scan the QR.';
         els.receiveCommand.textContent = receiveCommand(value);
-        if (value.code) els.senderCodeSection.querySelector('.code-help').textContent = 'On the other device, open CD and enter this code in Receive, or scan the QR.';
         els.senderCodeSection.classList.remove('hidden');
-        // Resumable (#v2.) sends wait up to 24 hours; the 15-minute countdown
-        // applies only to one-shot v1 shares.
-        if (!value.url.includes('#v2.')) startWaitCountdown();
+        startWaitCountdown();
         void renderQr(value.url, current);
       },
       onState(state) {
@@ -464,7 +419,7 @@ const Sender = (() => {
       },
       onStatus(text) {
         if (current !== generation) return;
-        // The live countdown owns the status line while waiting for a v1 receiver.
+        // The live countdown owns the status line while waiting for a receiver.
         if (waitCountdownTimer !== null) return;
         els.senderStatus.textContent = text;
       },
@@ -473,36 +428,14 @@ const Sender = (() => {
         lastProgressUpdate.value = updateProgress(els.senderProgress, done, total, startedAt || Date.now(), done === total, lastProgressUpdate);
       }
     };
-    const resumable = keepProgress.checked || Boolean(resumeLink);
     setState('connecting');
     try {
-      active = destination ? startDeviceSend(destination, source, hooks) : startBrowserSend(resumable ? files[0] : source, hooks, { sharing: resumeLink ? 'private' : sharing.value, resumable, resumeLink });
+      active = startRelaySend(source, hooks);
     } catch (error) { failSend(error.message); return; }
     active.done.then(() => {
       if (current === generation) showComplete();
     }, (error) => {
       if (current === generation && error.message !== 'Transfer canceled.') failSend(error.message);
-    });
-  }
-
-  function renderSelection() {
-    selection.hidden = files.length === 0;
-    singleFileSelected = files.length === 1;
-    els.dropZone.classList.toggle('hidden', files.length > 0);
-    selection.querySelector('summary').textContent = files.length === 1 ? files[0].name + ' · ' + formatSize(totalSize) : `${files.length} selected files · ${formatSize(totalSize)}`;
-    syncKeepProgress();
-    const list = selection.querySelector('ul');
-    list.replaceChildren();
-    files.forEach((file, index) => {
-      const row = document.createElement('li');
-      row.append(document.createTextNode(`${file.name} · ${formatSize(file.size)} `));
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.textContent = 'Remove';
-      remove.setAttribute('aria-label', `Remove ${file.name}`);
-      remove.addEventListener('click', () => { files.splice(index, 1); totalSize = files.reduce((sum, item) => sum + item.size, 0); renderSelection(); });
-      row.append(remove);
-      list.append(row);
     });
   }
 
@@ -532,7 +465,7 @@ const Sender = (() => {
     els.senderProgress.classList.add('hidden');
     els.senderFileInfo.classList.add('hidden');
     els.senderComplete.classList.remove('hidden');
-    els.senderCompleteMessage.textContent = destination ? `Delivered to ${destination.name}` : files.length === 1 ? 'File received and verified' : `${files.length} files received and verified`;
+    els.senderCompleteMessage.textContent = files.length === 1 ? 'File received and verified' : `${files.length} files received and verified`;
     els.senderCompleteDetail.textContent = files.length === 1
       ? `${shortenMiddle(files[0].name, 48)} · ${formatSize(totalSize)}`
       : formatSize(totalSize);
@@ -560,9 +493,7 @@ const Sender = (() => {
     active = null;
     files = [];
     els.fileInput.value = '';
-    selection.hidden = true;
     share = null;
-    lastResumeLink = '';
     totalSize = 0;
     startedAt = 0;
     lastProgressUpdate.value = 0;
@@ -573,10 +504,9 @@ const Sender = (() => {
     els.senderComplete.classList.add('hidden');
     els.senderError.classList.add('hidden');
     els.senderStatus.textContent = '';
-    els.shareCodeKicker.textContent = 'Share a private link';
+    els.shareCodeKicker.textContent = 'share this code';
     els.senderProgress.querySelector('.progress-mode').textContent = 'sending';
     els.receiveCommand.hidden = false;
-    els.copyCodeBtn.hidden = false;
     els.copyCmdBtn.hidden = false;
     resetProgress(els.senderProgress);
   }
@@ -586,14 +516,7 @@ const Sender = (() => {
     launch,
     reset,
     cancel,
-    copyCode: async () => {
-      if (!share) return;
-      try {
-        if (navigator.share) await navigator.share({ url: share.url });
-        else await copyText(share.url, els.copyCodeBtn, 'Copied');
-      } catch (error) { if (error.name !== 'AbortError') await copyText(share.url, els.copyCodeBtn, 'Copied'); }
-    },
-    copyLink: () => share && copyText(share.url, document.getElementById('copy-link-btn'), 'Copied'),
+    copyLink: () => share && copyText(share.code ? `${window.location.origin}/#${share.code}` : share.url, document.getElementById('copy-link-btn'), 'Copied'),
     copyShortCode: () => share?.code && copyText(share.code, document.getElementById('copy-short-code-btn'), 'Copied'),
     copyCommand: () => share && copyText(receiveCommand(share), els.copyCmdBtn, 'Copied')
   };
@@ -1466,7 +1389,6 @@ els.selectFileBtn.addEventListener('click', (event) => {
 els.dropZone.addEventListener('click', () => els.fileInput.click());
 els.fileInput.addEventListener('change', (event) => Sender.init(Array.from(event.target.files)));
 
-els.copyCodeBtn.addEventListener('click', () => void Sender.copyCode());
 document.getElementById('copy-link-btn').addEventListener('click', () => void Sender.copyLink().catch(() => { els.senderStatus.textContent = 'Copy the link from the receive command above.'; }));
 document.getElementById('copy-short-code-btn').addEventListener('click', () => void Sender.copyShortCode().catch(() => { els.senderStatus.textContent = 'Select and copy the code above.'; }));
 els.sendAnotherBtn.addEventListener('click', () => {

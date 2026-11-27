@@ -82,12 +82,15 @@ func TestAgentSetupStopsWithoutInput(t *testing.T) {
 	}
 }
 
-func TestAgentInstructionsOfferPairedDeviceChoice(t *testing.T) {
+func TestAgentInstructionsCoverSimpleSharing(t *testing.T) {
 	for name, instructions := range map[string]string{"skill": agentSkill, "global note": agentBlock} {
-		for _, required := range []string{"cdx devices --json", "request_user_input", "--to", "multiple", "APK"} {
+		for _, required := range []string{"cdx send --json", "https://cd.yash0.in/#", "--link", "--qr", "cdx help send"} {
 			if !strings.Contains(instructions, required) {
 				t.Errorf("%s omits %q", name, required)
 			}
 		}
+	}
+	if !strings.Contains(agentSkill, "cdx receive") {
+		t.Errorf("skill omits %q", "cdx receive")
 	}
 }

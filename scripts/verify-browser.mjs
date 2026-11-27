@@ -57,8 +57,6 @@ try {
     await page.locator('.workbench:not([inert])').waitFor();
 
     await page.locator('#file-input').setInputFiles(paths);
-    await page.getByLabel('Sharing method').selectOption('code');
-    await page.locator('#start-send-btn').click();
     await page.locator('#sender-code-section:not(.hidden)').waitFor();
     const code = (await page.locator('#share-code').textContent()).trim();
     assert.match(code, /^\d{4,5}$/, `send code ${code} is not numeric`);
