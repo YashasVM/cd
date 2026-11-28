@@ -25,11 +25,7 @@ func TestWindowsRecoveryShellQuoting(t *testing.T) {
 }
 
 func TestDeviceDestinationRejectedBeforeDetach(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.Chmod(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("CD_DEVICE_DIR", dir)
+	t.Setenv("CD_DEVICE_DIR", filepath.Join(t.TempDir(), "devices"))
 	source := filepath.Join(t.TempDir(), "payload.txt")
 	if err := os.WriteFile(source, []byte("hello"), 0600); err != nil {
 		t.Fatal(err)

@@ -40,17 +40,25 @@ func (s Store) directory() (*os.Root, error) {
 	if s.Dir == "" {
 		return nil, errors.New("device store directory missing")
 	}
-	if err := os.MkdirAll(s.Dir, 0700); err != nil {
+	if err := makeStoreDir(s.Dir); err != nil {
 		return nil, err
 	}
 	st, err := os.Lstat(s.Dir)
 	if err != nil {
 		return nil, err
 	}
-	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0077 != 0 {
-		return nil, errors.New("device store must be a private directory with mode 0700")
+	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.New("device store must be a private directory")
 	}
-	return os.OpenRoot(s.Dir)
+	root, err := os.OpenRoot(s.Dir)
+	if err != nil {
+		return nil, err
+	}
+	if err = checkStoreDir(root, st); err != nil {
+		root.Close()
+		return nil, err
+	}
+	return root, nil
 }
 func (s Store) Save(name string, p Pair) error {
 	if !validName(name) {
@@ -102,7 +110,10 @@ func (s Store) Save(name string, p Pair) error {
 		return err
 	}
 	defer root.Remove(temporary)
-	_, err = f.Write(data)
+	err = checkNewCredential(f)
+	if err == nil {
+		_, err = f.Write(data)
+	}
 	if err == nil {
 		err = f.Sync()
 	}
@@ -116,12 +127,7 @@ func (s Store) Save(name string, p Pair) error {
 	if err = root.Rename(temporary, name+".json"); err != nil {
 		return err
 	}
-	directory, err := os.Open(s.Dir)
-	if err != nil {
-		return err
-	}
-	defer directory.Close()
-	return directory.Sync()
+	return syncStoreDir(root)
 }
 func (s Store) Load(name string) (Pair, error) {
 	if !validName(name) {
@@ -139,7 +145,7 @@ func load(root *os.Root, name string) (Pair, error) {
 	if err != nil {
 		return Pair{}, err
 	}
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() > maxStoreFile {
+	if !st.Mode().IsRegular() || st.Size() > maxStoreFile {
 		return Pair{}, errors.New("credential must be a bounded private regular file")
 	}
 	f, err := root.Open(name + ".json")
@@ -153,6 +159,9 @@ func load(root *os.Root, name string) (Pair, error) {
 	}
 	if !os.SameFile(st, opened) {
 		return Pair{}, errors.New("credential changed during read")
+	}
+	if err := checkCredential(f, opened); err != nil {
+		return Pair{}, err
 	}
 	b, err := io.ReadAll(io.LimitReader(f, maxStoreFile+1))
 	if err != nil {
