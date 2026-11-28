@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -18,10 +19,12 @@ func TestStorePrivateAtomicAndPublicListing(t *testing.T) {
 	if err != nil || got.Secret != p.Secret {
 		t.Fatalf("load failed: %v", err)
 	}
-	for path, mode := range map[string]os.FileMode{store.Dir: 0700, filepath.Join(store.Dir, "phone.json"): 0600} {
-		st, err := os.Stat(path)
-		if err != nil || st.Mode().Perm() != mode {
-			t.Fatalf("private mode %s: %v %v", path, st, err)
+	if runtime.GOOS != "windows" {
+		for path, mode := range map[string]os.FileMode{store.Dir: 0700, filepath.Join(store.Dir, "phone.json"): 0600} {
+			st, err := os.Stat(path)
+			if err != nil || st.Mode().Perm() != mode {
+				t.Fatalf("private mode %s: %v %v", path, st, err)
+			}
 		}
 	}
 	list, err := store.List()
@@ -69,34 +72,43 @@ func TestStoreRejectsUnsafeEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(store.Dir, "phone.json")
-	if err := os.Chmod(path, 0644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.Load("phone"); err == nil {
-		t.Fatal("publicly readable credential loaded")
-	}
-	os.Remove(path)
-	outside := filepath.Join(t.TempDir(), "credential")
-	if err := os.WriteFile(outside, []byte("private"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(outside, path); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.Load("phone"); err == nil {
-		t.Fatal("symlink credential loaded")
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(path, 0644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.Load("phone"); err == nil {
+			t.Fatal("publicly readable credential loaded")
+		}
 	}
 	os.Remove(path)
+	t.Run("symbolic link", func(t *testing.T) {
+		outside := filepath.Join(t.TempDir(), "credential")
+		if err := os.WriteFile(outside, []byte("private"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(outside, path); err != nil {
+			if runtime.GOOS == "windows" {
+				t.Skipf("cannot create a symbolic link: %v", err)
+			}
+			t.Fatal(err)
+		}
+		defer os.Remove(path)
+		if _, err := store.Load("phone"); err == nil {
+			t.Fatal("symlink credential loaded")
+		}
+	})
 	if err := os.WriteFile(path, make([]byte, maxStoreFile+1), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.Load("phone"); err == nil {
 		t.Fatal("oversized credential loaded")
 	}
-	if err := os.Chmod(store.Dir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.Load("phone"); err == nil {
-		t.Fatal("public store accepted")
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(store.Dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := store.List(); err == nil {
+			t.Fatal("public store accepted")
+		}
 	}
 }

@@ -29,6 +29,10 @@ func deviceStore() (devices.Store, error) {
 			return devices.Store{}, err
 		}
 		dir = filepath.Join(base, "cdx", "devices")
+		if runtime.GOOS == "windows" {
+			// Older versions could leave an empty directory with inherited ACLs.
+			dir = filepath.Join(base, "cdx", "trusted-devices")
+		}
 	}
 	return devices.Store{Dir: dir}, nil
 }
